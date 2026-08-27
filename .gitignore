@@ -17,6 +17,9 @@ build/
 .vite/
 .turbo/
 coverage/
+playwright-report/
+test-results/
+.vite-temp/
 
 # ログ
 *.log
