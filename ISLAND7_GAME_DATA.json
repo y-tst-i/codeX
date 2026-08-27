@@ -1,0 +1,298 @@
+{
+  "version": "0.30.1",
+  "designVersion": "0.30",
+  "sessionRules": {
+    "teamCount": 2,
+    "minPlayersPerTeam": 3,
+    "maxPlayersPerTeam": 4,
+    "maxParticipants": 8
+  },
+  "limits": {
+    "statMax": 7,
+    "hpMax": 100,
+    "normalActionsPerDay": 2,
+    "normalDays": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6
+    ],
+    "hpDisplayMin": 0
+  },
+  "initial": {
+    "hp": 100,
+    "materials": 4,
+    "stats": {
+      "protection": 1,
+      "drainage": 1,
+      "access": 1,
+      "lifeline": 1
+    },
+    "tutorialPracticeMaterials": 2,
+    "tutorialBuildIncrement": 1
+  },
+  "actions": {
+    "beachExplore": {
+      "materialsDelta": 3
+    },
+    "build": {
+      "materialsCost": 2,
+      "statIncrement": 1
+    }
+  },
+  "yard": {
+    "visibleCount": 2
+  },
+  "grc": {
+    "availableDays": [
+      2,
+      4,
+      6
+    ],
+    "visibleCount": 2,
+    "acquireMax": 2
+  },
+  "products": [
+    {
+      "id": "kc_line_gutter",
+      "name": "KCライン側溝",
+      "category": "normal",
+      "statDelta": {
+        "drainage": 2
+      },
+      "hpRecovery": 0,
+      "preparedReductionPhase": null,
+      "preparedReduction": 0,
+      "autoInstallOnAcquire": false,
+      "starter": true
+    },
+    {
+      "id": "sw_variable_gutter",
+      "name": "SW可変深溝側溝",
+      "category": "normal",
+      "statDelta": {
+        "drainage": 1
+      },
+      "hpRecovery": 0,
+      "preparedReductionPhase": "final_rain",
+      "preparedReduction": 8,
+      "autoInstallOnAcquire": false,
+      "starter": false
+    },
+    {
+      "id": "box_culvert",
+      "name": "ボックスカルバート",
+      "category": "normal",
+      "statDelta": {
+        "drainage": 1,
+        "access": 1
+      },
+      "hpRecovery": 0,
+      "preparedReductionPhase": null,
+      "preparedReduction": 0,
+      "autoInstallOnAcquire": false,
+      "starter": true
+    },
+    {
+      "id": "the_wall_2",
+      "name": "ザ・ウォールⅡ",
+      "category": "normal",
+      "statDelta": {
+        "protection": 2
+      },
+      "hpRecovery": 0,
+      "preparedReductionPhase": null,
+      "preparedReduction": 0,
+      "autoInstallOnAcquire": false,
+      "starter": true
+    },
+    {
+      "id": "big_scale_2",
+      "name": "ビッグスケールⅡ",
+      "category": "normal",
+      "statDelta": {
+        "protection": 1
+      },
+      "hpRecovery": 0,
+      "preparedReductionPhase": "final_wind",
+      "preparedReduction": 8,
+      "autoInstallOnAcquire": false,
+      "starter": false
+    },
+    {
+      "id": "kp_block",
+      "name": "KPブロック",
+      "category": "normal",
+      "statDelta": {
+        "protection": 1
+      },
+      "hpRecovery": 10,
+      "preparedReductionPhase": null,
+      "preparedReduction": 0,
+      "autoInstallOnAcquire": false,
+      "starter": false
+    },
+    {
+      "id": "kc_form",
+      "name": "KCフォーム",
+      "category": "grc",
+      "statDelta": {
+        "drainage": 1
+      },
+      "hpRecovery": 0,
+      "preparedReductionPhase": null,
+      "preparedReduction": 0,
+      "autoInstallOnAcquire": true,
+      "starter": false
+    },
+    {
+      "id": "grc_driveway_curb",
+      "name": "GRC歩車道境界ブロック乗入れ",
+      "category": "grc",
+      "statDelta": {
+        "access": 1
+      },
+      "hpRecovery": 0,
+      "preparedReductionPhase": null,
+      "preparedReduction": 0,
+      "autoInstallOnAcquire": true,
+      "starter": false
+    },
+    {
+      "id": "excelite",
+      "name": "エクセリート",
+      "category": "grc",
+      "statDelta": {
+        "lifeline": 1
+      },
+      "hpRecovery": 0,
+      "preparedReductionPhase": null,
+      "preparedReduction": 0,
+      "autoInstallOnAcquire": true,
+      "starter": false
+    }
+  ],
+  "typhoons": {
+    "heavy_rain": {
+      "name": "豪雨型",
+      "requirements": {
+        "protection": 5,
+        "drainage": 7,
+        "access": 6,
+        "lifeline": 5
+      }
+    },
+    "coastal": {
+      "name": "沿岸直撃型",
+      "requirements": {
+        "protection": 7,
+        "drainage": 5,
+        "access": 5,
+        "lifeline": 6
+      }
+    },
+    "mountain": {
+      "name": "山側通過型",
+      "requirements": {
+        "protection": 6,
+        "drainage": 5,
+        "access": 7,
+        "lifeline": 5
+      }
+    }
+  },
+  "damageByShortage": {
+    "0": 0,
+    "1": 8,
+    "2": 20,
+    "3": 36,
+    "4": 56,
+    "5+": 80
+  },
+  "survivalGrades": {
+    "S": {
+      "minHp": 80,
+      "label": "盤石の生還"
+    },
+    "A": {
+      "minHp": 50,
+      "label": "見事な生還"
+    },
+    "B": {
+      "minHp": 20,
+      "label": "激闘の生還"
+    },
+    "C": {
+      "minHp": 1,
+      "label": "奇跡の生還"
+    },
+    "EVAC": {
+      "maxHp": 0,
+      "label": "緊急避難"
+    }
+  },
+  "events": {
+    "day2": {
+      "parts": {
+        "materialsDelta": 2
+      },
+      "sensor": {
+        "materialsDelta": 1,
+        "day3DamageReduction": 4,
+        "eliminateOneRoute": true
+      }
+    },
+    "day3": {
+      "damageByDrainage": {
+        "1": 8,
+        "2": 4,
+        "3+": 0
+      }
+    },
+    "day4": {
+      "data": {
+        "revealFinalRequirements": true
+      },
+      "cargo": {
+        "materialsDelta": 2
+      }
+    },
+    "day5": {
+      "routeFailure": {
+        "damageIfAccessBelow": 3,
+        "damage": 10
+      }
+    },
+    "day6": {
+      "explorationAllowedMorning": true,
+      "explorationAllowedAfternoon": false
+    }
+  },
+  "final": {
+    "phases": [
+      {
+        "id": "final_rain",
+        "name": "記録的大雨",
+        "stat": "drainage"
+      },
+      {
+        "id": "final_route",
+        "name": "ルート崩壊",
+        "stat": "access"
+      },
+      {
+        "id": "final_wind",
+        "name": "暴風・斜面崩壊",
+        "stat": "protection"
+      },
+      {
+        "id": "final_blackout",
+        "name": "停電・通信障害",
+        "stat": "lifeline"
+      }
+    ],
+    "emergencyInstallMax": 1
+  }
+}

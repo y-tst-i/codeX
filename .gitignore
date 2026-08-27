@@ -1,0 +1,44 @@
+# 秘密情報・環境変数
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# Node.js依存関係
+node_modules/
+.npm/
+.pnpm-store/
+.yarn/
+
+# ビルド・テスト生成物
+dist/
+build/
+.next/
+.vite/
+.turbo/
+coverage/
+
+# ログ
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ローカルDB・実行時データ
+*.db
+*.db-*
+*.sqlite
+*.sqlite-*
+
+# OS・エディタ固有ファイル
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# 一時ファイル
+tmp/
+temp/
+*.tmp
+*.swp
