@@ -296,7 +296,6 @@ function chapterHUD(t){
   g.restore();
   brackets(40,40,W-80,H-80,34,"rgba(140,235,255,.35)");
 }
-function hudLabel(s,x,y,col=C.cy){tx(s,x,y,{size:24,mono:true,color:col,sp:6});}
 
 /* =====================================================================
    シーン
@@ -317,10 +316,10 @@ function sProlog(t){
     // 台風
     typhoon(1560,250,lerp(120,190,P(t,6.4,5,eOut3)),t*.6,P(t,6.4,1)*WIN(t,6.4,12,1,.8));
     // ルート線
-    if(t>7){const p=P(t,7,1.3,eIO);g.save();g.globalAlpha=WIN(t,7,12.2,.3,.6);g.strokeStyle=C.red;g.lineWidth=4;g.setLineDash([22,14]);g.lineDashOffset=-t*40;
-      g.beginPath();g.moveTo(1560,250);g.quadraticCurveTo(1500,520,1140+ (1-p)*0,540);
-      const L=900;g.setLineDash([22,14]);g.stroke();g.restore();
-      const ex=lerp(1560,1150,p),ey=lerp(250,545,p);ring(ex,ey,18+4*Math.sin(t*6),C.red,4,WIN(t,7,12.2,.3,.6));}
+    if(t>7){const p=P(t,7,1.3,eIO),al=WIN(t,7,12.2,.3,.6),bz=q=>[(1-q)*(1-q)*1560+2*(1-q)*q*1500+q*q*1150,(1-q)*(1-q)*250+2*(1-q)*q*520+q*q*545];
+      g.save();g.globalAlpha=al;g.strokeStyle=C.red;g.lineWidth=4;g.setLineDash([22,14]);g.lineDashOffset=-t*40;g.beginPath();
+      for(let i=0;i<=40;i++){const q=bz(p*i/40);i?g.lineTo(q[0],q[1]):g.moveTo(q[0],q[1]);}g.stroke();g.restore();
+      const m=bz(p);ring(m[0],m[1],18+4*Math.sin(t*6),C.red,4,al);}
     // ラベル
     tag("WEATHER ALERT",90,105,C.red,WIN(t,5.3,12.2,.2,.5)*(.6+.4*Math.sin(t*7)));
     tx("SIGNAL DETECTED · TYPHOON",92,160,{size:22,mono:true,color:C.ice,sp:4,alpha:.7*WIN(t,6.2,12,.4,.5)});
@@ -380,10 +379,9 @@ function sAbilities(t){
     ring(160,y0+18,46,a.col,4);icon(a.k,160,y0+18,26,a.col,5);
     tx(a.jp,235,y0-6,{size:56,weight:800});tx(a.en,237,y0+42,{size:24,mono:true,color:a.col,sp:8});
     if(act)tx(a.desc,237,y0+88,{size:36,color:C.ice,alpha:P(lt,.2,.5)});
-    let n=1;if(act)n=1+(lt>.8?1:0)+(lt>2?1:0)+(lt>3.2?1:0)-(lt>3.2?0:0);
-    n=act?clamp(1+P(lt,.7,.5)+P(lt,1.9,.5)+P(lt,3.1,.5),1,4)-0:1;
-    pips(596,y0+2,Math.min(n,3),3,58,18,8,a.col);
-    if(act&&lt>3.1)tx("MAX",740,y0+58,{size:20,mono:true,color:a.col,sp:4});
+    const n=act?1+P(lt,.9,.5)+P(lt,2.4,.5):1;
+    pips(596,y0+2,n,3,58,18,8,a.col);
+    if(act&&lt>2.4)tx("MAX",740,y0+58,{size:20,mono:true,color:a.col,sp:4});
     g.restore();
   });
   // 島側キャプション
@@ -438,14 +436,13 @@ function sAction(t){
     tx("島を強くする製品を探す",110,225,{size:58,weight:800,alpha:P(t,63.3,.6)});
     const sel=t>66,drag=P(t,66.8,1.3,eIO);
     [[640,0],[1180,1]].forEach(([x,i])=>{
-      const fl=P(t,63.5+i*.45,.55,eOut4),ch=(i===0)===true;let cx=x,cy=560,sc=1,al=1;
+      const fl=P(t,63.5+i*.45,.55,eOut4);let cx=x,cy=560,sc=1,al=1;
       if(sel){if(i===0){cx=lerp(x,1560,drag);cy=lerp(560,830,drag);sc=lerp(1.04,.52,drag);}else{al=1-P(t,66.6,.6);}}
       const lift=(!sel&&Math.floor((t-65)*1.2)%2===i&&t>64.6)?-14:0;
       g.save();g.translate(cx,cy+lift);g.scale(sc*fl,sc);g.globalAlpha=al*fl;productCard(0,0,400,540,i,!sel&&lift?1:0);g.restore();});
     // 選択
     if(t>66&&t<67.6){ring(640,560,300*P(t,66,.5,eExpo),C.cy,4,1-P(t,66,.6));}
     panel(1380,660,440,300,{a:P(t,66.4,.5),stroke:"rgba(255,200,87,.7)"});tx("INVENTORY",1410,700,{size:24,mono:true,color:C.amb,sp:8,alpha:P(t,66.4,.5)});
-    if(!sel||drag<1){}else{}
     // カーソル
     const cur=t<66?[lerp(700,1120,eIO((Math.sin(t*1.9)+1)/2)),lerp(700,700,0)]:[lerp(700,1560,drag),lerp(650,860,drag)];
     if(t>64.4){g.save();g.translate(cur[0],cur[1]);g.fillStyle="#fff";g.strokeStyle="#000";g.lineWidth=2;g.beginPath();g.moveTo(0,0);g.lineTo(0,34);g.lineTo(9,26);g.lineTo(16,42);g.lineTo(23,39);g.lineTo(16,24);g.lineTo(28,24);g.closePath();g.fill();g.stroke();g.restore();}
@@ -455,7 +452,7 @@ function sAction(t){
   drawWorld({t,w:.1,dark:.2,cover:.3,rain:0,fx:{prot:t>72&&t<75.2?WIN(t,72,75.2,.3,.6):0,drain:t>74.4?WIN(t,74.4,76,.3,.5):0},islands:[{cx:1200,cy:520,sc:.95}]});
   const hx=1200+ISL.hill[0]*.95,hy=520+ISL.hill[1]*.95;
   panel(90,290,360,560,{stroke:"rgba(255,200,87,.7)"});tx("INVENTORY",120,330,{size:24,mono:true,color:C.amb,sp:8});
-  const drag=P(t,71,1,eIO),inTray=t<71.05;
+  const drag=P(t,71,1,eIO);
   if(t<72.05){g.save();const x=lerp(270,hx,drag),y=lerp(560,hy-10,drag),sc=lerp(.66,.32,drag);g.translate(x,y);g.scale(sc,sc);g.globalAlpha=t>72?1-P(t,72,.05):1;productCard(0,0,400,540,0,1);g.restore();
     if(t>70.6){g.save();g.translate(x+40*sc,y+80*sc);g.fillStyle="#fff";g.strokeStyle="#000";g.beginPath();g.moveTo(0,0);g.lineTo(0,34);g.lineTo(9,26);g.lineTo(16,42);g.lineTo(23,39);g.lineTo(16,24);g.lineTo(28,24);g.closePath();g.fill();g.stroke();g.restore();}}
   for(let k=0;k<3;k++){const fly=k<2?P(t,73.9+k*.2,.8,eIO):0;const sx=170+k*70,sy=810;chip(lerp(sx,1200+40,fly),lerp(sy,520+100,fly),22,fly<1?1:0);}
@@ -539,7 +536,7 @@ function sInfo(t){
   drawWorld({t,w:.2,dark:.6,cover:.3,rain:0,islands:[{cx:960,cy:560,sc:.85}]});
   const bal=WIN(t,99,105.2,.5,.7);
   if(bal>0){
-    const rot=t<100.4?0:t<102?lerp(0,-.15,eOut3(clamp((t-100.4)/.7))):t<103?lerp(-.15,-.15,1):t<104.1?lerp(-.15,.15,eIO(clamp((t-102.6)/.9))):.15*Math.exp(-(t-104.1)*3)*Math.cos((t-104.1)*9);
+    const rot=t<100.4?0:t<101.1?lerp(0,-.15,eOut3(clamp((t-100.4)/.7))):t<102.6?-.15:t<104.1?lerp(-.15,.15,eIO(clamp((t-102.6)/.9))):.15*Math.exp(-(t-104.1)*3)*Math.cos((t-104.1)*9);
     g.save();g.globalAlpha=bal;const px=960,py=720,L=560;
     g.strokeStyle=C.ice;g.lineWidth=8;g.beginPath();g.moveTo(px,py-40);g.lineTo(px-70,py+150);g.lineTo(px+70,py+150);g.closePath();g.stroke();
     const lx=px-Math.cos(rot)*L,ly=py-40-Math.sin(rot)*L,rx=px+Math.cos(rot)*L,ry=py-40+Math.sin(rot)*L;
@@ -684,7 +681,7 @@ function render(t){
   const n=SC[SC.indexOf(s)+1];
   if(n&&n.x&&t>s.b-XF){g.save();g.globalAlpha=eIO((t-(s.b-XF))/XF);n.fn(t);g.restore();}
   g.drawImage(vig,0,0);chapterHUD(t);
-  if(subOn){const c=CUES.filter(q=>t>=q[0]&&t<q[0]+q[1].length*.2+.6).pop();if(c){const tw=c[1];g.font=`700 44px ${SANS}`;const w=g.measureText(tw).width+70;rr(W/2-w/2,H-150,w,80,18);g.fillStyle="rgba(0,0,0,.65)";g.fill();tx(tw,W/2,H-110,{size:44,align:"center",shadow:false});}}
+  if(subOn){const c=CUES.filter(q=>t>=q[0]&&t<q[0]+q[1].length*.2+.6).pop();if(c){const tw=c[1];g.font=`700 38px ${SANS}`;const w=g.measureText(tw).width+60;rr(W/2-w/2,H-96,w,64,16);g.fillStyle="rgba(0,0,0,.72)";g.fill();tx(tw,W/2,H-64,{size:38,align:"center",shadow:false});}}
   g.restore();
 }
 
@@ -729,7 +726,7 @@ function genEvents(){
   for(let k=0;k<4;k++){ev(14.6+k*.35,a=>ping(a,700+k*90,.1));ev(15.9+k*.35,a=>ping(a,700+k*90,.1));}
   for(let i=0;i<7;i++)ev(19.6+i*.45,a=>ping(a,500+i*80,.12));
   for(let i=0;i<4;i++)ev(29+i*.55,a=>tick(a,.12,2000+i*200));
-  [32,36.5,41,45.5].forEach((x,i)=>{ev(x,a=>{whoosh(a,.5,false,.12);ping(a,900+i*100,.14);});[.8,2,3.2].forEach(d=>ev(x+d,a=>up2(a,.13)));});
+  [32,36.5,41,45.5].forEach((x,i)=>{ev(x,a=>{whoosh(a,.5,false,.12);ping(a,900+i*100,.14);});[.9,2.4].forEach(d=>ev(x+d,a=>up2(a,.13)));});
   ev(50.6,a=>tick(a,.16,1400));ev(51.4,a=>ping(a,900,.14));ev(51.9,a=>ping(a,1050,.14));ev(53.9,a=>down(a));ev(55.7,a=>down(a));
   ev(59.2,a=>ping(a,1100,.16));for(let k=0;k<3;k++)ev(60.9+k*.35,a=>ping(a,900+k*160,.16));
   ev(63.4,a=>whoosh(a,.3,false,.14));ev(63.85,a=>whoosh(a,.3,false,.14));ev(66,a=>ping(a,1300,.2));ev(66.8,a=>whoosh(a,.5,true,.1));ev(68.2,a=>tick(a,.22,900));
@@ -755,11 +752,11 @@ function genEvents(){
   ev(161.3,a=>tick(a,.12));ev(163.3,a=>{chime(a,NOTE(88),.16);chime(a+.14,NOTE(84),.12);});
   // ---- BGM ----
   const roots=[57,53,60,55],chords=[[57,60,64],[53,57,60],[60,64,67],[55,59,62]];
-  for(let x=12;x<117;x+=.3){const bar=Math.floor((x-12)/2.4)%4,st=Math.round((x-12)/.3)%8,ch=chords[bar],n=ch[[0,1,2,1,0,2,1,2][st]]+12;
+  for(let k=0,x;(x=12+k*.3)<117;k++){const bar=Math.floor(k/8)%4,st=k%8,ch=chords[bar],n=ch[[0,1,2,1,0,2,1,2][st]]+12;
     ev(x,a=>osc(a,"triangle",NOTE(n),NOTE(n),.004,.22,.05,bus.bgm,2600));
     if(st%2===1)ev(x,a=>nz(a,"highpass",8000,.5,.001,.03,.025,bus.bgm));}
   for(let x=16;x<117;x+=BEAT)ev(x,a=>kick(a,.26));
-  for(let x=117;x<133;x+=.3){const bar=Math.floor((x-117)/2.4)%4,st=Math.round((x-117)/.3)%8,ch=chords[bar],n=ch[[0,1,2,1,0,2,1,2][st]]+12;
+  for(let k=0,x;(x=117+k*.3)<133;k++){const bar=Math.floor(k/8)%4,st=k%8,ch=chords[bar],n=ch[[0,1,2,1,0,2,1,2][st]]+12;
     ev(x,a=>{osc(a,"triangle",NOTE(n),NOTE(n),.004,.2,.08,bus.bgm,3400);osc(a,"triangle",NOTE(n+12),NOTE(n+12),.004,.12,.03,bus.bgm,3400);nz(a,"highpass",8000,.5,.001,.04,.05,bus.bgm);});}
   for(let x=117,i=0;x<133;x+=BEAT,i++){ev(x,a=>{kick(a,.42);osc(a,"sine",NOTE(roots[Math.floor(i/4)%4]-24),NOTE(roots[Math.floor(i/4)%4]-24),.01,.5,.2,bus.bgm);});if(i%2===1)ev(x,a=>nz(a,"bandpass",1800,.8,.002,.16,.14,bus.bgm));}
   // 133–141 ライザー+スネアロール
@@ -769,7 +766,6 @@ function genEvents(){
   const heavy=(a0,a1)=>{for(let x=a0,i=0;x<a1;x+=BEAT/2,i++){ev(x,a=>{if(i%2===0){osc(a,"sine",110,45,.004,.4,.55,bus.bgm);osc(a,"sawtooth",55,55,.01,.5,.16,bus.bgm,300);}else if(i%4===1||i%4===3){nz(a,"bandpass",1200,.8,.002,.12,.1,bus.bgm);}
     if(i%4===2)osc(a,"sine",90,40,.004,.3,.4,bus.bgm);});}};
   heavy(141.6,146.9);heavy(149.6,153.9);
-  ev(146.9,a=>chime(a,NOTE(45),.0));
 }
 genEvents();
 // 環境音トラック（時刻,値）
@@ -808,38 +804,39 @@ function seekCues(t){cuePtr=CUES.findIndex(c=>c[0]>=t-.05);if(cuePtr<0)cuePtr=CU
 const $=id=>document.getElementById(id),pp=$("pp"),seek=$("seek"),timeEl=$("time"),poster=$("poster");
 const fmt=s=>`${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,"0")}`;
 function play(from){
-  if(from===undefined)from=curT>=DUR-.2?0:curT;
+  if(from===undefined)from=(!started||curT>=DUR-.2)?0:curT;started=true;
   try{speechSynthesis.cancel();}catch(e){}
   startAudio(from);seekCues(from);playing=true;pausedValid=false;curT=from;pp.textContent="⏸";poster.style.display="none";
   try{if(AC.state==="suspended")AC.resume();}catch(e){}
 }
 function pause(){if(!playing)return;curT=nowT();playing=false;pausedValid=true;pp.textContent="▶";try{AC.suspend();speechSynthesis.cancel();}catch(e){}}
 function stopEnd(){playing=false;curT=DUR;pp.textContent="↻";try{AC.close();}catch(e){}AC=null;}
-let pausedValid=false;
+let pausedValid=false,started=false;
 pp.onclick=()=>{if(playing)pause();else if(pausedValid&&AC&&curT<DUR-.2)resume();else play();};
 function resume(){playing=true;pausedValid=false;pp.textContent="⏸";AC.resume();}
-poster.onclick=()=>play(curT>=DUR-.2?0:curT);
+poster.onclick=()=>play();
 let seeking=false;
-seek.oninput=()=>{seeking=true;pausedValid=false;curT=+seek.value;render(curT);timeEl.textContent=`${fmt(curT)} / 2:45`;};
-seek.onchange=()=>{seeking=false;const wasPlaying=playing||poster.style.display==="none";if(wasPlaying)play(curT);else{seekCues(curT);}};
+let resumeAfter=false;
+seek.oninput=()=>{if(!seeking)resumeAfter=playing;seeking=true;pausedValid=false;curT=+seek.value;render(curT);timeEl.textContent=`${fmt(curT)} / 2:45`;};
+seek.onchange=()=>{seeking=false;if(resumeAfter)play(curT);else{if(playing)pause();seekCues(curT);}};
 CHAPTERS.forEach(([t,n],i)=>{const b=document.createElement("button");b.textContent=`${String(i+1).padStart(2,"0")} ${n}`;b.onclick=()=>play(t);$("chips").appendChild(b);});
 $("vo").onclick=e=>{voiceOn=!voiceOn;e.target.classList.toggle("on",voiceOn);if(!voiceOn)try{speechSynthesis.cancel();}catch(x){}};
 $("sub").onclick=e=>{subOn=!subOn;e.target.classList.toggle("on",subOn);render(nowT());};
 $("mu").onclick=e=>{muted=!muted;e.target.classList.toggle("on",!muted);if(bus.master)bus.master.gain.value=muted?0:.9;if(muted)try{speechSynthesis.cancel();}catch(x){}};
 
-let last=0;
+let last=0,lastKey="";const chipEls=[...document.querySelectorAll("#chips button")];
 function loop(ts){
   requestAnimationFrame(loop);
-  if(ts-last<32)return;last=ts;
+  if(ts-last<28)return;last=ts;
   const t=seeking?curT:nowT();
   if(playing){
     if(t>=DUR){render(DUR-.01);stopEnd();}
     else{curT=t;while(cuePtr<CUES.length&&CUES[cuePtr][0]<=t){if(t-CUES[cuePtr][0]<1.2)speak(CUES[cuePtr][1]);cuePtr++;}render(t);}
-  }else if(!seeking)render(t>=DUR?DUR-.01:t);
+  }else if(!seeking){const key=t+"|"+subOn;if(key!==lastKey){lastKey=key;render(t>=DUR?DUR-.01:t);}}
   if(!seeking){seek.value=Math.min(t,DUR);timeEl.textContent=`${fmt(Math.min(t,DUR))} / 2:45`;}
-  document.querySelectorAll("#chips button").forEach((b,i)=>b.classList.toggle("cur",t>=CHAPTERS[i][0]&&(i===8||t<CHAPTERS[i+1][0])));
+  chipEls.forEach((b,i)=>b.classList.toggle("cur",t>=CHAPTERS[i][0]&&(i===8||t<CHAPTERS[i+1][0])));
 }
-curT=8.6;render(curT);requestAnimationFrame(loop);
+seek.max=DUR;curT=8.6;render(curT);requestAnimationFrame(loop);
 window.__render=render;window.__DUR=DUR;
 </script>
 </body>
