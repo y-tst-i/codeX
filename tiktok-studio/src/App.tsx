@@ -3,7 +3,8 @@ import { clipDuration, mixClips, type AudioClip } from "./lib/audio";
 import { EXPORT_SAMPLE_RATE } from "./lib/exporter";
 import { brandOf, newProject, restoreSettings } from "./lib/project";
 import { speakText } from "./lib/script";
-import { clearClips, loadClips, loadProject, loadSettings, saveClip, saveProject, saveSettings, type ProjectState } from "./lib/storage";
+import { clearClips, loadClips, loadIdeas, loadProject, loadSettings, saveClip, saveIdeas, saveProject, saveSettings, type ProjectState } from "./lib/storage";
+import type { Idea } from "./lib/ideas";
 import { buildTimeline } from "./lib/timeline";
 import type { ApiSettings, Concept, VoiceSettings } from "./lib/types";
 import { ConceptStep } from "./components/ConceptStep";
@@ -20,10 +21,12 @@ export function App() {
   const [settings, setSettings] = useState<ApiSettings>(() => restoreSettings(loadSettings(), loadProject()));
   const [project, setProject] = useState<ProjectState>(() => loadProject() ?? newProject(settings));
   const [clips, setClips] = useState<ClipMap>({});
+  const [ideas, setIdeas] = useState<Idea[]>(loadIdeas);
   const [step, setStep] = useState<StepId>(() => (loadProject() ? "concept" : "guide"));
 
   useEffect(() => saveSettings(settings), [settings]);
   useEffect(() => saveProject(project), [project]);
+  useEffect(() => saveIdeas(ideas), [ideas]);
 
   // 保存済みの音声を復元
   const sceneIds = project.script?.scenes.map((scene) => scene.id) ?? [];
@@ -125,7 +128,7 @@ export function App() {
         {step === "guide" ? <GuideStep /> : null}
         {step === "settings" ? <SettingsStep settings={settings} onChange={setSettings} onReset={reset} /> : null}
         {step === "concept" ? (
-          <ConceptStep concept={project.concept} onChange={changeConcept} onNext={() => setStep("script")} />
+          <ConceptStep concept={project.concept} settings={settings} ideas={ideas} onIdeas={setIdeas} onChange={changeConcept} onNext={() => setStep("script")} />
         ) : null}
         {step === "script" ? (
           <ScriptStep

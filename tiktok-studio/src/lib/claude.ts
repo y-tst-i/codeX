@@ -1,13 +1,12 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { SCRIPT_JSON_SCHEMA } from "./script";
 import type { ApiSettings } from "./types";
 
 export interface ClaudeCallOptions {
   settings: ApiSettings;
   system: string;
   prompt: string;
-  /** 台本のようにJSONで受け取りたいとき */
-  json?: boolean;
+  /** JSONで受け取りたいときのJSON Schema（構造化出力） */
+  schema?: Record<string, unknown>;
   signal?: AbortSignal;
   /** 生成中の文字数を受け取る */
   onProgress?: (characters: number) => void;
@@ -24,7 +23,7 @@ function client(apiKey: string): Anthropic {
  * サーバー側のフォールバック（fallbacks: "default"）で別モデルに回す。
  */
 export async function askClaude(options: ClaudeCallOptions): Promise<string> {
-  const { settings, system, prompt, json, signal, onProgress } = options;
+  const { settings, system, prompt, schema, signal, onProgress } = options;
   if (!settings.anthropicKey) throw new Error("Anthropic APIキーが未設定です（⚙ 設定）");
 
   const stream = client(settings.anthropicKey).beta.messages.stream(
@@ -35,7 +34,7 @@ export async function askClaude(options: ClaudeCallOptions): Promise<string> {
       messages: [{ role: "user", content: prompt }],
       output_config: {
         effort: settings.effort,
-        ...(json ? { format: { type: "json_schema" as const, schema: SCRIPT_JSON_SCHEMA } } : {})
+        ...(schema ? { format: { type: "json_schema" as const, schema } } : {})
       },
       betas: ["server-side-fallback-2026-07-01"],
       fallbacks: "default"

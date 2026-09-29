@@ -1,14 +1,19 @@
 import { FONTS, GOALS, HOOKS, NICHE_IDEAS, PALETTES, STYLES } from "../lib/knowledge";
-import type { Concept } from "../lib/types";
+import { applyIdea, type Idea } from "../lib/ideas";
+import type { ApiSettings, Concept } from "../lib/types";
 import { Field, StepNav } from "./common";
+import { IdeasPanel } from "./IdeasPanel";
 
 interface Props {
   concept: Concept;
+  settings: ApiSettings;
+  ideas: Idea[];
+  onIdeas: (ideas: Idea[]) => void;
   onChange: (concept: Concept) => void;
   onNext: () => void;
 }
 
-export function ConceptStep({ concept, onChange, onNext }: Props) {
+export function ConceptStep({ concept, settings, ideas, onIdeas, onChange, onNext }: Props) {
   const set = <K extends keyof Concept>(key: K, value: Concept[K]) => onChange({ ...concept, [key]: value });
 
   return (
@@ -33,7 +38,17 @@ export function ConceptStep({ concept, onChange, onNext }: Props) {
             </button>
           ))}
         </div>
-        <Field label="今回の動画のテーマ（ネタ）">
+        <IdeasPanel
+          concept={concept}
+          settings={settings}
+          ideas={ideas}
+          onIdeas={onIdeas}
+          onPick={(idea) => {
+            onChange(applyIdea(concept, idea));
+            onIdeas(ideas.map((item) => (item.id === idea.id ? { ...item, used: true } : item)));
+          }}
+        />
+        <Field label="今回の動画のテーマ（ネタ帳から選ぶか、自分で書く）">
           <input value={concept.topic} onChange={(e) => set("topic", e.target.value)} placeholder="例：コンビニのレジ横に置いてある商品の秘密" />
         </Field>
         <Field label="参考情報・入れたい事実（任意）" hint="正確な数字や出典をここに書くと、台本がそれを優先します。">

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { askClaude, describeClaudeError } from "../lib/claude";
 import { buildScriptPrompt, scriptSystemPrompt } from "../lib/prompts";
-import { emptyScene, parseScript } from "../lib/script";
+import { SCRIPT_JSON_SCHEMA, emptyScene, parseScript } from "../lib/script";
 import { estimateSpeechSeconds, spokenLength } from "../lib/timeline";
 import type { ApiSettings, Concept, Scene, SceneRole, Script } from "../lib/types";
 import { Field, Notice, PromptBox, StepNav, formatSeconds } from "./common";
@@ -38,7 +38,7 @@ export function ScriptStep({ concept, script, settings, onChange, onBack, onNext
         settings,
         system: scriptSystemPrompt(),
         prompt,
-        json: true,
+        schema: SCRIPT_JSON_SCHEMA,
         onProgress: (n) => setProgress(`受信中… ${n.toLocaleString()}文字`)
       });
       onChange(parseScript(text));

@@ -1,8 +1,10 @@
 import type { AudioClip } from "./audio";
+import type { Idea } from "./ideas";
 import type { ApiSettings, Concept, Script, VoiceSettings } from "./types";
 
 const SETTINGS_KEY = "tms.settings.v1";
 const PROJECT_KEY = "tms.project.v1";
+const IDEAS_KEY = "tms.ideas.v1";
 
 export interface ProjectState {
   concept: Concept;
@@ -32,6 +34,9 @@ export const loadSettings = () => loadJson<ApiSettings>(SETTINGS_KEY);
 export const saveSettings = (settings: ApiSettings) => saveJson(SETTINGS_KEY, settings);
 export const loadProject = () => loadJson<ProjectState>(PROJECT_KEY);
 export const saveProject = (project: ProjectState) => saveJson(PROJECT_KEY, project);
+/** ネタ帳はアカウント単位で持つ（新規プロジェクトでも消さない） */
+export const loadIdeas = () => loadJson<Idea[]>(IDEAS_KEY) ?? [];
+export const saveIdeas = (ideas: Idea[]) => saveJson(IDEAS_KEY, ideas);
 
 /* 音声クリップは大きいのでIndexedDBに置く（キー: シーンID） */
 
