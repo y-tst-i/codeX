@@ -74,7 +74,7 @@ const T0=75,DUR=200;
 function render(t){t=Math.min(Math.max(t,0),DUR-.001);if(t<T0)OP.render(t);else EX.render(t-T0);}
 
 /* ---- 再生（2 本の mp3 を 1 本につないで同期）---- */
-const AUDIO={heavy:["@@H1@@","@@H2@@"],cinematic:["@@A1@@","@@A2@@"]};let mode="heavy";const CACHE={};
+const AUDIO={heavy:["@@H1@@","@@H2@@"],cinematic:["@@A1@@","@@A2@@"]};let mode="heavy";window.I7MODE=mode;const CACHE={};
 const $=id=>document.getElementById(id),pp=$("pp"),seek=$("seek"),timeEl=$("time"),poster=$("poster"),hint=$("hint");
 let AC=null,BUF=null,src=null,gain=null,playing=false,off=0,st=0,loadP=null,seeking=false,resumeAfter=false;
 const fmt=s=>`${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,"0")}`;
@@ -85,7 +85,8 @@ function load(){if(CACHE[mode]){BUF=CACHE[mode];return Promise.resolve();}if(loa
   const sr=a.sampleRate,n1=Math.round(T0*sr),n2=Math.round((DUR-T0)*sr),out=AC.createBuffer(2,n1+n2,sr);
   for(let c=0;c<2;c++){const d=out.getChannelData(c);d.set(a.getChannelData(Math.min(c,a.numberOfChannels-1)).subarray(0,n1),0);d.set(b.getChannelData(Math.min(c,b.numberOfChannels-1)).subarray(0,n2),n1);}
   CACHE[md]=out;loadP=null;if(md===mode)BUF=out;}).catch(e=>{console.warn("audio",e);loadP=null;hint.textContent="音声を読み込めませんでした（映像のみ再生）。もう一度再生を押すと再試行します";});return loadP;}
-const now=()=>playing?off+(AC.currentTime-st):off;
+const LAT=()=>AC?Math.min(.5,(AC.outputLatency||0)+(AC.baseLatency||0)):0; // Bluetooth 等の出力遅延ぶん映像を遅らせる
+const now=()=>playing?off+Math.max(0,AC.currentTime-st-LAT()):off;
 async function play(from){
   if(!AC){AC=new(window.AudioContext||window.webkitAudioContext)();gain=AC.createGain();gain.gain.value=vol2g(+$("vol").value);gain.connect(AC.destination);}
   if(AC.state==="suspended")await Promise.race([AC.resume(),new Promise(r=>setTimeout(r,1500))]);
@@ -104,7 +105,7 @@ const vol2g=v=>v*v;
 try{const v=localStorage.getItem("i7vol");if(v!==null)$("vol").value=v;}catch(e){}
 $("vol").oninput=()=>{const v=+$("vol").value;if(gain)gain.gain.setTargetAtTime(vol2g(v),AC.currentTime,.03);try{localStorage.setItem("i7vol",v);}catch(e){}};
 addEventListener("keydown",e=>{if(e.key==="ArrowUp"||e.key==="ArrowDown"){e.preventDefault();const s=$("vol");s.value=Math.min(1,Math.max(0,+s.value+(e.key==="ArrowUp"?.05:-.05)));s.oninput();}});
-$("bgm").onclick=()=>{mode=mode==="heavy"?"cinematic":"heavy";$("bgm").textContent="BGM: "+(mode==="heavy"?"HEAVY":"CINEMATIC");BUF=CACHE[mode]||null;if(playing)play(now());};
+$("bgm").onclick=()=>{mode=mode==="heavy"?"cinematic":"heavy";window.I7MODE=mode;$("bgm").textContent="BGM: "+(mode==="heavy"?"HEAVY":"CINEMATIC");BUF=CACHE[mode]||null;if(playing)play(now());};
 $("fs").onclick=()=>{const w=$("wrap");if(document.fullscreenElement)document.exitFullscreen();else if(w.requestFullscreen)w.requestFullscreen();};
 addEventListener("keydown",e=>{if(e.code==="Space"){e.preventDefault();pp.click();}else if(e.key==="f")$("fs").click();else if(e.key==="ArrowRight")play(Math.min(DUR-1,now()+5));else if(e.key==="ArrowLeft")play(Math.max(0,now()-5));});
 const CHS=[[0,"OPENING"],...EX.CH.map(([c,n],i)=>[T0+c,i===0?"BRIEFING":n])];

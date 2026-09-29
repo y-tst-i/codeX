@@ -297,3 +297,68 @@ class Mix:
         step = 5 if self.dur > 90 else 4
         print(f"wrote {path} {len(data)/1e6:.2f}MB  peak {20*np.log10(np.abs(self.out).max()):.1f}dBFS")
         print(" ".join(f"{s}:{seg(s, s + step):.0f}" for s in range(0, int(self.dur), step)))
+
+# ---------------------------------------------------------------- バリエーション（同じ音の使い回しを避ける）
+def _j(x, pct):  # ±pct のゆらぎ
+    return x * (1 + (rng.random() * 2 - 1) * pct)
+
+def hit(kind='boom', d=3.0, v=1.0):
+    """衝撃音の種類違い。毎回わずかに音程・減衰をゆらす。
+    boom: 低く長い／slam: 短く硬い金属感／deep: 超低域だけ沈む／glitch: 途切れるデジタル／sweep: 吸い込んでから落ちる／gong: 金属の余韻"""
+    t = tt(d); n = t.size
+    if kind == 'slam':
+        body = sine(_j(45, .06) + 180 * np.exp(-t * 40), n) * np.exp(-t * 7)
+        metal = sum(np.sin(2 * np.pi * _j(f, .03) * t) for f in (317, 541, 823, 1277)) / 4 * np.exp(-t * 9) * .5
+        crack = hp(noise(d), 2500) * np.exp(-t * 30) * .9
+        x = sat(body * 1.2 + metal + crack, 2.4)
+    elif kind == 'deep':
+        x = sat(sine(_j(24, .05) + 60 * np.exp(-t * 3), n) * np.exp(-t * 1.1) * 1.4 + lp(noise(d), 300, 4) * np.exp(-t * 2) * 2, 1.6)
+    elif kind == 'glitch':
+        base = hit('boom', d, 1.0)
+        g = np.ones(n); seg = ns(_j(.045, .2))
+        for k in range(0, min(n, ns(.7)), seg):
+            if rng.random() < .45: g[k:k + seg] = 0
+        return sat(base * g + hp(noise(d), 4000) * np.exp(-t * 20) * .4 * g, 1.5) * v
+    elif kind == 'sweep':
+        pre = ns(.35); tail = hit('boom', d - .35, 1.0)
+        k = np.linspace(0, 1, pre); inh = svf(noise(.35), np.geomspace(300, 9000, pre), 2, 'bp') * k ** 3
+        return np.concatenate([inh * .9, tail]) * v
+    elif kind == 'gong':
+        body = sine(_j(38, .05) + 50 * np.exp(-t * 12), n) * np.exp(-t * 2.2)
+        ring = sum(np.sin(2 * np.pi * _j(f, .02) * t + rng.random() * 6) * np.exp(-t * (1.2 + i * .5)) for i, f in enumerate((110, 177, 263, 391, 587))) / 5
+        x = sat(body + ring * .7 + lp(noise(d), 900) * np.exp(-t * 6), 1.8)
+    else:
+        body = sine(_j(28, .08) + _j(70, .1) * np.exp(-t * _j(7, .15)), n) * np.exp(-t * _j(1.6, .15))
+        x = sat(body * 1.1 + kick(d, _j(260, .1), _j(38, .05)) * .8 + lp(noise(d), _j(1200, .3), 4) * np.exp(-t * 4) * 1.4, 2.0)
+    return x * v * fade(n, .0005, .3)
+
+def se(kind, m=76, v=1.0):
+    """UI 効果音。種類で役割を分ける（どれも毎回わずかにゆらす）。"""
+    if kind == 'pop':      # 出現
+        d = .16; t = tt(d); f = hz(m) * (1 + 1.2 * np.exp(-t * 60)); return sine(f, t.size) * np.exp(-t * 26) * v
+    if kind == 'coin':     # 資材を得る
+        d = .5; t = tt(d); x = sum(np.sin(2 * np.pi * hz(m + i) * t) * np.exp(-t * (7 + i)) for i in (0, 12, 19)) / 2
+        x[:ns(.07)] *= 0; x += np.sin(2 * np.pi * hz(m - 5) * t) * np.exp(-t * 30) * (t < .07)
+        return x * v
+    if kind == 'glass':    # 選択・決定
+        d = 1.2; t = tt(d); return sum(np.sin(2 * np.pi * hz(m) * r * t) * np.exp(-t * (3 + i * 2)) / (i + 1) for i, r in enumerate((1, 2.76, 5.4, 8.9))) * v
+    if kind == 'flip':     # カードをめくる
+        d = .25; t = tt(d); x = bp(noise(d), 1500, 9000) * np.sin(np.pi * np.clip(t / .12, 0, 1)) * (t < .12)
+        return (x + hp(noise(d), 3000) * np.exp(-np.clip(t - .12, 0, None) * 120) * (t >= .12) * .8) * v
+    if kind == 'swish':    # ドラッグ・移動
+        d = .45; t = tt(d); k = t / d; return svf(noise(d), np.geomspace(600, 6000, t.size), 3, 'bp') * np.sin(np.pi * k) ** 2 * .9 * v
+    if kind == 'lock':     # 設置・はめ込む
+        d = .3; t = tt(d); x = hp(noise(d), 1800) * np.exp(-t * 90) + sine(hz(m - 24) * (1 + np.exp(-t * 50)), t.size) * np.exp(-t * 25) * .8
+        return sat(x + np.roll(x, ns(.045)) * .6, 1.5) * v
+    if kind == 'down':     # 行動を消費
+        d = .28; t = tt(d); return sine(hz(m) * np.exp(-t * 5), t.size) * np.exp(-t * 10) * sat(np.ones(t.size), 1) * v
+    if kind == 'error':    # 足りない・警告
+        d = .38; t = tt(d); x = square(np.full(t.size, hz(m - 24)), t.size) * .5 + square(np.full(t.size, hz(m - 23.4)), t.size) * .5
+        return lp(x, 1800) * ((t % .19) < .13) * fade(t.size, .002, .02) * .6 * v
+    if kind == 'ping':     # 情報・レーダー
+        d = 1.4; t = tt(d); x = np.sin(2 * np.pi * hz(m) * t) * np.exp(-t * 3.5); return (x + np.roll(x, ns(.22)) * .4 + np.roll(x, ns(.44)) * .18) * v
+    if kind == 'type':     # 文字が出る・カウント
+        d = .06; t = tt(d); return (bp(noise(d), 2000, 7000) * np.exp(-t * 110) + np.sin(2 * np.pi * hz(m + 12) * t) * np.exp(-t * 90) * .4) * v
+    if kind == 'chime':    # 完了・上昇
+        return np.concatenate([se('pop', m, v * .8)[: ns(.08)], se('glass', m + 7, v)])
+    raise ValueError(kind)

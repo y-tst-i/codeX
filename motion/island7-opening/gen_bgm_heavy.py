@@ -19,7 +19,11 @@ CH = {A: (57, 60, 64), F_: (53, 57, 60), C_: (55, 60, 64), G: (55, 59, 62)}
 def K(t, v=1.0, bus='drums'): mx.put(bus, t, kick(), v, drev=.05); mx.duck(t, .85)
 def SN(t, v=1.0, bus='drums'): mx.put(bus, t, snare(), v, drev=.35, rev=.08); mx.duck(t, .45, kick_=False)
 def HH(t, v=.35, o=False, pan=.25, bus='drums'): mx.put(bus, t, hat(o), v, pan=pan, drev=.1)
-def IMP(t, v=1.0): mx.put('fx', t, impact(3.0), v, rev=.25); mx.put('fx', t, crash(3.2), .55 * v, rev=.3); mx.duck(t, .9)
+def IMP(t, v=1.0, kind='boom', cr=True):
+    if kind == 'sweep': t = t - .35
+    mx.put('fx', t, hit(kind, 3.0), v, rev=.25)
+    if cr: mx.put('fx', t + (.35 if kind == 'sweep' else 0), crash(3.2), .5 * v, rev=.3)
+    mx.duck(t + (.35 if kind == 'sweep' else 0), .9)
 
 def halftime(t0, bars, v=1.0, bus='drums', hats=True, extra=True):
     for b in range(bars):
@@ -59,7 +63,7 @@ P3 = [(0, 4, 0, 'fm', 3, ('o', 'a')), (4, 2, 12, 'wob', 8, None), (6, 2, 10, 'fm
 
 # ============================================================ 0–7.6 コールドオープン
 for i, x in enumerate((0.0, 1.0, 2.0)):
-    IMP(x, .9)
+    IMP(x, .9, ('slam', 'glitch', 'deep')[i], cr=i == 0)
     mx.put('bass', x, growl(A + 12 + (0, 1, 3)[i], .7, 'fm', 10, ('o', 'a'), shape='down'), .9, rev=.15)
     mx.put('sub', x, sub(A + (0, 1, 3)[i], .7, r=.2), .9)
     mx.put('fx', x, S.thunder(), .6, pan=(-.4, .4, 0)[i], rev=.3)
@@ -81,11 +85,11 @@ for x, m in ((8.4, 76), (9.4, 81), (10.4, 83), (10.9, 84), (11.9, 83), (12.4, 79
 mx.put('fx', 7.6, noise_riser(1.6, 3000, 400)[::-1] * .4, .4, rev=.3)
 
 # ============================================================ 14–18 警報
-for x in (14.0, 14.3): mx.put('fx', x, S.blip(79, .3), .45, rev=.2)
+for x in (14.0, 14.3): mx.put('fx', x, se('error', 84), .5, rev=.2)
 mx.put('sub', 14.0, sub(A, 1.2, r=.8, glide=-7), .8)
 mx.put('fx', 14.6, noise_riser(1.4), .55); mx.put('fx', 14.6, pitch_riser(1.4, 45, 69), .35)
 K(15.0, .8)
-IMP(16.0, 1.0)
+IMP(16.0, 1.0, 'sweep')
 mx.put('bass', 16.0, growl(A + 12, 1.9, 'fm', 2, ('u', 'a'), shape='down', glide=-2), .85, rev=.25)
 mx.put('sub', 16.0, sub(A, 1.9, r=.6), .9)
 
@@ -108,7 +112,7 @@ for b in range(4):
 for x in (23.0, 24.5, 26.0, 27.5):          # 4つの力：グロウルの一撃
     mx.put('bass', x, growl(A + 12, .45, 'fm', 12, ('o', 'e'), shape='down'), .8, rev=.2)
     mx.put('fx', x, crash(.9), .25, rev=.2)
-IMP(29.0, .8)
+IMP(29.0, .8, 'gong')
 # 30–35：動詞モンタージュ（毎秒ショット）
 for i, x in enumerate((30.0, 31.0, 32.0, 33.0, 34.0)):
     K(x, 1.0); SN(x + .5, .6)
@@ -117,11 +121,12 @@ for i, x in enumerate((30.0, 31.0, 32.0, 33.0, 34.0)):
     mx.put('sub', x, sub(A + (0, -4, 3, -2, 0)[i], .48, r=.05), .9)
     for k in range(4): HH(x + .5 + k * ST, .2)
     mx.put('music', x, supersaw(CH[PROG[i % 4]], .45, fc=3000, a=.005, r=.1), .35, rev=.3)
+    mx.put('fx', x + .05, (se('coin', 84), se('flip'), se('lock', 76), se('chime', 79), se('ping', 88))[i], .45, rev=.15)
 # 35–38：DAY 1→6
 for i in range(6):
     x = 35 + i * .5
     mx.put('drums', x, tom(45 + i * 2), .7, drev=.3); SN(x, .35 + i * .08); K(x, .6 + i * .05)
-    mx.put('fx', x, S.tick(2600 + i * 250), .25)
+    mx.put('fx', x, se('type', 76 + i * 2), .5)
 mx.put('music', 35, supersaw((57, 64, 69), 3.0, fc=600, a=.2, r=.1, fc_end=6000), .4, rev=.3)
 # 38–40：ライザー
 mx.put('fx', 38, noise_riser(2.0), .8); mx.put('fx', 38, pitch_riser(2.0, 45, 93), .5)
@@ -131,17 +136,17 @@ while x < 39.9:
 mx.put('fx', 39.0, rev_crash(1.0), .6)
 
 # ============================================================ 40–48 ブレイク
-IMP(40.0, 1.0)
+IMP(40.0, 1.0, 'deep', cr=False)
 mx.put('sub', 40.0, sub(A - 12 + 12, 2.6, r=1.8, glide=-7), .9)
 mx.put('music', 40.0, supersaw((69, 72, 76), 7.8, fc=1200, a=1.0, r=1.0), .22, rev=.6)
 for k in range(5):
     t = 40.8 + k * 1.2
     mx.put('sub', t, sub(A, .22, r=.1, glide=-9), .9); mx.put('sub', t + .3, sub(A, .3, r=.15, glide=-9), .7)
 for k in range(16): mx.put('fx', 40 + k * .5, S.tick(3000 if k % 2 == 0 else 2000), .12)
-for i, x in enumerate((42.5, 43.0, 43.5)): mx.put('fx', x, S.blip(64 - i * 3, .25), .45)
-IMP(44.0, .9)
+for i, x in enumerate((42.5, 43.0, 43.5)): mx.put('fx', x, se('down', 76 - i * 3), .5)
+IMP(44.0, .9, 'slam')
 mx.put('bass', 44.0, growl(A + 11, 1.2, 'fm', 3, ('u', 'a'), shape='down', glide=-3), .8, rev=.25)
-for i, x in enumerate((45.3, 45.7, 46.1, 46.5)): mx.put('fx', x, S.blip(72 + i * 2), .4, pan=(-.5, .5, -.2, .2)[i])
+for i, x in enumerate((45.3, 45.7, 46.1, 46.5)): mx.put('fx', x, se('pop', (74, 79, 71, 83)[i]), .45, pan=(-.5, .5, -.2, .2)[i], rev=.1)
 K(47.0); SN(47.0, .8); K(47.25, .8)
 mx.put('bass', 47.0, growl(A + 12, .6, 'fm', 6, ('o', 'a')), .85, rev=.2)
 
@@ -165,12 +170,12 @@ mx.put('music', 56.0, S.shimmer(2.0), .5, rev=.6); mx.put('music', 56.0, S.bell(
 mx.put('music', 56.0, supersaw((69, 76, 81), 2.0, fc=1400, a=.3, r=.4), .25, rev=.6)
 mx.put('fx', 57.0, rev_crash(1.0), .7); mx.put('fx', 57.2, pitch_riser(.8, 57, 93), .4)
 # 58– 再ドロップ（強）
-IMP(58.0, 1.2)
+IMP(58.0, 1.2, 'sweep')
 halftime(58, 1, 1.1); drop_bar(58, C_, P3, 1.05)
 for i, (bt, m) in enumerate(((0, 81), (.75, 79), (1.0, 76), (1.5, 79))):
     mx.put('music', 58 + bt, lead(m, .45 if i < 3 else .5), .35, rev=.3)
 # 60 停電：パワーダウン
-IMP(60.0, .9)
+IMP(60.0, .9, 'glitch', cr=False)
 mx.put('bass', 60.0, growl(G + 12, 1.2, 'wob', 8, None, glide=-24), 1.0, rev=.2)
 mx.put('sub', 60.0, sub(G, 1.2, glide=-24, r=.2), 1.0)
 halftime(60, 1, 1.1, hats=False)
@@ -186,7 +191,7 @@ while x < 63.95:
     x += .25 if x < 63 else .125 if x < 63.5 else .0625
 
 # ============================================================ 64.6– タイトル
-IMP(64.6, 1.25)
+IMP(64.6, 1.25); IMP(64.6, .5, 'gong', cr=False)
 mx.put('music', 64.6, supersaw((45, 57, 61, 64, 69, 73, 76), 8.5, fc=900, a=.02, r=3.0, fc_end=5200), .75, rev=.55)
 mx.put('bass', 64.6, growl(A + 12, 2.2, 'fm', 2, ('o', 'a'), shape='down'), .8, rev=.3)
 mx.put('sub', 64.6, sub(A, 4.0, r=2.5), 1.0)
@@ -198,7 +203,7 @@ for i, x in enumerate((68.5, 69.5, 70.5)):
     mx.put('bass', x, growl(A + 12 + (0, 3, 7)[i], .55, 'fm', 8, ('o', 'a')), .7 + i * .1, rev=.2)
     mx.put('sub', x, sub(A + (0, 3, 7)[i], .55), .9)
 mx.put('fx', 70.8, rev_crash(.7), .6)
-IMP(71.5, 1.25)
+IMP(71.5, 1.15, 'slam')
 mx.put('music', 71.5, supersaw((45, 57, 61, 64, 69, 76, 81), 3.4, fc=4000, a=.01, r=2.2), .8, rev=.6)
 mx.put('bass', 71.5, growl(A + 12, 1.6, 'fm', 1.5, ('a', 'o'), shape='down'), .8, rev=.35)
 mx.put('sub', 71.5, sub(A, 3.0, r=2.0), 1.0)
