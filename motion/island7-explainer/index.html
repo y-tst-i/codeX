@@ -741,7 +741,7 @@ const EV=[];const ev=(t,f)=>EV.push({t,f});
 function buildGraph(){
   AC=new(window.AudioContext||window.webkitAudioContext)();
   const comp=AC.createDynamicsCompressor();comp.connect(AC.destination);
-  bus.master=AC.createGain();bus.master.gain.value=muted?0:.9;bus.master.connect(comp);
+  bus.master=AC.createGain();bus.master.gain.value=muted?0:.78;bus.master.connect(comp);
   bus.bgm=AC.createGain();bus.bgm.connect(bus.master);
   bus.pump=AC.createGain();bus.pump.connect(bus.bgm);
   bus.sfx=AC.createGain();bus.sfx.gain.value=.85;bus.sfx.connect(bus.master);
@@ -920,7 +920,7 @@ seek.onchange=()=>{seeking=false;if(resumeAfter)play(curT);else{if(playing)pause
 CHAPTERS.forEach(([t,n],i)=>{const b=document.createElement("button");b.textContent=`${String(i+1).padStart(2,"0")} ${n}`;b.onclick=()=>play(t);$("chips").appendChild(b);});
 $("vo").onclick=e=>{voiceOn=!voiceOn;e.target.classList.toggle("on",voiceOn);if(!voiceOn)try{speechSynthesis.cancel();}catch(x){}};
 $("sub").onclick=e=>{subOn=!subOn;e.target.classList.toggle("on",subOn);render(nowT());};
-$("mu").onclick=e=>{muted=!muted;e.target.classList.toggle("on",!muted);if(bus.master)bus.master.gain.value=muted?0:.9;if(muted)try{speechSynthesis.cancel();}catch(x){}};
+$("mu").onclick=e=>{muted=!muted;e.target.classList.toggle("on",!muted);if(bus.master)bus.master.gain.value=muted?0:.78;if(muted)try{speechSynthesis.cancel();}catch(x){}};
 
 let last=0,lastKey="";const chipEls=[...document.querySelectorAll("#chips button")];
 function loop(ts){
