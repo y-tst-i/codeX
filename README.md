@@ -93,3 +93,7 @@ GATE 2の人間確認後に一度止めます。承認後、GATE 3として次�
 3. チーム別Socket.IO roomと回答送信
 4. 4つの独立BrowserContextによるPlaywright E2E
 5. 非公開回答・チーム限定予報・再接続・undo同期の確認
+
+## 同梱ツール：TikTok Motion Studio
+
+`tiktok-studio/` は、TikTok用モーショングラフィックス動画（台本・Gemini TTSナレーション・Claude生成アニメーション・MP4書き出し）を作る独立したツールです。ゲーム本体とは依存関係を共有していません。使い方は `tiktok-studio/README.md` を参照してください。

@@ -1,0 +1,253 @@
+import { FONTS, GOALS, HOOKS, PALETTES, STYLES, VIDEO, findOrFirst } from "./knowledge";
+import { formatTimelineForPrompt } from "./timeline";
+import type { Concept, Script, Timeline } from "./types";
+
+/* ------------------------------------------------------------------ */
+/* 台本プロンプト                                                        */
+/* ------------------------------------------------------------------ */
+
+export function scriptSystemPrompt(): string {
+  return [
+    "あなたは日本のTikTokで数百万回再生を連発している、ショート動画専門の構成作家です。",
+    "視聴者が最初の1秒で指を止め、最後まで見て、もう一度見たくなる台本を書きます。",
+    "事実の正確さを大切にし、確証のない数字や断定は使いません。"
+  ].join("\n");
+}
+
+export function buildScriptPrompt(concept: Concept): string {
+  const hook = findOrFirst(HOOKS, concept.hookId);
+  const style = findOrFirst(STYLES, concept.styleId);
+  const goal = GOALS[concept.goal] ?? GOALS.follow!;
+  const charBudget = Math.round(concept.durationSec * VIDEO.charsPerSecond * 0.92);
+  const sceneCount = Math.max(4, Math.round(concept.durationSec / 3));
+
+  return `# 依頼
+TikTok用の縦型ショート動画（モーショングラフィックス＋AIナレーション）の台本を作ってください。
+
+# 動画の前提
+- アカウントのジャンル: ${concept.niche || "（未設定）"}
+- ターゲット: ${concept.target || "（未設定）"}
+- 今回のテーマ: ${concept.topic}
+${concept.notes.trim() ? `- 参考情報（事実はここを優先）:\n${indent(concept.notes.trim())}` : ""}
+- 目標尺: ${concept.durationSec}秒（セリフ合計はおよそ${charBudget}文字。記号を除く）
+- シーン数の目安: ${sceneCount}前後（1シーン2〜4秒）
+- 語り口: ${concept.tone || "テンポよく親しみやすい"}
+- 映像スタイル: ${style.name}（${style.summary}）
+- 動画のゴール: 視聴者に「${goal.label}」してもらう → ${goal.cta}
+
+# フック（最重要）
+- 型: 「${hook.name}」= ${hook.formula}
+- 例: ${hook.example}
+- 1文目は声に出して1.5秒以内（11文字前後）で言い切る。挨拶・自己紹介・「今回は」「皆さん」は禁止
+- 1文目で「答えを知りたい」という疑問（情報の空白）を作り、答えは後半まで引っ張る
+
+# 構成ルール
+1. hook → body（2〜3秒ごとに新しい情報）→ twist（「でも実は」の意外な展開）→ cta → loop の流れ
+2. 話し言葉・短文。1文20文字以内。体言止めや問いかけでリズムを作る
+3. 具体的な数字・固有名詞で信頼感を出す。ただし不確かな情報は「〜と言われています」とする
+4. ctaは押しつけがましくなく一言で。「${goal.label}」につながる理由を添える
+5. 最後のloopシーンのセリフは、動画の1文目に自然につながる言い回しにする（ループ再生で2周目に入りやすくする）
+6. 各シーンの onScreenText は12文字以内。セリフの要点を一撃で伝える言葉（セリフの丸写しは避ける）
+7. emphasis にはセリフ中で色や動きで叩くべき語句を1〜2個
+8. visual には「${style.name}」の世界観で、そのシーンの具体的な動き（何が・どう動くか）を書く
+9. reading はTTSに読ませる文。読み間違えやすい漢字・固有名詞・単位だけひらがな/カタカナに開き、それ以外はnarrationと同じにする
+10. caption は検索されやすいキーワードを自然に含む1〜2文＋コメントしたくなる問いかけ
+11. hashtags はジャンルを表す具体的なタグ中心に3〜5個（#fyp や #おすすめ のような汎用タグは不要）
+12. coverText はプロフィール一覧で並んでも目を引く12文字以内
+
+# 出力形式
+次の形のJSONだけを出力してください（前置き・説明は不要）。
+{
+  "title": "管理用タイトル",
+  "caption": "投稿文",
+  "hashtags": ["#タグ1", "#タグ2", "#タグ3"],
+  "coverText": "カバー用の一言",
+  "scenes": [
+    {
+      "role": "hook | body | twist | cta | loop",
+      "narration": "セリフ（字幕表記）",
+      "reading": "読み上げ用のセリフ",
+      "onScreenText": "画面の大きな文字",
+      "visual": "映像演出",
+      "emphasis": ["強調語"]
+    }
+  ]
+}`;
+}
+
+/* ------------------------------------------------------------------ */
+/* モーショングラフィックス生成プロンプト                                   */
+/* ------------------------------------------------------------------ */
+
+export function motionSystemPrompt(): string {
+  return [
+    "あなたは世界トップクラスのモーションデザイナー兼クリエイティブコーダーです。",
+    "Buck、ManvsMachine、日本のMV制作会社レベルの、タイミング・イージング・構図・タイポグラフィにこだわり抜いた映像を、",
+    "HTML Canvas 2D だけで実装します。見た人が『これどうやって作ったの？』と思うクオリティを目指してください。"
+  ].join("\n");
+}
+
+export interface MotionPromptInput {
+  concept: Concept;
+  script: Script;
+  timeline: Timeline;
+}
+
+export function buildMotionPrompt({ concept, script, timeline }: MotionPromptInput): string {
+  const style = findOrFirst(STYLES, concept.styleId);
+  const palette = findOrFirst(PALETTES, concept.paletteId);
+  const font = findOrFirst(FONTS, concept.fontId);
+  const duration = timeline.duration.toFixed(3);
+  const { safe } = VIDEO;
+  const fontUrl = googleFontsUrl(font.family, font.weights);
+  const heaviest = Math.max(...font.weights);
+
+  return `# 依頼
+下のタイムラインに完全同期する、TikTok用の縦型モーショングラフィックス動画を、1つのHTMLファイルとして実装してください。
+ナレーション音声は別で用意済みです（HTML内で音は鳴らしません）。映像だけを作ります。
+
+# 作品情報
+- タイトル: ${script.title}
+- ジャンル/ターゲット: ${concept.niche} ／ ${concept.target}
+- 総尺: ${duration}秒 ／ ${timeline.fps}fps ／ ${VIDEO.width}×${VIDEO.height}px（9:16）
+
+# アートディレクション
+## スタイル: ${style.name}
+${style.summary}
+${style.direction.map((line) => `- ${line}`).join("\n")}
+
+## カラーパレット（これ以外の色は明度違い程度に留める）
+- 背景: ${palette.colors.bg}
+- 面・カード: ${palette.colors.surface}
+- 文字: ${palette.colors.text}
+- アクセント1（強調語・重要な動き）: ${palette.colors.accent}
+- アクセント2（補助）: ${palette.colors.accent2}
+
+## フォント
+- 「${font.family}」（ウェイト ${font.weights.join(" / ")}）をGoogle Fontsから読み込む
+- 読み込みURL: ${fontUrl}
+- 見出し・キーワードは ${heaviest}、字幕は ${font.weights[0]} 以上
+
+# タイムライン（音声の実測値。1フレームもずらさないこと）
+${formatTimelineForPrompt(timeline)}
+
+# モーションの原則（全部守る）
+1. **0フレーム目から画が完成している**: 黒からのフェードイン禁止。t=0の時点でフックの文字と主役のビジュアルが見えていて、すでに動いている
+2. **最初の1秒が勝負**: 0〜1秒の間に大きな動き（ズームパンチ・叩きつけ・画面を割る等）を必ず入れる
+3. **静止画面を作らない**: どの瞬間もカメラのゆっくりしたドリフト/ズーム、背景要素の揺らぎなど、何かが動いている
+4. **1.5〜3秒ごとに視覚的な変化**（パターンインタラプト）: レイアウト・スケール・色面・カメラ位置のどれかを大きく変える
+5. **イージング**: linearは連続運動（回転・流れ）にだけ使う。登場は easeOutExpo / easeOutBack / spring、退場は easeInCubic で素早く
+6. **アニメーションの12原則**: 予備動作（anticipation）、オーバーシュート、フォロースルー、スタッガー（30〜60ms）、二次的な動き
+7. **音との同期**: 各シーンの主役の登場は speechStart の0〜2フレーム前。強調語は、その語が読まれる字幕チャンクの開始時刻に叩く
+8. **シーン転換**: シーン境界（前シーンのend）をまたいで6〜10フレームの転換をつくる。カットでつなぐだけにしない（マッチカット・ズームスルー・マスクワイプ・ホイップパン等）
+9. **階層**: 1画面の主役は1つ。onScreenText が主役、字幕は脇役
+10. **質感**: 必要に応じて微細なノイズ/グレイン、影、奥行き（パララックス）で「安っぽいスライド」感を消す
+11. **ループ**: 最後の${VIDEO.tail}秒で、画面を t=0 の構図へ自然につなぐ（ループ再生時に継ぎ目が分からないように）
+
+# 字幕（焼き込み）
+- タイムラインの「字幕」をその時刻どおりに表示（前後の塊と重ねない）
+- 位置は y=${safe.bottom - 260}〜${safe.bottom} 付近の固定ゾーン。${font.weights[0]}以上・58〜72px・文字色＋太い縁取り or 座布団（半透明の帯）で、どんな背景でも読める
+- 強調語が含まれる字幕は、その語だけアクセント色
+- 字幕の出入りは0.1秒程度の軽いポップ（大げさにしない）
+
+# TikTokのセーフエリア（厳守）
+- 重要な文字・顔になる要素はすべて x=${safe.left}〜${safe.right}, y=${safe.top}〜${safe.bottom} の中に置く
+- 右端（x>${safe.right}）はいいね等のボタン、下部（y>${safe.bottom}）は投稿文、上部（y<${safe.top}）はタブで隠れる。背景や装飾ははみ出してよい
+
+# 技術仕様（この契約を破ると書き出しできません）
+- 1つのHTMLファイル。外部読み込みは Google Fonts のみ（画像・ライブラリ・CDNは使わない。図形・アイコンはCanvasで描く）
+- \`<canvas id="stage" width="${VIDEO.width}" height="${VIDEO.height}">\` に Canvas 2D で描画する（DOM要素・CSSアニメーション・SVGで映像を作らない）
+- グローバルに次のオブジェクトを公開する:
+\`\`\`js
+window.MG = {
+  width: ${VIDEO.width},
+  height: ${VIDEO.height},
+  fps: ${timeline.fps},
+  duration: ${duration},
+  ready,          // Promise。フォント読み込みと事前計算が終わったら resolve
+  render(t) {}    // 時刻 t 秒の1フレームを描く（下記ルール）
+};
+\`\`\`
+- **render(t) は純粋関数**: 同じ t なら何度呼んでも、どんな順番で呼んでも同じ絵になる。前フレームの状態・経過時間・\`Date.now()\`・\`performance.now()\`・\`Math.random()\` に依存しない。乱数が要るならシード付きPRNG（mulberry32など）を初期化時に使い、結果を配列に保存しておく
+- render(t) の最初で必ず全面を塗りつぶす（前フレームの残像を残さない）。\`ctx.save()/restore()\` の対応を崩さない
+- 1フレームの描画は16ms以内を目安に（\`shadowBlur\` や \`ctx.filter\` の多用を避け、重いテクスチャは初期化時にオフスクリーンcanvasへ事前描画）
+- **日本語フォントの読み込み**: Google Fontsの日本語は文字ごとに分割配信されるため、動画内で使う全文字列を連結した \`ALL_TEXT\` を作り、使う各ウェイトについて \`document.fonts.load('<weight> 100px "${font.family}"', ALL_TEXT)\` を await してから \`ready\` を resolve する。ネットワークの失敗でフォントが読めなくても \`ready\` は reject させず（catchして）resolve する
+- 日本語の自動改行は measureText で1文字ずつ詰め、句読点・閉じ括弧・小書き文字（、。」』ゃゅょっー等）が行頭に来ないようにする
+- 自動再生: \`window.__MG_HOST__\` が true でないときだけ、ready 後に requestAnimationFrame で t を進めてループ再生する（単体でブラウザで開いたときの確認用）
+- 画面表示: html/body は余白なし・背景黒、canvas はウィンドウの高さに合わせて 9:16 のまま中央に表示（CSSの見た目の縮小のみ。canvasの内部解像度は変えない）
+
+# 実装の進め方
+1. まず全シーンの「絵コンテ」を頭の中で決める（各シーンの主役・構図・入り方・出方・転換）
+2. イージング関数群、補間ヘルパー（\`progress(t, start, end)\`・\`clamp\`・\`mix\`）、日本語折り返し、テキスト描画ヘルパーを用意
+3. シーンごとに \`drawSceneN(ctx, localT)\` を作り、render(t) で時刻に応じて呼び分け、転換区間は2シーンを合成する
+4. 字幕レイヤー → 全体エフェクト（グレイン・ビネット等）の順に重ねる
+
+# 提出前セルフチェック（すべてYesになるまで直す）
+- [ ] t=0 で黒画面ではなく、フックの文字が読める
+- [ ] 全シーンの主役の登場が speechStart に合っている
+- [ ] 字幕はタイムラインの時刻どおり、セーフエリア内
+- [ ] 1秒以上まったく動かない瞬間がない
+- [ ] 最後から最初へのループがなめらか
+- [ ] render(t) は Math.random / Date.now / performance.now / 前フレームの状態を使っていない
+- [ ] 外部読み込みは Google Fonts だけ
+- [ ] window.MG の全プロパティがそろっている
+
+# 出力形式
+最初に「演出コンセプト」を3行以内で書き、そのあとに完成したHTMLを \`\`\`html コードブロック1つだけで出力してください。省略（「…以下同様」等）は禁止です。`;
+}
+
+/** 生成済みHTMLをさらに磨き込むための依頼文 */
+export function buildPolishPrompt(input: MotionPromptInput, currentHtml: string, request: string): string {
+  return `${buildMotionPrompt(input)}
+
+---
+
+# 現在のバージョン
+以下は上の仕様で作った現在のHTMLです。
+
+\`\`\`html
+${currentHtml}
+\`\`\`
+
+# 今回の改善依頼
+${request.trim() || "（特になし。ディレクター目線で最も効果の大きい改善をしてください）"}
+
+# 進め方
+1. クリエイティブディレクターとして、現在のバージョンの弱点を「フックの強さ」「音との同期」「動きの質（イージング・スタッガー・転換）」「読みやすさ」「質感」の観点で厳しく5つ挙げる
+2. それをすべて直した完全版のHTMLを、\`\`\`html コードブロック1つで出力する（技術仕様は必ず守る。省略禁止）`;
+}
+
+/** 検証エラーを直すための依頼文 */
+export function buildFixPrompt(currentHtml: string, problems: string[]): string {
+  return `次のHTMLモーショングラフィックスを動画に書き出そうとしたところ、問題が見つかりました。
+
+# 見つかった問題
+${problems.map((problem) => `- ${problem}`).join("\n")}
+
+# 守るべき契約（再掲）
+- <canvas id="stage" width="${VIDEO.width}" height="${VIDEO.height}"> に Canvas 2D で描画
+- window.MG = { width, height, fps, duration, ready: Promise, render(t) } を公開
+- render(t) は同じ t なら常に同じ絵を描く純粋関数（Math.random / Date.now / performance.now / 前フレームの状態を使わない）
+- window.__MG_HOST__ が true のときは自動再生しない
+- 外部読み込みは Google Fonts のみ
+
+# 現在のHTML
+\`\`\`html
+${currentHtml}
+\`\`\`
+
+見た目と演出はできるだけ保ったまま問題だけを直し、完全なHTMLを \`\`\`html コードブロック1つで出力してください（省略禁止）。`;
+}
+
+export function googleFontsUrl(family: string, weights: number[]): string {
+  const name = family.replace(/ /g, "+");
+  const sorted = [...weights].sort((a, b) => a - b);
+  return `https://fonts.googleapis.com/css2?family=${name}:wght@${sorted.join(";")}&display=block`;
+}
+
+function indent(text: string): string {
+  return text
+    .split("\n")
+    .map((line) => `  ${line}`)
+    .join("\n");
+}

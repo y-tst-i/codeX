@@ -1,0 +1,454 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>デモ：青信号はなぜ「青」？</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@500;900&display=block" rel="stylesheet">
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  body { display: grid; place-items: center; }
+  canvas { height: 100vh; width: auto; aspect-ratio: 9 / 16; display: block; }
+</style>
+</head>
+<body>
+<canvas id="stage" width="1080" height="1920"></canvas>
+<script>
+(() => {
+  const W = 1080, H = 1920, FPS = 30, DURATION = 12.0;
+  const FONT = '"Noto Sans JP"';
+  const C = { bg: "#0b0b12", surface: "#1a1a26", text: "#f5f5f7", accent: "#c6ff3d", accent2: "#7a5cff", green: "#19d49a", blue: "#2f7bff" };
+  const canvas = document.getElementById("stage");
+  const ctx = canvas.getContext("2d");
+
+  /* ---------- 数学ヘルパー ---------- */
+  const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
+  const mix = (a, b, p) => a + (b - a) * p;
+  const progress = (t, s, e) => clamp((t - s) / (e - s));
+  const easeOutExpo = (p) => (p >= 1 ? 1 : 1 - Math.pow(2, -10 * p));
+  const easeInCubic = (p) => p * p * p;
+  const easeInOutCubic = (p) => (p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2);
+  const easeOutBack = (p, s = 1.9) => 1 + (s + 1) * Math.pow(p - 1, 3) + s * Math.pow(p - 1, 2);
+  // 減衰する揺れ（着地の余韻）
+  const spring = (p, freq = 3.2, decay = 5) => (p <= 0 ? 0 : 1 - Math.exp(-decay * p) * Math.cos(freq * Math.PI * 2 * p));
+
+  function mulberry32(seed) {
+    return () => {
+      seed |= 0; seed = (seed + 0x6d2b79f5) | 0;
+      let r = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+      r = (r + Math.imul(r ^ (r >>> 7), 61 | r)) ^ r;
+      return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  /* ---------- 事前計算（決定的） ---------- */
+  const rand = mulberry32(7);
+  const PARTICLES = Array.from({ length: 46 }, () => ({ x: rand() * W, y: rand() * H, r: 2 + rand() * 5, speed: 12 + rand() * 30, phase: rand() * Math.PI * 2 }));
+
+  // フィルムグレイン（オフスクリーンに4枚作って、フレーム番号で切り替える）
+  const GRAIN = Array.from({ length: 4 }, (_, k) => {
+    const g = document.createElement("canvas");
+    g.width = 270; g.height = 480;
+    const gx = g.getContext("2d");
+    const img = gx.createImageData(g.width, g.height);
+    const r = mulberry32(100 + k);
+    for (let i = 0; i < img.data.length; i += 4) {
+      const v = r() * 255;
+      img.data[i] = img.data[i + 1] = img.data[i + 2] = v;
+      img.data[i + 3] = 18;
+    }
+    gx.putImageData(img, 0, 0);
+    return g;
+  });
+
+  /* ---------- タイムライン ---------- */
+  const SCENES = [
+    { start: 0.0, end: 2.9 },
+    { start: 2.9, end: 6.1 },
+    { start: 6.1, end: 9.1 },
+    { start: 9.1, end: 12.0 }
+  ];
+  const CAPTIONS = [
+    { s: 0.05, e: 1.3, text: "信号の「青」って、", em: "青" },
+    { s: 1.3, e: 2.85, text: "どう見ても緑ですよね？", em: "緑" },
+    { s: 2.95, e: 4.5, text: "昔の日本語では、", em: "" },
+    { s: 4.5, e: 6.05, text: "緑も「アオ」と呼んでいました。", em: "アオ" },
+    { s: 6.15, e: 7.6, text: "青りんご、青菜、青葉。", em: "青" },
+    { s: 7.6, e: 9.05, text: "ぜんぶ緑なのに「青」。", em: "青" },
+    { s: 9.15, e: 10.5, text: "だから信号も「青」。", em: "青" },
+    { s: 10.5, e: 11.9, text: "ところで、信号の「青」って…", em: "青" }
+  ];
+  const ALL_TEXT = "青信号どう見ても緑昔の日本語ではアオと呼んでいたりんご菜葉ぜんぶなのにだから今もところで、。「」？…っ" + CAPTIONS.map((c) => c.text).join("");
+  const TRANSITION = 0.28; // シーン境界をまたぐ転換の長さ（秒）
+
+  /* ---------- 描画ヘルパー ---------- */
+  function font(weight, size) { return `${weight} ${size}px ${FONT}`; }
+
+  // 1文字ずつポップして出る見出し
+  function popText(text, x, y, size, t0, t, opts = {}) {
+    const { color = C.text, weight = 900, stagger = 0.04, align = "center", highlight = "", hlColor = C.accent } = opts;
+    ctx.font = font(weight, size);
+    const widths = [...text].map((ch) => ctx.measureText(ch).width);
+    const total = widths.reduce((a, b) => a + b, 0);
+    let cx = align === "center" ? x - total / 2 : x;
+    const hlStart = highlight ? text.indexOf(highlight) : -1;
+    [...text].forEach((ch, i) => {
+      const p = progress(t, t0 + i * stagger, t0 + i * stagger + 0.42);
+      if (p > 0) {
+        const s = easeOutBack(p, 2.2);
+        const isHl = hlStart >= 0 && i >= hlStart && i < hlStart + highlight.length;
+        ctx.save();
+        ctx.translate(cx + widths[i] / 2, y + (1 - easeOutExpo(p)) * size * 0.5);
+        ctx.scale(s, s);
+        ctx.globalAlpha = clamp(p * 3);
+        ctx.fillStyle = isHl ? hlColor : color;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(ch, 0, 0);
+        ctx.restore();
+      }
+      cx += widths[i];
+    });
+    return total;
+  }
+
+  // マーカーが引かれるハイライト帯
+  function marker(x, y, w, h, t0, t, color) {
+    const p = easeOutExpo(progress(t, t0, t0 + 0.35));
+    if (p <= 0) return;
+    ctx.save();
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.roundRect(x, y, w * p, h, 10);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function roundRectFill(x, y, w, h, r, color) {
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.roundRect(x, y, w, h, r);
+    ctx.fill();
+  }
+
+  /* ---------- 背景 ---------- */
+  function drawBackground(t) {
+    ctx.fillStyle = C.bg;
+    ctx.fillRect(0, 0, W, H);
+
+    // ゆっくり回る巨大リング
+    ctx.save();
+    ctx.translate(W * 0.78, H * 0.3);
+    ctx.rotate(t * 0.25);
+    ctx.strokeStyle = "rgba(122,92,255,0.22)";
+    ctx.lineWidth = 60;
+    ctx.setLineDash([140, 60]);
+    ctx.beginPath();
+    ctx.arc(0, 0, 420, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+
+    // 斜めの光の帯
+    ctx.save();
+    ctx.translate(W / 2, H * 0.72);
+    ctx.rotate(-0.35);
+    const band = ctx.createLinearGradient(-900, 0, 900, 0);
+    band.addColorStop(0, "rgba(198,255,61,0)");
+    band.addColorStop(0.5, "rgba(198,255,61,0.07)");
+    band.addColorStop(1, "rgba(198,255,61,0)");
+    ctx.fillStyle = band;
+    ctx.fillRect(-1400 + ((t * 160) % 400), -120, 2800, 240);
+    ctx.restore();
+
+    // 漂う粒子
+    for (const pt of PARTICLES) {
+      const y = (pt.y - t * pt.speed + H) % H;
+      const x = pt.x + Math.sin(t * 0.8 + pt.phase) * 18;
+      ctx.fillStyle = `rgba(245,245,247,${0.08 + 0.08 * Math.sin(t * 2 + pt.phase)})`;
+      ctx.beginPath();
+      ctx.arc(x, y, pt.r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  /* ---------- 信号機 ---------- */
+  function trafficLight(cx, cy, scale, t, glowColor) {
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.scale(scale, scale);
+    roundRectFill(-330, -120, 660, 240, 120, "#20202e");
+    ctx.strokeStyle = "#34344a";
+    ctx.lineWidth = 8;
+    ctx.stroke();
+    const lamps = [C.green, "#3a3326", "#3a2626"];
+    lamps.forEach((color, i) => {
+      const x = -200 + i * 200;
+      if (i === 0) {
+        const pulse = 0.75 + 0.25 * Math.sin(t * 6);
+        const glow = ctx.createRadialGradient(x, 0, 10, x, 0, 190);
+        glow.addColorStop(0, glowColor);
+        glow.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.globalAlpha = pulse;
+        ctx.fillStyle = glow;
+        ctx.beginPath();
+        ctx.arc(x, 0, 190, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+      }
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(x, 0, 78, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    ctx.restore();
+  }
+
+  /* ---------- シーン ---------- */
+  function scene1(t) {
+    // 0フレーム目から信号とフックが見えている（叩きつけ＋着地の揺れ）
+    const land = spring(progress(t, 0, 0.9), 2.4, 4.5);
+    trafficLight(W / 2, 560, mix(1.35, 1, land), t, "rgba(25,212,154,0.85)");
+
+    ctx.save();
+    ctx.translate(W / 2, 980);
+    const punch = 1 + 0.18 * (1 - easeOutExpo(progress(t, 0, 0.5)));
+    ctx.scale(punch, punch);
+    ctx.font = font(900, 150);
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillStyle = C.text;
+    ctx.fillText("「青」信号", 0, 0);
+    ctx.restore();
+
+    marker(W / 2 - 330, 1150, 660, 150, 1.25, t, C.green);
+    popText("どう見ても緑", W / 2, 1226, 112, 1.3, t, { color: C.bg, stagger: 0.045 });
+
+    // 「？」がくるっと着地
+    const q = easeOutBack(progress(t, 1.9, 2.35), 2.6);
+    if (q > 0) {
+      ctx.save();
+      ctx.translate(880, 1100);
+      ctx.rotate((1 - q) * -1.2);
+      ctx.scale(q, q);
+      ctx.font = font(900, 190);
+      ctx.fillStyle = C.accent;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText("？", 0, 0);
+      ctx.restore();
+    }
+  }
+
+  function scene2(t) {
+    const lt = t - SCENES[1].start;
+    popText("昔の日本語では", W / 2, 520, 92, 0.0, lt, { weight: 500, stagger: 0.03 });
+
+    // 緑の丸と青の丸が1つに溶ける
+    const merge = easeInOutCubic(progress(lt, 1.2, 2.2));
+    const r = 170;
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    ctx.fillStyle = C.green;
+    ctx.beginPath();
+    ctx.arc(W / 2 - mix(170, 0, merge), 900, r * easeOutBack(progress(lt, 0.2, 0.7)), 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = C.blue;
+    ctx.beginPath();
+    ctx.arc(W / 2 + mix(170, 0, merge), 900, r * easeOutBack(progress(lt, 0.3, 0.8)), 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    ctx.font = font(900, 64);
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.globalAlpha = 1 - merge;
+    ctx.fillStyle = C.bg;
+    ctx.fillText("緑", W / 2 - 170, 900);
+    ctx.fillText("青", W / 2 + 170, 900);
+    ctx.globalAlpha = 1;
+
+    const big = easeOutBack(progress(lt, 1.55, 2.0), 2.4);
+    if (big > 0) {
+      ctx.save();
+      ctx.translate(W / 2, 900);
+      ctx.scale(big, big);
+      ctx.font = font(900, 150);
+      ctx.fillStyle = C.bg;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText("アオ", 0, 8);
+      ctx.restore();
+    }
+    popText("どっちも「アオ」", W / 2, 1250, 104, 1.6, lt, { highlight: "アオ" });
+  }
+
+  function scene3(t) {
+    const lt = t - SCENES[2].start;
+    const items = ["青りんご", "青菜", "青葉"];
+    items.forEach((label, i) => {
+      const t0 = 0.05 + i * 0.42;
+      const p = easeOutExpo(progress(lt, t0, t0 + 0.5));
+      if (p <= 0) return;
+      const y = 470 + i * 240;
+      const x = mix(W + 200, 140, p);
+      roundRectFill(x, y, 800, 190, 36, C.surface);
+      ctx.fillStyle = C.green;
+      ctx.beginPath();
+      ctx.arc(x + 110, y + 95, 58, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.font = font(900, 92);
+      ctx.fillStyle = C.text;
+      ctx.textAlign = "left";
+      ctx.textBaseline = "middle";
+      ctx.fillText(label, x + 210, y + 100);
+      // 「青」の字にだけ緑のアンダーライン
+      ctx.font = font(900, 92);
+      const aw = ctx.measureText("青").width;
+      marker(x + 210, y + 150, aw, 12, t0 + 0.45, lt, C.accent);
+    });
+    const stamp = progress(lt, 1.6, 1.85);
+    if (stamp > 0) {
+      ctx.save();
+      ctx.translate(W / 2, 1195);
+      ctx.rotate(-0.08);
+      const s = mix(2.2, 1, easeOutExpo(stamp));
+      ctx.scale(s, s);
+      ctx.globalAlpha = clamp(stamp * 2);
+      roundRectFill(-360, -85, 720, 170, 24, C.accent);
+      ctx.font = font(900, 96);
+      ctx.fillStyle = C.bg;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText("ぜんぶ緑！", 0, 6);
+      ctx.restore();
+    }
+  }
+
+  function scene4(t) {
+    const lt = t - SCENES[3].start;
+    // 最後は信号がシーン1と同じ位置・大きさへ戻り、ループの継ぎ目を消す
+    const back = easeInOutCubic(progress(lt, 1.6, 2.9));
+    trafficLight(W / 2, mix(760, 560, back), mix(0.9, 1.35, back), t, "rgba(47,123,255,0.8)");
+    popText("だから今も", W / 2, 1060, 96, 0.05, lt, { weight: 500, stagger: 0.03 });
+    popText("「青」信号", W / 2, 1220, 150, 0.35, lt, { highlight: "青", hlColor: C.blue, stagger: 0.05 });
+  }
+
+  const DRAW = [scene1, scene2, scene3, scene4];
+
+  // シーン切り替え：前のシーンがカメラを突き抜けて拡大消失 → 次が奥から来る
+  function drawScenes(t) {
+    for (let i = 0; i < SCENES.length; i++) {
+      const sc = SCENES[i];
+      const inStart = sc.start - TRANSITION / 2;
+      const outEnd = sc.end + TRANSITION / 2;
+      if (t < inStart && i > 0) continue;
+      if (t > outEnd && i < SCENES.length - 1) continue;
+
+      let scale = 1, alpha = 1;
+      if (i > 0 && t < sc.start + TRANSITION / 2) {
+        const p = easeOutExpo(progress(t, inStart, sc.start + TRANSITION / 2));
+        scale = mix(0.82, 1, p);
+        alpha = p;
+      }
+      if (i < SCENES.length - 1 && t > sc.end - TRANSITION / 2) {
+        const p = easeInCubic(progress(t, sc.end - TRANSITION / 2, outEnd));
+        scale *= mix(1, 2.6, p);
+        alpha *= 1 - p;
+      }
+      if (alpha <= 0.001) continue;
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.translate(W / 2, H * 0.45);
+      ctx.scale(scale, scale);
+      ctx.translate(-W / 2, -H * 0.45);
+      DRAW[i](t);
+      ctx.restore();
+    }
+  }
+
+  /* ---------- 字幕 ---------- */
+  function drawCaptions(t) {
+    const cap = CAPTIONS.find((c) => t >= c.s && t < c.e);
+    if (!cap) return;
+    const p = easeOutBack(progress(t, cap.s, cap.s + 0.12), 1.6);
+    const y = 1400;
+    ctx.save();
+    ctx.font = font(900, 60);
+    const w = ctx.measureText(cap.text).width;
+    ctx.translate(W / 2, y);
+    ctx.scale(mix(0.92, 1, p), mix(0.92, 1, p));
+    ctx.globalAlpha = clamp(p);
+    roundRectFill(-w / 2 - 34, -58, w + 68, 116, 26, "rgba(0,0,0,0.62)");
+    ctx.textBaseline = "middle";
+    ctx.textAlign = "left";
+    let x = -w / 2;
+    const emAt = cap.em ? cap.text.indexOf(cap.em) : -1;
+    [...cap.text].forEach((ch, i) => {
+      const isEm = emAt >= 0 && i >= emAt && i < emAt + cap.em.length;
+      ctx.fillStyle = isEm ? C.accent : "#ffffff";
+      ctx.fillText(ch, x, 4);
+      x += ctx.measureText(ch).width;
+    });
+    ctx.restore();
+  }
+
+  /* ---------- 仕上げ ---------- */
+  function drawFinish(t) {
+    // ビネット
+    const v = ctx.createRadialGradient(W / 2, H / 2, H * 0.3, W / 2, H / 2, H * 0.75);
+    v.addColorStop(0, "rgba(0,0,0,0)");
+    v.addColorStop(1, "rgba(0,0,0,0.55)");
+    ctx.fillStyle = v;
+    ctx.fillRect(0, 0, W, H);
+    // グレイン
+    const frame = Math.floor(t * FPS);
+    ctx.save();
+    ctx.globalCompositeOperation = "overlay";
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(GRAIN[frame % GRAIN.length], 0, 0, W, H);
+    ctx.restore();
+  }
+
+  function render(t) {
+    t = clamp(t, 0, DURATION - 1e-6);
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = "source-over";
+    drawBackground(t);
+    // カメラはいつも少しだけ動いている
+    const cam = 1 + 0.015 * Math.sin(t * 0.9);
+    ctx.translate(W / 2, H / 2);
+    ctx.scale(cam, cam);
+    ctx.rotate(0.004 * Math.sin(t * 0.7));
+    ctx.translate(-W / 2, -H / 2);
+    drawScenes(t);
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    drawCaptions(t);
+    drawFinish(t);
+    ctx.restore();
+  }
+
+  const ready = Promise.all([
+    document.fonts.load(font(900, 100), ALL_TEXT),
+    document.fonts.load(font(500, 100), ALL_TEXT)
+  ]).then(() => document.fonts.ready).catch(() => undefined); // フォントが落ちても止めない
+
+  window.MG = { width: W, height: H, fps: FPS, duration: DURATION, ready, render };
+
+  if (!window.__MG_HOST__) {
+    ready.then(() => {
+      const t0 = performance.now();
+      const loop = (now) => {
+        render(((now - t0) / 1000) % DURATION);
+        requestAnimationFrame(loop);
+      };
+      requestAnimationFrame(loop);
+    });
+  }
+})();
+</script>
+</body>
+</html>
