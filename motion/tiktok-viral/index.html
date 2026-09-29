@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TikTok バズ系モーショングラフィックス</title>
+<style>
+  :root{color-scheme:dark}
+  html,body{margin:0;height:100%;background:#0b0b10;color:#fff;font-family:"Hiragino Sans","Noto Sans JP","IPAGothic",sans-serif}
+  body{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px}
+  #stage{height:min(84vh,calc(100vw*16/9));aspect-ratio:9/16;border-radius:18px;box-shadow:0 0 60px #ff2d8a55;background:#000}
+  .bar{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;padding:0 16px}
+  button{font:inherit;font-weight:800;border:0;border-radius:999px;padding:12px 22px;color:#fff;background:#ff2d8a;cursor:pointer}
+  button.alt{background:#25f4ee;color:#000}
+  button:disabled{opacity:.5}
+  label{display:flex;align-items:center;gap:6px;font-size:14px}
+  small{opacity:.7;max-width:520px;text-align:center;line-height:1.5;padding:0 16px}
+</style>
+</head>
+<body>
+<canvas id="stage" width="1080" height="1920"></canvas>
+<div class="bar">
+  <button id="play">▶ 再生（音ON）</button>
+  <button id="rec" class="alt">⏺ 動画を書き出す (.webm)</button>
+  <label><input type="checkbox" id="voice" checked>ナレーション音声</label>
+</div>
+<small>再生ボタンを押すと音声付きで15秒ループ。書き出しはBGM/SE込みのWebM（ブラウザ音声合成のナレーションは録音に乗らないため、書き出し時は字幕＋BGM/SEのみ。TikTok側の「テキスト読み上げ」を重ねると声も入ります）。</small>
+
+<script>
+/* ============ 台本（beat単位）============ */
+const BPM = 128, B = 60 / BPM, BEATS = 32, DUR = BEATS * B;
+// t: 開始beat / d: 長さ / lines: 表示テキスト / say: 読み上げ / bg: 背景色 / fx: 演出
+const SCRIPT = [
+  { t:0,  d:3, lines:["ちょっと","待って！"], say:"ちょっと待って", bg:["#ff2d8a","#7a00ff"], fx:"shake", emoji:"✋" },
+  { t:3,  d:3, lines:["これ知らないと"],      say:"これ知らないと", bg:["#111","#333"], fx:"slide", hi:0 },
+  { t:6,  d:2, lines:["99%が","損してる"],   say:"九十九パーセントが損してる", bg:["#ff3b30","#ff9500"], fx:"slam", emoji:"💸" },
+  { t:8,  d:4, lines:["TikTokで","伸びる人の","共通点"], say:"TikTokで伸びる人の共通点", bg:["#25f4ee","#0057ff"], fx:"pop", dark:true },
+  { t:12, d:2, lines:["たった","3つ"],       say:"たった三つ", bg:["#ffe600","#ff8a00"], fx:"slam", dark:true, emoji:"☝️" },
+  { t:14, d:4, num:"1", lines:["最初の1秒で","掴む"],        say:"一つ目、最初の一秒で掴む", bg:["#ff2d8a","#ff6a00"], fx:"pop" },
+  { t:18, d:4, num:"2", lines:["字幕は","大きく動かす"],      say:"二つ目、字幕は大きく動かす", bg:["#7a00ff","#25f4ee"], fx:"pop" },
+  { t:22, d:4, num:"3", lines:["音で","リズムを作る"],        say:"三つ目、音でリズムを作る", bg:["#00c853","#25f4ee"], fx:"pop", dark:true },
+  { t:26, d:6, lines:["保存して","見返してね"], say:"保存して、見返してね", bg:["#ff2d8a","#7a00ff"], fx:"cta", emoji:"🔖" },
+];
+
+/* ============ 状態 ============ */
+const cv = document.getElementById("stage"), g = cv.getContext("2d");
+const W = 1080, H = 1920;
+let ctx = null, master = null, dest = null, t0 = 0, running = false, recorder = null, chunks = [];
+const voiceOn = () => document.getElementById("voice").checked && !recorder;
+
+/* ============ 音（Web Audio 合成）============ */
+function noiseBuf(sec){ const b = ctx.createBuffer(1, ctx.sampleRate*sec, ctx.sampleRate), d = b.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=Math.random()*2-1; return b; }
+function env(node, at, a, dec, peak){ node.gain.setValueAtTime(0.0001, at); node.gain.exponentialRampToValueAtTime(peak, at+a); node.gain.exponentialRampToValueAtTime(0.0001, at+a+dec); }
+function kick(at, v=1){ const o=ctx.createOscillator(), gn=ctx.createGain(); o.frequency.setValueAtTime(150,at); o.frequency.exponentialRampToValueAtTime(42,at+.14); env(gn,at,.002,.28,.95*v); o.connect(gn).connect(master); o.start(at); o.stop(at+.32); }
+function hat(at, v=.25, open=false){ const s=ctx.createBufferSource(); s.buffer=noiseBuf(.2); const f=ctx.createBiquadFilter(); f.type="highpass"; f.frequency.value=7500; const gn=ctx.createGain(); env(gn,at,.001,open?.14:.04,v); s.connect(f).connect(gn).connect(master); s.start(at); s.stop(at+.2); }
+function clap(at, v=.5){ const s=ctx.createBufferSource(); s.buffer=noiseBuf(.25); const f=ctx.createBiquadFilter(); f.type="bandpass"; f.frequency.value=1800; f.Q.value=.8; const gn=ctx.createGain(); env(gn,at,.002,.16,v); s.connect(f).connect(gn).connect(master); s.start(at); s.stop(at+.25); }
+function bass(at, hz, len, v=.5){ const o=ctx.createOscillator(), f=ctx.createBiquadFilter(), gn=ctx.createGain(); o.type="sawtooth"; o.frequency.value=hz; f.type="lowpass"; f.frequency.setValueAtTime(900,at); f.frequency.exponentialRampToValueAtTime(140,at+len); env(gn,at,.005,len,v); o.connect(f).connect(gn).connect(master); o.start(at); o.stop(at+len+.05); }
+function pluck(at, hz, v=.18){ const o=ctx.createOscillator(), gn=ctx.createGain(); o.type="square"; o.frequency.value=hz; const f=ctx.createBiquadFilter(); f.type="lowpass"; f.frequency.value=3200; env(gn,at,.003,.18,v); o.connect(f).connect(gn).connect(master); o.start(at); o.stop(at+.22); }
+function pop(at, hz=880, v=.35){ const o=ctx.createOscillator(), gn=ctx.createGain(); o.type="sine"; o.frequency.setValueAtTime(hz,at); o.frequency.exponentialRampToValueAtTime(hz*2,at+.07); env(gn,at,.002,.12,v); o.connect(gn).connect(master); o.start(at); o.stop(at+.15); }
+function whoosh(at, len, up=true, v=.35){ const s=ctx.createBufferSource(); s.buffer=noiseBuf(len+.1); const f=ctx.createBiquadFilter(); f.type="bandpass"; f.Q.value=1.2; f.frequency.setValueAtTime(up?300:6000,at); f.frequency.exponentialRampToValueAtTime(up?7000:300,at+len); const gn=ctx.createGain(); gn.gain.setValueAtTime(.0001,at); gn.gain.exponentialRampToValueAtTime(v,at+len*(up?.95:.2)); gn.gain.exponentialRampToValueAtTime(.0001,at+len+.05); s.connect(f).connect(gn).connect(master); s.start(at); s.stop(at+len+.1); }
+function boom(at){ const o=ctx.createOscillator(), gn=ctx.createGain(); o.frequency.setValueAtTime(90,at); o.frequency.exponentialRampToValueAtTime(30,at+.6); env(gn,at,.003,.7,1); o.connect(gn).connect(master); o.start(at); o.stop(at+.75); }
+function riser(at, len){ const o=ctx.createOscillator(), gn=ctx.createGain(); o.type="sawtooth"; o.frequency.setValueAtTime(200,at); o.frequency.exponentialRampToValueAtTime(2400,at+len); gn.gain.setValueAtTime(.0001,at); gn.gain.exponentialRampToValueAtTime(.18,at+len); gn.gain.exponentialRampToValueAtTime(.0001,at+len+.03); o.connect(gn).connect(master); o.start(at); o.stop(at+len+.05); }
+
+const NOTES = [55, 55, 65.41, 49]; // A1 A1 C2 G1 のベースリフ
+function scheduleAudio(start){
+  const at = b => start + b*B;
+  // ビート：0-8beatはキックのみ+軽いハット、8beat以降フル、6-8はライザー→ドロップ
+  for(let b=0;b<BEATS;b++){
+    if(b>=30 && b<32){ /* ラスト2beatはループ前のブレイク */ }
+    kick(at(b), b>=8?1:.8);
+    if(b>=2) hat(at(b+.5), .22, false);
+    if(b>=8){ hat(at(b), .12); hat(at(b+.75), .14); if(b%2===1) clap(at(b), .5); bass(at(b), NOTES[b%4]*(b>=26?2:1), B*.9, .55); pluck(at(b+.5), NOTES[(b+1)%4]*8, .12); }
+  }
+  riser(at(6), 2*B); boom(at(8)); whoosh(at(7.5), .5, true);
+  // 各セリフの頭SE
+  SCRIPT.forEach(s=>{
+    const a = at(s.t);
+    if(s.fx==="slam"){ boom(a); }
+    else if(s.fx==="slide"){ whoosh(a-.05, .3, false, .3); }
+    else pop(a, 700+s.t*12);
+    if(s.num) pop(a+.12, 1200, .3);
+  });
+  // CTA前の「ピロン」
+  [1046,1318,1568].forEach((hz,i)=>pop(at(26+i*.25), hz, .3));
+}
+
+/* ============ 音声（ブラウザ読み上げ）============ */
+let voiceTimers = [];
+function speakLine(text){
+  try{
+    const u = new SpeechSynthesisUtterance(text); u.lang="ja-JP"; u.rate=1.25; u.pitch=1.15; u.volume=1;
+    const v = speechSynthesis.getVoices().find(v=>v.lang && v.lang.startsWith("ja")); if(v) u.voice=v;
+    speechSynthesis.speak(u);
+  }catch(e){}
+}
+function scheduleVoice(){
+  if(!("speechSynthesis" in window)) return;
+  speechSynthesis.cancel();
+  SCRIPT.forEach(s=>voiceTimers.push(setTimeout(()=>{ if(running && voiceOn()) { speechSynthesis.cancel(); speakLine(s.say); } }, s.t*B*1000 + 60)));
+}
+function clearVoice(){ voiceTimers.forEach(clearTimeout); voiceTimers=[]; try{ speechSynthesis.cancel(); }catch(e){} }
+
+/* ============ 描画ユーティリティ ============ */
+const clamp=(x,a=0,b=1)=>Math.min(b,Math.max(a,x));
+const easeOutBack=x=>{const c1=1.70158,c3=c1+1;return 1+c3*Math.pow(x-1,3)+c1*Math.pow(x-1,2);};
+const easeOutExpo=x=>x>=1?1:1-Math.pow(2,-10*x);
+const FONT = '"Hiragino Sans","Noto Sans JP","IPAGothic","Yu Gothic",sans-serif';
+let seed = 1; const rnd=()=>{ seed=(seed*16807)%2147483647; return (seed-1)/2147483646; };
+
+function drawBg(s, lt, t){
+  const gr = g.createLinearGradient(0,0,W,H);
+  gr.addColorStop(0,s.bg[0]); gr.addColorStop(1,s.bg[1]);
+  g.fillStyle = gr; g.fillRect(0,0,W,H);
+  // ハーフトーン風ドット（ビートで脈動）
+  const beatPhase = (t/B)%1, pulse = 1-beatPhase;
+  g.fillStyle = s.dark ? "rgba(0,0,0,.10)" : "rgba(255,255,255,.12)";
+  const step = 90, off = (t*60)%step;
+  for(let y=-step;y<H+step;y+=step) for(let x=-step;x<W+step;x+=step){
+    const r = 8 + 14*Math.abs(Math.sin((x+y)*0.004 + t*2)) * (0.6+pulse*0.6);
+    g.beginPath(); g.arc(x+off+((y/step)%2?step/2:0), y+off, r, 0, 7); g.fill();
+  }
+  // 放射ライン
+  g.save(); g.translate(W/2,H/2); g.rotate(t*0.25);
+  g.fillStyle = s.dark ? "rgba(0,0,0,.07)" : "rgba(255,255,255,.08)";
+  for(let i=0;i<16;i++){ g.rotate(Math.PI*2/16); g.beginPath(); g.moveTo(0,0); g.lineTo(1800,-90); g.lineTo(1800,90); g.fill(); }
+  g.restore();
+  // ビートフラッシュ
+  g.fillStyle = `rgba(255,255,255,${pulse*pulse*0.18})`; g.fillRect(0,0,W,H);
+}
+
+function fitFont(text, size, maxW, weight=900){
+  g.font = `${weight} ${size}px ${FONT}`;
+  const w = g.measureText(text).width;
+  return w>maxW ? size*maxW/w : size;
+}
+
+function drawText(text, x, y, size, fill, stroke, strokeW){
+  g.font = `900 ${size}px ${FONT}`; g.textAlign="center"; g.textBaseline="middle"; g.lineJoin="round";
+  g.lineWidth = strokeW; g.strokeStyle = stroke;
+  g.shadowColor="rgba(0,0,0,.45)"; g.shadowBlur=0; g.shadowOffsetY=14;
+  g.strokeText(text,x,y); g.shadowColor="transparent";
+  g.fillStyle = fill; g.fillText(text,x,y);
+}
+
+function drawScene(s, t){
+  const lt = t - s.t*B;                 // シーン内経過秒
+  seed = 7;
+  const beatPhase = (t/B)%1, pulse = Math.pow(1-beatPhase, 3);
+  g.save();
+  // シェイク／ビートズーム
+  let sx=0, sy=0;
+  if(s.fx==="shake" && lt<1.2){ const k=(1.2-lt)*22; sx=(rnd()-.5)*k+Math.sin(t*90)*k*.3; sy=(rnd()-.5)*k; }
+  if(s.fx==="slam" && lt<.35){ const k=(1-lt/.35)*40; sx=(Math.random()-.5)*k; sy=(Math.random()-.5)*k; }
+  const zoom = 1 + pulse*0.035;
+  g.translate(W/2+sx, H/2+sy); g.scale(zoom,zoom); g.translate(-W/2,-H/2);
+  drawBg(s, lt, t);
+
+  // 大きな番号（① ② ③）
+  if(s.num){
+    const p = easeOutBack(clamp(lt/.35));
+    g.save(); g.translate(W/2, 520); g.scale(p,p); g.rotate(-0.06);
+    g.font=`900 620px ${FONT}`; g.textAlign="center"; g.textBaseline="middle";
+    g.fillStyle="rgba(255,255,255,.22)"; g.fillText(s.num,0,0);
+    g.lineWidth=14; g.strokeStyle="#fff"; g.strokeText(s.num,0,0);
+    g.restore();
+  }
+
+  // 絵文字（ポップ＆ゆらゆら）
+  if(s.emoji){
+    const p = easeOutBack(clamp((lt-.1)/.4));
+    g.save(); g.translate(W/2+320, 360 + Math.sin(t*4)*18); g.scale(p,p); g.rotate(Math.sin(t*3)*0.15+0.2);
+    g.font=`300px "Noto Color Emoji",sans-serif`; g.textAlign="center"; g.textBaseline="middle"; g.fillText(s.emoji,0,0); g.restore();
+  }
+
+  // テキスト本体（行ごと時間差でポップ）
+  const n = s.lines.length, lineH = 250, baseY = H/2 + (s.num?120:0) - (n-1)*lineH/2;
+  const fill = s.dark ? "#111" : "#fff", stroke = s.dark ? "#fff" : "#111";
+  s.lines.forEach((ln,i)=>{
+    const local = lt - i*0.18;
+    if(local<0) return;
+    const size = Math.min(fitFont(ln, 230, 940), 230);
+    let sc=1, ox=0, oy=0, rot=0;
+    if(s.fx==="slam"){ sc = 1 + (1-easeOutExpo(clamp(local/.25)))*2.2; }
+    else if(s.fx==="slide"){ ox = (1-easeOutExpo(clamp(local/.3)))*-900; }
+    else { sc = easeOutBack(clamp(local/.3)); rot = (1-clamp(local/.3))*(i%2?.12:-.12); }
+    if(s.fx==="cta") { sc *= 1 + Math.sin(t*(Math.PI*2)/B)*0.03; }
+    g.save(); g.translate(W/2+ox, baseY+i*lineH+oy); g.rotate(rot); g.scale(sc,sc);
+    // カラー帯（強調行は黄色マーカー風）
+    if(s.hi===undefined && i===n-1 && s.fx!=="cta"){
+      g.font=`900 ${size}px ${FONT}`; const w=g.measureText(ln).width;
+      g.fillStyle = s.dark ? "rgba(255,255,255,.55)" : "rgba(255,230,0,.95)"; g.save(); g.rotate(-0.02); g.fillRect(-w/2-24, size*.05, w+48, size*.42); g.restore();
+    }
+    drawText(ln, 0, 0, size, (i===n-1 && !s.dark && s.fx!=="cta" && s.hi===undefined) ? "#111" : fill, (i===n-1 && !s.dark && s.fx!=="cta" && s.hi===undefined) ? "#fff" : stroke, 22);
+    g.restore();
+  });
+
+  // CTA：矢印＋保存アイコン
+  if(s.fx==="cta"){
+    const bob = Math.sin(t*8)*22;
+    g.font=`260px "Noto Color Emoji",sans-serif`; g.textAlign="center"; g.textBaseline="middle";
+    g.fillText("👉", W-190+bob, 1240);
+    g.font=`900 64px ${FONT}`; g.fillStyle="#fff"; g.fillText("右のブックマークをタップ", W/2, 1500);
+  }
+  g.restore();
+}
+
+function drawChrome(t){
+  // 進捗バー
+  g.fillStyle="rgba(255,255,255,.25)"; g.fillRect(40,70,W-80,10);
+  g.fillStyle="#fff"; g.fillRect(40,70,(W-80)*(t/DUR),10);
+  // 字幕風クレジット（UIセーフゾーンの下）
+  g.font=`700 38px ${FONT}`; g.textAlign="left"; g.fillStyle="rgba(255,255,255,.85)"; g.textBaseline="alphabetic";
+  g.fillText("@your_account", 48, H-190);
+}
+
+function frame(){
+  if(!running) return;
+  let t = ctx.currentTime - t0;
+  if(t >= DUR){ startPlayback(true); return; }
+  const s = SCRIPT.slice().reverse().find(x=>t>=x.t*B) || SCRIPT[0];
+  drawScene(s, t); drawChrome(t);
+  requestAnimationFrame(frame);
+}
+
+/* ============ 再生制御 ============ */
+function ensureAudio(){
+  if(ctx) return;
+  ctx = new (window.AudioContext||window.webkitAudioContext)();
+  master = ctx.createGain(); master.gain.value=.8;
+  const comp = ctx.createDynamicsCompressor(); master.connect(comp); comp.connect(ctx.destination);
+  dest = ctx.createMediaStreamDestination(); comp.connect(dest);
+}
+function startPlayback(loop=false){
+  ensureAudio(); ctx.resume();
+  clearVoice();
+  t0 = ctx.currentTime + 0.1;
+  scheduleAudio(t0); scheduleVoice();
+  running = true; requestAnimationFrame(frame);
+  if(!loop) document.getElementById("play").textContent="■ 停止";
+}
+function stopPlayback(){ running=false; clearVoice(); if(ctx) ctx.suspend().then(()=>ctx.close()).then(()=>{ctx=null;}); document.getElementById("play").textContent="▶ 再生（音ON）"; }
+
+document.getElementById("play").onclick = ()=>{ running ? stopPlayback() : startPlayback(); };
+
+document.getElementById("rec").onclick = async ()=>{
+  if(running) stopPlayback();
+  await new Promise(r=>setTimeout(r,300));
+  ensureAudio();
+  const stream = cv.captureStream(30); dest.stream.getAudioTracks().forEach(tr=>stream.addTrack(tr));
+  const mime = ["video/webm;codecs=vp9,opus","video/webm;codecs=vp8,opus","video/webm"].find(m=>MediaRecorder.isTypeSupported(m));
+  chunks=[]; recorder = new MediaRecorder(stream,{mimeType:mime, videoBitsPerSecond:8_000_000});
+  recorder.ondataavailable = e=>e.data.size&&chunks.push(e.data);
+  recorder.onstop = ()=>{
+    const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob(chunks,{type:"video/webm"})); a.download="tiktok-viral-motion.webm"; a.click();
+    recorder=null; document.getElementById("rec").disabled=false; document.getElementById("rec").textContent="⏺ 動画を書き出す (.webm)";
+  };
+  document.getElementById("rec").disabled=true; document.getElementById("rec").textContent="録画中…15秒";
+  recorder.start(); startPlayback(true);
+  setTimeout(()=>{ recorder.stop(); running=false; clearVoice(); }, DUR*1000+400);
+};
+
+// 初期表示（停止中の1フレーム目）
+(function preview(){ const s=SCRIPT[0]; drawScene(s,.6); drawChrome(.6); })();
+window.speechSynthesis && (speechSynthesis.onvoiceschanged=()=>{});
+</script>
+</body>
+</html>
