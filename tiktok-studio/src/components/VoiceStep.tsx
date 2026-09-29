@@ -1,6 +1,7 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { clipDuration, clipToWav, encodeWav, type AudioClip } from "../lib/audio";
-import { synthesize } from "../lib/geminiTts";
+import { SplitError, synthesize, synthesizeScript } from "../lib/geminiTts";
+import { todayTtsCalls } from "../lib/usage";
 import { VOICES, VOICE_DIRECTIONS } from "../lib/knowledge";
 import { speakText } from "../lib/script";
 import { estimateSpeechSeconds } from "../lib/timeline";
@@ -24,17 +25,32 @@ interface Props {
   timeline: Timeline;
   mixed: { samples: Float32Array; sampleRate: number } | null;
   onVoiceChange: (voice: VoiceSettings) => void;
+  onSettingsChange: (settings: ApiSettings) => void;
   onClip: (sceneId: string, clip: AudioClip, signature: string) => void;
   onBack: () => void;
   onNext: () => void;
 }
 
-export function VoiceStep({ script, voice, settings, clips, timeline, mixed, onVoiceChange, onClip, onBack, onNext }: Props) {
+export function VoiceStep({ script, voice, settings, clips, timeline, mixed, onVoiceChange, onSettingsChange, onClip, onBack, onNext }: Props) {
   const [busy, setBusy] = useState<string | null>(null);
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
   const abortRef = useRef<AbortController | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [usedToday, setUsedToday] = useState(todayTtsCalls);
+  const [splitFailed, setSplitFailed] = useState(false);
+  useEffect(() => {
+    const update = () => setUsedToday(todayTtsCalls());
+    window.addEventListener("tms-tts-usage", update);
+    const timer = setInterval(update, 60_000);
+    return () => {
+      window.removeEventListener("tms-tts-usage", update);
+      clearInterval(timer);
+    };
+  }, []);
+  const mode = settings.ttsMode ?? "batch";
+  const rpm = settings.ttsRpm ?? 3;
+  const dailyLimit = settings.ttsDailyLimit ?? 10;
 
   const isFresh = (sceneId: string, text: string) => clips[sceneId]?.signature === clipSignature(voice, text);
   const readyCount = script.scenes.filter((scene) => isFresh(scene.id, speakText(scene))).length;
@@ -47,14 +63,35 @@ export function VoiceStep({ script, voice, settings, clips, timeline, mixed, onV
     void audio.play();
   };
 
-  const generate = async (sceneIds: string[]) => {
+  const begin = () => {
     if (!settings.geminiKey) {
       setError("Gemini APIキーが未設定です（⚙ 設定）");
-      return;
+      return null;
     }
     const controller = new AbortController();
     abortRef.current = controller;
     setError("");
+    setSplitFailed(false);
+    return controller;
+  };
+
+  const finish = (dropped: number) =>
+    setStatus(
+      dropped > 0
+        ? `完了しました（演技指示まで読み上げたため、指示なしで作り直した部分があります。気になる場合は演技指示を空にしてください）`
+        : "完了しました"
+    );
+
+  const fail = (e: unknown) => {
+    if (e instanceof SplitError) setSplitFailed(true);
+    setError(e instanceof DOMException && e.name === "AbortError" ? "中止しました" : (e as Error).message);
+    setStatus("");
+  };
+
+  /** シーンごとに1回ずつ作る */
+  const generate = async (sceneIds: string[]) => {
+    const controller = begin();
+    if (!controller) return;
     let dropped = 0;
     try {
       for (const [n, id] of sceneIds.entries()) {
@@ -69,6 +106,7 @@ export function VoiceStep({ script, voice, settings, clips, timeline, mixed, onV
             model: voice.model,
             voiceName: voice.voiceName,
             direction: voice.direction,
+            rpm,
             text,
             expectedSeconds: estimateSpeechSeconds(text),
             signal: controller.signal
@@ -78,14 +116,42 @@ export function VoiceStep({ script, voice, settings, clips, timeline, mixed, onV
         if (directionDropped) dropped += 1;
         onClip(id, clip, clipSignature(voice, text));
       }
-      setStatus(
-        dropped > 0
-          ? `完了しました（${dropped}シーンは演技指示まで読み上げたため、指示なしで作り直しました。気になる場合は演技指示を空にしてください）`
-          : "完了しました"
-      );
+      finish(dropped);
     } catch (e) {
-      setError((e as Error).message);
-      setStatus("");
+      fail(e);
+    } finally {
+      setBusy(null);
+      abortRef.current = null;
+    }
+  };
+
+  /** 全シーンをまとめて1回で作り、無音で切り分ける */
+  const generateAll = async () => {
+    const controller = begin();
+    if (!controller) return;
+    const texts = script.scenes.map(speakText);
+    setBusy("all");
+    try {
+      const { clips: parts, directionDropped } = await synthesizeScript(
+        {
+          apiKey: settings.geminiKey,
+          model: voice.model,
+          voiceName: voice.voiceName,
+          direction: voice.direction,
+          rpm,
+          texts,
+          expectedSeconds: texts.map(estimateSpeechSeconds),
+          signal: controller.signal
+        },
+        setStatus
+      );
+      script.scenes.forEach((scene, i) => {
+        const part = parts[i];
+        if (part) onClip(scene.id, part, clipSignature(voice, texts[i]!));
+      });
+      finish(directionDropped ? 1 : 0);
+    } catch (e) {
+      fail(e);
     } finally {
       setBusy(null);
       abortRef.current = null;
@@ -137,13 +203,49 @@ export function VoiceStep({ script, voice, settings, clips, timeline, mixed, onV
       ) : null}
       {error ? <Notice kind="error" title="エラー">{" " + error}</Notice> : null}
 
+      {splitFailed ? (
+        <Notice kind="warn" title="区切りがうまくいきませんでした">
+          <div className="row" style={{ marginTop: 6 }}>
+            <span className="meta">シーンごとに作る方式ならシーン数ぶんの回数を使いますが、確実に区切れます。</span>
+            <button className="btn small" type="button" onClick={() => onSettingsChange({ ...settings, ttsMode: "scene" })}>
+              シーンごとに作る方式に切り替える
+            </button>
+          </div>
+        </Notice>
+      ) : null}
+
+      <div className="card stack" style={{ marginTop: 16 }}>
+        <div className="row">
+          <b>作り方</b>
+          <label className="row meta">
+            <input type="radio" style={{ width: "auto" }} checked={mode === "batch"} onChange={() => onSettingsChange({ ...settings, ttsMode: "batch" })} />
+            まとめて1回で作る（無料枠向け・おすすめ）
+          </label>
+          <label className="row meta">
+            <input type="radio" style={{ width: "auto" }} checked={mode === "scene"} onChange={() => onSettingsChange({ ...settings, ttsMode: "scene" })} />
+            シーンごとに作る（{script.scenes.length}回使う）
+          </label>
+        </div>
+        <span className="meta">
+          今日のGemini使用：<b>{usedToday}{dailyLimit > 0 ? ` / ${dailyLimit}回` : "回"}</b>
+          {dailyLimit > 0 ? "（日本時間の16〜17時ごろリセット）" : ""}
+          {rpm > 0 ? `・1分に${rpm}回を超えないよう自動で間隔をあけます` : ""}
+        </span>
+      </div>
+
       <div className="row" style={{ margin: "16px 0 10px" }}>
-        <button className="btn primary" type="button" disabled={Boolean(busy) || missing.length === 0 || !settings.geminiKey} onClick={() => generate(missing)}>
-          {missing.length === script.scenes.length ? "全シーンの音声を生成" : `未生成・変更された${missing.length}シーンを生成`}
-        </button>
+        {mode === "batch" ? (
+          <button className="btn primary" type="button" disabled={Boolean(busy) || missing.length === 0 || !settings.geminiKey} onClick={generateAll}>
+            {missing.length === script.scenes.length ? "全シーンをまとめて生成（1回分）" : `全シーンをまとめて作り直す（1回分・変更${missing.length}シーン）`}
+          </button>
+        ) : (
+          <button className="btn primary" type="button" disabled={Boolean(busy) || missing.length === 0 || !settings.geminiKey} onClick={() => generate(missing)}>
+            {missing.length === script.scenes.length ? `全シーンの音声を生成（${missing.length}回分）` : `未生成・変更された${missing.length}シーンを生成`}
+          </button>
+        )}
         {missing.length > 1 && script.scenes[0] && missing.includes(script.scenes[0].id) ? (
           <button className="btn" type="button" disabled={Boolean(busy) || !settings.geminiKey} onClick={() => generate([script.scenes[0]!.id])}>
-            まず1シーン目だけ試す
+            まず1シーン目だけ試す（1回分）
           </button>
         ) : null}
         {busy ? (

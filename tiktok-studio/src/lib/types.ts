@@ -85,6 +85,12 @@ export interface ApiSettings {
   claudeModel: string;
   effort: "medium" | "high" | "xhigh" | "max";
   ttsModel: string;
+  /** Gemini TTSの1分あたりの上限回数（無料枠は3）。0なら制限なし */
+  ttsRpm?: number;
+  /** Gemini TTSの1日あたりの上限回数（無料枠は10）。0なら表示しない */
+  ttsDailyLimit?: number;
+  /** 音声の作り方：まとめて1回（無料枠向け）／シーンごと */
+  ttsMode?: "batch" | "scene";
   /** アカウントの声。新しい動画はこの声で始まる（声はアカウントの「顔」なので固定する） */
   accountVoice?: VoiceSettings;
   /** アカウントの「らしさ」。新しい動画はこのジャンル・見た目で始まる */

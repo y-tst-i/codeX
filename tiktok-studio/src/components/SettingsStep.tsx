@@ -45,6 +45,21 @@ export function SettingsStep({ settings, onChange, onReset }: Props) {
         <Field label="Gemini APIキー（日本語ナレーション）" hint="https://aistudio.google.com で発行">
           <input type="password" value={settings.geminiKey} onChange={(e) => set("geminiKey", e.target.value.trim())} placeholder="AIza..." autoComplete="off" />
         </Field>
+        <Field label="Geminiのプラン" hint="AI Studioの「レート制限」画面で上限を確認できます">
+          <select
+            value={(settings.ttsRpm ?? 3) > 0 ? "free" : "paid"}
+            onChange={(e) =>
+              onChange(
+                e.target.value === "free"
+                  ? { ...settings, ttsRpm: 3, ttsDailyLimit: 10 }
+                  : { ...settings, ttsRpm: 0, ttsDailyLimit: 0 }
+              )
+            }
+          >
+            <option value="free">無料枠（1分3回・1日10回）</option>
+            <option value="paid">有料（支払い情報を設定済み）</option>
+          </select>
+        </Field>
         <Field label="TTSモデルの初期値" hint="新しいモデルが出たら、③音声の画面でモデル名を直接書き換えられます">
           <select value={settings.ttsModel} onChange={(e) => set("ttsModel", e.target.value)}>
             {TTS_MODELS.map((model) => (

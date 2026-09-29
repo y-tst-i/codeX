@@ -7,7 +7,10 @@ export const DEFAULT_SETTINGS: ApiSettings = {
   geminiKey: "",
   claudeModel: "claude-opus-5-5",
   effort: "high",
-  ttsModel: "gemini-3.8-flash-tts"
+  ttsModel: "gemini-3.8-flash-tts",
+  ttsRpm: 3,
+  ttsDailyLimit: 10,
+  ttsMode: "batch"
 };
 
 export function defaultVoice(settings: ApiSettings): VoiceSettings {

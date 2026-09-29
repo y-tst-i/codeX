@@ -149,6 +149,7 @@ export function App() {
             timeline={timeline}
             mixed={mixed}
             onVoiceChange={changeVoice}
+            onSettingsChange={setSettings}
             onClip={onClip}
             onBack={() => setStep("script")}
             onNext={() => setStep("motion")}
