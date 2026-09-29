@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { clipDuration, mixClips, type AudioClip } from "./lib/audio";
 import { EXPORT_SAMPLE_RATE } from "./lib/exporter";
-import { VOICE_DIRECTIONS } from "./lib/knowledge";
+import { newProject, restoreSettings } from "./lib/project";
 import { speakText } from "./lib/script";
 import { clearClips, loadClips, loadProject, loadSettings, saveClip, saveProject, saveSettings, type ProjectState } from "./lib/storage";
 import { buildTimeline } from "./lib/timeline";
-import type { ApiSettings } from "./lib/types";
+import type { ApiSettings, VoiceSettings } from "./lib/types";
 import { ConceptStep } from "./components/ConceptStep";
 import { ExportStep } from "./components/ExportStep";
 import { GuideStep } from "./components/GuideStep";
@@ -16,37 +16,8 @@ import { VoiceStep, clipSignature, type ClipMap } from "./components/VoiceStep";
 
 type StepId = "guide" | "concept" | "script" | "voice" | "motion" | "export" | "settings";
 
-const DEFAULT_SETTINGS: ApiSettings = {
-  anthropicKey: "",
-  geminiKey: "",
-  claudeModel: "claude-opus-5-5",
-  effort: "high",
-  ttsModel: "gemini-3.8-flash-tts"
-};
-
-function newProject(settings: ApiSettings): ProjectState {
-  return {
-    concept: {
-      niche: "",
-      target: "",
-      topic: "",
-      notes: "",
-      durationSec: 30,
-      hookId: "shock-number",
-      styleId: "kinetic-type",
-      paletteId: "night-lime",
-      fontId: "noto-black",
-      goal: "follow",
-      tone: "テンポよく親しみやすい"
-    },
-    script: null,
-    voice: { voiceName: "Puck", direction: VOICE_DIRECTIONS[0]!.text, model: settings.ttsModel },
-    html: ""
-  };
-}
-
 export function App() {
-  const [settings, setSettings] = useState<ApiSettings>(() => ({ ...DEFAULT_SETTINGS, ...loadSettings() }));
+  const [settings, setSettings] = useState<ApiSettings>(() => restoreSettings(loadSettings(), loadProject()));
   const [project, setProject] = useState<ProjectState>(() => loadProject() ?? newProject(settings));
   const [clips, setClips] = useState<ClipMap>({});
   const [step, setStep] = useState<StepId>(() => (loadProject() ? "concept" : "guide"));
@@ -88,6 +59,12 @@ export function App() {
   const onClip = (sceneId: string, clip: AudioClip, signature: string) => {
     setClips((current) => ({ ...current, [sceneId]: { clip, signature } }));
     void saveClip(sceneId, clip, signature).catch(() => undefined);
+  };
+
+  // 声を変えたら、それがアカウントの声になる（次の動画にも引き継ぐ）
+  const changeVoice = (voice: VoiceSettings) => {
+    setProject((current) => ({ ...current, voice }));
+    setSettings((current) => ({ ...current, accountVoice: voice }));
   };
 
   const reset = () => {
@@ -162,7 +139,7 @@ export function App() {
             clips={clips}
             timeline={timeline}
             mixed={mixed}
-            onVoiceChange={(voice) => setProject((current) => ({ ...current, voice }))}
+            onVoiceChange={changeVoice}
             onClip={onClip}
             onBack={() => setStep("script")}
             onNext={() => setStep("motion")}

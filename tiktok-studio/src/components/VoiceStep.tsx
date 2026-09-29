@@ -106,7 +106,10 @@ export function VoiceStep({ script, voice, settings, clips, timeline, mixed, onV
             </button>
           ))}
         </div>
-        <span className="meta">コツ：声を決めたら、まず1シーン目だけ生成して聴き比べ → 気に入ったら全シーン生成。声はアカウントの「顔」なので、毎回同じ声に固定しましょう。</span>
+        <span className="meta">
+          🔒 ここで選んだ声と演技指示は「アカウントの声」として保存され、新しい動画にも自動で引き継がれます（声はアカウントの「顔」なので、決めたら変えないのがおすすめ）。
+          決めるときは、まず1シーン目だけ生成して聴き比べてください。
+        </span>
       </div>
 
       {!settings.geminiKey ? (

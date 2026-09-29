@@ -85,4 +85,6 @@ export interface ApiSettings {
   claudeModel: string;
   effort: "medium" | "high" | "xhigh" | "max";
   ttsModel: string;
+  /** アカウントの声。新しい動画はこの声で始まる（声はアカウントの「顔」なので固定する） */
+  accountVoice?: VoiceSettings;
 }
