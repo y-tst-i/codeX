@@ -87,4 +87,9 @@ export interface ApiSettings {
   ttsModel: string;
   /** アカウントの声。新しい動画はこの声で始まる（声はアカウントの「顔」なので固定する） */
   accountVoice?: VoiceSettings;
+  /** アカウントの「らしさ」。新しい動画はこのジャンル・見た目で始まる */
+  accountBrand?: AccountBrand;
 }
+
+/** 動画ごとに変えず、アカウントで固定する企画項目（フックの型やテーマは毎回変える） */
+export type AccountBrand = Pick<Concept, "niche" | "target" | "styleId" | "paletteId" | "fontId" | "tone">;

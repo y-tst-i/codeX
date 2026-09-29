@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { clipDuration, mixClips, type AudioClip } from "./lib/audio";
 import { EXPORT_SAMPLE_RATE } from "./lib/exporter";
-import { newProject, restoreSettings } from "./lib/project";
+import { brandOf, newProject, restoreSettings } from "./lib/project";
 import { speakText } from "./lib/script";
 import { clearClips, loadClips, loadProject, loadSettings, saveClip, saveProject, saveSettings, type ProjectState } from "./lib/storage";
 import { buildTimeline } from "./lib/timeline";
-import type { ApiSettings, VoiceSettings } from "./lib/types";
+import type { ApiSettings, Concept, VoiceSettings } from "./lib/types";
 import { ConceptStep } from "./components/ConceptStep";
 import { ExportStep } from "./components/ExportStep";
 import { GuideStep } from "./components/GuideStep";
@@ -67,6 +67,12 @@ export function App() {
     setSettings((current) => ({ ...current, accountVoice: voice }));
   };
 
+  // ジャンル・見た目を変えたら、それがアカウントの「らしさ」になる
+  const changeConcept = (concept: Concept) => {
+    setProject((current) => ({ ...current, concept }));
+    setSettings((current) => ({ ...current, accountBrand: brandOf(concept) }));
+  };
+
   const reset = () => {
     void clearClips();
     setClips({});
@@ -119,7 +125,7 @@ export function App() {
         {step === "guide" ? <GuideStep /> : null}
         {step === "settings" ? <SettingsStep settings={settings} onChange={setSettings} onReset={reset} /> : null}
         {step === "concept" ? (
-          <ConceptStep concept={project.concept} onChange={(concept) => setProject((current) => ({ ...current, concept }))} onNext={() => setStep("script")} />
+          <ConceptStep concept={project.concept} onChange={changeConcept} onNext={() => setStep("script")} />
         ) : null}
         {step === "script" ? (
           <ScriptStep

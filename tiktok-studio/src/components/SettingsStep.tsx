@@ -65,7 +65,7 @@ export function SettingsStep({ settings, onChange, onReset }: Props) {
       </Notice>
 
       <div className="row" style={{ marginTop: 20 }}>
-        <button className="btn danger" type="button" onClick={() => confirm("企画・台本・音声・HTMLをすべて消して新しく始めますか？（APIキーとアカウントの声は残ります）") && onReset()}>
+        <button className="btn danger" type="button" onClick={() => confirm("企画・台本・音声・HTMLをすべて消して新しく始めますか？（APIキー・アカウントの声・ジャンルと見た目の設定は残ります）") && onReset()}>
           プロジェクトを新規作成（全消去）
         </button>
       </div>

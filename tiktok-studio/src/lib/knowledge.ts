@@ -264,6 +264,8 @@ export const TTS_MODELS: { id: string; label: string }[] = [
 ];
 
 export const NICHE_IDEAS: { niche: string; why: string }[] = [
+  { niche: "恋愛心理学・脈ありサイン", why: "『自分ごと』でコメント、『あの人に送る』でシェアが伸びる" },
+  { niche: "星座・誕生月の性格診断", why: "12パターンで毎日量産でき、自分の星座を探して最後まで見られる" },
   { niche: "お金の雑学・節約術", why: "保存されやすく、損失回避フックが効く" },
   { niche: "1分でわかる歴史の裏話", why: "物語フック×シネマ演出が映える" },
   { niche: "心理学・行動経済学", why: "『あなたも当てはまる』でコメントが伸びる" },

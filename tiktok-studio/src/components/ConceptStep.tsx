@@ -15,6 +15,7 @@ export function ConceptStep({ concept, onChange, onNext }: Props) {
     <>
       <h1>① 企画</h1>
       <p className="lead">「誰に・何を・どう見せるか」を決めます。ここで選んだ内容が、台本とモーションのプロンプトに全部反映されます。</p>
+      <p className="meta">🔒 ジャンル・ターゲット・語り口・スタイル・カラー・フォントは「アカウントのらしさ」として保存され、新しい動画にも引き継がれます。テーマとフックの型は毎回変えて試しましょう。</p>
 
       <div className="card stack">
         <div className="grid-2">
