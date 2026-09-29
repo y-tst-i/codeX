@@ -37,3 +37,19 @@ describe("音声処理", () => {
     expect(new DataView(bytes.buffer).getUint32(24, true)).toBe(48000);
   });
 });
+
+describe("Gemini TTSへの渡し方", () => {
+  it("演技指示とセリフを見出しで分ける（指示が無ければセリフだけ）", async () => {
+    const { buildTtsPrompt } = await import("../src/lib/geminiTts");
+    expect(buildTtsPrompt("", "第5位から。")).toBe("第5位から。");
+    const prompt = buildTtsPrompt("明るく", "第5位から。");
+    expect(prompt.indexOf("明るく")).toBeLessThan(prompt.indexOf("TRANSCRIPT"));
+    expect(prompt.endsWith("#### TRANSCRIPT\n第5位から。")).toBe(true);
+  });
+
+  it("セリフに対して長すぎる音声は指示文の読み上げを疑う", async () => {
+    const { looksLikeInstructionsWereRead } = await import("../src/lib/geminiTts");
+    expect(looksLikeInstructionsWereRead(13.4, 2.5)).toBe(true);
+    expect(looksLikeInstructionsWereRead(3.2, 2.5)).toBe(false);
+  });
+});

@@ -3,13 +3,17 @@ import { clipDuration, clipToWav, encodeWav, type AudioClip } from "../lib/audio
 import { synthesize } from "../lib/geminiTts";
 import { VOICES, VOICE_DIRECTIONS } from "../lib/knowledge";
 import { speakText } from "../lib/script";
+import { estimateSpeechSeconds } from "../lib/timeline";
 import type { ApiSettings, Script, Timeline, VoiceSettings } from "../lib/types";
 import { Field, Notice, StepNav, downloadBlob, formatSeconds } from "./common";
 
 export type ClipMap = Record<string, { clip: AudioClip; signature: string }>;
 
+/** 音声の作り方を変えたら上げる（古い音声を「作り直しが必要」にするため） */
+const TTS_FORMAT_VERSION = "v2";
+
 export function clipSignature(voice: VoiceSettings, text: string): string {
-  return [voice.model, voice.voiceName, voice.direction, text].join("|");
+  return [TTS_FORMAT_VERSION, voice.model, voice.voiceName, voice.direction, text].join("|");
 }
 
 interface Props {
@@ -51,6 +55,7 @@ export function VoiceStep({ script, voice, settings, clips, timeline, mixed, onV
     const controller = new AbortController();
     abortRef.current = controller;
     setError("");
+    let dropped = 0;
     try {
       for (const [n, id] of sceneIds.entries()) {
         const scene = script.scenes.find((s) => s.id === id);
@@ -58,13 +63,26 @@ export function VoiceStep({ script, voice, settings, clips, timeline, mixed, onV
         const text = speakText(scene);
         setBusy(id);
         setStatus(`音声を生成中… ${n + 1}/${sceneIds.length}`);
-        const clip = await synthesize(
-          { apiKey: settings.geminiKey, model: voice.model, voiceName: voice.voiceName, direction: voice.direction, text, signal: controller.signal },
+        const { clip, directionDropped } = await synthesize(
+          {
+            apiKey: settings.geminiKey,
+            model: voice.model,
+            voiceName: voice.voiceName,
+            direction: voice.direction,
+            text,
+            expectedSeconds: estimateSpeechSeconds(text),
+            signal: controller.signal
+          },
           setStatus
         );
+        if (directionDropped) dropped += 1;
         onClip(id, clip, clipSignature(voice, text));
       }
-      setStatus("完了しました");
+      setStatus(
+        dropped > 0
+          ? `完了しました（${dropped}シーンは演技指示まで読み上げたため、指示なしで作り直しました。気になる場合は演技指示を空にしてください）`
+          : "完了しました"
+      );
     } catch (e) {
       setError((e as Error).message);
       setStatus("");
@@ -123,6 +141,11 @@ export function VoiceStep({ script, voice, settings, clips, timeline, mixed, onV
         <button className="btn primary" type="button" disabled={Boolean(busy) || missing.length === 0 || !settings.geminiKey} onClick={() => generate(missing)}>
           {missing.length === script.scenes.length ? "全シーンの音声を生成" : `未生成・変更された${missing.length}シーンを生成`}
         </button>
+        {missing.length > 1 && script.scenes[0] && missing.includes(script.scenes[0].id) ? (
+          <button className="btn" type="button" disabled={Boolean(busy) || !settings.geminiKey} onClick={() => generate([script.scenes[0]!.id])}>
+            まず1シーン目だけ試す
+          </button>
+        ) : null}
         {busy ? (
           <button className="btn" type="button" onClick={() => abortRef.current?.abort()}>
             中止

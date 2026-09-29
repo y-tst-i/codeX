@@ -9,6 +9,8 @@ export interface TtsRequest {
   /** 演技指示（例：明るくテンポよく） */
   direction: string;
   text: string;
+  /** セリフだけを読んだ場合のおおよその秒数。指示文まで読み上げたかの判定に使う */
+  expectedSeconds?: number;
   signal?: AbortSignal;
 }
 
@@ -30,11 +32,19 @@ export class TtsError extends Error {
   }
 }
 
-/** 演技指示とセリフを、TTSモデルに渡す1本のテキストにする */
+/**
+ * 演技指示とセリフを、TTSモデルに渡す1本のテキストにする。
+ * 指示とセリフを見出しで分け、セリフ（TRANSCRIPT）だけを読ませる。
+ */
 export function buildTtsPrompt(direction: string, text: string): string {
   const trimmed = direction.trim();
   if (!trimmed) return text;
-  return `${trimmed}\n次のセリフだけを読み上げてください：\n${text}`;
+  return `### DIRECTOR'S NOTES\n${trimmed}\n\n#### TRANSCRIPT\n${text}`;
+}
+
+/** セリフに対して音声が長すぎる＝指示文まで読み上げた疑いがある */
+export function looksLikeInstructionsWereRead(actualSeconds: number, expectedSeconds: number): boolean {
+  return actualSeconds > expectedSeconds * 2 + 1.5;
 }
 
 type VoiceConfigShape = "prebuilt" | "voice";
@@ -91,7 +101,23 @@ function wait(ms: number, signal?: AbortSignal): Promise<void> {
  * 1セリフ分の音声を作る。
  * 429/5xx は待って再試行。ボイス指定の書式が合わない400は、もう一方の書式で1回だけ試す。
  */
-export async function synthesize(request: TtsRequest, onRetry?: (message: string) => void): Promise<AudioClip> {
+export interface TtsResult {
+  clip: AudioClip;
+  /** 演技指示まで読み上げたため、指示なしで作り直したか */
+  directionDropped: boolean;
+}
+
+export async function synthesize(request: TtsRequest, onRetry?: (message: string) => void): Promise<TtsResult> {
+  const clip = await synthesizeWithRetry(request, onRetry);
+  const { expectedSeconds } = request;
+  if (!request.direction.trim() || !expectedSeconds) return { clip, directionDropped: false };
+  if (!looksLikeInstructionsWereRead(clip.samples.length / clip.sampleRate, expectedSeconds)) return { clip, directionDropped: false };
+  // 演技指示まで読み上げてしまったので、セリフだけでもう一度作る
+  onRetry?.("演技指示まで読み上げたため、セリフだけで作り直しています…");
+  return { clip: await synthesizeWithRetry({ ...request, direction: "" }, onRetry), directionDropped: true };
+}
+
+async function synthesizeWithRetry(request: TtsRequest, onRetry?: (message: string) => void): Promise<AudioClip> {
   let shape: VoiceConfigShape = "prebuilt";
   let switchedShape = false;
   for (let attempt = 0; ; attempt++) {
