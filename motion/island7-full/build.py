@@ -44,6 +44,8 @@ HTML = r'''<!doctype html>
   button{font:inherit;color:var(--fg);background:#0d1f31;border:1px solid var(--line);border-radius:999px;padding:8px 14px;min-height:40px;cursor:pointer}
   #pp{min-width:56px;font-weight:800}
   input[type=range]{flex:1;min-width:0;accent-color:var(--acc);height:28px}
+  #volw{display:flex;align-items:center;gap:4px;font-size:16px}
+  #vol{width:90px;flex:none}
   #time{font:13px ui-monospace,Menlo,monospace;color:var(--dim);white-space:nowrap}
   #chips{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none}
   #chips button{flex:none;font-size:12px;padding:6px 11px;min-height:32px;color:var(--dim)}
@@ -57,7 +59,7 @@ HTML = r'''<!doctype html>
   <div id="poster"><b>ISLAND 7</b><span>▶</span><i>タップで最初から再生（音が出ます・約3分20秒）</i></div>
   <div id="hint"></div>
 </div>
-<div id="ui"><div id="row"><button id="pp">▶</button><input id="seek" type="range" min="0" max="200" step="0.05" value="0"><div id="time">0:00 / 3:20</div><button id="bgm" title="BGM 切り替え">BGM: HEAVY</button><button id="fs" title="全画面">⛶</button></div><div id="chips"></div></div>
+<div id="ui"><div id="row"><button id="pp">▶</button><input id="seek" type="range" min="0" max="200" step="0.05" value="0"><div id="time">0:00 / 3:20</div><label id="volw" title="音量">🔊<input id="vol" type="range" min="0" max="1" step="0.01" value="0.5"></label><button id="bgm" title="BGM 切り替え">BGM: HEAVY</button><button id="fs" title="全画面">⛶</button></div><div id="chips"></div></div>
 <script>
 "use strict";
 /* ISLAND 7 オープニング(0:00–1:15) + ルール説明(1:15–3:20)。BGM は gen_bgm.py で合成した mp3 を埋め込み。
@@ -85,7 +87,7 @@ function load(){if(CACHE[mode]){BUF=CACHE[mode];return Promise.resolve();}if(loa
   CACHE[md]=out;loadP=null;if(md===mode)BUF=out;}).catch(e=>{console.warn("audio",e);loadP=null;hint.textContent="音声を読み込めませんでした（映像のみ再生）。もう一度再生を押すと再試行します";});return loadP;}
 const now=()=>playing?off+(AC.currentTime-st):off;
 async function play(from){
-  if(!AC){AC=new(window.AudioContext||window.webkitAudioContext)();gain=AC.createGain();gain.connect(AC.destination);}
+  if(!AC){AC=new(window.AudioContext||window.webkitAudioContext)();gain=AC.createGain();gain.gain.value=vol2g(+$("vol").value);gain.connect(AC.destination);}
   if(AC.state==="suspended")await Promise.race([AC.resume(),new Promise(r=>setTimeout(r,1500))]);
   hint.textContent="音声を読み込み中…";try{await load();}catch(e){}if(BUF)hint.textContent="";
   stopSrc();off=from===undefined?(off>=DUR-.1?0:off):from;
@@ -98,6 +100,10 @@ pp.onclick=()=>playing?pause():play();
 poster.onclick=()=>play(0);
 seek.oninput=()=>{if(!seeking)resumeAfter=playing;seeking=true;if(playing)pause();off=+seek.value;render(off);timeEl.textContent=`${fmt(off)} / ${fmt(DUR)}`;};
 seek.onchange=()=>{seeking=false;if(resumeAfter)play(off);};
+const vol2g=v=>v*v;
+try{const v=localStorage.getItem("i7vol");if(v!==null)$("vol").value=v;}catch(e){}
+$("vol").oninput=()=>{const v=+$("vol").value;if(gain)gain.gain.setTargetAtTime(vol2g(v),AC.currentTime,.03);try{localStorage.setItem("i7vol",v);}catch(e){}};
+addEventListener("keydown",e=>{if(e.key==="ArrowUp"||e.key==="ArrowDown"){e.preventDefault();const s=$("vol");s.value=Math.min(1,Math.max(0,+s.value+(e.key==="ArrowUp"?.05:-.05)));s.oninput();}});
 $("bgm").onclick=()=>{mode=mode==="heavy"?"cinematic":"heavy";$("bgm").textContent="BGM: "+(mode==="heavy"?"HEAVY":"CINEMATIC");BUF=CACHE[mode]||null;if(playing)play(now());};
 $("fs").onclick=()=>{const w=$("wrap");if(document.fullscreenElement)document.exitFullscreen();else if(w.requestFullscreen)w.requestFullscreen();};
 addEventListener("keydown",e=>{if(e.code==="Space"){e.preventDefault();pp.click();}else if(e.key==="f")$("fs").click();else if(e.key==="ArrowRight")play(Math.min(DUR-1,now()+5));else if(e.key==="ArrowLeft")play(Math.max(0,now()-5));});
