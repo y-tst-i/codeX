@@ -72,20 +72,22 @@ const T0=75,DUR=200;
 function render(t){t=Math.min(Math.max(t,0),DUR-.001);if(t<T0)OP.render(t);else EX.render(t-T0);}
 
 /* ---- 再生（2 本の mp3 を 1 本につないで同期）---- */
-const AUDIO=["data:audio/mpeg;base64,@@A1@@","data:audio/mpeg;base64,@@A2@@"];
+const AUDIO=["@@A1@@","@@A2@@"];
 const $=id=>document.getElementById(id),pp=$("pp"),seek=$("seek"),timeEl=$("time"),poster=$("poster"),hint=$("hint");
 let AC=null,BUF=null,src=null,gain=null,playing=false,off=0,st=0,loadP=null,seeking=false,resumeAfter=false;
 const fmt=s=>`${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,"0")}`;
-async function dec(u){const b=await (await fetch(u)).arrayBuffer();return new Promise((res,rej)=>AC.decodeAudioData(b,res,rej));}
-function load(){if(loadP)return loadP;loadP=Promise.all(AUDIO.map(dec)).then(([a,b])=>{
+function toBuf(s){const r=atob(s),a=new Uint8Array(r.length);for(let i=0;i<r.length;i++)a[i]=r.charCodeAt(i);return a.buffer;}
+function dec(s){return new Promise((res,rej)=>{try{const p=AC.decodeAudioData(toBuf(s),res,rej);if(p&&p.catch)p.catch(rej);}catch(e){rej(e);}});}
+const withTimeout=(p,ms)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error("timeout")),ms))]);
+function load(){if(loadP)return loadP;loadP=withTimeout(Promise.all(AUDIO.map(dec)),12000).then(([a,b])=>{
   const sr=a.sampleRate,n1=Math.round(T0*sr),n2=Math.round((DUR-T0)*sr),out=AC.createBuffer(2,n1+n2,sr);
   for(let c=0;c<2;c++){const d=out.getChannelData(c);d.set(a.getChannelData(Math.min(c,a.numberOfChannels-1)).subarray(0,n1),0);d.set(b.getChannelData(Math.min(c,b.numberOfChannels-1)).subarray(0,n2),n1);}
-  BUF=out;}).catch(e=>{console.warn("audio",e);hint.textContent="音声を読み込めませんでした（映像のみ再生）";});return loadP;}
+  BUF=out;}).catch(e=>{console.warn("audio",e);loadP=null;hint.textContent="音声を読み込めませんでした（映像のみ再生）。もう一度再生を押すと再試行します";});return loadP;}
 const now=()=>playing?off+(AC.currentTime-st):off;
 async function play(from){
   if(!AC){AC=new(window.AudioContext||window.webkitAudioContext)();gain=AC.createGain();gain.connect(AC.destination);}
-  if(AC.state==="suspended")await AC.resume();
-  hint.textContent="読み込み中…";await load();if(BUF)hint.textContent="";
+  if(AC.state==="suspended")await Promise.race([AC.resume(),new Promise(r=>setTimeout(r,1500))]);
+  hint.textContent="音声を読み込み中…";try{await load();}catch(e){}if(BUF)hint.textContent="";
   stopSrc();off=from===undefined?(off>=DUR-.1?0:off):from;
   if(BUF){src=AC.createBufferSource();src.buffer=BUF;src.connect(gain);src.start(0,Math.min(off,BUF.duration-.01));}
   st=AC.currentTime;playing=true;pp.textContent="⏸";poster.style.display="none";
