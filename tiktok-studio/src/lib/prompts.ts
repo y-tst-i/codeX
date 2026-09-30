@@ -1,4 +1,5 @@
 import { FONTS, GOALS, HOOKS, PALETTES, STYLES, VIDEO, findOrFirst } from "./knowledge";
+import { EASING_LIBRARY, resolveTechniques } from "./techniques";
 import { formatTimelineForPrompt } from "./timeline";
 import type { Concept, Script, Timeline } from "./types";
 
@@ -101,6 +102,8 @@ export function buildMotionPrompt({ concept, script, timeline }: MotionPromptInp
   const { safe } = VIDEO;
   const fontUrl = googleFontsUrl(font.family, font.weights);
   const heaviest = Math.max(...font.weights);
+  const { techniques, auto } = resolveTechniques(concept.styleId, concept.techniqueIds);
+  const techniqueLines = techniques.map((t) => `- **${t.name}**（${t.when}）: ${t.recipe}`).join("\n");
 
   return `# 依頼
 下のタイムラインに完全同期する、TikTok用の縦型モーショングラフィックス動画を、1つのHTMLファイルとして実装してください。
@@ -128,6 +131,12 @@ ${style.direction.map((line) => `- ${line}`).join("\n")}
 - 読み込みURL: ${fontUrl}
 - 見出し・キーワードは ${heaviest}、字幕は ${font.weights[0]} 以上
 
+## 使う演出テクニック${auto ? "（スタイルに合わせたおすすめ。シーンに合うものを選んで使う）" : "（指定。最低1回ずつ、効果的な場面で使う）"}
+${techniqueLines}
+
+## イージング辞典（この式で実装する）
+${EASING_LIBRARY.map((line) => `- ${line}`).join("\n")}
+
 # タイムライン（音声の実測値。1フレームもずらさないこと）
 ${formatTimelineForPrompt(timeline)}
 
@@ -136,7 +145,9 @@ ${formatTimelineForPrompt(timeline)}
 2. **最初の1秒が勝負**: 0〜1秒の間に大きな動き（ズームパンチ・叩きつけ・画面を割る等）を必ず入れる
 3. **静止画面を作らない**: どの瞬間もカメラのゆっくりしたドリフト/ズーム、背景要素の揺らぎなど、何かが動いている
 4. **1.5〜3秒ごとに視覚的な変化**（パターンインタラプト）: レイアウト・スケール・色面・カメラ位置のどれかを大きく変える
-5. **イージング**: linearは連続運動（回転・流れ）にだけ使う。登場は easeOutExpo / easeOutBack / spring、退場は easeInCubic で素早く
+5. **イージング**: linearは連続運動（回転・流れ）にだけ使う。登場は easeOutExpo / easeOutBack / spring、退場は easeInCubic で素早く。大きな動きの前には easeInBack の溜めを入れる
+5-2. **物理は式で**: 重力・減衰・バネは「経過時間 s の式」で位置を出す（\`v *= 0.98\` のようにフレームごとに状態を更新する書き方は禁止。書き出しでは任意の時刻を直接描くため）
+5-3. **光で主役を立てる**: 暗い背景では発光（'lighter' 合成や shadowBlur を控えめに）で主役と背景のコントラストを作る
 6. **アニメーションの12原則**: 予備動作（anticipation）、オーバーシュート、フォロースルー、スタッガー（30〜60ms）、二次的な動き
 7. **音との同期**: 各シーンの主役の登場は speechStart の0〜2フレーム前。強調語は、その語が読まれる字幕チャンクの開始時刻に叩く
 8. **シーン転換**: シーン境界（前シーンのend）をまたいで6〜10フレームの転換をつくる。カットでつなぐだけにしない（マッチカット・ズームスルー・マスクワイプ・ホイップパン等）

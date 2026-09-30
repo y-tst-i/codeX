@@ -58,3 +58,32 @@ describe("プロンプト", () => {
     expect(googleFontsUrl("Noto Sans JP", [900, 500])).toBe("https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@500;900&display=block");
   });
 });
+
+describe("演出テクニック", () => {
+  it("未選択ならスタイルのおまかせ、選択すればそれを使う", async () => {
+    const { resolveTechniques } = await import("../src/lib/techniques");
+    expect(resolveTechniques("infographic", []).auto).toBe(true);
+    expect(resolveTechniques("infographic", []).techniques.map((t) => t.id)).toContain("TECH-006");
+    const chosen = resolveTechniques("infographic", ["TECH-017"]);
+    expect(chosen.auto).toBe(false);
+    expect(chosen.techniques.map((t) => t.name)).toEqual(["紙吹雪・粒子バースト"]);
+  });
+
+  it("モーションプロンプトにテクニックとイージング辞典が入る", () => {
+    const timeline = buildTimeline(script.scenes, [2, 1.5]);
+    const prompt = buildMotionPrompt({ concept: { ...concept, techniqueIds: ["TECH-017"] }, script, timeline });
+    expect(prompt).toContain("紙吹雪・粒子バースト");
+    expect(prompt).toContain("easeInBack");
+    expect(prompt).toContain("フレームごとに状態を更新する書き方は禁止");
+  });
+
+  it("すべてのスタイルのおまかせが実在するテクニックを指す", async () => {
+    const { STYLE_TECHNIQUES, TECHNIQUES } = await import("../src/lib/techniques");
+    const { STYLES } = await import("../src/lib/knowledge");
+    for (const style of STYLES) {
+      const ids = STYLE_TECHNIQUES[style.id] ?? [];
+      expect(ids.length).toBeGreaterThan(0);
+      for (const id of ids) expect(TECHNIQUES.some((t) => t.id === id)).toBe(true);
+    }
+  });
+});

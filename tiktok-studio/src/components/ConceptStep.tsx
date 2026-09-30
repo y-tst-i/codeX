@@ -1,5 +1,6 @@
 import { FONTS, GOALS, HOOKS, NICHE_IDEAS, PALETTES, STYLES } from "../lib/knowledge";
 import { applyIdea, type Idea } from "../lib/ideas";
+import { MAX_TECHNIQUES, STYLE_TECHNIQUES, TECHNIQUES } from "../lib/techniques";
 import type { ApiSettings, Concept } from "../lib/types";
 import { Field, StepNav } from "./common";
 import { IdeasPanel } from "./IdeasPanel";
@@ -81,6 +82,46 @@ export function ConceptStep({ concept, settings, ideas, onIdeas, onChange, onNex
             <b>{style.name}</b>
             <small>{style.summary}</small>
           </button>
+        ))}
+      </div>
+
+      <h2>演出テクニック（任意・最大{MAX_TECHNIQUES}つ）</h2>
+      <p className="meta">
+        何も選ばなければ「{STYLES.find((st) => st.id === concept.styleId)?.name}」に合うものをおまかせで使います（
+        {(STYLE_TECHNIQUES[concept.styleId] ?? []).map((id) => TECHNIQUES.find((t) => t.id === id)?.name).join("・")}）。
+      </p>
+      <div className="stack" style={{ gap: 8 }}>
+        {[...new Set(TECHNIQUES.map((t) => t.category))].map((category) => (
+          <div className="row" key={category} style={{ alignItems: "flex-start" }}>
+            <span className="meta" style={{ width: 80, flex: "none", paddingTop: 5 }}>
+              {category}
+            </span>
+            <div className="chips" style={{ flex: 1 }}>
+              {TECHNIQUES.filter((t) => t.category === category).map((t) => {
+                const selected = concept.techniqueIds?.includes(t.id) ?? false;
+                const full = (concept.techniqueIds?.length ?? 0) >= MAX_TECHNIQUES;
+                return (
+                  <button
+                    key={t.id}
+                    type="button"
+                    className="chip"
+                    title={t.when}
+                    disabled={!selected && full}
+                    style={selected ? { borderColor: "var(--accent)", color: "var(--accent)" } : undefined}
+                    onClick={() =>
+                      set(
+                        "techniqueIds",
+                        selected ? (concept.techniqueIds ?? []).filter((id) => id !== t.id) : [...(concept.techniqueIds ?? []), t.id]
+                      )
+                    }
+                  >
+                    {selected ? "✓ " : ""}
+                    {t.name}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         ))}
       </div>
 

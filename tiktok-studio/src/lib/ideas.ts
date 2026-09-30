@@ -121,5 +121,5 @@ export function parseIdeas(text: string): Idea[] {
 /** ネタを企画に反映する（テーマ・フックの型・参考情報） */
 export function applyIdea(concept: Concept, idea: Idea): Concept {
   const notes = [idea.hookLine && `1文目の案：${idea.hookLine}`, idea.notes].filter(Boolean).join("\n");
-  return { ...concept, topic: idea.topic, hookId: idea.hookId, notes };
+  return { ...concept, topic: idea.topic, hookId: idea.hookId, notes, techniqueIds: [] };
 }

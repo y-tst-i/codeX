@@ -19,6 +19,8 @@ export interface Concept {
   goal: "follow" | "save" | "share" | "comment";
   /** 語り口（例：テンポよく親しみやすい） */
   tone: string;
+  /** 使う演出テクニック（TECH-xxx）。空ならスタイルのおまかせ */
+  techniqueIds?: string[];
 }
 
 export interface Scene {
