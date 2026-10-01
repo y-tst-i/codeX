@@ -1,0 +1,461 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <script src="assets/gsap.min.js"></script>
+    <style>
+      :root {
+        --ink: #0a0a12;
+        --paper: #fffdf5;
+        --gold: #ffc400;
+        --orange: #ff7a18;
+        --red: #ff2a4d;
+        --cyan: #19d3ff;
+      }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 1920px; height: 1080px; overflow: hidden; background: var(--ink); }
+      #root { position: relative; width: 100%; height: 100%; overflow: hidden; background: var(--ink); }
+      #stage { position: absolute; inset: 0; }
+      .scene { position: absolute; inset: 0; overflow: hidden; }
+      .abs { position: absolute; }
+      .full { position: absolute; inset: 0; }
+      .t { font-family: "Noto Sans JP", sans-serif; font-weight: 700; line-height: 1; white-space: nowrap; letter-spacing: -0.02em; }
+      .c { display: inline-block; }
+      .skew { transform: skewX(-8deg); }
+      .center { display: flex; align-items: center; justify-content: center; flex-direction: column; }
+      .lines { position: absolute; inset: 0; width: 1920px; height: 1080px; }
+      .ht {
+        position: absolute; inset: 0;
+        background-image: radial-gradient(circle, rgba(0,0,0,.28) 30%, transparent 32%);
+        background-size: 28px 28px;
+        -webkit-mask-image: radial-gradient(ellipse at 50% 50%, transparent 25%, #000 90%);
+        mask-image: radial-gradient(ellipse at 50% 50%, transparent 25%, #000 90%);
+      }
+      .sun {
+        position: absolute; left: -640px; top: -1060px; width: 3200px; height: 3200px;
+        border-radius: 50%;
+      }
+      .tape { display: inline-block; padding: 12px 34px; background: var(--gold); color: var(--ink); }
+      .tape.k { background: var(--ink); color: var(--paper); }
+      .tape.w { background: var(--paper); color: var(--ink); }
+      .chip { display: inline-block; padding: 8px 36px; background: var(--paper); color: var(--ink); border: 9px solid var(--ink); transform: skewX(-8deg); }
+      .hero, .enemy { position: absolute; }
+      .hero svg, .enemy svg { width: 100%; height: 100%; overflow: visible; }
+      .hero { filter: drop-shadow(0 0 16px rgba(255,196,0,.85)); }
+      .enemy { filter: drop-shadow(0 0 22px rgba(255,42,77,.55)); }
+      .eye { filter: drop-shadow(0 0 10px #ff2a4d); }
+      #flash { position: absolute; inset: 0; background: #fff; opacity: 0; pointer-events: none; z-index: 50; }
+      #fade { position: absolute; inset: 0; background: #000; opacity: 0; pointer-events: none; z-index: 60; }
+      .vig { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 50%, transparent 40%, rgba(0,0,0,.65) 100%); }
+      .ember { position: absolute; width: 10px; height: 10px; border-radius: 50%; background: var(--orange); box-shadow: 0 0 14px 4px rgba(255,122,24,.8); }
+      .ring { position: absolute; width: 400px; height: 400px; border-radius: 50%; border: 22px solid #fff; opacity: 0; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="30" data-width="1920" data-height="1080">
+      <div id="stage">
+
+        <!-- ================= A : 0.0 - 3.0  dread ================= -->
+        <section id="sA" class="scene clip" data-start="0" data-duration="3" data-track-index="1" style="background:#07070c">
+          <div class="full" style="background:radial-gradient(ellipse at 50% 120%, rgba(255,42,77,.35), transparent 60%)"></div>
+          <div id="embers" class="full"></div>
+          <div id="a-l1" class="full center">
+            <div class="skew" style="display:flex;align-items:baseline;gap:34px">
+              <div id="a1a" class="t" style="font-size:170px;color:#fffdf5">魔王軍</div>
+              <div id="a1b" class="t" style="font-size:310px;color:#ff2a4d">100万</div>
+            </div>
+            <div id="a1s" class="t" style="font-size:72px;color:#cfcfd8;margin-top:36px;letter-spacing:.12em">世界は、終わるはずだった。</div>
+          </div>
+          <div id="a-l2" class="full center">
+            <div class="skew" style="display:flex;align-items:baseline;gap:34px">
+              <div id="a2a" class="t" style="font-size:160px;color:#fffdf5">勇者パーティ</div>
+              <div id="a2b" class="t" style="font-size:330px;color:#ff2a4d">全滅</div>
+            </div>
+            <div id="a2s" class="t" style="font-size:72px;color:#cfcfd8;margin-top:36px;letter-spacing:.12em">希望は、ない。</div>
+          </div>
+          <div class="vig"></div>
+        </section>
+
+        <!-- ================= B : 3.0 - 6.0  hero vs demon lord ================= -->
+        <section id="sB" class="scene clip" data-start="3" data-duration="3" data-track-index="1" style="background:#ffb000">
+          <div id="b-world" class="full">
+            <div id="b-sun" class="sun" style="background:repeating-conic-gradient(#ffd23f 0deg 7.5deg, #ff9f1c 7.5deg 15deg)"></div>
+            <div class="ht"></div>
+            <div id="b-enemy" class="enemy" style="right:60px;bottom:-60px;width:800px;height:1030px"></div>
+            <div id="b-hero" class="hero" style="left:250px;bottom:-30px;width:470px;height:920px"></div>
+          </div>
+          <svg id="b-lines" class="lines" viewBox="0 0 1920 1080"></svg>
+          <div id="b-tape" class="abs" style="left:70px;top:60px"><div class="tape t" style="font-size:84px;transform:rotate(-3deg)">そこに立っていたのは——</div></div>
+          <div id="b-chip1" class="abs" style="left:560px;top:330px"><div class="chip t" style="font-size:110px">Lv.1</div></div>
+          <div id="b-chip2" class="abs" style="left:1130px;top:70px"><div class="chip t" style="font-size:110px;background:#ff2a4d;color:#fffdf5">Lv.999</div></div>
+          <div id="b-line" class="abs" style="left:0;right:0;bottom:46px;text-align:center"><div class="tape k t" style="font-size:70px">魔王「たかがレベル1が、何の用だ？」</div></div>
+        </section>
+
+        <!-- ================= C1 : 6.0 - 7.5  impact frame ================= -->
+        <section id="sC1" class="scene clip" data-start="6" data-duration="1.5" data-track-index="1" style="background:#fffdf5">
+          <svg id="c1-lines" class="lines" viewBox="0 0 1920 1080"></svg>
+          <div class="full center">
+            <div class="skew"><div id="c1t" class="t" style="font-size:430px;color:#0a0a12">ワンパン</div></div>
+            <div id="c1s" class="t" style="font-size:88px;color:#fffdf5;background:#0a0a12;padding:6px 40px;margin-top:10px">レベル1の、ただのパンチ。</div>
+          </div>
+        </section>
+
+        <!-- ================= C2 : 7.5 - 10.5  aftermath ================= -->
+        <section id="sC2" class="scene clip" data-start="7.5" data-duration="3" data-track-index="1" style="background:#0b86b6">
+          <div id="c2-sun" class="sun" style="background:repeating-conic-gradient(#0f9fd2 0deg 6deg, #0a7aa8 6deg 12deg)"></div>
+          <div class="ht"></div>
+          <div id="c2-ring1" class="ring" style="left:520px;top:340px"></div>
+          <div id="c2-ring2" class="ring" style="left:520px;top:340px"></div>
+          <div id="c2-ring3" class="ring" style="left:520px;top:340px"></div>
+          <div id="c2-hero" class="hero" style="left:60px;bottom:-40px;width:470px;height:920px"></div>
+          <div class="abs center" style="left:740px;top:70px;width:1000px;align-items:flex-start">
+            <div class="skew"><div id="c2a" class="t" style="font-size:310px;color:#fffdf5">魔王、</div></div>
+            <div class="skew"><div id="c2b" class="t" style="font-size:340px;color:#fffdf5;margin-top:10px">消滅。</div></div>
+          </div>
+          <div id="c2-star" class="abs" style="right:70px;top:30px;width:220px;height:220px">
+            <svg viewBox="-110 -110 220 220" width="220" height="220"><polygon points="0,-100 18,-18 100,0 18,18 0,100 -18,18 -100,0 -18,-18" fill="#fffdf5" stroke="#ff9f1c" stroke-width="6"/></svg>
+            <div id="c2-kira" class="abs t" style="left:0;right:0;top:92px;text-align:center;font-size:34px;color:#0a0a12">キラーン</div>
+          </div>
+          
+          <div id="c2-stamp" class="abs" style="left:430px;bottom:70px"><div class="tape t" style="font-size:86px;transform:rotate(3deg)">※ただの準備運動です</div></div>
+        </section>
+
+        <!-- ================= D : 10.5 - 15.0  one-hit montage ================= -->
+        <section id="d1" class="scene clip" data-start="10.5" data-duration="0.75" data-track-index="1" style="background:#ffc400">
+          <div class="ht"></div><svg class="lines" viewBox="0 0 1920 1080"></svg>
+          <div class="full center">
+            <div class="d-label"><div class="tape k t" style="font-size:120px;transform:rotate(-3deg)">ドラゴンは、</div></div>
+            <div class="skew"><div class="d-big t" style="font-size:420px;color:#0a0a12;margin-top:20px">デコピン</div></div>
+            <div class="d-sub t" style="margin-top:34px;font-size:110px;color:#0a0a12">で終了。</div>
+          </div>
+        </section>
+        <section id="d2" class="scene clip" data-start="11.25" data-duration="0.75" data-track-index="1" style="background:#19d3ff">
+          <div class="ht"></div><svg class="lines" viewBox="0 0 1920 1080"></svg>
+          <div class="full center">
+            <div class="d-label"><div class="tape k t" style="font-size:120px;transform:rotate(2deg)">大魔法は、</div></div>
+            <div class="skew"><div class="d-big t" style="font-size:520px;color:#0a0a12;margin-top:20px">ビンタ</div></div>
+            <div class="d-sub t" style="margin-top:34px;font-size:110px;color:#0a0a12">で終了。</div>
+          </div>
+        </section>
+        <section id="d3" class="scene clip" data-start="12" data-duration="0.75" data-track-index="1" style="background:#ff2a4d">
+          <div class="ht"></div><svg class="lines" viewBox="0 0 1920 1080"></svg>
+          <div class="full center">
+            <div class="d-label"><div class="tape w t" style="font-size:120px;transform:rotate(-2deg)">伝説の剣は、</div></div>
+            <div class="skew"><div class="d-big t" style="font-size:560px;color:#fffdf5;margin-top:20px">素手</div></div>
+            <div class="d-sub t" style="margin-top:34px;font-size:110px;color:#fffdf5">で終了。</div>
+          </div>
+        </section>
+        <section id="d4" class="scene clip" data-start="12.75" data-duration="0.75" data-track-index="1" style="background:#fffdf5">
+          <div class="ht"></div><svg class="lines" viewBox="0 0 1920 1080"></svg>
+          <div class="full center">
+            <div class="d-label"><div class="tape k t" style="font-size:120px;transform:rotate(3deg)">最終兵器は、</div></div>
+            <div class="skew"><div class="d-big t" style="font-size:420px;color:#0a0a12;margin-top:20px">くしゃみ</div></div>
+            <div class="d-sub t" style="margin-top:34px;font-size:110px;color:#0a0a12">で終了。</div>
+          </div>
+        </section>
+        <section id="d5" class="scene clip" data-start="13.5" data-duration="0.75" data-track-index="1" style="background:#0a0a12">
+          <div class="ht" style="background-image:radial-gradient(circle, rgba(255,196,0,.22) 30%, transparent 32%)"></div><svg class="lines" viewBox="0 0 1920 1080"></svg>
+          <div class="full center">
+            <div class="d-label"><div class="tape t" style="font-size:120px;transform:rotate(-3deg)">神は、</div></div>
+            <div class="skew"><div class="d-big t" style="font-size:560px;color:#ffc400;margin-top:20px">一瞥</div></div>
+            <div class="d-sub t" style="margin-top:34px;font-size:110px;color:#ffc400">で終了。</div>
+          </div>
+        </section>
+        <section id="d6" class="scene clip" data-start="14.25" data-duration="0.75" data-track-index="1" style="background:#ff2a4d">
+          <div class="ht"></div><svg id="d6-lines" class="lines" viewBox="0 0 1920 1080"></svg>
+          <div class="full center">
+            <div class="skew"><div id="d6t" class="t" style="font-size:270px;color:#fffdf5">全部、一撃。</div></div>
+          </div>
+        </section>
+
+        <!-- ================= E : 15.0 - 19.5  TITLE ================= -->
+        <section id="sE" class="scene clip" data-start="15" data-duration="4.5" data-track-index="1" style="background:#0a0a12">
+          <div id="e-sun" class="sun" style="background:repeating-conic-gradient(#ffc400 0deg 4deg, #1a1208 4deg 8deg);opacity:.5"></div>
+          <div class="full" style="background:radial-gradient(ellipse at 50% 50%, rgba(10,10,18,.15) 20%, rgba(10,10,18,.92) 100%)"></div>
+          <div id="e-ring" class="ring" style="left:760px;top:340px;border-color:#ffc400"></div>
+          <div id="e-ring2" class="ring" style="left:760px;top:340px;border-color:#fffdf5"></div>
+          <div class="full center" style="padding-bottom:170px">
+            <div class="skew"><div id="e-top" class="t" style="font-size:150px;color:#fffdf5">レベル1なのに</div></div>
+            <div class="skew"><div id="e-big" class="t" style="font-size:410px;color:#ffc400;margin-top:14px">世界最強</div></div>
+          </div>
+          <div id="e-tag" class="abs" style="left:0;right:0;bottom:70px;text-align:center"><div class="tape t" style="font-size:110px;background:#ff2a4d;color:#fffdf5;transform:rotate(-2deg)">異世界無双、開幕。</div></div>
+        </section>
+
+        <!-- ================= F : 19.5 - 23.25  comedy ================= -->
+        <section id="sF" class="scene clip" data-start="19.5" data-duration="3.75" data-track-index="1" style="background:#bfeaff">
+          <div class="ht" style="background-image:radial-gradient(circle, rgba(25,120,200,.25) 30%, transparent 32%)"></div>
+          <div id="f-hero" class="hero" style="left:150px;bottom:-60px;width:480px;height:940px"></div>
+          <div id="f-w1" class="abs skew" style="left:900px;top:50px"><div class="t" style="font-size:160px;color:#0a0a12">強すぎて、</div></div>
+          <div id="f-w2" class="abs skew" style="left:900px;top:240px"><div class="t" style="font-size:160px;color:#0a0a12">敵が</div></div>
+          <div id="f-w3" class="abs skew" style="left:900px;top:430px"><div class="t" style="font-size:160px;color:#c4002f">かわいそう。</div></div>
+          <div id="f-bubble" class="abs" style="left:700px;top:700px;width:800px;padding:34px 44px;background:#fffdf5;border:10px solid #0a0a12;border-radius:60px">
+            <div class="t" style="font-size:86px;color:#0a0a12;white-space:normal;line-height:1.25">え、今の…<br>技だったの？</div>
+            <div style="position:absolute;left:-74px;top:70px;width:0;height:0;border-top:34px solid transparent;border-bottom:34px solid transparent;border-right:74px solid #0a0a12"></div>
+            <div style="position:absolute;left:-46px;top:81px;width:0;height:0;border-top:23px solid transparent;border-bottom:23px solid transparent;border-right:52px solid #fffdf5"></div>
+          </div>
+        </section>
+
+        <!-- ================= G : 23.25 - 27.0  words + announcement ================= -->
+        <section id="g1" class="scene clip" data-start="23.25" data-duration="0.75" data-track-index="1" style="background:#ff2a4d">
+          <div class="ht"></div><svg class="lines" viewBox="0 0 1920 1080"></svg>
+          <div class="full center"><div class="skew"><div class="g-w t" style="font-size:700px;color:#fffdf5">最強</div></div></div>
+        </section>
+        <section id="g2" class="scene clip" data-start="24" data-duration="0.75" data-track-index="1" style="background:#19d3ff">
+          <div class="ht"></div><svg class="lines" viewBox="0 0 1920 1080"></svg>
+          <div class="full center"><div class="skew"><div class="g-w t" style="font-size:700px;color:#0a0a12">無双</div></div></div>
+        </section>
+        <section id="g3" class="scene clip" data-start="24.75" data-duration="0.75" data-track-index="1" style="background:#ffc400">
+          <div class="ht"></div><svg class="lines" viewBox="0 0 1920 1080"></svg>
+          <div class="full center"><div class="skew"><div class="g-w t" style="font-size:700px;color:#0a0a12">爽快</div></div></div>
+        </section>
+        <section id="g4" class="scene clip" data-start="25.5" data-duration="1.5" data-track-index="1" style="background:#ff2a4d">
+          <div class="ht"></div><svg id="g4-lines" class="lines" viewBox="0 0 1920 1080"></svg>
+          <div class="full center">
+            <div id="g4-chip" class="skew"><div class="tape k t" style="font-size:110px">TVアニメ</div></div>
+            <div class="skew"><div id="g4t" class="t" style="font-size:400px;color:#fffdf5;margin-top:24px">放送決定</div></div>
+          </div>
+        </section>
+
+        <!-- ================= H : 27.0 - 30.0  end card ================= -->
+        <section id="sH" class="scene clip" data-start="27" data-duration="3" data-track-index="1" style="background:#0a0a12">
+          <div id="h-sun" class="sun" style="background:repeating-conic-gradient(#ffc400 0deg 4deg, #1a1208 4deg 8deg);opacity:.35"></div>
+          <div class="full" style="background:radial-gradient(ellipse at 50% 50%, rgba(10,10,18,.2) 15%, rgba(10,10,18,.95) 100%)"></div>
+          <div class="full center">
+            <div class="skew"><div id="h-top" class="t" style="font-size:120px;color:#fffdf5">レベル1なのに</div></div>
+            <div class="skew"><div id="h-big" class="t" style="font-size:330px;color:#ffc400;margin-top:10px">世界最強</div></div>
+            <div id="h-cap" class="t" style="font-size:96px;color:#fffdf5;margin-top:44px;letter-spacing:.14em">TVアニメ　放送決定</div>
+          </div>
+          <div id="h-note" class="abs t" style="left:0;right:0;bottom:36px;text-align:center;font-size:34px;color:#9a9aa8;font-weight:400;letter-spacing:.08em">※本作品は架空のアニメです。</div>
+        </section>
+
+      </div><!-- /stage -->
+
+      <div id="flash"></div>
+      <div id="fade"></div>
+      <audio id="bgm" src="assets/soundtrack.wav" data-start="0" data-duration="30" data-track-index="9" data-volume="1"></audio>
+    </div>
+
+    <script>
+      // ------------------------------------------------------------ helpers (all deterministic)
+      const $ = (s, r = document) => r.querySelector(s);
+      const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+      function prng(seed) { let a = seed >>> 0; return () => { a = (a + 0x6d2b79f5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+      function split(el) { const txt = el.textContent; el.textContent = ""; [...txt].forEach((ch) => { const s = document.createElement("span"); s.className = "c"; s.textContent = ch; el.appendChild(s); }); return $$(".c", el); }
+      function ringShadow(r, color, drop) {
+        const out = [];
+        for (let k = 0; k < 24; k++) { const a = (k / 24) * Math.PI * 2; out.push(`${Math.round(Math.cos(a) * r)}px ${Math.round(Math.sin(a) * r)}px 0 ${color}`); }
+        if (drop) out.push(drop);
+        return out.join(",");
+      }
+      // outline + fattening for display type
+      function fat(el, { stroke = 0, color = "currentColor", ring = 0, ringColor = "#0a0a12", drop = "" } = {}) {
+        if (stroke) el.style.webkitTextStroke = `${stroke}px ${color}`;
+        if (ring) el.style.textShadow = ringShadow(ring, ringColor, drop);
+      }
+      function burst(svg, { n = 90, inner = 140, seed = 1, fill = "#000", spread = 0.016, far = 1800, cx = 960, cy = 540 } = {}) {
+        const r = prng(seed); let d = "";
+        for (let i = 0; i < n; i++) {
+          const a = (i / n) * Math.PI * 2 + (r() - 0.5) * 0.05, w = spread * (0.4 + r() * 1.3), rin = inner * (0.5 + r() * 1.4);
+          const p = (ang, rad) => `${Math.round(cx + Math.cos(ang) * rad)} ${Math.round(cy + Math.sin(ang) * rad)}`;
+          d += `M${p(a, rin)}L${p(a - w, far)}L${p(a + w, far)}Z`;
+        }
+        svg.innerHTML = `<path d="${d}" fill="${fill}"/>`;
+      }
+      const HERO = `<svg viewBox="0 0 420 820" xmlns="http://www.w3.org/2000/svg">
+        <g class="cape"><path d="M175 205 C75 270 25 520 78 722 L66 766 L152 748 C132 560 168 360 232 238 Z" fill="#0a0a12"/></g>
+        <path d="M165 470 L214 470 L208 742 L236 800 L146 800 L152 746 Z" fill="#0a0a12"/>
+        <path d="M212 470 L262 470 L268 744 L298 800 L206 800 L212 744 Z" fill="#0a0a12"/>
+        <path d="M148 205 L262 205 L284 300 L262 480 L164 480 L140 300 Z" fill="#0a0a12"/>
+        <path d="M158 215 L112 340 L100 432 L130 440 L152 362 L180 262 Z" fill="#0a0a12"/>
+        <g class="head"><circle cx="207" cy="146" r="44" fill="#0a0a12"/>
+          <path d="M160 140 L138 84 L184 112 L192 52 L216 110 L250 68 L244 120 L262 132 L252 152 L164 152 Z" fill="#0a0a12"/>
+          <path d="M216 142 L242 137 L242 147 L218 152 Z" fill="#fffdf5"/></g>
+        <path d="M160 196 L254 196 L264 232 L156 232 Z" fill="#ff2a4d"/>
+        <g class="scarf"><path d="M165 212 C110 195 62 222 18 296 C74 262 118 262 172 252 Z" fill="#ff2a4d"/></g>
+        <g class="arm"><rect class="armrect" x="250" y="206" width="118" height="40" rx="20" fill="#0a0a12"/>
+          <g class="fistg"><circle cx="372" cy="226" r="34" fill="#0a0a12"/></g></g>
+      </svg>`;
+      const ENEMY = `<svg viewBox="0 0 700 900" xmlns="http://www.w3.org/2000/svg">
+        <path d="M20 900 L110 440 L590 440 L680 900 Z" fill="#2a0a1c"/>
+        <path d="M120 900 L172 482 L262 384 L438 384 L528 482 L580 900 Z" fill="#14050f"/>
+        <path d="M52 478 L168 396 L204 526 L88 570 Z" fill="#14050f" stroke="#ff2a4d" stroke-width="4"/>
+        <path d="M648 478 L532 396 L496 526 L612 570 Z" fill="#14050f" stroke="#ff2a4d" stroke-width="4"/>
+        <path d="M70 470 L30 380 L128 432 Z M110 440 L100 350 L170 410 Z" fill="#14050f" stroke="#ff2a4d" stroke-width="3"/>
+        <path d="M630 470 L670 380 L572 432 Z M590 440 L600 350 L530 410 Z" fill="#14050f" stroke="#ff2a4d" stroke-width="3"/>
+        <path d="M268 392 L262 262 Q350 226 438 262 L432 392 Z" fill="#14050f" stroke="#ff2a4d" stroke-width="4"/>
+        <path d="M276 282 C196 272 118 212 100 92 C164 148 236 176 318 226 Z" fill="#14050f" stroke="#ff2a4d" stroke-width="4"/>
+        <path d="M424 282 C504 272 582 212 600 92 C536 148 464 176 382 226 Z" fill="#14050f" stroke="#ff2a4d" stroke-width="4"/>
+        <path class="eye" d="M298 314 L342 326 L338 344 L296 332 Z" fill="#ff2a4d"/>
+        <path class="eye" d="M402 314 L358 326 L362 344 L404 332 Z" fill="#ff2a4d"/>
+        <path d="M312 374 L332 360 L350 376 L368 360 L388 374" stroke="#ff2a4d" stroke-width="5" fill="none"/>
+      </svg>`;
+      function mountHero(sel) { const el = $(sel); el.innerHTML = HERO; return { arm: $(".arm", el), rect: $(".armrect", el), fist: $(".fistg", el), cape: $(".cape", el), scarf: $(".scarf", el), head: $(".head", el), el }; }
+      $("#b-enemy").innerHTML = ENEMY;
+      const HB = mountHero("#b-hero"), HC = mountHero("#c2-hero"), HF = mountHero("#f-hero");
+      gsap.set([HB.arm, HC.arm, HF.arm], { svgOrigin: "252 226" });
+      gsap.set(HB.arm, { rotation: 75 });
+      gsap.set(HC.arm, { rotation: 0 }); gsap.set(HC.rect, { attr: { width: 240 } }); gsap.set(HC.fist, { x: 122 });
+      gsap.set(HF.arm, { rotation: -70 }); gsap.set(HF.rect, { attr: { width: 84 } }); gsap.set(HF.fist, { x: -34 });
+      gsap.set([HB.cape, HC.cape, HF.cape], { svgOrigin: "175 205" });
+      gsap.set([HB.scarf, HC.scarf, HF.scarf], { svgOrigin: "165 225" });
+
+      // type styling
+      fat($("#a1a"), { stroke: 4, color: "#fffdf5" }); fat($("#a1b"), { stroke: 8, color: "#ff2a4d", ring: 0 });
+      fat($("#a2a"), { stroke: 4, color: "#fffdf5" }); fat($("#a2b"), { stroke: 8, color: "#ff2a4d" });
+      fat($("#c1t"), { stroke: 14, color: "#0a0a12" });
+      fat($("#c2a"), { stroke: 10, color: "#fffdf5", ring: 14, ringColor: "#0a0a12", drop: "10px 14px 0 #0a0a12" });
+      fat($("#c2b"), { stroke: 10, color: "#fffdf5", ring: 14, ringColor: "#0a0a12", drop: "10px 14px 0 #0a0a12" });
+      $$(".d-big").forEach((e, i) => { const col = getComputedStyle(e).color; fat(e, { stroke: 10, color: col }); });
+      fat($("#d6t"), { stroke: 10, color: "#fffdf5", ring: 12, ringColor: "#0a0a12", drop: "10px 12px 0 #0a0a12" });
+      fat($("#e-top"), { stroke: 5, color: "#fffdf5", ring: 10, ringColor: "#0a0a12" });
+      fat($("#e-big"), { stroke: 12, color: "#ffc400", ring: 18, ringColor: "#0a0a12", drop: "0 22px 0 #c2410c, 0 30px 40px rgba(0,0,0,.6)" });
+      fat($("#h-top"), { stroke: 4, color: "#fffdf5", ring: 8, ringColor: "#0a0a12" });
+      fat($("#h-big"), { stroke: 10, color: "#ffc400", ring: 14, ringColor: "#0a0a12", drop: "0 16px 0 #c2410c" });
+      $$("#f-w1 .t, #f-w2 .t, #f-w3 .t").forEach((e) => fat(e, { stroke: 6, color: getComputedStyle(e).color, ring: 10, ringColor: "#fffdf5" }));
+      $$(".g-w").forEach((e) => fat(e, { stroke: 14, color: getComputedStyle(e).color }));
+      fat($("#g4t"), { stroke: 10, color: "#fffdf5", ring: 12, ringColor: "#0a0a12", drop: "10px 14px 0 #0a0a12" });
+      $$(".d-sub").forEach((e) => fat(e, { stroke: 4, color: getComputedStyle(e).color }));
+
+      // radial speed lines
+      burst($("#b-lines"), { n: 70, inner: 520, seed: 3, fill: "rgba(255,255,255,.85)", spread: 0.012 });
+      burst($("#c1-lines"), { n: 120, inner: 260, seed: 5, fill: "#0a0a12", spread: 0.02 });
+      burst($("#d6-lines"), { n: 90, inner: 380, seed: 11, fill: "rgba(10,10,18,.35)" });
+      burst($("#g4-lines"), { n: 90, inner: 420, seed: 13, fill: "rgba(10,10,18,.3)" });
+      $$("#d1 .lines,#d2 .lines,#d3 .lines,#d4 .lines,#d5 .lines").forEach((s, i) =>
+        burst(s, { n: 80, inner: 300 + i * 20, seed: 20 + i, fill: i === 4 ? "rgba(255,196,0,.22)" : i === 2 ? "rgba(255,255,255,.28)" : "rgba(10,10,18,.22)" }));
+      $$("#g1 .lines,#g2 .lines,#g3 .lines").forEach((s, i) => burst(s, { n: 80, inner: 380, seed: 40 + i, fill: "rgba(10,10,18,.22)" }));
+
+      // embers
+      { const r = prng(9), box = $("#embers"); for (let i = 0; i < 38; i++) { const e = document.createElement("div"); e.className = "ember"; e.style.left = Math.round(r() * 1900) + "px"; e.style.top = "1100px"; e.style.opacity = "0"; e.dataset.d = (r() * 1.6).toFixed(2); e.dataset.s = (0.7 + r() * 1.1).toFixed(2); e.dataset.x = Math.round((r() - 0.5) * 240); box.appendChild(e); } }
+
+      // ------------------------------------------------------------ timeline
+      const tl = gsap.timeline({ paused: true });
+      const slam = (chars, t, o = {}) => tl.fromTo(chars, { scale: o.from ?? 2.4, opacity: 0, y: o.y ?? -50 }, { scale: 1, opacity: 1, y: 0, duration: o.dur ?? 0.14, ease: o.ease ?? "power4.out", stagger: o.st ?? 0.06, immediateRender: true }, t);
+      const flash = (t, peak = 1, dur = 0.28, col = "#fff") => tl.fromTo("#flash", { opacity: peak, backgroundColor: col }, { opacity: 0, duration: dur, ease: "power2.out", immediateRender: false }, t);
+      const SH = [1, -0.85, 0.7, -0.5, 0.3, -0.15, 0];
+      const shake = (t, amp = 14) => SH.forEach((m, i) => tl.to("#stage", { x: m * amp, y: -m * amp * 0.6, duration: 0.035, ease: "none" }, t + i * 0.035));
+
+      // ---- A  0.0-3.0
+      slam(split($("#a1a")), 0.15, { st: 0.07 });
+      slam(split($("#a1b")), 0.45, { st: 0.09, from: 3 });
+      shake(0.45, 10);
+      tl.fromTo("#a1s", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.4, ease: "power2.out" }, 0.9);
+      tl.set("#a-l2", { opacity: 0 }, 0);
+      tl.set("#a-l1", { opacity: 0 }, 1.45);
+      tl.set("#a-l2", { opacity: 1 }, 1.5);
+      slam(split($("#a2a")), 1.5, { st: 0.05 });
+      slam(split($("#a2b")), 1.95, { st: 0.12, from: 3.2 });
+      flash(1.95, 0.55, 0.35, "#ff2a4d"); shake(1.95, 26);
+      tl.fromTo("#a2s", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.4, ease: "power2.out" }, 2.4);
+      $$(".ember").forEach((e) => { const d = +e.dataset.d, s = +e.dataset.s; tl.fromTo(e, { y: 0, opacity: 0 }, { y: -1250, x: +e.dataset.x, opacity: 1, duration: 1.6 / s + 1.2, ease: "none", immediateRender: true }, d); tl.to(e, { opacity: 0, duration: 0.5 }, d + 0.9 / s); });
+
+      // ---- B  3.0-6.0
+      flash(3.0, 0.9, 0.3);
+      tl.fromTo("#b-sun", { rotation: 0 }, { rotation: 28, duration: 3, ease: "none", transformOrigin: "50% 50%" }, 3);
+      tl.fromTo("#b-world", { scale: 1 }, { scale: 1.1, duration: 3, ease: "none", transformOrigin: "50% 78%" }, 3);
+      tl.fromTo("#b-hero", { y: 140, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, ease: "power3.out" }, 3.05);
+      tl.fromTo(HB.cape, { rotation: -2 }, { rotation: 4, duration: 0.32, ease: "sine.inOut", yoyo: true, repeat: 8 }, 3);
+      tl.fromTo(HB.scarf, { rotation: -6 }, { rotation: 7, duration: 0.24, ease: "sine.inOut", yoyo: true, repeat: 11 }, 3);
+      tl.fromTo("#b-tape", { x: -900, opacity: 0 }, { x: 0, opacity: 1, duration: 0.22, ease: "power4.out" }, 3.0);
+      tl.fromTo("#b-enemy", { x: 260, opacity: 0, scale: 1.08 }, { x: 0, opacity: 1, scale: 1, duration: 0.3, ease: "power4.out", transformOrigin: "50% 100%" }, 3.9);
+      shake(3.9, 14);
+      tl.fromTo("#b-chip1", { scale: 0, rotation: -12 }, { scale: 1, rotation: -3, duration: 0.3, ease: "back.out(2.4)" }, 4.2);
+      tl.fromTo("#b-chip2", { scale: 0, rotation: 12 }, { scale: 1, rotation: 3, duration: 0.3, ease: "back.out(2.4)" }, 4.5);
+      shake(4.5, 16);
+      tl.fromTo("#b-line", { y: 120, opacity: 0 }, { y: 0, opacity: 1, duration: 0.25, ease: "power3.out" }, 4.8);
+      tl.fromTo("#b-lines", { opacity: 0, rotation: 0 }, { opacity: 1, rotation: 6, duration: 0.6, ease: "power2.in", transformOrigin: "50% 50%" }, 5.4);
+      tl.to(HB.arm, { rotation: 108, duration: 0.3, ease: "power2.out" }, 5.4);
+      tl.to(HB.arm, { rotation: 0, duration: 0.12, ease: "power4.in" }, 5.82);
+      tl.to(HB.rect, { attr: { width: 240 }, duration: 0.12, ease: "power4.in" }, 5.82);
+      tl.to(HB.fist, { x: 122, duration: 0.12, ease: "power4.in" }, 5.82);
+      tl.to("#b-hero", { x: 80, duration: 0.14, ease: "power4.in" }, 5.8);
+
+      // ---- C1  6.0-7.5  impact frame
+      tl.fromTo("#flash", { opacity: 1, backgroundColor: "#000" }, { opacity: 0, duration: 0.09, ease: "none", immediateRender: false }, 6.0);
+      slam(split($("#c1t")), 6.04, { st: 0.035, from: 2.8, dur: 0.12 });
+      shake(6.04, 30);
+      tl.fromTo("#c1-lines", { scale: 0.7, opacity: 0.2 }, { scale: 1.25, opacity: 1, duration: 1.5, ease: "power2.out", transformOrigin: "50% 50%" }, 6.0);
+      tl.fromTo("#c1s", { opacity: 0, y: 40 }, { opacity: 1, y: 0, duration: 0.25, ease: "power3.out" }, 6.7);
+
+      // ---- C2  7.5-10.5  aftermath
+      flash(7.5, 0.85, 0.3);
+      tl.fromTo("#c2-sun", { rotation: 0 }, { rotation: -40, duration: 3, ease: "none", transformOrigin: "50% 50%" }, 7.5);
+      tl.fromTo("#c2-hero", { x: -200, opacity: 0 }, { x: 0, opacity: 1, duration: 0.25, ease: "power4.out" }, 7.5);
+      tl.fromTo(HC.cape, { rotation: -3 }, { rotation: 5, duration: 0.3, ease: "sine.inOut", yoyo: true, repeat: 9 }, 7.5);
+      tl.fromTo(HC.scarf, { rotation: -8 }, { rotation: 9, duration: 0.22, ease: "sine.inOut", yoyo: true, repeat: 12 }, 7.5);
+      [1, 2, 3].forEach((n, i) => tl.fromTo("#c2-ring" + n, { scale: 0.2, opacity: 0.95 }, { scale: 4.2, opacity: 0, duration: 0.8, ease: "power2.out" }, 7.5 + i * 0.12));
+      slam(split($("#c2a")), 7.55, { st: 0.07, from: 2.6 });
+      slam(split($("#c2b")), 7.78, { st: 0.1, from: 2.8 });
+      shake(7.55, 22);
+      tl.fromTo("#c2-star", { scale: 0, rotation: -90, opacity: 0 }, { scale: 1, rotation: 0, opacity: 1, duration: 0.4, ease: "back.out(3)" }, 7.9);
+      tl.fromTo("#c2-stamp", { scale: 3, opacity: 0, rotation: -8 }, { scale: 1, opacity: 1, rotation: 0, duration: 0.18, ease: "power4.out" }, 9.0);
+      shake(9.0, 10);
+
+      // ---- D  one-hit montage
+      [["#d1", 10.5, 1.35], ["#d2", 11.25, 1.3], ["#d3", 12.0, 1.35], ["#d4", 12.75, 1.3], ["#d5", 13.5, 1.35]].forEach(([id, t0, from], i) => {
+        const s = $(id);
+        tl.fromTo($(".d-label", s), { x: i % 2 ? 700 : -700, opacity: 0 }, { x: 0, opacity: 1, duration: 0.12, ease: "power4.out" }, t0);
+        slam(split($(".d-big", s)), t0 + 0.07, { st: 0.04, from: 1.9, dur: 0.12 });
+        tl.fromTo($(".d-sub", s), { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.14, ease: "power3.out" }, t0 + 0.34);
+        tl.fromTo($(".lines", s), { scale: 0.8 }, { scale: 1.3, duration: 0.75, ease: "none", transformOrigin: "50% 50%" }, t0);
+        shake(t0 + 0.07, 10);
+      });
+      slam(split($("#d6t")), 14.27, { st: 0.07, from: 2.4, dur: 0.12 });
+      shake(14.3, 24); flash(14.25, 0.5, 0.2, "#fff");
+      tl.fromTo("#d6-lines", { scale: 0.7 }, { scale: 1.3, duration: 0.75, ease: "none", transformOrigin: "50% 50%" }, 14.25);
+
+      // ---- E  15.0-19.5  title
+      tl.fromTo("#flash", { opacity: 1, backgroundColor: "#fff" }, { opacity: 0, duration: 0.5, ease: "power2.out", immediateRender: false }, 15.0);
+      tl.fromTo("#e-sun", { rotation: 0, scale: 0.6 }, { rotation: 30, scale: 1, duration: 4.5, ease: "power1.out", transformOrigin: "50% 50%" }, 15);
+      tl.fromTo("#e-ring", { scale: 0.2, opacity: 1 }, { scale: 6, opacity: 0, duration: 0.9, ease: "power2.out" }, 15.0);
+      tl.fromTo("#e-ring2", { scale: 0.2, opacity: 1 }, { scale: 6, opacity: 0, duration: 0.9, ease: "power2.out" }, 15.12);
+      slam(split($("#e-top")), 15.0, { st: 0.06, from: 2, dur: 0.16 });
+      slam(split($("#e-big")), 15.3, { st: 0.1, from: 2.8, dur: 0.2 });
+      shake(15.0, 28); shake(15.4, 20);
+      tl.fromTo("#e-big", { scale: 1 }, { scale: 1.05, duration: 3.6, ease: "none", transformOrigin: "50% 50%" }, 15.9);
+      tl.fromTo("#e-tag", { x: 1400, opacity: 0 }, { x: 0, opacity: 1, duration: 0.2, ease: "power4.out" }, 17.25);
+      shake(17.25, 14); flash(17.25, 0.35, 0.2, "#ffc400");
+
+      // ---- F  19.5-23.25  comedy
+      tl.fromTo("#flash", { opacity: 1, backgroundColor: "#fff" }, { opacity: 0, duration: 0.2, ease: "none", immediateRender: false }, 19.5);
+      tl.fromTo("#f-hero", { x: -500, opacity: 0 }, { x: 0, opacity: 1, duration: 0.3, ease: "power4.out" }, 19.5);
+      tl.fromTo(HF.cape, { rotation: -2 }, { rotation: 3, duration: 0.4, ease: "sine.inOut", yoyo: true, repeat: 8 }, 19.5);
+      tl.fromTo(HF.scarf, { rotation: -5 }, { rotation: 6, duration: 0.3, ease: "sine.inOut", yoyo: true, repeat: 11 }, 19.5);
+      tl.fromTo(HF.arm, { rotation: -76 }, { rotation: -64, duration: 0.18, ease: "sine.inOut", yoyo: true, repeat: 9, immediateRender: false }, 19.8);
+      [["#f-w1", 19.5], ["#f-w2", 20.25], ["#f-w3", 21.0]].forEach(([id, t0]) => {
+        tl.fromTo(id, { x: 900, opacity: 0 }, { x: 0, opacity: 1, duration: 0.14, ease: "power4.out" }, t0);
+        shake(t0 + 0.1, 8);
+      });
+      tl.fromTo("#f-bubble", { scale: 0, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.35, ease: "back.out(2.6)", transformOrigin: "0% 30%" }, 21.75);
+      tl.fromTo("#f-hero", { y: 0 }, { y: -26, duration: 0.12, ease: "power2.out", yoyo: true, repeat: 1, immediateRender: false }, 21.75);
+
+      // ---- G  23.25-27.0
+      ["#g1", "#g2", "#g3"].forEach((id, i) => {
+        const t0 = 23.25 + i * 0.75, s = $(id);
+        slam(split($(".g-w", s)), t0 + 0.02, { st: 0.07, from: 2.2, dur: 0.13 });
+        tl.fromTo($(".lines", s), { scale: 0.8 }, { scale: 1.3, duration: 0.75, ease: "none", transformOrigin: "50% 50%" }, t0);
+        shake(t0 + 0.04, 18);
+      });
+      flash(23.25, 0.5, 0.2);
+      tl.fromTo("#flash", { opacity: 1, backgroundColor: "#fff" }, { opacity: 0, duration: 0.4, ease: "power2.out", immediateRender: false }, 25.5);
+      tl.fromTo("#g4-chip", { x: -900, opacity: 0 }, { x: 0, opacity: 1, duration: 0.16, ease: "power4.out" }, 25.52);
+      slam(split($("#g4t")), 25.62, { st: 0.09, from: 2.4, dur: 0.14 });
+      tl.fromTo("#g4-lines", { scale: 0.7 }, { scale: 1.3, duration: 1.5, ease: "none", transformOrigin: "50% 50%" }, 25.5);
+      shake(25.55, 22);
+
+      // ---- H  27.0-30.0  end card
+      tl.fromTo("#flash", { opacity: 1, backgroundColor: "#fff" }, { opacity: 0, duration: 0.6, ease: "power2.out", immediateRender: false }, 27.0);
+      tl.fromTo("#h-sun", { rotation: 0, scale: 0.7 }, { rotation: 24, scale: 1, duration: 3, ease: "power1.out", transformOrigin: "50% 50%" }, 27);
+      slam(split($("#h-top")), 27.0, { st: 0.05, from: 1.8, dur: 0.16 });
+      slam(split($("#h-big")), 27.2, { st: 0.09, from: 2.4, dur: 0.18 });
+      shake(27.0, 20);
+      tl.fromTo("#h-cap", { opacity: 0, y: 40 }, { opacity: 1, y: 0, duration: 0.4, ease: "power3.out" }, 27.9);
+      tl.fromTo("#h-note", { opacity: 0 }, { opacity: 1, duration: 0.4 }, 28.3);
+      tl.fromTo("#fade", { opacity: 0 }, { opacity: 1, duration: 0.5, ease: "power1.in", immediateRender: false }, 29.5);
+
+      window.__timelines["main"] = tl;
+      tl.seek(0);
+    </script>
+  </body>
+</html>
