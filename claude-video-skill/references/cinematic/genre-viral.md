@@ -460,3 +460,80 @@
 - **適性**: ★★ / 注意: 青い色調だけだと単なる「寒色LUT」。
 - **AI動画生成プロンプト**: `Cold vision of [Subject], arctic grade, thermal edges, a world seen as temperature and threat.`
 
+### コミック / Comic  (`viral-looks/comic`)
+- **一言**: 実写のフレームに墨の輪郭、影のハーフトーン、限定した差し色をのせる。写真の身体は残り、「出版された1ページ」に見える。
+- **見た目の分解**: 配色=墨 #111111、紙 #F6EFD9、差し色 赤 #E63946 / 黄 #FFD60A / 青 #1D4ED8。光=一方向の光(インクに太陽がある)。構図=固定、目線の高さ。質感=網点、墨線。吹き出しは入れない。
+- **HyperFramesでの作り方**: 輪郭は SVG `feConvolveMatrix`(kernelMatrix `-1 -1 -1 -1 8 -1 -1 -1 -1`)で抽出し、`feComponentTransfer` の `discrete` で黒線に。影はV3のハーフトーンを暗部にだけ(輝度しきい値をマスク)、色は V2 で5階調 + 差し色の面。効果は100%にせず、顔は写真のまま。小さな動き1つだけ。
+- **適性**: ★★ / 注意: 粒子や光の方向を消して「ただのイラスト」にしない。
+- **AI動画生成プロンプト**: `Comic-book treatment of [Subject], inked edges, halftone, panel energy, a page that moves.`
+
+### イルカライド / Dolphin Ride  (`viral-looks/dolphin-ride`)
+- **一言**: 「イルカに乗る」観光の不可能さを真顔で見せる。明るい海、正直な水平線、水しぶき、乗り物としての動物が笑いの核。
+- **見た目の分解**: 配色=海 #00B4D8→#90E0EF、空 #CAF0F8、イルカ #6B8FA3。光=強い日差しの水面の反射。構図=広角、水平線は水平のまま、乗り手は真剣。動き=上下の弾み、しぶき。
+- **HyperFramesでの作り方**: 実写の動物と人物は不向き。代替: SVGのシルエットのイルカ+乗り手を `sin` で上下させ、水面の反射は seed付きの白い点滅、しぶきは canvas の放物線粒子(`y=v·t−g·t²/2`)。水平線は固定して背景だけ左へ流す。軽い `camera-shake`。ロゴなし。
+- **適性**: 不向き(実写の動物) / ★★(ベクター代替)。
+- **AI動画生成プロンプト**: `Dolphin-ride of [Subject], a body carried by a sea creature, impossible tourism, joy as a gag.`
+
+### おとぎ話の城 / Fairytale Castle  (`viral-looks/fairytale-castle`)
+- **一言**: 絵本のような石、ありえない尖塔、挿絵として扱った夕暮れの中に、小さな人物を置く「場所が主役」の見た目。
+- **見た目の分解**: 配色=夕空 #2B2A6B(藍)→#F2B84B(金)、石の縁に金、霞 #C9B8E0。光=夕暮れ。構図=人物は画面の1/3以下、城へ続く土手道、格子窓。質感=挿絵風の石。
+- **HyperFramesでの作り方**: SVGで城(円錐屋根の塔、窓の格子)と土手道を遠近(消失点へ収束)で描き、石の縁に金の細線。空はグラデ、霞は横長の半透明層を2枚ゆっくり流す。人物は小さなシルエットが道を歩く(t関数)。V2 弱めと V1 の紙目で挿絵質感。タイトルは `Cinzel Decorative`。
+- **適性**: ★★ / 注意: 人物を大きくすると城が背景になる。
+- **AI動画生成プロンプト**: `Fairytale-castle world around [Subject], storybook stone, impossible turrets, dusk as illustration.`
+
+### 堕天使 / Fallen Angel  (`viral-looks/fallen-angel`)
+- **一言**: 墜ちた後の聖なる光。汚れた教会の窓からの光の筋、ローキーな肌、布や影で示される壊れた翼。
+- **見た目の分解**: 配色=黒 #080808、くすんだ金 #C8A96A、灰白 #D8D2C4、壊れた白布 #BDB6A8。光=高窓から硬い光の筋、塵が舞う。構図=身廊や崖で頭を垂れた人物、固定。
+- **HyperFramesでの作り方**: 光の筋は斜めのポリゴン+`linear-gradient`、`mix-blend-mode: screen; opacity .35; blur(8px)`、ゆっくり左右に揺らす。塵は筋のマスク内だけ見える canvas 粒子(seed付き)。素材に `brightness(.7) contrast(1.4) sepia(.3) saturate(.8)`。翼は壁に落ちる裂けた影のSVG(feTurbulence で縁を荒らす、opacity .5)。
+- **適性**: ★★ / 注意: 白い羽根のコスプレにしない。
+- **AI動画生成プロンプト**: `Fallen-angel image of [Subject], wrecked wings implied, church light, a holy fall, beauty after the drop.`
+
+### フラッシュコミック / Flash Comic  (`viral-looks/flash-comic`)
+- **一言**: コミックの墨線とハーフトーンに、ストロボの白い爆発を足す。出版物とパパラッチが一撃になる。
+- **見た目の分解**: 配色=コミックと同じ(墨 #111、紙 #F6EFD9、差し色1つ)+白 #FFFFFF。光=正面の硬いフラッシュ。構図=動作の途中で固定。
+- **HyperFramesでの作り方**: コミックの処理を土台に、動作の頂点で V4 の白バーストを3コマ(opacity 1→.4→0)。バースト中も墨線とハーフトーンは残す(線を `mix-blend-mode: multiply` で最上層に)。ハーフトーンの反転(白点)を1コマ入れると「撃たれた」感が出る。吹き出しなし。
+- **適性**: ★★ / 注意: フラッシュだけ、または墨線だけだと別の技法になる。
+- **AI動画生成プロンプト**: `Flash-comic of [Subject], inked edges plus a strobe bang, print and paparazzi in one hit.`
+
+### ハンドペイント / Hand Paint  (`viral-looks/hand-paint`)
+- **一言**: 動いている絵の上に、濡れた筆跡がたった今置かれた。完成した油彩(キャンバス)ではなく、塗るという「動詞」を見せる。
+- **見た目の分解**: 配色=濡れた顔料 #E94F37 / #2E86AB / #F6C85F。光=筆跡の縁に濡れたハイライト。構図=写真の下地+顔は残す。動き=筆跡が伸びる。
+- **HyperFramesでの作り方**: canvas に素材を描き、フローフィールドに沿った太い線(幅40〜90px、seed付き)を `t` で先端を伸ばしながら描く。色は線の始点で素材から決定的にサンプリング。筆跡の縁に白い細ハイライト。筆や手のSVGを先端に付けてもよい。顔領域は線を薄く。
+- **適性**: ★★★(canvasの筆跡エンジンが要る) / 代替: SVGの `stroke-dashoffset` で太い線を描くだけの簡易版は★★。
+- **AI動画生成プロンプト**: `Hand-paint over [Subject], wet strokes still moving, a painter's wrist in the picture.`
+
+### インクライオット / Ink Riot  (`viral-looks/ink-riot`)
+- **一言**: 黒と色の液体書道が、写真のままの被写体の周りの空気を占拠し、滴り、爆ぜる。インクは「質感」ではなく「天気」。
+- **見た目の分解**: 配色=黒 #0A0A0A + 差し色1色(例 #E63946)、紙の白。光=本物のランプで被写体に影。構図=固定、目は読める。動き=にじむ→落ち着く。
+- **HyperFramesでの作り方**: `npx hyperframes add ink-bleed-reveal`(にじみ+閾値のゴーイー・フィルタ)。自作は円/縦長の黒い形を `feGaussianBlur stdDeviation=8` + `feColorMatrix values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 18 -7"` で液体化し、半径を t で拡大、縦長が下へ垂れる。顔領域をマスクして**インクが目を覆わない**。
+- **適性**: ★★ / 注意: 色数を増やさない。会話の切り返しには使わない。
+- **AI動画生成プロンプト**: `Ink riot around [Subject], black and color blooming in liquid, calligraphy as explosion, a page that fights.`
+
+### 騎士の日記 / Knight's Diary  (`viral-looks/knights-diary`)
+- **一言**: 画面を「泥のついた彩飾写本のページ」として扱う。ハイライトは金箔、質感は鉄、布は汚れ、顔は疲れた聖人。
+- **見た目の分解**: 配色=金箔 #D4AF37→#8A6B16、羊皮紙 #E8D8B0、鉄 #4A4F55、泥 #4B3A2A。光=硬めの昼光。構図=一人の人物と余白に写本の飾り。質感=紙目、汚れ。
+- **HyperFramesでの作り方**: 素材に `sepia(.4) contrast(1.2) saturate(.8)`、ハイライト帯に金色の面を `mix-blend-mode: overlay`、V1 の紙目、feTurbulence を multiply .3 で汚れ。文字は `IM Fell English`/`UnifrakturCook` の日記文と、飾り頭文字(金のグラデ文字)。枠は二重線+SVG飾り。
+- **適性**: ★★ / 注意: ピカピカの鎧や遊園地の騎士にしない。
+- **AI動画生成プロンプト**: `Knight's-diary image of [Subject], illuminated-manuscript gold, iron, mud, a page from a crusade.`
+
+### ラバ(溶岩) / Lava  (`viral-looks/lava`)
+- **一言**: 溶けた光。黒い地殻、橙の割れ目、下からの熱がキーライトになり、空気が揺らぐ。
+- **見た目の分解**: 配色=黒岩 #120A08、橙 #FF5A00、黄橙 #FFB000、芯 #FFF1B0、夜空 #0A0505。光=下からの熱。構図=小さな人物。質感=熱の揺らぎ。
+- **HyperFramesでの作り方**: 下から `linear-gradient(0deg,#FF5A00,#FF9A1F 15%,transparent 55%)` を screen。割れ目はSVGの折れ線に `stroke #FF6A00` とグロー(V5)、`stroke-dashoffset` で流れる。陽炎は `feTurbulence`+`feDisplacementMap scale=6`、baseFrequencyのyを t で動かす。火の粉は seed付きの上昇粒子。
+- **適性**: ★★ / 注意: 普通の街にオレンジのLUTを掛けるだけでは成立しない。
+- **AI動画生成プロンプト**: `Lava light on [Subject], black crust, orange wounds, heat as the key from below.`
+
+### 本の中へ / Lost in a Book  (`viral-looks/lost-in-a-book`)
+- **一言**: 開いた本を扉にする。手前に紙、綴じ目が敷居、頁から絵や天気があふれ、読者が覗き込む/落ちる。
+- **見た目の分解**: 配色=紙 #EADFC4、頁の光 #FFD98A、暗い部屋 #1C1A24。光=頁から出る光+弱い室内灯。構図=本が手前1/3、綴じ目へ押し込み。質感=文字は読めない質感。
+- **HyperFramesでの作り方**: CSS 3Dで左右の頁を `rotateY(±25deg)` で配置、V1 の紙目。文字は灰色の `repeating-linear-gradient` の線で読めない質感に。綴じ目の `clip-path: inset()` が開き、内側の世界(別シーン)が scale 0.8→1.0 で現れる。光は綴じ目からの radial-gradient。カメラは scale 1.0→1.8(power2.in)で綴じ目へ。
+- **適性**: ★★ / 注意: ソファで本を読むだけの絵にしない(敷居が要る)。
+- **AI動画生成プロンプト**: `Lost-in-a-book of [Subject], a reader falling into illustration, pages becoming rooms.`
+
+### LSD(サイケデリックな知覚) / LSD  (`viral-looks/lsd`)
+- **一言**: 光の尾、わずかな二重の縁、過飽和の光源、ゆっくり呼吸する壁。知覚そのものを舞台にした見た目。
+- **見た目の分解**: 配色=マゼンタ #FF2BD6、シアン #20E3FF、ライム #B6FF2E、橙 #FF8A00。光=過飽和の実用光。構図=一つの部屋、読める人物。動き=壁の呼吸、光の尾。
+- **HyperFramesでの作り方**: **残像**=同じシーン関数を `t−k·0.06`(k=1..6)で複製し、`opacity` を .5→.1、`hue-rotate` を k×15度ずつ変えて `mix-blend-mode: screen`。**呼吸**=`feDisplacementMap` の scale を `sin(t·0.8)×12`。二重の縁は R/G を ±3px ずらす。`saturate(2)`。顔はマスクで揺れを弱める。
+- **適性**: ★★ / 注意: アシッド(焼けたプリント)の融解や万華鏡パックと混ぜない。
+- **AI動画生成プロンプト**: `LSD look on [Subject], trails, breathing walls, too much chroma, a room that will not stay put.`
+
