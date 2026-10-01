@@ -83,7 +83,18 @@ export interface VoiceSettings {
   /** Geminiへの演技指示 */
   direction: string;
   model: string;
+  /** 音声合成の方法（無ければ Gemini） */
+  engine?: TtsEngine;
+  /** VOICEVOX / AivisSpeech の話者（スタイル）ID と表示名 */
+  localSpeaker?: number;
+  localSpeakerName?: string;
+  /** 話す速さ・声の高さ・抑揚（VOICEVOX / AivisSpeech） */
+  speed?: number;
+  pitch?: number;
+  intonation?: number;
 }
+
+export type TtsEngine = "gemini" | "voicevox" | "aivis";
 
 export interface ApiSettings {
   anthropicKey: string;

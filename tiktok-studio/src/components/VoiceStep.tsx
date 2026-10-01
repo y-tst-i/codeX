@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { clipDuration, clipToWav, encodeWav, type AudioClip } from "../lib/audio";
 import { SplitError, synthesize, synthesizeScript } from "../lib/geminiTts";
+import { LOCAL_ENGINES, creditText, listSpeakers, synthesizeLocal, type LocalEngine, type LocalSpeaker } from "../lib/localTts";
 import { todayTtsCalls } from "../lib/usage";
 import { VOICES, VOICE_DIRECTIONS } from "../lib/knowledge";
 import { speakText } from "../lib/script";
 import { estimateSpeechSeconds } from "../lib/timeline";
 import type { ApiSettings, Script, Timeline, VoiceSettings } from "../lib/types";
-import { Field, Notice, StepNav, downloadBlob, formatSeconds } from "./common";
+import { CopyButton, Field, Notice, StepNav, downloadBlob, formatSeconds } from "./common";
 
 export type ClipMap = Record<string, { clip: AudioClip; signature: string }>;
 
@@ -14,6 +15,8 @@ export type ClipMap = Record<string, { clip: AudioClip; signature: string }>;
 const TTS_FORMAT_VERSION = "v2";
 
 export function clipSignature(voice: VoiceSettings, text: string): string {
+  const engine = voice.engine ?? "gemini";
+  if (engine !== "gemini") return [TTS_FORMAT_VERSION, engine, voice.localSpeaker, voice.speed ?? 1.1, voice.pitch ?? 0, voice.intonation ?? 1.2, text].join("|");
   return [TTS_FORMAT_VERSION, voice.model, voice.voiceName, voice.direction, text].join("|");
 }
 
@@ -48,7 +51,27 @@ export function VoiceStep({ script, voice, settings, clips, timeline, mixed, onV
       clearInterval(timer);
     };
   }, []);
-  const mode = settings.ttsMode ?? "batch";
+  const engine = voice.engine ?? "gemini";
+  const local: LocalEngine | null = engine === "gemini" ? null : engine;
+  const [speakers, setSpeakers] = useState<LocalSpeaker[]>([]);
+  const loadSpeakers = async (target: LocalEngine) => {
+    setError("");
+    setSpeakers([]);
+    try {
+      const list = await listSpeakers(target);
+      setSpeakers(list);
+      const current = list.find((sp) => sp.id === voice.localSpeaker);
+      if (!current && list[0]) onVoiceChange({ ...voice, engine: target, localSpeaker: list[0].id, localSpeakerName: `${list[0].name}（${list[0].style}）` });
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  };
+  useEffect(() => {
+    if (local) void loadSpeakers(local);
+  }, [local]);
+  /** 使える状態か（Gemini はキーが、ローカルは声の選択が必要） */
+  const canGenerate = local ? voice.localSpeaker !== undefined : Boolean(settings.geminiKey);
+  const mode = local ? "scene" : settings.ttsMode ?? "batch";
   const rpm = settings.ttsRpm ?? 3;
   const dailyLimit = settings.ttsDailyLimit ?? 10;
 
@@ -64,7 +87,11 @@ export function VoiceStep({ script, voice, settings, clips, timeline, mixed, onV
   };
 
   const begin = () => {
-    if (!settings.geminiKey) {
+    if (local && voice.localSpeaker === undefined) {
+      setError(`${LOCAL_ENGINES[local].label} の声を選んでください`);
+      return null;
+    }
+    if (!local && !settings.geminiKey) {
       setError("Gemini APIキーが未設定です（⚙ 設定）");
       return null;
     }
@@ -100,6 +127,19 @@ export function VoiceStep({ script, voice, settings, clips, timeline, mixed, onV
         const text = speakText(scene);
         setBusy(id);
         setStatus(`音声を生成中… ${n + 1}/${sceneIds.length}`);
+        if (local) {
+          const clip = await synthesizeLocal({
+            engine: local,
+            speaker: voice.localSpeaker!,
+            text,
+            speed: voice.speed,
+            pitch: voice.pitch,
+            intonation: voice.intonation,
+            signal: controller.signal
+          });
+          onClip(id, clip, clipSignature(voice, text));
+          continue;
+        }
         const { clip, directionDropped } = await synthesize(
           {
             apiKey: settings.geminiKey,
@@ -162,9 +202,77 @@ export function VoiceStep({ script, voice, settings, clips, timeline, mixed, onV
 
   return (
     <>
-      <h1>③ 音声（Gemini TTS）</h1>
+      <h1>③ 音声</h1>
       <p className="lead">シーンごとに音声を作り、その実際の長さでタイムラインを確定させます。これで映像と声が1フレーム単位で揃います。</p>
 
+      <div className="row" style={{ marginBottom: 10, flexWrap: "wrap" }}>
+        <b>読み上げに使うもの</b>
+        {(["gemini", "voicevox", "aivis"] as const).map((e) => (
+          <button
+            key={e}
+            className={`btn small ${engine === e ? "primary" : ""}`}
+            type="button"
+            onClick={() => onVoiceChange({ ...voice, engine: e })}
+          >
+            {e === "gemini" ? "Gemini TTS（演技が自然・無料枠あり）" : `${LOCAL_ENGINES[e].label}（無料・無制限）`}
+          </button>
+        ))}
+      </div>
+
+      {local ? (
+        <div className="card stack">
+          <span className="meta">
+            {LOCAL_ENGINES[local].note}。{LOCAL_ENGINES[local].label} のアプリ（
+            <a href={LOCAL_ENGINES[local].download} target="_blank" rel="noreferrer">
+              公式サイトから無料でダウンロード
+            </a>
+            ）を起動したままにしておくと、このツールから呼び出せます。回数の制限はありません。
+          </span>
+          <div className="row">
+            <Field label="声">
+              <select
+                value={voice.localSpeaker ?? ""}
+                onChange={(e) => {
+                  const sp = speakers.find((x) => x.id === Number(e.target.value));
+                  if (sp) onVoiceChange({ ...voice, localSpeaker: sp.id, localSpeakerName: `${sp.name}（${sp.style}）` });
+                }}
+              >
+                {speakers.length === 0 && voice.localSpeakerName ? <option value={voice.localSpeaker}>{voice.localSpeakerName}</option> : null}
+                {speakers.map((sp) => (
+                  <option key={sp.id} value={sp.id}>
+                    {sp.name}（{sp.style}）
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <button className="btn small" type="button" onClick={() => void loadSpeakers(local)}>
+              声の一覧を読み込み直す
+            </button>
+          </div>
+          <div className="grid-2">
+            <Field label={`話す速さ ${(voice.speed ?? 1.1).toFixed(2)}（TikTokは1.1〜1.25が聞きやすい）`}>
+              <input type="range" min={0.8} max={1.5} step={0.05} value={voice.speed ?? 1.1} onChange={(e) => onVoiceChange({ ...voice, speed: Number(e.target.value) })} />
+            </Field>
+            <Field label={`抑揚 ${(voice.intonation ?? 1.2).toFixed(2)}（大きいほど感情的）`}>
+              <input type="range" min={0.5} max={2} step={0.05} value={voice.intonation ?? 1.2} onChange={(e) => onVoiceChange({ ...voice, intonation: Number(e.target.value) })} />
+            </Field>
+            <Field label={`声の高さ ${(voice.pitch ?? 0).toFixed(2)}`}>
+              <input type="range" min={-0.15} max={0.15} step={0.01} value={voice.pitch ?? 0} onChange={(e) => onVoiceChange({ ...voice, pitch: Number(e.target.value) })} />
+            </Field>
+          </div>
+          <div className="row">
+            <span className="meta">
+              クレジット表記（投稿の説明文に入れる）：<b>{creditText(local, voice.localSpeakerName)}</b>
+            </span>
+            <CopyButton text={creditText(local, voice.localSpeakerName)} />
+          </div>
+          <span className="meta">
+            読み間違いがあれば、②台本の「読み」欄にひらがなで書くと、その通りに読みます。🔒 ここで選んだ声は「アカウントの声」として新しい動画にも引き継がれます。
+          </span>
+        </div>
+      ) : null}
+
+      {!local ? (
       <div className="card stack">
         <div className="grid-2">
           <Field label="声">
@@ -195,8 +303,9 @@ export function VoiceStep({ script, voice, settings, clips, timeline, mixed, onV
           決めるときは、まず1シーン目だけ生成して聴き比べてください。
         </span>
       </div>
+      ) : null}
 
-      {!settings.geminiKey ? (
+      {!local && !settings.geminiKey ? (
         <Notice kind="warn" title="Gemini APIキーが未設定です">
           {" "}音声なしでも先へ進めます（尺は文字数から推定）。ただし声と映像をぴったり合わせるには音声生成がおすすめです。
         </Notice>
@@ -214,6 +323,7 @@ export function VoiceStep({ script, voice, settings, clips, timeline, mixed, onV
         </Notice>
       ) : null}
 
+      {!local ? (
       <div className="card stack" style={{ marginTop: 16 }}>
         <div className="row">
           <b>作り方</b>
@@ -232,20 +342,29 @@ export function VoiceStep({ script, voice, settings, clips, timeline, mixed, onV
           {rpm > 0 ? `・1分に${rpm}回を超えないよう自動で間隔をあけます` : ""}
         </span>
       </div>
+      ) : null}
 
       <div className="row" style={{ margin: "16px 0 10px" }}>
         {mode === "batch" ? (
-          <button className="btn primary" type="button" disabled={Boolean(busy) || missing.length === 0 || !settings.geminiKey} onClick={generateAll}>
+          <button className="btn primary" type="button" disabled={Boolean(busy) || missing.length === 0 || !canGenerate} onClick={generateAll}>
             {missing.length === script.scenes.length ? "全シーンをまとめて生成（1回分）" : `全シーンをまとめて作り直す（1回分・変更${missing.length}シーン）`}
           </button>
         ) : (
-          <button className="btn primary" type="button" disabled={Boolean(busy) || missing.length === 0 || !settings.geminiKey} onClick={() => generate(missing)}>
-            {missing.length === script.scenes.length ? `全シーンの音声を生成（${missing.length}回分）` : `未生成・変更された${missing.length}シーンを生成`}
+          <button className="btn primary" type="button" disabled={Boolean(busy) || missing.length === 0 || !canGenerate} onClick={() => generate(missing)}>
+            {missing.length === 0
+              ? "すべて生成済み"
+              : local
+              ? missing.length === script.scenes.length
+                ? "全シーンの音声を生成"
+                : `未生成・変更された${missing.length}シーンを生成`
+              : missing.length === script.scenes.length
+                ? `全シーンの音声を生成（${missing.length}回分）`
+                : `未生成・変更された${missing.length}シーンを生成`}
           </button>
         )}
         {missing.length > 1 && script.scenes[0] && missing.includes(script.scenes[0].id) ? (
-          <button className="btn" type="button" disabled={Boolean(busy) || !settings.geminiKey} onClick={() => generate([script.scenes[0]!.id])}>
-            まず1シーン目だけ試す（1回分）
+          <button className="btn" type="button" disabled={Boolean(busy) || !canGenerate} onClick={() => generate([script.scenes[0]!.id])}>
+            {local ? "まず1シーン目だけ試す" : "まず1シーン目だけ試す（1回分）"}
           </button>
         ) : null}
         {busy ? (
@@ -282,7 +401,7 @@ export function VoiceStep({ script, voice, settings, clips, timeline, mixed, onV
               <button className="btn small" type="button" disabled={!entry} onClick={() => entry && play(clipToWav(entry.clip))}>
                 ▶
               </button>
-              <button className="btn small" type="button" disabled={Boolean(busy) || !settings.geminiKey} onClick={() => generate([scene.id])}>
+              <button className="btn small" type="button" disabled={Boolean(busy) || !canGenerate} onClick={() => generate([scene.id])}>
                 {busy === scene.id ? "生成中…" : entry ? "作り直す" : "生成"}
               </button>
             </div>
