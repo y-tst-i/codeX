@@ -2,7 +2,7 @@
  * 別のPCへの引っ越し用バックアップ。
  * 設定・作業中のプロジェクト・ネタ帳（localStorage）と、音声・キャラ画像（IndexedDB）を1つのZIPにまとめる。
  */
-import { AUDIO_STORE, CHARACTER_IMAGE_STORE, dumpStore, replaceStore } from "./storage";
+import { ASSETS_STORE, AUDIO_STORE, CHARACTER_IMAGE_STORE, dumpStore, replaceStore } from "./storage";
 
 const PREFIX = "tms.";
 const SETTINGS_KEY = "tms.settings.v1";
@@ -16,6 +16,8 @@ interface Manifest {
   local: Record<string, string>;
   clips: { key: string; file: string; sampleRate: number; signature: string }[];
   images: { key: string; file: string; type: string }[];
+  /** BGM・背景画像・Lottie（古いバックアップには無い） */
+  assets?: { key: string; file: string; type: string }[];
 }
 
 /** 設定から APIキーを抜く（キーを含めないバックアップ用） */
@@ -65,13 +67,20 @@ export async function exportBackup(includeKeys: boolean): Promise<{ blob: Blob; 
     files[file] = new Uint8Array(await value.arrayBuffer());
     images.push({ key, file, type: value.type });
   }
-  const manifest: Manifest = { app: "tiktok-motion-studio", version: 1, createdAt: new Date().toISOString(), includesKeys: includeKeys, local, clips, images };
+  const assets: NonNullable<Manifest["assets"]> = [];
+  for (const [i, [key, value]] of (await dumpStore(ASSETS_STORE)).entries()) {
+    if (!(value instanceof Blob)) continue;
+    const file = `assets/${i}.bin`;
+    files[file] = new Uint8Array(await value.arrayBuffer());
+    assets.push({ key, file, type: value.type });
+  }
+  const manifest: Manifest = { app: "tiktok-motion-studio", version: 1, createdAt: new Date().toISOString(), includesKeys: includeKeys, local, clips, images, assets };
   files["backup.json"] = strToU8(JSON.stringify(manifest));
   // 画像・音声はもともと圧縮されている／圧縮しても小さくならないので、速さ優先で無圧縮にする
   const zipped = zipSync(files, { level: 0 });
   return {
     blob: new Blob([zipped.slice()], { type: "application/zip" }),
-    summary: `音声${clips.length}本・キャラ画像${images.length}枚・設定とプロジェクト`
+    summary: `音声${clips.length}本・キャラ画像${images.length}枚・素材${assets.length}個・設定とプロジェクト`
   };
 }
 
@@ -93,10 +102,16 @@ export async function importBackup(file: File): Promise<string> {
     if (!bytes) throw new Error(`バックアップが壊れています（${img.file} がありません）`);
     return [img.key, new Blob([bytes.slice()], { type: img.type })];
   });
+  const assets: [string, unknown][] = (manifest.assets ?? []).map((a) => {
+    const bytes = files[a.file];
+    if (!bytes) throw new Error(`バックアップが壊れています（${a.file} がありません）`);
+    return [a.key, new Blob([bytes.slice()], { type: a.type })];
+  });
   await replaceStore(AUDIO_STORE, clips);
   await replaceStore(CHARACTER_IMAGE_STORE, images);
+  await replaceStore(ASSETS_STORE, assets);
   for (const [key, value] of Object.entries(manifest.local)) {
     localStorage.setItem(key, key === SETTINGS_KEY ? mergeKeys(value, localStorage.getItem(key)) : value);
   }
-  return `音声${clips.length}本・キャラ画像${images.length}枚・設定とプロジェクトを読み込みました`;
+  return `音声${clips.length}本・キャラ画像${images.length}枚・素材${assets.length}個・設定とプロジェクトを読み込みました`;
 }

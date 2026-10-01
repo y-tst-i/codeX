@@ -216,7 +216,7 @@ export function App() {
             onNext={() => setStep("export")}
           />
         ) : null}
-        {step === "export" ? <ExportStep extras={extras} html={project.html} script={project.script} timeline={timeline} mixed={mixed} onBack={() => setStep("motion")} /> : null}
+        {step === "export" ? <ExportStep extras={extras} html={project.html} script={project.script} timeline={timeline} mixed={mixed} settings={settings} onSettingsChange={setSettings} onBack={() => setStep("motion")} /> : null}
         {(step === "voice" || step === "motion") && !project.script ? <p className="lead">先に②台本を作ってください。</p> : null}
       </main>
     </div>

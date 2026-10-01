@@ -1,3 +1,4 @@
+import type { AudioSettings } from "./sfx";
 import type { CharacterSettings } from "./character";
 
 export type SceneRole = "hook" | "body" | "twist" | "cta" | "loop";
@@ -114,6 +115,8 @@ export interface ApiSettings {
   accountBrand?: AccountBrand;
   /** 看板キャラクター */
   character?: CharacterSettings;
+  /** 効果音・BGM の設定 */
+  audio?: AudioSettings;
 }
 
 /** 動画ごとに変えず、アカウントで固定する企画項目（フックの型やテーマは毎回変える） */

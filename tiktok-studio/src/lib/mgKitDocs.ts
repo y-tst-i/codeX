@@ -43,6 +43,15 @@ export const MGK_PROMPT = `# 演出の道具箱 window.MGK（必ず使う）
 ## 仕上げ（render の最後に毎回）
 - \`K.fx.lightLeak(ctx, t, {color, alpha})\` → \`K.fx.vignette(ctx, 0.3)\` → \`K.fx.grain(ctx, t, 0.06)\`
 
+## 効果音の指定（MG.sfx）
+映像の動きに合わせて、ツールが効果音を合成して入れます。**window.MG に \`sfx\` 配列を足して、どの時刻にどの音を鳴らすか指定**してください（音そのものは作らない）。
+\`\`\`js
+sfx: [ { t: 0.0, type: "impact" }, { t: 0.5, type: "pop" }, { t: 2.42, type: "whoosh" }, { t: 6.0, type: "impact", volume: 1.2 }, ... ]
+\`\`\`
+- type: "whoosh"（転換・大きく動く）/ "swipe"（短い転換・スライド）/ "pop"（文字や物が出る）/ "impact"（叩きつけ・驚き・着地）/ "ding"（正解・結論・CTA）/ "sparkle"（キラキラ・ほめる）/ "tick"（カウント・項目が並ぶ）/ "riser"（溜め：大きな見せ場の1秒前から）/ "heart"（ときめき）/ "bubble"（吹き出し・小さな登場）
+- 映像の動きと**同じ時刻**に置く（K.transition の at の0.15秒前に whoosh、slam の文字の開始に impact、burst の start に sparkle など）
+- 1秒に2つまで。声の強調語と重なる大きな音（impact）は1シーン1回まで。volume は 0.3〜1.3
+
 ## 画面の組み立て方（この構造で書く）
 \`\`\`js
 const K = window.MGK;

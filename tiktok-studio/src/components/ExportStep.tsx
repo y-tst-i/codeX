@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { encodeWav } from "../lib/audio";
-import { exportVideo } from "../lib/exporter";
+import { EXPORT_SAMPLE_RATE, exportVideo } from "../lib/exporter";
 import { VIDEO } from "../lib/knowledge";
 import { isDeterministic, loadGraphic, type HostExtras, type LoadedGraphic } from "../lib/mg";
-import type { Script, Timeline } from "../lib/types";
+import { DEFAULT_AUDIO, SFX_LABELS, autoCues, decodeBgm, mixAll, renderSfx, sanitizeCues, type AudioSettings, type SfxCue } from "../lib/sfx";
+import { deleteAsset, loadAssets, saveAsset } from "../lib/storage";
+import type { ApiSettings, Script, Timeline } from "../lib/types";
 import { CopyButton, Notice, StepNav, downloadBlob, formatSeconds } from "./common";
 import { TimelineBar } from "./VoiceStep";
 
@@ -13,6 +15,8 @@ interface Props {
   script: Script | null;
   timeline: Timeline;
   mixed: { samples: Float32Array; sampleRate: number } | null;
+  settings: ApiSettings;
+  onSettingsChange: (settings: ApiSettings) => void;
   onBack: () => void;
 }
 
@@ -26,7 +30,9 @@ const CHECKLIST = [
   "投稿後1時間はコメントに返信する（初速の反応が大事）"
 ];
 
-export function ExportStep({ extras, html, script, timeline, mixed, onBack }: Props) {
+export function ExportStep({ extras, html, script, timeline, mixed: voiceMix, settings, onSettingsChange, onBack }: Props) {
+  const audioSettings: AudioSettings = { ...DEFAULT_AUDIO, ...settings.audio };
+  const setAudio = (patch: Partial<AudioSettings>) => onSettingsChange({ ...settings, audio: { ...audioSettings, ...patch } });
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [graphic, setGraphic] = useState<LoadedGraphic | null>(null);
@@ -43,7 +49,63 @@ export function ExportStep({ extras, html, script, timeline, mixed, onBack }: Pr
   const [videoExt, setVideoExt] = useState<"mp4" | "webm">("mp4");
   const abortRef = useRef<AbortController | null>(null);
 
-  const duration = mixed ? timeline.duration : graphic?.mg.duration ?? timeline.duration;
+  const duration = voiceMix ? timeline.duration : graphic?.mg.duration ?? timeline.duration;
+  // 効果音のきっかけ：HTMLが MG.sfx を持っていればそれを、無ければタイムラインから自動で
+  const htmlCues = graphic ? sanitizeCues((graphic.mg as { sfx?: unknown }).sfx, duration) : [];
+  const cues: SfxCue[] = htmlCues.length > 0 ? htmlCues : autoCues(timeline).filter((c) => c.t < duration);
+  const cueKey = cues.map((c) => `${c.t.toFixed(3)}${c.type}${c.volume ?? 1}`).join(",");
+  // BGM（素材として保存してあるもの）
+  const [bgm, setBgm] = useState<Float32Array | null>(null);
+  const [bgmError, setBgmError] = useState("");
+  useEffect(() => {
+    let cancelled = false;
+    setBgm(null);
+    if (!audioSettings.bgmKey) return;
+    void loadAssets(audioSettings.bgmKey)
+      .then(async (assets) => {
+        const blob = assets[audioSettings.bgmKey!];
+        if (!blob) throw new Error("BGMファイルが見つかりません。もう一度選んでください");
+        const data = await decodeBgm(blob, EXPORT_SAMPLE_RATE);
+        if (!cancelled) setBgm(data);
+      })
+      .catch((e: Error) => !cancelled && setBgmError(e.message));
+    return () => {
+      cancelled = true;
+    };
+  }, [audioSettings.bgmKey]);
+  // 声＋BGM＋効果音をまとめた最終の音
+  const [mixed, setMixed] = useState<{ samples: Float32Array; sampleRate: number } | null>(voiceMix);
+  useEffect(() => {
+    let cancelled = false;
+    const sampleRate = voiceMix?.sampleRate ?? EXPORT_SAMPLE_RATE;
+    const useSfx = audioSettings.sfx && cues.length > 0;
+    if (!voiceMix && !bgm && !useSfx) {
+      setMixed(null);
+      return;
+    }
+    void (async () => {
+      const sfx = useSfx ? await Promise.all(cues.map(async (cue) => ({ cue, samples: await renderSfx(cue.type, sampleRate) }))) : [];
+      const samples = mixAll({ voice: voiceMix?.samples ?? null, sampleRate, duration, bgm, sfx, settings: audioSettings });
+      if (!cancelled) setMixed({ samples, sampleRate });
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [voiceMix, bgm, cueKey, duration, audioSettings.sfx, audioSettings.sfxVolume, audioSettings.bgmVolume, audioSettings.duck]);
+
+  const chooseBgm = async (file: File | undefined) => {
+    if (!file) return;
+    setBgmError("");
+    try {
+      await decodeBgm(file, EXPORT_SAMPLE_RATE);
+      if (audioSettings.bgmKey) await deleteAsset(audioSettings.bgmKey);
+      const key = `bgm:${file.name}`;
+      await saveAsset(key, file);
+      setAudio({ bgmKey: key, bgmName: file.name });
+    } catch {
+      setBgmError("この音声ファイルは読めませんでした（mp3 / wav / m4a などを選んでください）");
+    }
+  };
   // 音声のURLは effect の中で作って片付ける（開発モードで effect が2回走っても、使用中のURLを消さないため）
   const [audioUrl, setAudioUrl] = useState("");
   const [audioError, setAudioError] = useState("");
@@ -226,6 +288,64 @@ export function ExportStep({ extras, html, script, timeline, mixed, onBack }: Pr
 
         <div className="stack">
           <TimelineBar timeline={timeline} time={time} />
+          <div className="card stack">
+            <b>🎵 効果音・BGM</b>
+            <label className="row meta">
+              <input type="checkbox" style={{ width: "auto" }} checked={audioSettings.sfx} onChange={(e) => setAudio({ sfx: e.target.checked })} />
+              効果音を入れる（{htmlCues.length > 0 ? `映像の指定どおり ${htmlCues.length}個` : `シーンの切り替わり・文字の登場などに自動で ${cues.length}個`}）
+            </label>
+            {audioSettings.sfx ? (
+              <label className="row meta">
+                効果音の音量
+                <input type="range" min={0} max={1.5} step={0.05} value={audioSettings.sfxVolume} onChange={(e) => setAudio({ sfxVolume: Number(e.target.value) })} style={{ width: 160 }} />
+                {Math.round(audioSettings.sfxVolume * 100)}%
+              </label>
+            ) : null}
+            {audioSettings.sfx && cues.length > 0 ? (
+              <span className="meta">
+                使う音：{[...new Set(cues.map((c) => SFX_LABELS[c.type]))].join("・")}
+              </span>
+            ) : null}
+            <div className="row meta" style={{ flexWrap: "wrap" }}>
+              BGM：
+              <b>{audioSettings.bgmName ?? "なし"}</b>
+              <label className="btn small" style={{ cursor: "pointer" }}>
+                {audioSettings.bgmName ? "変える" : "曲を選ぶ"}
+                <input type="file" accept="audio/*" style={{ display: "none" }} onChange={(e) => void chooseBgm(e.target.files?.[0])} />
+              </label>
+              {audioSettings.bgmKey ? (
+                <button
+                  className="btn small ghost"
+                  type="button"
+                  onClick={async () => {
+                    await deleteAsset(audioSettings.bgmKey!);
+                    setAudio({ bgmKey: undefined, bgmName: undefined });
+                  }}
+                >
+                  外す
+                </button>
+              ) : null}
+            </div>
+            {audioSettings.bgmKey ? (
+              <>
+                <label className="row meta">
+                  BGMの音量
+                  <input type="range" min={0} max={0.8} step={0.01} value={audioSettings.bgmVolume} onChange={(e) => setAudio({ bgmVolume: Number(e.target.value) })} style={{ width: 160 }} />
+                  {Math.round(audioSettings.bgmVolume * 100)}%
+                </label>
+                <label className="row meta">
+                  声が鳴っている間BGMを下げる
+                  <input type="range" min={0} max={0.95} step={0.05} value={audioSettings.duck} onChange={(e) => setAudio({ duck: Number(e.target.value) })} style={{ width: 160 }} />
+                  {Math.round(audioSettings.duck * 100)}%
+                </label>
+              </>
+            ) : null}
+            {bgmError ? <Notice kind="error">{bgmError}</Notice> : null}
+            <span className="meta">
+              BGMはフリー音源サイト等の規約を守って使ってください。TikTokのアプリでトレンド曲を付けるなら、ここではBGMなしでOK（効果音だけ入れる）。
+            </span>
+          </div>
+
           <div className="card stack">
             <b>MP4に書き出す</b>
             <span className="meta">1フレームずつ描いてエンコードするので、重い演出でもコマ落ちしません（尺 {formatSeconds(duration)}）。Chrome / Edge 推奨。</span>

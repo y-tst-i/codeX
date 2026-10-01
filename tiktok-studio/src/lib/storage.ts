@@ -44,14 +44,17 @@ const DB_NAME = "tms-audio";
 const STORE = "clips";
 /** 画像キャラの画像（キー: "表情:口"） */
 const IMAGE_STORE = "characterImages";
+/** 動画の素材（BGM・背景画像・Lottieアニメ）。キー: "bgm:名前" / "img:名前" / "lottie:名前" */
+const ASSET_STORE = "assets";
 
 function openDb(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, 2);
+    const request = indexedDB.open(DB_NAME, 3);
     request.onupgradeneeded = () => {
       const db = request.result;
       if (!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE);
       if (!db.objectStoreNames.contains(IMAGE_STORE)) db.createObjectStore(IMAGE_STORE);
+      if (!db.objectStoreNames.contains(ASSET_STORE)) db.createObjectStore(ASSET_STORE);
     };
     request.onsuccess = () => resolve(request.result);
     request.onerror = () => reject(request.error);
@@ -160,6 +163,42 @@ export async function loadCharacterImages(keys: string[]): Promise<Record<string
 
 export const AUDIO_STORE = STORE;
 export const CHARACTER_IMAGE_STORE = IMAGE_STORE;
+export const ASSETS_STORE = ASSET_STORE;
+
+/* ---------------- 素材（BGM・背景画像・Lottie） ---------------- */
+
+export async function saveAsset(key: string, blob: Blob): Promise<void> {
+  await replaceEntry(ASSET_STORE, key, blob);
+}
+
+export async function deleteAsset(key: string): Promise<void> {
+  const db = await openDb();
+  await new Promise<void>((resolve) => {
+    const tx = db.transaction(ASSET_STORE, "readwrite");
+    tx.objectStore(ASSET_STORE).delete(key);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => resolve();
+  });
+  db.close();
+}
+
+/** 素材をすべて読む（prefix で種類をしぼる） */
+export async function loadAssets(prefix = ""): Promise<Record<string, Blob>> {
+  const out: Record<string, Blob> = {};
+  for (const [key, value] of await dumpStore(ASSET_STORE)) if (key.startsWith(prefix) && value instanceof Blob) out[key] = value;
+  return out;
+}
+
+async function replaceEntry(store: string, key: string, value: unknown): Promise<void> {
+  const db = await openDb();
+  await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(store, "readwrite");
+    tx.objectStore(store).put(value, key);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+  db.close();
+}
 
 /** ストアの中身を [キー, 値] の一覧で取り出す */
 export async function dumpStore(store: string): Promise<[string, unknown][]> {
