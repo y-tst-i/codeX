@@ -5,6 +5,7 @@ import { askClaude, describeClaudeError } from "../lib/claude";
 import { PALETTES, findOrFirst } from "../lib/knowledge";
 import { SAMPLE_CHARACTER } from "../lib/sampleCharacter";
 import { ImageCharacterPanel } from "./ImageCharacterPanel";
+import { RigCharacterPanel } from "./RigCharacterPanel";
 import type { ApiSettings, Concept } from "../lib/types";
 import { Field, Notice, PromptBox } from "./common";
 
@@ -25,7 +26,7 @@ export function CharacterStep({ settings, concept, onChange }: Props) {
   const [checking, setChecking] = useState(false);
   const [running, setRunning] = useState(false);
   const [progress, setProgress] = useState("");
-  const [tab, setTab] = useState<"image" | "code">(saved && saved.kind !== "image" ? "code" : "image");
+  const [tab, setTab] = useState<"rig" | "image" | "code">(saved?.kind === "rig" ? "rig" : saved && saved.kind !== "image" ? "code" : "image");
   const palette = findOrFirst(PALETTES, concept.paletteId);
   const prompt = buildCharacterPrompt(name, idea, palette);
 
@@ -35,7 +36,7 @@ export function CharacterStep({ settings, concept, onChange }: Props) {
 
   // 保存済みのキャラがあれば、開いたときに見本を表示する
   useEffect(() => {
-    if (saved?.script && saved.kind !== "image") void preview(saved.script);
+    if (saved?.script && saved.kind !== "image" && saved.kind !== "rig") void preview(saved.script);
   }, []);
 
   const preview = async (script: string) => {
@@ -134,6 +135,9 @@ export function CharacterStep({ settings, concept, onChange }: Props) {
       ) : null}
 
       <div className="row" style={{ margin: "18px 0 6px" }}>
+        <button className={`btn ${tab === "rig" ? "primary" : ""}`} type="button" onClick={() => setTab("rig")}>
+          🧩 パーツで組み立てる（いちばん動く）
+        </button>
         <button className={`btn ${tab === "image" ? "primary" : ""}`} type="button" onClick={() => setTab("image")}>
           🖼 画像で作る（おすすめ・口パクがはっきり）
         </button>
@@ -142,7 +146,15 @@ export function CharacterStep({ settings, concept, onChange }: Props) {
         </button>
       </div>
 
-      {tab === "image" ? (
+      {tab === "rig" ? (
+        <RigCharacterPanel
+          saved={saved}
+          onChange={onChange}
+          onPreview={(sheet) => {
+            if (sheet) setSheetUrl(URL.createObjectURL(sheet));
+          }}
+        />
+      ) : tab === "image" ? (
         <ImageCharacterPanel
           saved={saved}
           onChange={onChange}

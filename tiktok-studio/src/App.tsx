@@ -6,6 +6,7 @@ import type { HostExtras } from "./lib/mg";
 import { brandOf, newProject, restoreSettings } from "./lib/project";
 import { characterFor } from "./lib/prompts";
 import { blobToDataUrl, buildImageCharacterScript } from "./lib/imageCharacter";
+import { buildRigCharacterScript, rigKey } from "./lib/rigCharacter";
 import { speakText } from "./lib/script";
 import { clearClips, loadCharacterImages, loadClips, loadIdeas, loadProject, loadSettings, saveClip, saveIdeas, saveProject, saveSettings, type ProjectState } from "./lib/storage";
 import type { Idea } from "./lib/ideas";
@@ -71,13 +72,22 @@ export function App() {
   const [imageScript, setImageScript] = useState("");
   const imageKeysKey = (character?.imageKeys ?? []).join(",");
   useEffect(() => {
-    if (character?.kind !== "image") {
+    if (character?.kind !== "image" && character?.kind !== "rig") {
       setImageScript("");
       return;
     }
     let cancelled = false;
     void (async () => {
       const blobs = await loadCharacterImages(character.imageKeys ?? []);
+      if (character.kind === "rig" && character.rig) {
+        const parts: Record<string, string> = {};
+        for (const part of Object.keys(character.rig.offsets)) {
+          const blob = blobs[rigKey(part)];
+          if (blob) parts[part] = await blobToDataUrl(blob);
+        }
+        if (!cancelled) setImageScript(buildRigCharacterScript(character.name, character.rig, parts));
+        return;
+      }
       const urls: Record<string, string> = {};
       for (const [key, blob] of Object.entries(blobs)) urls[key] = await blobToDataUrl(blob);
       if (!cancelled) setImageScript(buildImageCharacterScript(character.name, urls));
@@ -86,7 +96,7 @@ export function App() {
       cancelled = true;
     };
   }, [character?.kind, character?.name, character?.updatedAt, imageKeysKey]);
-  const characterScript = character?.kind === "image" ? imageScript || undefined : character?.script;
+  const characterScript = character?.kind === "image" || character?.kind === "rig" ? imageScript || undefined : character?.script;
   const extras = useMemo<HostExtras>(() => ({ characterScript, voiceLevels: levels }), [characterScript, levels]);
 
   const onClip = (sceneId: string, clip: AudioClip, signature: string) => {

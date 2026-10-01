@@ -5,15 +5,19 @@ import type { Palette } from "./knowledge";
  * Canvas 2D で描く関数として1回だけデザインし、毎回の動画に同じコードを差し込む
  * （＝毎回まったく同じ見た目で登場する）。口は実際のナレーションの音量で動く。
  */
+import type { RigConfig } from "./rigCharacter";
+
 export interface CharacterSettings {
   name: string;
   concept: string;
-  /** code: Canvasで描くキャラ / image: 画像（口違い・表情違い）を切り替えるキャラ */
-  kind?: "code" | "image";
+  /** code: Canvasで描くキャラ / image: 画像（口違い・表情違い）を切り替えるキャラ / rig: パーツを関節で動かすキャラ */
+  kind?: "code" | "image" | "rig";
   /** window.CHARACTER を定義する JavaScript（<script>の中身）。画像キャラでは空で、読み込み時に組み立てる */
   script: string;
   /** 画像キャラ：登録済みの画像のキー（"表情:口" 例 "normal:open"） */
   imageKeys?: string[];
+  /** パーツキャラ：関節とパーツの位置 */
+  rig?: RigConfig;
   /** 保存した時刻（画像を差し替えたときに読み直すため） */
   updatedAt?: number;
 }
@@ -128,7 +132,7 @@ export function characterPromptSection(character: CharacterSettings): string {
     : "";
   return `# 看板キャラクター「${character.name}」（必ず登場させる）
 キャラクターの描画関数 \`window.CHARACTER.draw(ctx, opts)\` は、このツールが**HTMLの読み込み前に自動で用意します**。自分でキャラを描いたり、関数を書き直したりしないでください。
-- イメージ: ${character.concept}${isImage ? "\n- 見た目: 1枚絵のイラスト（画像）。口の開きと表情は画像の差し替えで変わる。ポーズの指定は体の傾き・揺れ・跳ねとして表現される" + stillNote : ""}
+- イメージ: ${character.concept}${character.kind === "rig" ? "\n- 見た目: パーツ（頭・体・耳・腕・目・口）を関節で動かす立体的なイラスト。まばたき・耳のピクッ・呼吸・話すときのうなずきは自動。expression で目と口と耳の角度が、pose で実際に腕が動く（point=指さし、wave=手を振る、cheer=バンザイ、shrug=お手上げ）。look で首をかしげて視線の向きを変える" : ""}${isImage ? "\n- 見た目: 1枚絵のイラスト（画像）。口の開きと表情は画像の差し替えで変わる。ポーズの指定は体の傾き・揺れ・跳ねとして表現される" + stillNote : ""}
 - 呼び出し方: \`window.CHARACTER.draw(ctx, { x, y, size, t, expression, pose, mouth, look, flip })\`
   - x, y は足元の中心、size は身長(px)。size を画面の高さより大きくすれば、下がはみ出したバストアップ・顔のアップになる
   - expression: ${expressions.join(" / ")}
