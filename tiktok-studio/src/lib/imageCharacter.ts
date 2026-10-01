@@ -9,7 +9,7 @@ export type MouthState = (typeof MOUTHS)[number];
 export const MOUTH_LABELS: Record<MouthState, string> = { closed: "口を閉じる", half: "口が半開き", open: "口を大きく開く" };
 
 /** 画像を登録できる表情（normal は必須） */
-export const IMAGE_EXPRESSIONS = ["normal", "happy", "surprised", "thinking", "sad"] as const;
+export const IMAGE_EXPRESSIONS = ["normal", "happy", "surprised", "thinking", "sad", "wink", "smug"] as const;
 
 export function imageKey(expression: string, mouth: MouthState): string {
   return `${expression}:${mouth}`;
@@ -131,6 +131,8 @@ const EXPRESSION_WORDS: [string, RegExp][] = [
   ["surprised", /surpris|shock|wow|驚|びっくり|おどろ/i],
   ["thinking", /think|hmm|考|かんが|悩/i],
   ["sad", /sad|cry|悲|かなし|しょんぼり|泣|落ち込/i],
+  ["wink", /wink|ウインク|ウィンク/i],
+  ["smug", /smug|doya|ドヤ|どや|得意/i],
   ["normal", /normal|base|neutral|default|通常|ふつう|普通|基本|ノーマル/i]
 ];
 

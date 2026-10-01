@@ -121,9 +121,14 @@ export function characterPromptSection(character: CharacterSettings): string {
   const available = (list: readonly string[]) => list.filter((name) => name === "normal" || name === "idle" || keys.some((k) => k.startsWith(`${name}:`)));
   const expressions = isImage ? available(EXPRESSIONS) : [...EXPRESSIONS];
   const poses = isImage ? [...POSES] : [...POSES];
+  const mouthCount = (name: string) => keys.filter((k) => k.startsWith(`${name}:`)).length;
+  const still = isImage ? expressions.filter((name) => mouthCount(name) === 1 && name !== "normal") : [];
+  const stillNote = still.length
+    ? `\n- 注意: ${still.join(" / ")} は口の画像が1枚だけなので、その表情の間は口パクしない。ナレーションの最中は口パクできる表情を中心に使い、${still.join(" / ")} は「間」やリアクションの一瞬（0.5〜1.5秒）に使う`
+    : "";
   return `# 看板キャラクター「${character.name}」（必ず登場させる）
 キャラクターの描画関数 \`window.CHARACTER.draw(ctx, opts)\` は、このツールが**HTMLの読み込み前に自動で用意します**。自分でキャラを描いたり、関数を書き直したりしないでください。
-- イメージ: ${character.concept}${isImage ? "\n- 見た目: 1枚絵のイラスト（画像）。口の開きと表情は画像の差し替えで変わる。ポーズの指定は体の傾き・揺れ・跳ねとして表現される" : ""}
+- イメージ: ${character.concept}${isImage ? "\n- 見た目: 1枚絵のイラスト（画像）。口の開きと表情は画像の差し替えで変わる。ポーズの指定は体の傾き・揺れ・跳ねとして表現される" + stillNote : ""}
 - 呼び出し方: \`window.CHARACTER.draw(ctx, { x, y, size, t, expression, pose, mouth, look, flip })\`
   - x, y は足元の中心、size は身長(px)。size を画面の高さより大きくすれば、下がはみ出したバストアップ・顔のアップになる
   - expression: ${expressions.join(" / ")}

@@ -5,6 +5,7 @@ import { checkCharacter } from "../lib/characterHost";
 import { IMAGE_EXPRESSIONS, MOUTHS, MOUTH_LABELS, assignSlots, buildImageCharacterScript, collectImages, blobToDataUrl, imageKey, prepareCharacterImage, type MouthState } from "../lib/imageCharacter";
 import { deleteCharacterImage, loadCharacterImages, saveCharacterImage } from "../lib/storage";
 import { CopyButton, Field, Notice } from "./common";
+import { SheetSplitter } from "./SheetSplitter";
 
 interface Props {
   saved: CharacterSettings | undefined;
@@ -139,6 +140,18 @@ export function ImageCharacterPanel({ saved, onChange, onPreview }: Props) {
     }
   };
 
+  /** シートから切り出した画像を登録（すでに背景は透明） */
+  const registerPiece = async (key: string, piece: Blob) => {
+    setBusyKey(key);
+    try {
+      const blob = await prepareCharacterImage(piece, false);
+      await saveCharacterImage(key, blob);
+      setUrls((current) => ({ ...current, [key]: URL.createObjectURL(blob) }));
+    } finally {
+      setBusyKey(null);
+    }
+  };
+
   const remove = async (key: string) => {
     await deleteCharacterImage(key);
     setUrls((current) => {
@@ -245,6 +258,12 @@ export function ImageCharacterPanel({ saved, onChange, onPreview }: Props) {
           名前に何も書いてなければ、ファイル名順（1→2→3）に「ふつう」の閉じ→半開き→全開へ入れます。例：<code>1.png 2.png 3.png</code>、<code>笑顔_閉じ.png</code>
         </span>
         {bulkNotes.length > 0 ? <Notice kind="warn" title="一部の画像は登録していません" items={bulkNotes} /> : null}
+        <details>
+          <summary style={{ cursor: "pointer", fontWeight: 600 }}>✂️ キャラクターシート（1枚にポーズがたくさん並んだ画像）から切り出す</summary>
+          <div style={{ marginTop: 8 }}>
+            <SheetSplitter onRegister={registerPiece} />
+          </div>
+        </details>
         <div style={{ overflowX: "auto" }}>
           <table style={{ borderCollapse: "separate", borderSpacing: 8 }}>
             <thead>
@@ -288,7 +307,7 @@ export function ImageCharacterPanel({ saved, onChange, onPreview }: Props) {
                           {busyKey === key ? (
                             <span className="meta">処理中…</span>
                           ) : url ? (
-                            <img src={url} alt={key} style={{ maxWidth: "100%", maxHeight: "100%" }} />
+                            <img src={url} alt={key} style={{ maxWidth: "100%", maxHeight: 136, objectFit: "contain" }} />
                           ) : (
                             <span className="meta">＋ 画像</span>
                           )}
