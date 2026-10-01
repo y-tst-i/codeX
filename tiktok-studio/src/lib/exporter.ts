@@ -19,6 +19,8 @@ export interface ExportOptions {
   audio: { samples: Float32Array; sampleRate: number } | null;
   onProgress?: (ratio: number) => void;
   signal?: AbortSignal;
+  /** モーションブラー：1フレームを何回に分けて描いて重ねるか（1で無し） */
+  motionBlurSamples?: number;
 }
 
 export const EXPORT_SAMPLE_RATE = 48000;
@@ -53,6 +55,9 @@ async function pickContainer(needAudio: boolean): Promise<Container> {
  */
 export async function exportVideo(options: ExportOptions): Promise<ExportResult> {
   const { graphic, duration, fps, audio, onProgress, signal } = options;
+  const samples = Math.max(1, Math.round(options.motionBlurSamples ?? 1));
+  // シャッターを開けている長さ（1フレームの半分＝映画と同じ 180度シャッター）
+  const shutter = 0.5 / fps;
 
   if (typeof VideoEncoder === "undefined") {
     throw new Error("このブラウザは動画の書き出し（WebCodecs）に対応していません。最新のChromeかEdgeを使ってください。");
@@ -96,8 +101,18 @@ export async function exportVideo(options: ExportOptions): Promise<ExportResult>
     for (let frame = 0; frame < totalFrames; frame++) {
       if (signal?.aborted) throw new DOMException("中断しました", "AbortError");
       const t = frame / fps;
-      graphic.mg.render(t);
-      ctx.drawImage(graphic.canvas, 0, 0, VIDEO.width, VIDEO.height);
+      if (samples === 1) {
+        graphic.mg.render(t);
+        ctx.drawImage(graphic.canvas, 0, 0, VIDEO.width, VIDEO.height);
+      } else {
+        // 少しずつ時刻をずらして描いた絵を平均する（速く動くものが自然にブレて、動画らしくなる）
+        for (let k = 0; k < samples; k++) {
+          graphic.mg.render(Math.max(0, t + (k / (samples - 1) - 0.5) * shutter));
+          ctx.globalAlpha = 1 / (k + 1);
+          ctx.drawImage(graphic.canvas, 0, 0, VIDEO.width, VIDEO.height);
+        }
+        ctx.globalAlpha = 1;
+      }
       await video.add(t, 1 / fps);
       if (frame % 10 === 0) {
         onProgress?.(frame / totalFrames);

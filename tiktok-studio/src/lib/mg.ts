@@ -1,4 +1,5 @@
 import { hostExtrasScript } from "./character";
+import { MGK_SCRIPT } from "./mgKit";
 import { measureFrozen, type FrozenReport } from "./frames";
 import { VIDEO } from "./knowledge";
 
@@ -45,8 +46,8 @@ function injectHead(html: string, snippet: string): string {
 
 /** 看板キャラ・音量データを差し込む（保存用HTMLにも使う） */
 export function withExtras(html: string, extras?: HostExtras): string {
-  if (!extras || (!extras.characterScript && !extras.voiceLevels)) return html;
-  return injectHead(html, hostExtrasScript(extras.characterScript, extras.voiceLevels));
+  // 演出の道具箱（window.MGK）はいつも入れる。キャラと音量は用意できたときだけ
+  return injectHead(html, `<script>${MGK_SCRIPT}</script>${hostExtrasScript(extras?.characterScript, extras?.voiceLevels)}`);
 }
 
 /** 自動再生を止め、エラーを集める仕込みを<head>の先頭に入れる */
@@ -135,7 +136,7 @@ export async function loadGraphic(html: string, extras?: HostExtras, timeoutMs =
   }
 }
 
-function fingerprint(canvas: HTMLCanvasElement): string {
+export function fingerprint(canvas: HTMLCanvasElement): string {
   const ctx = canvas.getContext("2d");
   if (!ctx) return "";
   const { data } = ctx.getImageData(0, 0, canvas.width, canvas.height);
@@ -240,6 +241,20 @@ function diagnoseNondeterminism(loaded: LoadedGraphic, t: number, leaked: string
   }
   hints.push("window.CHARACTER と window.MG_VOICE_LEVEL はツールが用意する決定的な関数なので、原因はHTML側です");
   return { hints, severe };
+}
+
+/** 同じ時刻を描き直して同じ絵になるか（モーションブラーで1フレームを何度も描いてよいか） */
+export function isDeterministic(loaded: LoadedGraphic, duration: number): boolean {
+  try {
+    const probe = Math.min(1.234, duration / 3);
+    loaded.mg.render(probe);
+    const a = fingerprint(loaded.canvas);
+    loaded.mg.render(duration * 0.8);
+    loaded.mg.render(probe);
+    return a === fingerprint(loaded.canvas);
+  } catch {
+    return false;
+  }
 }
 
 /** 書き出し前の動作検証（決定性・サイズ・尺・描画速度・t=0が真っ白/真っ黒でないか） */

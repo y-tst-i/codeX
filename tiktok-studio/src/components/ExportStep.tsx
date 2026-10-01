@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { encodeWav } from "../lib/audio";
 import { exportVideo } from "../lib/exporter";
 import { VIDEO } from "../lib/knowledge";
-import { loadGraphic, type HostExtras, type LoadedGraphic } from "../lib/mg";
+import { isDeterministic, loadGraphic, type HostExtras, type LoadedGraphic } from "../lib/mg";
 import type { Script, Timeline } from "../lib/types";
 import { CopyButton, Notice, StepNav, downloadBlob, formatSeconds } from "./common";
 import { TimelineBar } from "./VoiceStep";
@@ -37,6 +37,8 @@ export function ExportStep({ extras, html, script, timeline, mixed, onBack }: Pr
   const [exporting, setExporting] = useState(false);
   const [exportProgress, setExportProgress] = useState(0);
   const [exportError, setExportError] = useState("");
+  const [motionBlur, setMotionBlur] = useState(true);
+  const [blurNote, setBlurNote] = useState("");
   const [videoUrl, setVideoUrl] = useState("");
   const [videoExt, setVideoExt] = useState<"mp4" | "webm">("mp4");
   const abortRef = useRef<AbortController | null>(null);
@@ -154,7 +156,18 @@ export function ExportStep({ extras, html, script, timeline, mixed, onBack }: Pr
     const controller = new AbortController();
     abortRef.current = controller;
     try {
-      const { blob, extension } = await exportVideo({ graphic, duration, fps: VIDEO.fps, audio: mixed, onProgress: setExportProgress, signal: controller.signal });
+      // 前のフレームの状態に頼るHTMLは、1フレームを何度も描くと動きが速くなるので、ブラーをかけない
+      const blurOk = motionBlur && isDeterministic(graphic, duration);
+      setBlurNote(motionBlur && !blurOk ? "このHTMLは同じ時刻でも毎回少し違う絵になるため、モーションブラーなしで書き出しました" : "");
+      const { blob, extension } = await exportVideo({
+        graphic,
+        duration,
+        fps: VIDEO.fps,
+        audio: mixed,
+        onProgress: setExportProgress,
+        signal: controller.signal,
+        motionBlurSamples: blurOk ? 4 : 1
+      });
       setVideoUrl(URL.createObjectURL(blob));
       setVideoExt(extension);
       // 日本語のファイル名は環境によって「download」に化けるので、日時の英数字名にする
@@ -216,6 +229,11 @@ export function ExportStep({ extras, html, script, timeline, mixed, onBack }: Pr
           <div className="card stack">
             <b>MP4に書き出す</b>
             <span className="meta">1フレームずつ描いてエンコードするので、重い演出でもコマ落ちしません（尺 {formatSeconds(duration)}）。Chrome / Edge 推奨。</span>
+            <label className="row meta">
+              <input type="checkbox" style={{ width: "auto" }} checked={motionBlur} onChange={(e) => setMotionBlur(e.target.checked)} />
+              モーションブラー（速い動きが自然にブレて、映像らしくなる。書き出し時間は約3〜4倍）
+            </label>
+            {blurNote ? <span className="meta">{blurNote}</span> : null}
             <div className="row">
               <button className="btn pink" type="button" disabled={!graphic || exporting} onClick={runExport}>
                 {exporting ? `書き出し中… ${Math.round(exportProgress * 100)}%` : "MP4を書き出す"}

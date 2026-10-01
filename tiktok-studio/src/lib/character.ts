@@ -147,7 +147,10 @@ export function characterPromptSection(character: CharacterSettings): string {
         rigCaps.fx.length ? `  - fx（任意）: ${rigCaps.fx.join(" / ")} のどれか、または配列（例 fx: ["blush", "sparkle"]）。照れ・ハート目・汗・キラキラ・涙・怒りマーク・はてなを顔に重ねる。気持ちが動く瞬間に使う（1シーン1〜2個まで）` : "",
         rigCaps.walk ? "  - walk（任意）: true で足を交互に上げて歩く。画面の端から歩いて登場・退場するときに、x を動かしながら使う" : "",
         rigCaps.gaze ? "  - lookY（任意, -1〜1）: 視線の上下（-1=上を見る、1=下を見る）。look は首と黒目の左右。注目させたい文字の方向へ視線を向ける" : "",
-        "  - love: ハートの目＋照れ。恋愛ネタの「キュン」の瞬間に"
+        "  - love: ハートの目＋照れ。恋愛ネタの「キュン」の瞬間に",
+        "  - react（任意）: \"jump\" / \"shock\" / \"nod\" / \"shake\" / \"bounce\" と reactAt（秒）を渡すと、その時刻に一回きりのリアクション（ジャンプ・のけぞり・うなずき・首振り・着地のつぶれ）をする",
+        "  - energy（任意, 0〜2.5, 標準1.3）: 自動で付く動き（体の揺れ・話すときの身ぶり・うなずき）の大きさ",
+        "  - squash（任意, -1〜1）: 体を縦に伸ばす(+)・つぶす(-)。K.hop の sy と組み合わせて弾ませる ／ lean（任意, ラジアン）: 体ごと傾ける（走り込み・のけぞり）"
       ]
         .filter(Boolean)
         .join("\n")
@@ -160,7 +163,7 @@ export function characterPromptSection(character: CharacterSettings): string {
   return `# 看板キャラクター「${character.name}」（必ず登場させる）
 キャラクターの描画関数 \`window.CHARACTER.draw(ctx, opts)\` は、このツールが**HTMLの読み込み前に自動で用意します**。自分でキャラを描いたり、関数を書き直したりしないでください。
 - イメージ: ${character.concept}${character.kind === "rig" ? "\n- 見た目: パーツ（頭・体・耳・腕・目・口）を関節で動かす立体的なイラスト。まばたき・耳のピクッ・呼吸・話すときのうなずきは自動。expression で目と口と耳の角度が、pose で実際に腕が動く（point=指さし、wave=手を振る、cheer=バンザイ、shrug=お手上げ、think=あごに手、phone=スマホを見る、heart=両手でハート、hip=腰に手、jump=ジャンプ。使えるものだけ下に挙げる）。look で首をかしげて視線の向きを変える" : ""}${isImage ? "\n- 見た目: 1枚絵のイラスト（画像）。口の開きと表情は画像の差し替えで変わる。ポーズの指定は体の傾き・揺れ・跳ねとして表現される" + stillNote : ""}
-- 呼び出し方: \`window.CHARACTER.draw(ctx, { x, y, size, t, expression, pose, mouth, look, flip${isRig ? ", lookY, fx, walk" : ""} })\`
+- 呼び出し方: \`window.CHARACTER.draw(ctx, { x, y, size, t, expression, pose, mouth, look, flip${isRig ? ", lookY, fx, walk, react, reactAt, energy, squash, lean" : ""} })\`
   - x, y は足元の中心、size は身長(px)。size を画面の高さより大きくすれば、下がはみ出したバストアップ・顔のアップになる
   - expression: ${expressions.join(" / ")}
   - pose: ${poses.join(" / ")}${rigExtras ? `\n${rigExtras}` : ""}

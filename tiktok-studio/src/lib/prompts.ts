@@ -1,5 +1,6 @@
 import { FONTS, GOALS, HOOKS, PALETTES, STYLES, VIDEO, findOrFirst } from "./knowledge";
 import { characterPromptSection, type CharacterSettings } from "./character";
+import { CHARACTER_CHOREO_PROMPT, MGK_PROMPT } from "./mgKitDocs";
 import { EASING_LIBRARY, resolveTechniques } from "./techniques";
 import { formatTimelineForPrompt } from "./timeline";
 import type { Concept, Script, Timeline } from "./types";
@@ -145,7 +146,9 @@ ${techniqueLines}
 ## イージング辞典（この式で実装する）
 ${EASING_LIBRARY.map((line) => `- ${line}`).join("\n")}
 
-${character ? `${characterPromptSection(character)}\n\n` : ""}# タイムライン（音声の実測値。1フレームもずらさないこと）
+${MGK_PROMPT}
+
+${character ? `${characterPromptSection(character)}\n\n${CHARACTER_CHOREO_PROMPT}\n\n` : ""}# タイムライン（音声の実測値。1フレームもずらさないこと）
 ${formatTimelineForPrompt(timeline)}
 
 # モーションの原則（全部守る）
@@ -189,7 +192,7 @@ ${formatTimelineForPrompt(timeline)}
 - 右端（x>${safe.right}）はいいね等のボタン、下部（y>${safe.bottom}）は投稿文、上部（y<${safe.top}）はタブで隠れる。背景や装飾ははみ出してよい
 
 # 技術仕様（この契約を破ると書き出しできません）
-- 1つのHTMLファイル。外部読み込みは Google Fonts のみ（画像・ライブラリ・CDNは使わない。図形・アイコンはCanvasで描く）
+- 1つのHTMLファイル。外部読み込みは Google Fonts のみ（画像・ライブラリ・CDNは使わない。図形・アイコンはCanvasで描く）。window.MGK・window.CHARACTER・window.MG_VOICE_LEVEL はツールが用意するので、そのまま使う
 - \`<canvas id="stage" width="${VIDEO.width}" height="${VIDEO.height}">\` に Canvas 2D で描画する（DOM要素・CSSアニメーション・SVGで映像を作らない）
 - グローバルに次のオブジェクトを公開する:
 \`\`\`js
@@ -212,15 +215,17 @@ window.MG = {
 
 # 実装の進め方
 1. まず全シーンの絵コンテを表にする（出力形式を参照）。「エフェクト名を使わずに説明できる見せ場の変身」を3つ決める（例：『？マークが割れて答えのカードになる』）
-2. イージング関数群、補間ヘルパー（\`progress(t, start, end)\`・\`clamp\`・\`mix\`）、日本語折り返し、テキスト描画ヘルパーを用意
+2. 補間・イージング・文字・背景・転換は window.MGK を使う（自前で書かない）。シーンごとの背景の組み合わせと、カメラの動き（寄り・引き・パンチ）を表にしてから書く
 3. シーンごとに \`drawSceneN(ctx, localT)\` を作り、render(t) で時刻に応じて呼び分け、転換区間は2シーンを合成する
-4. 字幕レイヤー → 全体エフェクト（グレイン・ビネット等）の順に重ねる
+4. 字幕レイヤー → 仕上げ（K.fx.lightLeak → K.fx.vignette → K.fx.grain）の順に重ねる
 
 # 提出前セルフチェック（すべてYesになるまで直す）
 - [ ] t=0 で黒画面ではなく、フックの文字が読める
 - [ ] 全シーンの主役の登場が speechStart に合っている
 - [ ] 字幕はタイムラインの時刻どおり、セーフエリア内
 - [ ] 0.6秒以上まったく動かない瞬間がない
+- [ ] 背景が全シーンで動いていて、シーンごとに配色か種類が変わる
+- [ ] カメラが常に動いていて、強調語でズームパンチが入る${character ? "\n- [ ] キャラが2秒以上同じ場所・大きさで止まらず、各シーンに1回以上アクションがある" : ""}
 - [ ] 転換の途中で文字どうしが重なったり、文字が別の文字を横切ったりしない
 - [ ] 主役がセーフエリアの60〜85%の大きさで、余白が寂しくない
 - [ ] 少なくとも1つの物体が、シーンをまたいで引き継がれている
@@ -230,7 +235,7 @@ window.MG = {
 - [ ] window.MG の全プロパティがそろっている
 
 # 出力形式
-1. 最初に**絵コンテ表**を書く（列：時刻｜画面に見えるもの｜そのビートの役割｜転換の方法と、次のシーンへ引き継ぐ物体）
+1. 最初に**絵コンテ表**を書く（列：時刻｜画面に見えるもの｜背景（MGKのどれ・配色）｜カメラ｜${character ? "キャラ（位置・大きさ・表情・ポーズ・アクション）｜" : ""}転換の方法と、次のシーンへ引き継ぐ物体）
 2. 見せ場の変身3つを箇条書きで
 3. そのあとに完成したHTMLを \`\`\`html コードブロック1つだけで出力する。省略（「…以下同様」等）は禁止です。`;
 }

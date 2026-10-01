@@ -368,18 +368,30 @@ function draw(ctx,o){
   if(expr==="love")fx.blush=1;
   var B=P.body,H=P.head,tall=Math.max(1,B[1]-TOP),s=size/tall;
   var talk=mouth>0.12?1:0;
+  // 元気さ（自動で付く動きの大きさ）。1.3 が標準、0.6 で落ち着き、2 で大はしゃぎ
+  var en=o.energy===undefined?1.3:clamp(o.energy,0,2.5);
+  // 一回きりのリアクション：react（jump / shock / nod / shake / bounce）を reactAt 秒に起こす
+  var R={lift:0,sx:1,sy:1,lean:0,nod:0,shake:0,ears:0,arms:0},rs=o.react&&o.reactAt!==undefined?t-o.reactAt:-1;
+  if(rs>=0){
+    if(o.react==="jump"){if(rs<0.55){var jx=rs/0.55;R.lift=0.52*jx*(1-jx);R.arms=Math.sin(Math.PI*jx);R.sy=1+0.06*Math.sin(Math.PI*jx);}else if(rs<0.75){var jy=1-(rs-0.55)/0.2;R.sx=1+0.08*jy;R.sy=1-0.1*jy;}}
+    if(o.react==="shock"&&rs<0.8){var d=Math.exp(-rs*6);R.sy=1+0.12*d*Math.cos(rs*20);R.sx=1-0.06*d*Math.cos(rs*20);R.lean=-0.12*d;R.ears=-0.3*d;R.lift=0.03*d;R.arms=0.5*d;}
+    if(o.react==="nod"&&rs<0.8)R.nod=Math.sin(rs*14)*0.14*Math.exp(-rs*3);
+    if(o.react==="shake"&&rs<0.9)R.shake=Math.sin(rs*22)*Math.exp(-rs*3);
+    if(o.react==="bounce"&&rs<0.7){var d2=Math.exp(-rs*7);R.sy=1-0.14*d2*Math.cos(rs*24);R.sx=1+0.08*d2*Math.cos(rs*24);}
+  }
+  var sq=clamp(o.squash||0,-1,1);
   ctx.save();
   ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality="high";
   ctx.translate(o.x,o.y);if(o.flip)ctx.scale(-1,1);ctx.scale(s,s);ctx.translate(-B[0],-B[1]);
   // ジャンプ・歩きの上下
   var air=pose==="jump"?Math.max(0,Math.sin(t*4.5)):0;
-  var lift=air*tall*0.09+(o.walk?Math.abs(Math.sin(t*8))*tall*0.012:0);
+  var lift=air*tall*0.09+(o.walk?Math.abs(Math.sin(t*8))*tall*0.012:0)+R.lift*tall;
   ctx.translate(0,-lift);
   // 体：呼吸と、話している間の小さなバウンス（足元を中心に伸び縮み）
   var breath=Math.sin(t*2.4)*0.008;
-  var bounce=(pose==="cheer"?Math.abs(Math.sin(t*6))*0.05:0)+mouth*0.018+(pose==="jump"?(1-air)*Math.max(0,-Math.sin(t*4.5))*0.05:0);
-  var sway=Math.sin(t*1.1)*0.012+look*0.02+(pose==="shrug"?Math.sin(t*3)*0.02:0)+(o.walk?Math.sin(t*8)*0.025:0);
-  about(ctx,B,sway,1-bounce*0.5-breath*0.5,1+bounce+breath);
+  var bounce=(pose==="cheer"?Math.abs(Math.sin(t*6))*0.05:0)+mouth*0.018*en+(pose==="jump"?(1-air)*Math.max(0,-Math.sin(t*4.5))*0.05:0);
+  var sway=(Math.sin(t*1.1)*0.012+talk*Math.sin(t*2.7)*0.012)*en+look*0.02+R.lean+(o.lean||0)+(pose==="shrug"?Math.sin(t*3)*0.02:0)+(o.walk?Math.sin(t*8)*0.025:0);
+  about(ctx,B,sway,(1-bounce*0.5-breath*0.5)*R.sx*(1-0.08*sq),(1+bounce+breath)*R.sy*(1+0.15*sq));
   // 脚（股関節を中心に回す）。体の後ろに描く
   var lL=Math.sin(t*1.2)*0.015,lR=-Math.sin(t*1.2)*0.015;
   // 歩き：正面向きなので、左右の足を交互に持ち上げる（ちょこちょこ歩き）
@@ -390,7 +402,8 @@ function draw(ctx,o){
   ctx.save();ctx.translate(0,-stepR);if(P.leg_R)about(ctx,P.leg_R,lR);part(ctx,"leg_R");ctx.restore();
   part(ctx,"body");
   // 腕（肩を中心に回す）
-  var aL=Math.sin(t*1.6)*0.04+talk*Math.sin(t*4.2)*0.06,aR=-Math.sin(t*1.6+1)*0.04-talk*Math.sin(t*3.7+2)*0.07;
+  var aL=(Math.sin(t*1.6)*0.04+talk*Math.sin(t*4.2)*0.08)*en+R.arms*1.6,aR=(-Math.sin(t*1.6+1)*0.04-talk*Math.sin(t*3.7+2)*0.09)*en-R.arms*1.6;
+  if(o.walk){aL+=Math.sin(t*8)*0.22;aR+=Math.sin(t*8)*0.22;}
   var armL="arm_L",armR="arm_R",front=null,both=null;
   if(pose==="point"){if(has("arm_R_point"))armR="arm_R_point";else aR=-1.2+Math.sin(t*2)*0.03;}
   if(pose==="wave"){if(has("arm_R_wave")){armR="arm_R_wave";aR=Math.sin(t*9)*0.14;}else aR=-2.4+Math.sin(t*9)*0.25;}
@@ -407,15 +420,15 @@ function draw(ctx,o){
   }
   // 頭（首の付け根を中心に、かしげる・うなずく）。耳・目・口・漫符は頭と一緒に動く
   var tilt=look*0.07+Math.sin(t*1.3)*0.025+(expr==="thinking"&&!front?0.13:0)+(pose==="shrug"?-0.1:0)+(expr==="sad"?-0.05:0)+(front?0.02:0);
-  var nod=talk*Math.sin(t*7.5)*mouth*0.035;
+  var nod=talk*Math.sin(t*7.5)*mouth*0.05*en+R.nod;
   ctx.save();
   about(ctx,H,tilt+nod);
-  ctx.translate(look*10*K,0);
+  ctx.translate(look*10*K+R.shake*18*K,0);
   if(expr==="surprised")about(ctx,H,0,1,1.03);
   // 耳：表情で角度が変わり、ときどきピクッと動く
   var droop=expr==="sad"?0.4:expr==="surprised"?-0.1:expr==="happy"||expr==="love"?0.06:0;
-  var eL=-droop+Math.sin(t*1.7)*0.035-pulse(t,4.3,0.28,1)*0.22;
-  var eR=droop+Math.sin(t*1.9+1)*0.035+pulse(t,5.9,0.28,7)*0.22;
+  var eL=-droop+Math.sin(t*1.7)*0.035*en-pulse(t,4.3,0.28,1)*0.22-R.ears+(talk?-Math.abs(Math.sin(t*5))*0.04*en:0);
+  var eR=droop+Math.sin(t*1.9+1)*0.035*en+pulse(t,5.9,0.28,7)*0.22+R.ears+(talk?Math.abs(Math.sin(t*5+1))*0.04*en:0);
   ctx.save();if(P.ear_L)about(ctx,P.ear_L,eL);part(ctx,"ear_L");ctx.restore();
   ctx.save();if(P.ear_R)about(ctx,P.ear_R,eR);part(ctx,"ear_R");ctx.restore();
   part(ctx,"head");
@@ -433,6 +446,6 @@ function draw(ctx,o){
   if(front){ctx.save();if(P.arm_R)about(ctx,P.arm_R,Math.sin(t*1.6)*0.01);part(ctx,front);ctx.restore();}
   ctx.restore();
 }
-window.CHARACTER={name:${JSON.stringify(name)},kind:"rig",expressions:${JSON.stringify(RIG_EXPRESSIONS)},poses:${JSON.stringify(caps.poses)},fx:${JSON.stringify(caps.fx)},draw:draw};
+window.CHARACTER={name:${JSON.stringify(name)},kind:"rig",reacts:["jump","shock","nod","shake","bounce"],expressions:${JSON.stringify(RIG_EXPRESSIONS)},poses:${JSON.stringify(caps.poses)},fx:${JSON.stringify(caps.fx)},draw:draw};
 })();`;
 }
