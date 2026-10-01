@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <script src="assets/gsap.min.js"></script>
+    <style>
+      @font-face { font-family: "Zen Antique"; src: url("assets/fonts/ZenAntique-sub.ttf") format("truetype"); font-weight: 400; }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: #0a0a12; }
+      #root { position: relative; width: 100%; height: 100%; overflow: hidden; background: #0a0a12; font-family: "Zen Antique", serif; }
+      svg.full { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; }
+      .gold { background: linear-gradient(180deg, #fff3b0 0%, #ffd23a 42%, #c98a00 100%); -webkit-background-clip: text;
+        background-clip: text; color: transparent; }
+      .t { position: absolute; white-space: nowrap; }
+      #tape { left: 72px; top: 58px; width: 440px; height: 128px; background: linear-gradient(180deg, #ffe58a, #ffc400 55%, #c98a00);
+        clip-path: inset(0 100% 0 0); box-shadow: 0 0 40px rgba(255,196,0,0.45); }
+      #tape span { position: absolute; left: 0; top: 0; width: 440px; height: 128px; line-height: 128px; text-align: center;
+        font-size: 96px; color: #0a0a12; letter-spacing: 0.08em; }
+      #word { line-height: 1.2; left: 0; top: 40px; width: 1920px; text-align: center; font-size: 340px; letter-spacing: 0.08em; opacity: 0;
+        filter: drop-shadow(0 0 26px rgba(255,196,0,0.55)) drop-shadow(0 8px 0 #4a2f00); }
+      #end { line-height: 1.3; left: 0; top: 930px; width: 1920px; text-align: center; font-size: 100px; letter-spacing: 0.34em; opacity: 0;
+        padding-left: 0.34em; filter: drop-shadow(0 0 4px #0a0a12) drop-shadow(0 0 16px rgba(10,10,18,0.9)); }
+      #white { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; background: #ffffff; opacity: 0; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="0.8" data-width="1920" data-height="1080">
+      <svg id="eye" class="full" viewBox="0 0 1920 1080" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <clipPath id="ap"><path d="M40 560 Q960 -140 1880 560 Q960 1260 40 560 Z" /></clipPath>
+          <clipPath id="irisClip"><circle cx="0" cy="0" r="298" /></clipPath>
+          <radialGradient id="sclera" cx="50%" cy="50%" r="62%">
+            <stop offset="0" stop-color="#fff6d8" /><stop offset="0.55" stop-color="#f0dba5" /><stop offset="1" stop-color="#7a5514" />
+          </radialGradient>
+          <radialGradient id="irisG" cx="50%" cy="50%" r="50%">
+            <stop offset="0" stop-color="#fff6b0" /><stop offset="0.32" stop-color="#ffd84a" /><stop offset="0.66" stop-color="#e5a100" />
+            <stop offset="0.92" stop-color="#9a5f00" /><stop offset="1" stop-color="#3d2200" />
+          </radialGradient>
+          <radialGradient id="vig" cx="50%" cy="50%" r="60%">
+            <stop offset="0.5" stop-color="#1a0d00" stop-opacity="0" /><stop offset="1" stop-color="#1a0d00" stop-opacity="0.65" />
+          </radialGradient>
+          <linearGradient id="godG" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#ffffff" /><stop offset="1" stop-color="#ffd84a" />
+          </linearGradient>
+          <radialGradient id="bloomG" cx="50%" cy="50%" r="50%">
+            <stop offset="0" stop-color="#ffffff" stop-opacity="1" /><stop offset="0.35" stop-color="#ffe27a" stop-opacity="0.85" />
+            <stop offset="1" stop-color="#ffc400" stop-opacity="0" />
+          </radialGradient>
+          <filter id="blur18" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="18" /></filter>
+          <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+            <feGaussianBlur stdDeviation="7" result="b" /><feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
+          </filter>
+          <g id="godSrc">
+            <g stroke="#fffbe0" stroke-width="6" stroke-linecap="round" opacity="0.9" id="godRays"></g>
+            <circle cx="0" cy="-175" r="60" fill="none" stroke="#fffbe0" stroke-width="10" />
+            <path d="M-52 -96 L-256 -6 L-236 46 L-92 -8 Z" fill="url(#godG)" stroke="#7a4a00" stroke-width="4" stroke-linejoin="round" />
+            <path d="M52 -96 L256 -6 L236 46 L92 -8 Z" fill="url(#godG)" stroke="#7a4a00" stroke-width="4" stroke-linejoin="round" />
+            <circle cx="-252" cy="20" r="20" fill="#fffbe0" stroke="#7a4a00" stroke-width="4" />
+            <circle cx="252" cy="20" r="20" fill="#fffbe0" stroke="#7a4a00" stroke-width="4" />
+            <path d="M-34 -142 L34 -142 L54 -90 L132 24 L152 204 L-152 204 L-132 24 L-54 -90 Z" fill="url(#godG)" stroke="#7a4a00" stroke-width="4" stroke-linejoin="round" />
+            <circle cx="0" cy="-175" r="31" fill="#fffbe0" stroke="#7a4a00" stroke-width="4" />
+            <path d="M0 -60 L16 -30 L0 0 L-16 -30 Z" fill="#ffc400" stroke="#7a4a00" stroke-width="3" />
+            <path d="M-60 60 L-60 200 M0 20 L0 204 M60 60 L60 200" stroke="#e5a100" stroke-width="4" opacity="0.7" />
+          </g>
+          <g id="clips"></g>
+        </defs>
+
+        <g id="eyeCam">
+          <g clip-path="url(#ap)">
+            <rect x="0" y="0" width="1920" height="1080" fill="url(#sclera)" />
+            <rect x="0" y="0" width="1920" height="1080" fill="url(#vig)" />
+            <!-- 虹彩 -->
+            <g id="iris" transform="translate(960 552)">
+              <g id="irisInner">
+                <circle r="300" fill="url(#irisG)" />
+                <g id="fibers"></g>
+                <circle r="298" fill="none" stroke="#2a1600" stroke-width="18" />
+                <circle id="pupil" r="150" fill="#0a0a12" />
+                <circle id="pupilRim" r="150" fill="none" stroke="#ffe27a" stroke-width="5" opacity="0.85" />
+                <g clip-path="url(#irisClip)"><g id="god" opacity="0.35"><use href="#godSrc" /></g></g>
+                <g id="cracks" fill="none" stroke="#ffffff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"></g>
+              </g>
+            </g>
+            <ellipse cx="780" cy="420" rx="95" ry="52" transform="rotate(-24 780 420)" fill="#fff" opacity="0.8" />
+            <circle cx="1110" cy="690" r="20" fill="#fff" opacity="0.7" />
+            <!-- まぶた -->
+            <g id="lidTop">
+              <path d="M-120 -300 L2040 -300 L2040 560 L1880 560 Q960 -140 40 560 L-120 560 Z" fill="#0a0a12" />
+              <path d="M40 560 Q960 -140 1880 560" fill="none" stroke="#000" stroke-opacity="0.55" stroke-width="64" filter="url(#blur18)" />
+              <path d="M40 560 Q960 -140 1880 560" fill="none" stroke="#ffc400" stroke-width="7" />
+            </g>
+            <g id="lidBot">
+              <path d="M-120 560 L40 560 Q960 1260 1880 560 L2040 560 L2040 1300 L-120 1300 Z" fill="#0a0a12" />
+              <path d="M40 560 Q960 1260 1880 560" fill="none" stroke="#000" stroke-opacity="0.45" stroke-width="50" filter="url(#blur18)" />
+              <path d="M40 560 Q960 1260 1880 560" fill="none" stroke="#c98a00" stroke-width="5" />
+            </g>
+          </g>
+          <g id="lashes" fill="none" stroke="#d9a21a" stroke-linecap="round"></g>
+        </g>
+
+        <!-- 砕ける神(光の破片) -->
+        <g id="shardLayer" transform="translate(960 552)" filter="url(#glow)"></g>
+        <circle id="bloom" cx="960" cy="552" r="300" fill="url(#bloomG)" opacity="0" />
+        <g id="motes" fill="#fff2b0" filter="url(#glow)"></g>
+      </svg>
+
+      <div id="tape" class="t"><span>神は、</span></div>
+      <div id="word" class="t gold">一瞥</div>
+      <div id="end" class="t gold">で終了。</div>
+      <div id="white"></div>
+    </div>
+
+    <script>
+      function rng(a) { return function () { a |= 0; a = (a + 0x6d2b79f5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a);
+        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+      const R = rng(7777);
+      const ns = "http://www.w3.org/2000/svg";
+      function mk(tag, attrs, parent) { const e = document.createElementNS(ns, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); parent.appendChild(e); return e; }
+
+      // 虹彩の繊維
+      const fib = document.getElementById("fibers");
+      for (let i = 0; i < 150; i++) {
+        const a = R() * Math.PI * 2, r0 = 118 + R() * 60, r1 = 205 + R() * 85;
+        const light = R() > 0.45;
+        mk("line", { x1: Math.cos(a) * r0, y1: Math.sin(a) * r0, x2: Math.cos(a) * r1, y2: Math.sin(a) * r1,
+          stroke: light ? "#fff6c0" : "#7a4600", "stroke-opacity": light ? 0.4 : 0.38, "stroke-width": 2 + R() * 3 }, fib);
+      }
+      // 後光
+      const rays = document.getElementById("godRays");
+      for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2;
+        mk("line", { x1: Math.cos(a) * 82, y1: -175 + Math.sin(a) * 82, x2: Math.cos(a) * 112, y2: -175 + Math.sin(a) * 112 }, rays); }
+
+      // まつ毛(上まぶたの縁に沿う)
+      const lashes = document.getElementById("lashes");
+      function arcPt(t) { const u = 1 - t; return [40 * u * u + 1920 * t * u + 1880 * t * t, 560 * u * u - 280 * t * u + 560 * t * t]; }
+      for (let i = 0; i < 34; i++) {
+        const t = 0.1 + 0.8 * i / 33, p = arcPt(t), p2 = arcPt(t + 0.01);
+        let nx = p2[1] - p[1], ny = -(p2[0] - p[0]); const l = Math.hypot(nx, ny); nx /= l; ny /= l;
+        const len = 40 + R() * 36 + Math.sin(t * Math.PI) * 22, bend = (t - 0.5) * 50;
+        mk("path", { d: `M${p[0]} ${p[1]} Q${p[0] + nx * len * 0.6 + bend * 0.3} ${p[1] + ny * len * 0.6} ${p[0] + nx * len + bend} ${p[1] + ny * len}`,
+          "stroke-width": 5 - Math.abs(t - 0.5) * 3.5, "stroke-opacity": 0.9 }, lashes);
+      }
+
+      // 神の破片: 4x5 の格子を三角形に割る
+      const clips = document.getElementById("clips");
+      const shardLayer = document.getElementById("shardLayer");
+      const cols = 4, rows = 5, x0 = -290, y0 = -250, dx = 145, dy = 96;
+      const V = [];
+      for (let j = 0; j <= rows; j++) { V[j] = []; for (let i = 0; i <= cols; i++) {
+        const edge = (i === 0 || i === cols || j === 0 || j === rows);
+        V[j][i] = [x0 + i * dx + (edge ? 0 : (R() - 0.5) * 70), y0 + j * dy + (edge ? 0 : (R() - 0.5) * 40)]; } }
+      const pieces = []; let pid = 0;
+      function addTri(a, b, c) {
+        const id = "cp" + (pid++);
+        const cp = mk("clipPath", { id }, clips); mk("polygon", { points: [a, b, c].map(p => p.join(",")).join(" ") }, cp);
+        const wrap = mk("g", { opacity: 0 }, shardLayer);
+        const inner = mk("g", { "clip-path": `url(#${id})` }, wrap); mk("use", { href: "#godSrc" }, inner);
+        const cx = (a[0] + b[0] + c[0]) / 3, cy = (a[1] + b[1] + c[1]) / 3;
+        const vx = cx, vy = cy + 20, vl = Math.hypot(vx, vy) || 1;
+        pieces.push({ wrap, cx, cy, ux: vx / vl, uy: vy / vl, dist: 120 + R() * 330, rot: (R() - 0.5) * 200 });
+      }
+      for (let j = 0; j < rows; j++) for (let i = 0; i < cols; i++) {
+        const A = V[j][i], B = V[j][i + 1], C = V[j + 1][i + 1], D = V[j + 1][i];
+        if (R() > 0.5) { addTri(A, B, C); addTri(A, C, D); } else { addTri(A, B, D); addTri(B, C, D); }
+      }
+      // ひび(ギザギザ線)
+      const cr = document.getElementById("cracks");
+      const crackEls = [];
+      [[-10, -250, -40, -170, 10, -110, -30, -30, 30, 40, -10, 120, 20, 210],
+       [-220, -20, -150, -50, -90, 10, -30, -20, 40, 20, 120, -30, 230, 10],
+       [-10, -40, 70, -130, 130, -110, 190, -190, 250, -230],
+       [-20, 10, -90, 90, -150, 80, -210, 160, -250, 200],
+       [30, 30, 90, 110, 70, 190, 130, 230]].forEach(pts => {
+        let d = "M" + pts[0] + " " + pts[1]; for (let k = 2; k < pts.length; k += 2) d += " L" + pts[k] + " " + pts[k + 1];
+        crackEls.push(mk("path", { d, pathLength: 1, "stroke-dasharray": 1, "stroke-dashoffset": 1 }, cr)); });
+      // 光の粒
+      const motes = document.getElementById("motes");
+      const moteEls = [];
+      for (let i = 0; i < 70; i++) {
+        const a = R() * Math.PI * 2, d = 200 + R() * 760, r = 2 + R() * 6;
+        const e = mk("circle", { cx: 960, cy: 552, r, opacity: 0 }, motes);
+        moteEls.push({ e, dx: Math.cos(a) * d * 1.3, dy: Math.sin(a) * d * 0.8 - 60 * R(), t: 0.3 + R() * 0.1, dur: 0.25 + R() * 0.25 });
+      }
+
+      const tl = gsap.timeline({ paused: true });
+      // ゆっくり開く(0→0.22) / 視線は左を見ている
+      tl.fromTo("#lidTop", { y: 230 }, { y: 0, duration: 0.22, ease: "power2.out" }, 0);
+      tl.fromTo("#lashes", { y: 230 }, { y: 0, duration: 0.22, ease: "power2.out" }, 0);
+      tl.fromTo("#lidBot", { y: -40 }, { y: 0, duration: 0.22, ease: "power2.out" }, 0);
+      tl.fromTo("#iris", { x: -190 + 960, y: 20 + 552 }, { x: -140 + 960, y: 10 + 552, duration: 0.17, ease: "sine.inOut" }, 0);
+      tl.to("#god", { opacity: 0.95, duration: 0.25, ease: "sine.in" }, 0);
+      tl.fromTo("#eyeCam", { scale: 1, svgOrigin: "960 552" }, { scale: 1.06, duration: 0.25, ease: "none" }, 0);
+      // 見出し 0→0.15
+      tl.fromTo("#tape", { clipPath: "inset(0 100% 0 0)" }, { clipPath: "inset(0 0% 0 0)", duration: 0.15, ease: "power3.out" }, 0);
+
+      // CUE-B 0.25: 目が合う
+      tl.to("#iris", { x: 960, y: 552, duration: 0.08, ease: "power3.in" }, 0.17);
+      tl.to("#pupil", { attr: { r: 98 }, duration: 0.03, ease: "power4.out" }, 0.25);
+      tl.to("#pupilRim", { attr: { r: 98 }, duration: 0.03, ease: "power4.out" }, 0.25);
+      tl.to("#eyeCam", { scale: 1.11, duration: 0.05, ease: "power4.out" }, 0.25);
+      tl.to("#eyeCam", { scale: 1.15, duration: 0.45, ease: "none" }, 0.3);
+      crackEls.forEach((c, i) => tl.to(c, { strokeDashoffset: 0, duration: 0.04, ease: "none" }, 0.25 + i * 0.006));
+      tl.set("#god", { opacity: 0 }, 0.29);
+      tl.set("#cracks", { opacity: 0 }, 0.29);
+      pieces.forEach(p => {
+        tl.set(p.wrap, { opacity: 1 }, 0.29);
+        tl.to(p.wrap, { x: p.ux * p.dist, y: p.uy * p.dist - 40, rotation: p.rot, scale: 0.15, opacity: 0, duration: 0.28, ease: "power2.out" }, 0.29);
+      });
+      moteEls.forEach(m => {
+        tl.set(m.e, { opacity: 1 }, m.t);
+        tl.fromTo(m.e, { x: 0, y: 0, scale: 0.4 }, { x: m.dx, y: m.dy, scale: 1.4, opacity: 0, duration: m.dur, ease: "power2.out" }, m.t);
+      });
+      tl.fromTo("#bloom", { scale: 0.3, opacity: 0, svgOrigin: "960 552" }, { scale: 2.4, opacity: 0.7, duration: 0.3, ease: "power2.in", immediateRender: false }, 0.32);
+
+      // まぶたが落ちる + CUE-C 0.45 一瞥
+      tl.to("#lidTop", { y: 250, duration: 0.14, ease: "power3.inOut" }, 0.38);
+      tl.to("#lashes", { y: 250, duration: 0.14, ease: "power3.inOut" }, 0.38);
+      tl.to("#lidBot", { y: -34, duration: 0.14, ease: "power3.inOut" }, 0.38);
+      tl.fromTo("#word", { opacity: 0, clipPath: "inset(0 100% 0 0)", x: -60 }, { opacity: 1, clipPath: "inset(0 0% 0 0)", x: 0, duration: 0.09, ease: "power3.out" }, 0.45);
+      // CUE-D 0.60 で終了。
+      tl.fromTo("#end", { opacity: 0, y: 24, scaleX: 1.18 }, { opacity: 1, y: 0, scaleX: 1, duration: 0.06, ease: "power3.out" }, 0.54);
+      // 出: 純白へ(0.65-0.72)
+      tl.fromTo("#white", { opacity: 0 }, { opacity: 1, duration: 0.07, ease: "none", immediateRender: false }, 0.65);
+
+      window.__timelines["main"] = tl;
+      tl.seek(0);
+    </script>
+  </body>
+</html>

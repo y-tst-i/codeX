@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <script src="assets/gsap.min.js"></script>
+    <style>
+      @font-face { font-family: "DotGothic16"; src: url("assets/fonts/DotGothic16.ttf") format("truetype"); font-weight: 400; font-style: normal; }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: #0b1040; }
+      #root { position: relative; width: 100%; height: 100%; overflow: hidden; background: #0b1040;
+        font-family: "DotGothic16", "Noto Sans JP", sans-serif; }
+      #c { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; image-rendering: pixelated; }
+      .t { position: absolute; white-space: nowrap; line-height: 1; font-weight: 400; }
+      #tape { left: 72px; top: 60px; padding: 22px 36px 26px; background: #ffd400; color: #0a0a12; font-size: 92px;
+        box-shadow: 0 0 0 12px #0a0a12, 12px 12px 0 12px #0a0a12, 24px 24px 0 12px #e8212f; }
+      #word { left: 0; width: 1920px; text-align: center; top: 270px; font-size: 330px; color: #ffd400; letter-spacing: 10px;
+        -webkit-text-stroke: 24px #ffd400; stroke-linejoin: miter;
+        text-shadow: -26px -26px 0 #0a0a12, 26px -26px 0 #0a0a12, -26px 26px 0 #0a0a12, 26px 26px 0 #0a0a12,
+          0 -30px 0 #0a0a12, 0 30px 0 #0a0a12, -30px 0 0 #0a0a12, 30px 0 0 #0a0a12,
+          48px 48px 0 #0a0a12, 60px 60px 0 #e8212f; }
+      #end { left: 50%; top: 750px; margin-left: -330px; width: 660px; text-align: center; padding: 26px 0 30px;
+        font-size: 150px; color: #fffdf5; background: #1a2a7a; -webkit-text-stroke: 7px #fffdf5;
+        box-shadow: 0 0 0 12px #ffd400, 0 0 0 24px #0a0a12, 24px 24px 0 24px #0a0a12; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="0.8" data-width="1920" data-height="1080">
+      <canvas id="c" width="160" height="90"></canvas>
+      <div id="tape" class="t">ドラゴンは、</div>
+      <div id="word" class="t">デコピン</div>
+      <div id="end" class="t">で終了。</div>
+    </div>
+    <script>
+      const cv = document.getElementById("c");
+      const g = cv.getContext("2d");
+      g.imageSmoothingEnabled = false;
+      const INK = "#0a0a12", NAVY = "#0b1040", NAVY2 = "#101a5c", NAVY3 = "#1a2a7a", GREEN = "#2fb344", DGREEN = "#14702a",
+        YEL = "#ffd400", RED = "#e8212f", WHITE = "#fffdf5", SKIN = "#ffcf8a", SKIN2 = "#e8a860", ORG = "#ff8a1a", BELLY = "#f5c542";
+
+      function R(x, y, w, h, c) { g.fillStyle = c; g.fillRect(Math.round(x), Math.round(y), w, h); }
+      function inPoly(pts, x, y) {
+        let ins = false;
+        for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+          const xi = pts[i][0], yi = pts[i][1], xj = pts[j][0], yj = pts[j][1];
+          if (((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) ins = !ins;
+        }
+        return ins;
+      }
+      function fillPoly(pts, c, ox, oy) {
+        let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
+        pts.forEach(p => { x0 = Math.min(x0, p[0]); x1 = Math.max(x1, p[0]); y0 = Math.min(y0, p[1]); y1 = Math.max(y1, p[1]); });
+        g.fillStyle = c;
+        for (let y = Math.floor(y0); y <= Math.ceil(y1); y++)
+          for (let x = Math.floor(x0); x <= Math.ceil(x1); x++)
+            if (inPoly(pts, x + 0.5, y + 0.5)) g.fillRect(x + (ox || 0), y + (oy || 0), 1, 1);
+      }
+      function poly(pts, c, outline) {
+        if (outline !== false) { fillPoly(pts, INK, 1, 0); fillPoly(pts, INK, -1, 0); fillPoly(pts, INK, 0, 1); fillPoly(pts, INK, 0, -1); }
+        fillPoly(pts, c);
+      }
+      function ell(cx, cy, rx, ry, c) {
+        g.fillStyle = c;
+        for (let y = Math.floor(cy - ry); y <= Math.ceil(cy + ry); y++)
+          for (let x = Math.floor(cx - rx); x <= Math.ceil(cx + rx); x++) {
+            const a = (x + 0.5 - cx) / rx, b = (y + 0.5 - cy) / ry;
+            if (a * a + b * b <= 1) g.fillRect(x, y, 1, 1);
+          }
+      }
+      function blob(cx, cy, rx, ry, c) { ell(cx, cy, rx + 1, ry + 1, INK); ell(cx, cy, rx, ry, c); }
+
+      // seeded PRNG (deterministic)
+      function rng(seed) { let s = seed >>> 0; return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; }
+      const rs = rng(77);
+      const stars = []; for (let i = 0; i < 46; i++) stars.push([Math.floor(rs() * 156) + 2, Math.floor(rs() * 40) + 2, Math.floor(rs() * 4)]);
+      const mtn = []; for (let x = 0; x < 160; x++) mtn.push(Math.round(7 + 5 * Math.sin(x / 9) + 3 * Math.sin(x / 3.7 + 1)));
+
+      function sky(f) {
+        R(0, 0, 160, 30, NAVY); R(0, 30, 160, 16, NAVY2); R(0, 46, 160, 30, NAVY3);
+        for (let x = 0; x < 160; x++) { // dither bands
+          if ((x & 1) === 0) { R(x, 28, 1, 1, NAVY2); R(x, 30, 1, 1, NAVY); R(x, 44, 1, 1, NAVY3); R(x, 46, 1, 1, NAVY2); }
+          if ((x & 1) === 1) { R(x, 29, 1, 1, NAVY2); R(x, 45, 1, 1, NAVY3); }
+        }
+        stars.forEach(s => { const on = ((s[2] + (f >> 2)) % 4) !== 0; R(s[0], s[1], on ? 1 : 1, 1, on ? WHITE : "#7f8bd6"); });
+        for (let x = 0; x < 160; x++) { R(x, 72 - mtn[x], 1, mtn[x] + 2, "#2a2060"); if (mtn[x] > 11) R(x, 72 - mtn[x], 1, 1, "#4a3c9a"); }
+        R(0, 72, 160, 18, DGREEN); R(0, 72, 160, 2, GREEN); R(0, 74, 160, 1, INK);
+        for (let x = 0; x < 160; x += 4) { R(x + (((x >> 2) & 1) * 2), 78, 2, 1, GREEN); R(x + 2, 84, 2, 1, GREEN); }
+      }
+      function hud(f, hp) {
+        // frame
+        R(0, 0, 160, 2, YEL); R(0, 88, 160, 2, YEL); R(0, 0, 2, 90, YEL); R(158, 0, 2, 90, YEL);
+        R(2, 2, 156, 1, INK); R(2, 87, 156, 1, INK); R(2, 2, 1, 86, INK); R(157, 2, 1, 86, INK);
+        [[0, 0], [156, 0], [0, 88], [156, 88]].forEach(p => R(p[0], p[1], 4, 2, RED));
+        [[0, 0], [158, 0], [0, 86], [158, 86]].forEach(p => R(p[0], p[1], 2, 4, RED));
+        // dragon HP bar (right top)
+        R(96, 5, 58, 9, INK); R(97, 6, 56, 7, "#3a3a52");
+        const w = Math.round(54 * hp); R(98, 7, w, 5, hp > 0.4 ? GREEN : (hp > 0.1 ? YEL : RED)); if (w > 0) R(98, 7, w, 1, "#9af0a8");
+        // hero hearts (bottom left)
+        for (let i = 0; i < 3; i++) heart(8 + i * 11, 80);
+      }
+      function heart(x, y) {
+        const m = ["01100110", "11111111", "11111111", "01111110", "00111100", "00011000"];
+        m.forEach((row, j) => { for (let i = 0; i < 8; i++) if (row[i] === "1") R(x + i, y + j, 1, 1, i < 3 && j < 2 ? "#ff8aa0" : RED); });
+      }
+
+      function flame(ox, oy, f, len) {
+        const k = f & 1;
+        for (let i = 0; i < len; i++) {
+          const x = ox - i * 3, w = 5 - (i >> 1) * 0 + (i % 2), y = oy + ((i * 2 + k * 2) % 5) - 1 + (i >> 1);
+          ell(x, y, 4 + (i % 2), 3, ORG);
+          ell(x + 1, y, 3, 2, YEL);
+        }
+      }
+
+      function dragon(f, o) {
+        // local coords: origin = body centre
+        const up = ((f >> 1) & 1) === 0;
+        if (o.sil) { /* silhouette uses colour override */ }
+        const C = (a) => (o.sil ? WHITE : a);
+        // wings
+        if (up) poly([[0, -12], [14, -40], [22, -31], [30, -37], [34, -22], [24, -8]], C(RED));
+        else poly([[0, -10], [24, -12], [38, -2], [30, 0], [34, 10], [22, 6], [14, 14], [8, 4]], C(RED));
+        // tail
+        blob(28, 10, 8, 6, C(GREEN)); blob(38, 12, 6, 5, C(GREEN)); blob(46, 8, 5, 4, C(GREEN)); blob(52, 2, 4, 3, C(GREEN));
+        poly([[54, -3], [60, -10], [58, 1]], C(YEL));
+        // legs
+        blob(-8, 18, 6, 5, C(DGREEN)); blob(12, 19, 6, 4, C(DGREEN));
+        // body
+        blob(0, 0, 26, 18, C(GREEN));
+        if (!o.sil) { ell(-5, 6, 15, 10, BELLY); for (let i = -2; i < 3; i++) R(-14 + (i + 2) * 7, 8 + (i & 1) * 3, 5, 1, "#c89a20"); }
+        [[-8, -17], [4, -19], [16, -16]].forEach(p => poly([[p[0] - 4, p[1] + 2], [p[0], p[1] - 7], [p[0] + 4, p[1] + 2]], C(ORG)));
+        // neck + head
+        blob(-22, -10, 10, 12, C(GREEN));
+        blob(-34, -14, 15, 12, C(GREEN));
+        const drop = o.open ? 5 : 0;
+        blob(-45, -10, 11, 6, C(GREEN));
+        if (o.open) { R(-55, -5, 18, drop + 1, o.sil ? WHITE : "#6a0f1e"); for (let i = 0; i < 4; i++) { R(-55 + i * 4, -5, 2, 2, WHITE); R(-53 + i * 4, -5 + drop - 1, 2, 2, WHITE); } }
+        blob(-44, -4 + drop, 10, 3, C(GREEN));
+        R(-56, -12, 1, 2, INK); R(-54, -12, 1, 2, INK);
+        // horns
+        poly([[-32, -24], [-27, -37], [-24, -23]], C(YEL)); poly([[-42, -23], [-42, -34], [-35, -23]], C(YEL));
+        // eye
+        if (!o.sil) {
+          if (o.hurt) { // X eyes
+            [[0, 0], [1, 1], [2, 2], [3, 3], [3, 0], [2, 1], [1, 2], [0, 3]].forEach(p => R(-40 + p[0] * 1, -19 + p[1], 1, 1, RED));
+            [[0, 0], [1, 1], [2, 2], [3, 3], [3, 0], [2, 1], [1, 2], [0, 3]].forEach(p => R(-33 + p[0] * 1, -19 + p[1], 1, 1, RED));
+          } else {
+            R(-41, -19, 6, 5, WHITE); R(-41, -18, 3, 4, RED); R(-41, -18, 1, 2, INK);
+            poly([[-43, -23], [-33, -20], [-33, -22], [-43, -26]], INK, false);
+            R(-33, -19, 3, 3, WHITE); R(-33, -18, 2, 2, RED);
+          }
+        }
+      }
+
+      function hand(hx, hy, tip, f, flickPose) {
+        // sleeve (hero's black coat, gold rim) + red band
+        R(hx - 44, hy - 10, 38, 20, INK); R(hx - 44, hy - 10, 38, 1, "#ffd34d"); R(hx - 44, hy + 9, 38, 1, "#ffd34d");
+        R(hx - 6, hy - 10, 5, 20, RED); R(hx - 6, hy - 10, 5, 1, "#ff7a90");
+        blob(hx + 6, hy, 9, 9, SKIN);
+        ell(hx + 4, hy + 4, 6, 4, SKIN2);
+        if (!flickPose) {
+          // curled index finger held under the thumb
+          blob(hx + 15, hy - 1, 5, 5, SKIN); R(hx + 14, hy - 1, 3, 3, INK);
+          poly([[hx + 8, hy - 9], [hx + 19, hy - 7], [hx + 20, hy - 3], [hx + 8, hy - 3]], SKIN2);
+        } else {
+          const len = tip - (hx + 10);
+          poly([[hx + 8, hy - 6], [hx + 10 + len, hy - 5], [hx + 10 + len, hy - 1], [hx + 8, hy - 1]], SKIN);
+          R(hx + 10 + len - 2, hy - 5, 2, 1, WHITE);
+          poly([[hx + 6, hy + 1], [hx + 17, hy + 3], [hx + 17, hy + 7], [hx + 6, hy + 8]], SKIN2);
+        }
+      }
+
+      function star(cx, cy, r, c) {
+        const arm = [[0, -r], [r * 0.3, -r * 0.3], [r, 0], [r * 0.3, r * 0.3], [0, r], [-r * 0.3, r * 0.3], [-r, 0], [-r * 0.3, -r * 0.3]];
+        poly(arm.map(p => [cx + p[0], cy + p[1]]), c);
+      }
+      function burst(cx, cy, r, c, n) {
+        for (let i = 0; i < n; i++) {
+          const a = i * Math.PI * 2 / n + 0.2;
+          const x = Math.round(cx + Math.cos(a) * r), y = Math.round(cy + Math.sin(a) * r * 0.9);
+          R(x - 1, y - 1, 3, 3, c); if (i % 2) R(Math.round(cx + Math.cos(a) * (r * 0.62)), Math.round(cy + Math.sin(a) * r * 0.55), 2, 2, WHITE);
+        }
+      }
+
+      const TAPE_X = [-440, -250, -120, -36, 0];
+      const END_Y = [-330, -240, -120, -40, 0, 0];
+      const $tape = document.getElementById("tape"), $word = document.getElementById("word"), $end = document.getElementById("end");
+      const FPS = 30;
+
+      function draw(tt) {
+        const f = Math.max(0, Math.min(23, Math.round(tt * FPS)));
+        g.clearRect(0, 0, 160, 90);
+        let hp = f < 8 ? 1 : (f === 8 ? 0.55 : (f === 9 ? 0.18 : 0));
+        sky(f);
+        // ---- dragon ----
+        const O = [112, 46];
+        const bob = (f < 7) ? ((f >> 1) & 1) : 0;
+        if (f < 7) {
+          // fire breath toward the hero
+          if (f < 6) flame(54, 41 + bob, f, 6 + (f >> 1));
+          g.save(); g.translate(O[0], O[1] - bob); dragon(f, { open: f < 6 }); g.restore();
+        } else if (f === 7) {
+          g.save(); g.translate(O[0] + 2, O[1] + 1); dragon(f, { hurt: true, open: false }); g.restore();
+        } else if (f === 8) {
+          g.save(); g.translate(O[0] + 3, O[1]); dragon(f, { sil: true }); g.restore();
+        } else if (f <= 10) {
+          const k = f - 8, dx = 12 * k + 3, dy = -9 * k;
+          g.save(); g.translate(O[0] + dx, O[1] + dy); g.rotate(k * Math.PI / 2); dragon(f, { hurt: true, sil: (f & 1) === 0 }); g.restore();
+        } else {
+          // dragon has become a star and zips off
+          const k = f - 11;
+          const sx = [130, 142, 148, 148, 148][Math.min(k, 4)], sy = [34, 18, 15, 15, 15][Math.min(k, 4)];
+          if (k === 0) { burst(sx - 6, sy + 8, 10, YEL, 8); }
+          const sz = k < 2 ? 7 : (((f >> 1) & 1) ? 11 : 9);
+          star(sx, sy, sz, YEL); R(sx - 1, sy - 1, 3, 3, WHITE);
+          if (k >= 2) { const s = ((f >> 1) & 1) ? 15 : 12; R(sx - s, sy, s * 2 + 1, 1, WHITE); R(sx, sy - s, 1, s * 2 + 1, WHITE); }
+          if (k < 3) { for (let i = 1; i < 4; i++) R(sx - 14 * i + 4, sy + 9 * i - 3, 3, 3, i % 2 ? WHITE : "#ffe98a"); }
+        }
+        // ---- hand ----
+        let hx, tip = 63;
+        if (f <= 5) hx = [32, 33, 34, 36, 37, 38][f];
+        else if (f === 6) hx = 36;
+        else if (f === 7) hx = 40;
+        else hx = [40, 40, 36, 28, 16, 2, -14, -30, -44][Math.min(f - 8, 8)];
+        hand(hx, 31, Math.min(tip, hx + 23), f, f >= 7);
+        if (f === 6) { R(hx + 12, 22, 2, 2, WHITE); R(hx + 22, 24, 2, 2, YEL); R(hx + 8, 38, 2, 2, YEL); } // charging sparks
+        // ---- impact ----
+        if (f === 7) { R(64, 24, 3, 11, YEL); R(60, 28, 11, 3, YEL); R(65, 28, 1, 3, WHITE); }
+        if (f === 9) burst(66, 29, 11, YEL, 12);
+        if (f === 10) burst(66, 29, 18, ORG, 12);
+        if (f === 11) burst(66, 29, 26, "#ff7a90", 8);
+        hud(f, hp);
+        // sparkle stars after (idle twinkle)
+        if (f >= 14) { const s = ((f >> 2) & 1); R(22 + s, 20, 1, 3, WHITE); R(21 + s, 21, 3, 1, WHITE); R(128, 58 - s, 1, 3, WHITE); R(127, 59 - s, 3, 1, WHITE); }
+        if (f === 8) { g.fillStyle = WHITE; g.fillRect(0, 0, 160, 90); }
+
+        // ---- DOM ----
+        // screen shake in whole-pixel steps (2 hits max): impact and the landing of the end card
+        let sxk = 0, syk = 0;
+        if (f === 9) { sxk = 12; syk = -12; } else if (f === 10) { sxk = -12; syk = 12; }
+        if (f === 18) { syk = 12; }
+        cv.style.transform = "translate(" + sxk + "px," + syk + "px)";
+        const rt = document.getElementById("root"); rt.style.backgroundColor = f === 8 ? "#fffdf5" : "#0b1040";
+        $tape.style.transform = "translateX(" + TAPE_X[Math.min(f, 4)] + "px)";
+        const vis = f < 10 ? 0 : [0.28, 0.55, 0.8, 1][Math.min(f - 10, 3)];
+        $word.style.clipPath = "inset(-60px " + Math.round((1 - vis) * 100) + "% -60px 0)";
+        $word.style.visibility = vis > 0 ? "visible" : "hidden";
+        const ey = f < 15 ? null : END_Y[Math.min(f - 15, 5)];
+        if (ey === null) $end.style.visibility = "hidden"; else { $end.style.visibility = "visible"; $end.style.transform = "translateY(" + (ey + (f === 18 ? 12 : 0)) + "px)"; }
+      }
+
+      const st = { t: 0 };
+      const tl = gsap.timeline({ paused: true });
+      // the ease callback runs on every seek, so the canvas is a pure function of time
+      tl.to(st, { t: 0.8, duration: 0.8, ease: function (p) { draw(p * 0.8); return p; } }, 0);
+      draw(0);
+      window.__timelines["main"] = tl;
+      tl.seek(0);
+    </script>
+  </body>
+</html>

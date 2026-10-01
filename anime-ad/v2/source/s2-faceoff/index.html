@@ -1,0 +1,416 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>s2-faceoff</title>
+    <script src="assets/gsap.min.js"></script>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 1920px; height: 1080px; overflow: hidden; background: #0a0a12; }
+      body { font-family: 'Noto Sans JP', sans-serif; font-weight: 700; }
+      #root { position: relative; width: 100%; height: 100%; overflow: hidden; background: #0a0a12; }
+      .abs { position: absolute; }
+      #shake, #cam, #bg { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; }
+      .layer { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; transform-origin: 960px 540px; }
+      .layer svg.wide { position: absolute; left: -140px; top: 0; width: 2200px; height: 1080px; overflow: visible; }
+
+      #sky { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px;
+        background: linear-gradient(180deg, #1a0a3a 0%, #4a1c70 26%, #a03a7c 46%, #e8506a 58%, #ff7a18 70%, #ffb030 82%, #ffc400 100%); }
+      #sunglow { position: absolute; left: 400px; top: -430px; width: 2000px; height: 2000px;
+        background: radial-gradient(circle, rgba(255,246,200,.95) 0, rgba(255,196,0,.7) 5%, rgba(255,122,24,.35) 16%, rgba(255,122,24,0) 38%); }
+      #rays { position: absolute; left: 0; top: 0; width: 3200px; height: 3200px; margin-left: -200px; margin-top: -1228px;
+        background: repeating-conic-gradient(from 0deg, rgba(255,214,90,.62) 0deg 6deg, rgba(255,214,90,0) 6deg 18deg);
+        -webkit-mask-image: radial-gradient(circle, #000 0, rgba(0,0,0,.85) 22%, rgba(0,0,0,0) 62%);
+        mask-image: radial-gradient(circle, #000 0, rgba(0,0,0,.85) 22%, rgba(0,0,0,0) 62%); }
+      .cloud { position: absolute; border-radius: 50%; filter: blur(14px); }
+
+      #demonWrap { position: absolute; left: 1080px; top: 100px; width: 640px; height: 800px; }
+      #demonSvg { position: absolute; left: 0; top: 0; width: 640px; height: 800px; overflow: visible; }
+      #demonSvg .eyeL, #demonSvg .eyeR { fill: #3a0c1c; }
+      #demonSvg .core { fill: #5a1228; }
+
+      #lv999 { position: absolute; left: 900px; top: 300px; width: 280px; height: 124px; }
+      #lv999 .plate { position: absolute; inset: 0; background: #14050f; border: 6px solid #ff2a4d; border-radius: 10px;
+        box-shadow: 0 0 40px rgba(255,42,77,.7), 10px 12px 0 rgba(10,0,20,.55);
+        display: flex; align-items: center; justify-content: center; }
+      #lv999 .txt { font-size: 84px; line-height: 1; letter-spacing: .02em; color: #ffc400; -webkit-text-stroke: 2px #ff7a18; text-shadow: 0 0 22px rgba(255,196,0,.65); }
+      #lv999 .ptr { position: absolute; right: -44px; top: 40px; width: 0; height: 0; border-top: 22px solid transparent; border-bottom: 22px solid transparent; border-left: 46px solid #ff2a4d; }
+      #ring999 { position: absolute; left: 940px; top: 316px; width: 200px; height: 90px; border: 6px solid #ff2a4d; border-radius: 50%; opacity: 0; }
+
+      #heroWrap { position: absolute; left: 150px; top: 324px; width: 322px; height: 558px; }
+      #heroSvg { position: absolute; left: 0; top: 0; width: 322px; height: 558px; overflow: visible; filter: drop-shadow(0 0 7px rgba(255,200,60,.55)); }
+      #heroShadow { position: absolute; left: -20px; top: 520px; width: 380px; height: 50px; border-radius: 50%; background: radial-gradient(ellipse, rgba(5,0,10,.85) 0, rgba(5,0,10,0) 70%); }
+      #lv1 { position: absolute; left: 90px; top: -112px; width: 150px; height: 74px; }
+      #lv1 .plate { position: absolute; inset: 0; background: #fffdf5; border-radius: 10px; border-bottom: 8px solid #19d3ff;
+        display: flex; align-items: center; justify-content: center; box-shadow: 6px 8px 0 rgba(10,0,20,.5); }
+      #lv1 .txt { font-size: 48px; line-height: 1; color: #0a0a12; letter-spacing: .02em; }
+      #lv1 .ptr { position: absolute; left: 62px; bottom: -26px; width: 0; height: 0; border-left: 14px solid transparent; border-right: 14px solid transparent; border-top: 20px solid #19d3ff; }
+      #flareGlow { position: absolute; left: 4px; top: -65px; width: 340px; height: 340px; border-radius: 50%; opacity: 0;
+        background: radial-gradient(circle, #fff 0, rgba(255,255,255,.95) 10%, rgba(255,240,200,.5) 30%, rgba(255,240,200,0) 70%); }
+      #flareStar { position: absolute; left: -26px; top: -95px; width: 400px; height: 400px; opacity: 0; }
+      #flareStreak { position: absolute; left: -700px; top: 101px; width: 1750px; height: 8px; opacity: 0;
+        background: linear-gradient(90deg, rgba(255,255,255,0), #fff 40%, #fff 60%, rgba(255,255,255,0)); }
+      #fistRing { position: absolute; left: 280px; top: 166px; width: 130px; height: 130px; margin-left: -65px; margin-top: -65px; border: 6px solid #ffc400; border-radius: 50%; opacity: 0; }
+
+      #fg { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; transform-origin: 960px 540px; filter: blur(2.5px); }
+      #fg svg { position: absolute; left: -1400px; top: -400px; width: 4700px; height: 2200px; overflow: visible; }
+      .ember { position: absolute; border-radius: 50%; background: #ffb030; box-shadow: 0 0 10px 3px rgba(255,140,40,.8); }
+
+      #root { --vig: .5; }
+      #root::after { content: ''; position: absolute; inset: 0; z-index: 2; pointer-events: none; background: radial-gradient(ellipse at 50% 50%, rgba(20,0,30,0) 45%, rgba(20,0,30,.78) 100%); opacity: var(--vig); }
+      #barT, #barB, #tapeWrap, #plate { z-index: 3; } #flash, #black { z-index: 5; }
+      #redtint { position: absolute; inset: 0; background: radial-gradient(ellipse at 72% 40%, rgba(255,42,77,.0) 20%, rgba(255,42,77,.34) 100%); opacity: 0; mix-blend-mode: screen; }
+
+      #tape { position: absolute; left: 90px; top: 96px; height: 104px; padding: 0 56px; display: flex; align-items: center;
+        background: repeating-linear-gradient(115deg, #ffd23a 0 26px, #ffc400 26px 52px);
+        color: #0a0a12; font-size: 60px; letter-spacing: .08em; white-space: nowrap;
+        clip-path: polygon(0 8%, 1.5% 0, 3% 12%, 4.5% 0, 100% 0, 98.8% 22%, 100% 44%, 98.6% 66%, 100% 100%, 4.5% 100%, 3% 88%, 1.5% 100%, 0 90%, 1.4% 70%, 0 50%, 1.4% 30%);
+        box-shadow: 0 8px 0 rgba(10,0,20,.5); }
+      #tapeWrap { position: absolute; left: 0; top: 0; width: 1920px; height: 300px; transform-origin: 400px 150px; }
+
+      #plate { position: absolute; left: 100px; top: 872px; width: 1720px; height: 134px; background: rgba(12,4,20,.92);
+        border-left: 14px solid #ff2a4d; display: flex; align-items: center; padding-left: 44px; opacity: 0; box-shadow: 0 0 40px rgba(255,42,77,.25); }
+      #say { font-size: 74px; color: #fffdf5; letter-spacing: .02em; white-space: nowrap; }
+      #say span { opacity: 0; }
+      #say .nm { color: #ffc400; }
+
+      #barT, #barB { position: absolute; left: 0; width: 1920px; height: 66px; background: #000; }
+      #barT { top: -66px; } #barB { top: 1080px; }
+      #flash { position: absolute; inset: 0; background: #ffffff; opacity: 1; }
+      #black { position: absolute; inset: 0; background: #000; opacity: 0; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="4" data-width="1920" data-height="1080">
+      <div id="shake">
+        <div id="cam">
+          <div id="bg">
+            <div id="sky"></div>
+
+            <!-- 太陽光線(魔王の頭に中心。奥行 D=2.3) -->
+            <div class="layer" id="L_rays">
+              <div id="sunglow"></div>
+              <div id="rays"></div>
+            </div>
+
+            <div class="layer" id="L_clouds">
+              <div class="cloud" style="left:-100px;top:330px;width:900px;height:70px;background:rgba(255,160,130,.5);transform:rotate(-2deg)"></div>
+              <div class="cloud" style="left:700px;top:430px;width:1000px;height:56px;background:rgba(255,206,120,.55)"></div>
+              <div class="cloud" style="left:100px;top:470px;width:700px;height:44px;background:rgba(120,40,120,.55)"></div>
+              <div class="cloud" style="left:1100px;top:210px;width:800px;height:60px;background:rgba(120,50,150,.5);transform:rotate(1.5deg)"></div>
+              <div class="cloud" style="left:-60px;top:150px;width:700px;height:50px;background:rgba(150,60,160,.45)"></div>
+              <div class="cloud" style="left:1300px;top:520px;width:760px;height:40px;background:rgba(255,130,90,.55)"></div>
+            </div>
+
+            <div class="layer" id="L_far"><svg class="wide" id="svgFar" viewBox="-140 0 2200 1080"></svg></div>
+            <div class="layer" id="L_near"><svg class="wide" id="svgNear" viewBox="-140 0 2200 1080"></svg></div>
+            <div class="layer" id="L_army"><svg class="wide" id="svgArmy" viewBox="-140 0 2200 1080"></svg></div>
+
+            <!-- 魔王(D=2.3) -->
+            <div class="layer" id="L_demon">
+              <div id="demonWrap">
+                <svg id="demonSvg" viewBox="0 0 800 1000">
+                  <defs>
+                    <radialGradient id="eyeGlow"><stop offset="0" stop-color="#fff" stop-opacity="1"/><stop offset=".25" stop-color="#ff5a6e" stop-opacity=".9"/><stop offset="1" stop-color="#ff2a4d" stop-opacity="0"/></radialGradient>
+                  </defs>
+                  <g class="demonbody">
+                    <path class="cape" d="M10 1000 L120 470 L680 470 L790 1000 L640 940 L560 1000 L400 930 L240 1000 L160 940 Z" fill="#2a0a1c"/>
+                    <path class="torso" d="M140 1000 L190 520 L290 420 L510 420 L610 520 L660 1000 Z" fill="#14050f" stroke="#ff2a4d" stroke-width="4" stroke-linejoin="round"/>
+                    <path d="M250 560 L550 560 M240 650 L560 650 M232 740 L568 740" stroke="#ff2a4d" stroke-opacity=".35" stroke-width="5"/>
+                    <path class="core" d="M400 600 L428 650 L400 700 L372 650 Z" fill="#ff2a4d"/>
+                    <path class="pauldronL" d="M44 520 L190 420 L230 570 L90 620 Z M78 508 L30 410 L140 470 Z M120 470 L108 366 L184 436 Z" fill="#14050f" stroke="#ff2a4d" stroke-width="4" stroke-linejoin="round"/>
+                    <path class="pauldronR" d="M756 520 L610 420 L570 570 L710 620 Z M722 508 L770 410 L660 470 Z M680 470 L692 366 L616 436 Z" fill="#14050f" stroke="#ff2a4d" stroke-width="4" stroke-linejoin="round"/>
+                    <path class="head" d="M300 430 L292 290 Q400 246 508 290 L500 430 Z" fill="#14050f" stroke="#ff2a4d" stroke-width="4" stroke-linejoin="round"/>
+                    <path class="hornL" d="M306 312 C214 300 112 232 86 92 C168 152 258 188 352 246 Z" fill="#14050f" stroke="#ff2a4d" stroke-width="4" stroke-linejoin="round"/>
+                    <path class="hornR" d="M494 312 C586 300 688 232 714 92 C632 152 542 188 448 246 Z" fill="#14050f" stroke="#ff2a4d" stroke-width="4" stroke-linejoin="round"/>
+                    <path class="crown" d="M330 292 L350 214 L376 280 L400 190 L424 280 L450 214 L470 292 Z" fill="#14050f" stroke="#ff2a4d" stroke-width="3" stroke-linejoin="round"/>
+                    <path class="eyeL" d="M338 346 L388 360 L383 380 L334 366 Z" fill="#ff2a4d"/>
+                    <path class="eyeR" d="M462 346 L412 360 L417 380 L466 366 Z" fill="#ff2a4d"/>
+                    <path d="M352 416 L376 398 L400 418 L424 398 L448 416" stroke="#ff2a4d" stroke-width="6" fill="none" stroke-linejoin="round"/>
+                  </g>
+                  <circle class="glowL" cx="361" cy="363" r="90" fill="url(#eyeGlow)" opacity="0"/>
+                  <circle class="glowR" cx="439" cy="363" r="90" fill="url(#eyeGlow)" opacity="0"/>
+                  <circle class="glowC" cx="400" cy="650" r="120" fill="url(#eyeGlow)" opacity="0"/>
+                </svg>
+              </div>
+              <div id="ring999"></div>
+              <div id="lv999"><div class="plate"><span class="txt">Lv.999</span></div><div class="ptr"></div></div>
+            </div>
+
+            <div class="layer" id="L_mid"><svg class="wide" id="svgMid" viewBox="-140 0 2200 1080"></svg></div>
+            <div class="layer" id="L_ground"><svg class="wide" id="svgGround" viewBox="-140 0 2200 1080"></svg></div>
+          </div>
+
+          <!-- 主人公: 大きさ一定(D=1) -->
+          <div id="heroWrap">
+            <div id="heroShadow"></div>
+            <svg id="heroSvg" viewBox="0 0 520 900">
+              <g class="cape"><path d="M186 262 C96 300 44 440 22 640 L64 604 L58 700 L112 636 L124 726 L166 622 C176 500 194 400 222 300 Z" fill="#0a0a12" stroke="#ffd34d" stroke-width="2.5" stroke-linejoin="round"/></g>
+              <g class="legs">
+                <path d="M200 515 L258 520 L236 700 L218 846 L254 874 L102 874 L110 848 L172 832 L184 700 Z" fill="#0a0a12" stroke="#ffd34d" stroke-width="2.5" stroke-linejoin="round"/>
+                <path d="M256 515 L314 505 L332 690 L354 852 L416 874 L272 874 L284 842 L292 690 Z" fill="#0a0a12" stroke="#ffd34d" stroke-width="2.5" stroke-linejoin="round"/>
+              </g>
+              <g class="backarm"><path d="M192 262 L150 382 L140 482 L172 490 L198 402 L228 292 Z" fill="#0a0a12" stroke="#ffd34d" stroke-width="2.5" stroke-linejoin="round"/><circle cx="156" cy="498" r="27" fill="#0a0a12" stroke="#ffd34d" stroke-width="2.5"/></g>
+              <path class="torso" d="M180 252 C215 236 288 236 324 252 L348 402 L362 566 L190 580 L168 402 Z" fill="#0a0a12" stroke="#ffd34d" stroke-width="2.5" stroke-linejoin="round"/>
+              <path class="belt" d="M186 520 L360 508 L362 534 L188 546 Z" fill="#1a1a26" stroke="#ffd34d" stroke-width="2"/>
+              <g class="head">
+                <path d="M222 205 L286 205 L290 244 L222 244 Z" fill="#0a0a12"/>
+                <ellipse cx="254" cy="170" rx="42" ry="47" fill="#0a0a12" stroke="#ffd34d" stroke-width="2.5"/>
+                <path d="M208 150 L168 100 L216 122 L204 56 L244 110 L264 34 L284 106 L322 64 L308 128 L336 146 L314 156 L212 156 Z" fill="#0a0a12" stroke="#ffd34d" stroke-width="2.5" stroke-linejoin="round"/>
+                <path class="band" d="M214 150 C170 138 118 170 76 232 C128 190 172 192 218 170 Z M222 156 C190 170 160 206 150 250 C176 214 200 196 226 182 Z" fill="#ff2a4d"/>
+                <path class="eye" d="M262 170 L298 160 L300 173 L266 180 Z" fill="#fffdf5"/>
+              </g>
+              <g class="scarf"><path d="M208 252 C150 252 96 236 28 296 C96 292 148 306 214 290 Z" fill="#ff2a4d"/><path d="M206 252 L312 250 L318 276 L202 284 Z" fill="#ff2a4d"/></g>
+              <g class="arm"><rect class="armrect" x="318" y="244" width="130" height="46" rx="23" fill="#0a0a12" stroke="#ffd34d" stroke-width="2.5"/><g class="fistg"><circle cx="452" cy="267" r="38" fill="#0a0a12" stroke="#ffd34d" stroke-width="2.5"/></g></g>
+            </svg>
+            <div id="lv1"><div class="plate"><span class="txt">Lv.1</span></div><div class="ptr"></div></div>
+            <div id="flareGlow"></div>
+            <svg id="flareStar" viewBox="-200 -200 400 400"><path d="M0 -200 L16 -16 L200 0 L16 16 L0 200 L-16 16 L-200 0 L-16 -16 Z" fill="#fff"/><path d="M0 -110 L10 -10 L110 0 L10 10 L0 110 L-10 10 L-110 0 L-10 -10 Z" fill="#fff" transform="rotate(45)"/></svg>
+            <div id="flareStreak"></div>
+            <div id="fistRing"></div>
+          </div>
+
+          <div id="fg"><svg id="svgFg" viewBox="-1400 -400 4700 2200"></svg></div>
+          <div id="embers"></div>
+        </div>
+      </div>
+
+      <div id="redtint"></div>
+      <div id="tapeWrap"><div id="tape">そこに立っていたのは——</div></div>
+      <div id="plate"><div id="say"></div></div>
+      <div id="barT"></div><div id="barB"></div>
+      <div id="flash"></div>
+      <div id="black"></div>
+    </div>
+
+    <script>
+      // ---------- seed付きPRNG ----------
+      function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;}}
+      const NS = 'http://www.w3.org/2000/svg';
+      function mk(parent, tag, attrs){const e=document.createElementNS(NS,tag);for(const k in attrs)e.setAttribute(k,attrs[k]);parent.appendChild(e);return e;}
+      function defsGrad(svg,id,x1,y1,x2,y2,stops){const d=mk(svg,'defs',{});const g=mk(d,'linearGradient',{id:id,gradientUnits:'userSpaceOnUse',x1:x1,y1:y1,x2:x2,y2:y2});stops.forEach(s=>mk(g,'stop',{offset:s[0],'stop-color':s[1]}));}
+
+      // ---------- 山並み(遠・近) ----------
+      function ridge(svg, base, amp, seed, fill, rim){
+        const r = mulberry32(seed); const s1=r()*6, s2=r()*6, s3=r()*6;
+        let d = 'M -160 1300 L -160 ' + base;
+        for(let x=-160; x<=2080; x+=34){
+          const y = base - amp*(0.5*Math.abs(Math.sin(x*0.0042+s1)) + 0.34*Math.abs(Math.sin(x*0.012+s2)) + 0.16*Math.abs(Math.sin(x*0.031+s3)) + 0.05*r());
+          d += ' L ' + x + ' ' + y.toFixed(1);
+        }
+        d += ' L 2080 1300 Z';
+        mk(svg,'path',{d:d, fill:fill, stroke:rim||'none','stroke-width':3,'stroke-linejoin':'round'});
+      }
+      const svgFar = document.getElementById('svgFar');
+      defsGrad(svgFar,'gFar',0,430,0,780,[[0,'#9a4488'],[0.55,'#c0507a'],[1,'#ff8a4a']]);
+      ridge(svgFar, 650, 230, 11, 'url(#gFar)');
+      const svgNear = document.getElementById('svgNear');
+      defsGrad(svgNear,'gNear',0,500,0,820,[[0,'#5a2468'],[1,'#8a3a6a']]);
+      ridge(svgNear, 702, 150, 29, 'url(#gNear)', 'rgba(255,170,90,.55)');
+
+      // ---------- 魔王軍の槍の林 ----------
+      const svgArmy = document.getElementById('svgArmy');
+      defsGrad(svgArmy,'gArmyG',0,725,0,900,[[0,'#40184e'],[1,'#180830']]);
+      mk(svgArmy,'rect',{x:-160,y:742,width:2260,height:700,fill:'url(#gArmyG)'});
+      function army(rank, count, baseY, hMin, hMax, color, seed){
+        const r = mulberry32(seed); let d='';
+        for(let i=0;i<count;i++){
+          const x = -150 + (2240/count)*i + r()*22, h = hMin + r()*(hMax-hMin), w = h*0.34;
+          d += `M${x-w/2} ${baseY}L${x+w/2} ${baseY}L${x+w*0.42} ${baseY-h*0.7}L${x-w*0.42} ${baseY-h*0.7}Z`;
+          const hy = baseY-h*0.84, hr = h*0.15;
+          d += `M${x-hr} ${hy}a${hr} ${hr} 0 1 0 ${hr*2} 0a${hr} ${hr} 0 1 0 ${-hr*2} 0Z`;
+          if(r()<0.5){ d += `M${x-hr*0.9} ${hy-hr*0.4}L${x-hr*2.2} ${hy-hr*2.6}L${x-hr*0.2} ${hy-hr*0.9}ZM${x+hr*0.9} ${hy-hr*0.4}L${x+hr*2.2} ${hy-hr*2.6}L${x+hr*0.2} ${hy-hr*0.9}Z`; }
+          if(r()<0.78){
+            const th = (r()-0.5)*0.2, L = h*(1.5+r()*1.4), sx = x+w*0.62, sy = baseY-h*0.25;
+            const tx = sx+Math.sin(th)*L, ty = sy-Math.cos(th)*L, k = 1.1+rank*0.5;
+            d += `M${sx-k} ${sy}L${tx-k*0.5} ${ty}L${tx+k*0.5} ${ty}L${sx+k} ${sy}Z`;
+            d += `M${tx-4.5} ${ty+4}L${tx+Math.sin(th)*16} ${ty-Math.cos(th)*16}L${tx+4.5} ${ty+4}Z`;
+          }
+        }
+        mk(svgArmy,'path',{d:d, fill:color});
+      }
+      army(0, 96, 748, 30, 52, '#4a1c5a', 5);
+      // 旗(ゆらぐ)
+      const flagG = mk(svgArmy,'g',{id:'flags'});
+      [[170,330],[560,300],[980,350],[1330,310],[1720,340],[2010,300]].forEach((p,i)=>{
+        const g = mk(flagG,'g',{class:'flag'}); const x=p[0], h=p[1], by=752;
+        mk(g,'rect',{x:x,y:by-h,width:7,height:h,fill:'#2a1040'});
+        mk(g,'path',{d:`M${x+7} ${by-h}C${x+60} ${by-h-12} ${x+84} ${by-h+38} ${x+138} ${by-h+16}L${x+138} ${by-h+96}C${x+84} ${by-h+116} ${x+60} ${by-h+66} ${x+7} ${by-h+80}Z`,fill:'#5a0f2e',stroke:'#2a1040','stroke-width':3});
+        mk(g,'circle',{cx:x+70,cy:by-h+52,r:13,fill:'#ff2a4d'});
+      });
+      army(1, 78, 770, 48, 82, '#2e1244', 17);
+      army(2, 60, 790, 70, 118, '#1a0830', 41);
+
+      // ---------- 中景の岩場 ----------
+      const svgMid = document.getElementById('svgMid');
+      (function(){
+        const r = mulberry32(77); let d='M -160 1300 L -160 800';
+        for(let x=-160;x<=2080;x+=26){ const y = 782 + Math.sin(x*0.012)*14 + (r()-0.5)*34 - (r()<0.08? 34:0); d += ' L '+x+' '+y.toFixed(1); }
+        d += ' L 2080 1300 Z';
+        mk(svgMid,'path',{d:d, fill:'#1c0a2c', stroke:'rgba(255,140,60,.55)','stroke-width':3,'stroke-linejoin':'round'});
+        // 大岩
+        mk(svgMid,'path',{d:'M-40 880 L40 760 L120 748 L210 820 L230 900Z',fill:'#140720',stroke:'rgba(255,140,60,.5)','stroke-width':3,'stroke-linejoin':'round'});
+        mk(svgMid,'path',{d:'M1500 880 L1560 790 L1640 770 L1720 820 L1790 900Z',fill:'#140720',stroke:'rgba(255,140,60,.5)','stroke-width':3,'stroke-linejoin':'round'});
+      })();
+
+      // ---------- 主人公の足場(D=1) ----------
+      const svgGround = document.getElementById('svgGround');
+      defsGrad(svgGround,'gGnd',0,850,0,1080,[[0,'#2e1438'],[1,'#0e0618']]);
+      (function(){
+        let d='M -160 1300 L -160 856';
+        for(let x=-160;x<=2080;x+=40){ d += ' L '+x+' '+(852 + Math.sin(x*0.009)*5 + Math.sin(x*0.05)*2).toFixed(1); }
+        d += ' L 2080 1300 Z';
+        mk(svgGround,'path',{d:d, fill:'url(#gGnd)', stroke:'rgba(255,170,70,.85)','stroke-width':4});
+        const r = mulberry32(3);
+        let c=''; for(let i=0;i<14;i++){ const x=-100+r()*2100, y=900+r()*150; c+=`M${x} ${y}l${30+r()*50} ${(r()-0.4)*14}l${10+r()*20} ${6+r()*10}`; }
+        mk(svgGround,'path',{d:c, stroke:'rgba(255,120,60,.25)','stroke-width':3,fill:'none','stroke-linecap':'round'});
+        for(let i=0;i<22;i++){ const x=-100+r()*2100, y=870+r()*180, s=4+r()*10; mk(svgGround,'path',{d:`M${x} ${y}l${s} ${-s*0.7}l${s*1.4} ${s*0.2}l${s*0.4} ${s*0.7}Z`, fill:'#1c0c28'}); }
+      })();
+
+      // ---------- 前景 ----------
+      const svgFg = document.getElementById('svgFg');
+      (function(){
+        const r = mulberry32(123); let d='M -1400 1900 L -1400 1000';
+        for(let x=-1400; x<=3300; x+=22){ const gx = (x>-60 && x<430) ? 0 : 1; const hh = (x<260 || x>1500) ? 120+r()*190 : 30+r()*60; d += ' L '+x+' '+(1080-hh*(x<-60||x>1700?1:0.55)).toFixed(1)+' L '+(x+11)+' '+(1080+10+r()*10).toFixed(1); }
+        d += ' L 3300 1900 Z';
+        mk(svgFg,'path',{d:d, fill:'#0a0510', stroke:'rgba(255,140,60,.4)','stroke-width':3});
+        mk(svgFg,'path',{d:'M1560 1180 L1660 980 L1760 940 L1880 1010 L1960 1180Z',fill:'#0a0510'});
+      })();
+
+      // ---------- 火の粉(seed付き) ----------
+      (function(){
+        const r = mulberry32(9), host = document.getElementById('embers');
+        for(let i=0;i<34;i++){
+          const e = document.createElement('div'); e.className='ember'; const s = 3+r()*6;
+          e.style.cssText = `left:${r()*1920}px;top:${300+r()*760}px;width:${s}px;height:${s}px;opacity:${0.35+r()*0.5}`;
+          e.dataset.dx = (40+r()*120).toFixed(0); e.dataset.dy = (180+r()*260).toFixed(0);
+          host.appendChild(e);
+        }
+      })();
+
+      // ---------- 台詞(タイプライター用の文字span) ----------
+      const SAY = '魔王「たかがレベル1が、何の用だ？」';
+      const sayEl = document.getElementById('say');
+      Array.from(SAY).forEach((ch,i)=>{ const s=document.createElement('span'); s.textContent=ch; if(i<3) s.className='nm'; sayEl.appendChild(s); });
+
+      // ---------- タイムライン ----------
+      const tl = gsap.timeline({ paused: true });
+      const F = 1/30;
+
+      // ドリーズーム: 主人公(D=1)は不変、背景層だけ段階的に拡大 ratio=(Ds+e)*D/(Ds*(D+e)), Ds=1
+      const DEPTH = [['#L_rays',2.3],['#L_clouds',9],['#L_far',7],['#L_near',5],['#L_army',3.8],['#L_demon',2.3],['#L_mid',1.5],['#L_ground',1.0],['#fg',0.8]];
+      const cam = { e: 0, drift: 0 };
+      function applyCam(){
+        DEPTH.forEach(([sel,D])=>{
+          const s = (1+cam.e)*D/(D+cam.e);
+          gsap.set(sel, { scale: s, x: -cam.drift*60*(1-1/D) });
+        });
+      }
+      applyCam();
+      tl.fromTo(cam, {e:0}, {e:0.10, duration:2.0, ease:'none', onUpdate:applyCam}, 0);
+      tl.fromTo(cam, {e:0.10}, {e:1.15, duration:1.2, ease:'power2.in', onUpdate:applyCam}, 2.0);
+      tl.fromTo(cam, {e:1.15}, {e:1.32, duration:0.8, ease:'none', onUpdate:applyCam}, 3.2);
+      tl.fromTo(cam, {drift:0}, {drift:1, duration:4, ease:'none', onUpdate:applyCam}, 0);
+
+      // 白フラッシュ(0.3秒で減衰)
+      tl.fromTo('#flash', {opacity:1}, {opacity:0, duration:0.3, ease:'power2.out'}, 0);
+
+      // 太陽光線: 回り続ける(有限回転)
+      gsap.set('#rays', { rotation: 0 });
+      tl.fromTo('#rays', {rotation:0}, {rotation:34, duration:4, ease:'none'}, 0);
+      gsap.set('#sunglow', { scale: 1 });
+      tl.fromTo('#sunglow', {scale:1}, {scale:1.15, duration:4, ease:'none'}, 0);
+      tl.fromTo('#L_clouds', {xPercent:0}, {xPercent:-4, duration:4, ease:'none'}, 0);
+
+      // 旗・外套・スカーフの揺らぎ(有限回)
+      tl.fromTo('.flag', {skewY:-3, transformOrigin:'0% 0%'}, {skewY:3, duration:0.5, ease:'sine.inOut', yoyo:true, repeat:7, stagger:0.07}, 0);
+      tl.fromTo('#heroSvg .scarf', {rotation:-2.5, svgOrigin:'208 262'}, {rotation:3.5, duration:0.45, ease:'sine.inOut', yoyo:true, repeat:7}, 0);
+      tl.fromTo('#heroSvg .cape', {rotation:-1.2, svgOrigin:'200 270'}, {rotation:1.6, duration:0.8, ease:'sine.inOut', yoyo:true, repeat:4}, 0);
+      tl.fromTo('#heroSvg .head', {y:0}, {y:-2.2, duration:0.9, ease:'sine.inOut', yoyo:true, repeat:3}, 0);
+      tl.fromTo('#demonSvg .demonbody', {scaleY:1, svgOrigin:'400 1000'}, {scaleY:1.012, duration:1.0, ease:'sine.inOut', yoyo:true, repeat:3}, 0);
+
+      // 火の粉
+      document.querySelectorAll('.ember').forEach((e,i)=>{
+        tl.fromTo(e, {x:0,y:0}, {x:-Number(e.dataset.dx), y:-Number(e.dataset.dy), duration:4, ease:'none'}, 0);
+      });
+
+      // 暗いビネットが締まる
+      tl.fromTo('#root', {'--vig':0.5}, {'--vig':1, duration:3.2, ease:'power1.in'}, 0.4);
+      tl.fromTo('#redtint', {opacity:0}, {opacity:1, duration:1.2, ease:'power2.in'}, 2.0);
+
+      // CUE-A 0.60 テープが斜めに貼られる
+      gsap.set('#tapeWrap', { rotation: -3.5 });
+      tl.fromTo('#tape', {x:-1200}, {x:0, duration:0.15, ease:'power4.out'}, 0.45);
+      tl.fromTo('#tape', {scaleY:1.25, transformOrigin:'50% 100%'}, {scaleY:1, duration:0.12, ease:'power2.out'}, 0.60);
+
+      // CUE-B 1.20 主人公の頭上に Lv.1 ポップ
+      tl.fromTo('#lv1', {scale:0, opacity:0, rotation:-10, transformOrigin:'50% 130%'}, {scale:1, opacity:1, rotation:0, duration:0.28, ease:'back.out(2.6)'}, 1.20);
+
+      // CUE-C 1.60 魔王の頭上に Lv.999(重い着地)
+      tl.fromTo('#lv999', {y:-420, opacity:0}, {y:0, opacity:1, duration:0.17, ease:'power3.in'}, 1.43);
+      tl.fromTo('#lv999 .plate', {scaleY:1, scaleX:1, transformOrigin:'50% 100%'}, {scaleY:0.72, scaleX:1.14, duration:0.05, ease:'power2.out'}, 1.60);
+      tl.to('#lv999 .plate', {scaleY:1, scaleX:1, duration:0.35, ease:'elastic.out(1,0.4)'}, 1.65);
+      tl.fromTo('#ring999', {scale:0.4, opacity:0.9}, {scale:3.6, opacity:0, duration:0.45, ease:'power2.out', immediateRender:false}, 1.60);
+      // 魔王の目が赤く光る(白熱→赤)・核も灯る
+      tl.fromTo('#demonSvg .eyeL, #demonSvg .eyeR', {fill:'#fff0f2'}, {fill:'#ff2a4d', duration:0.25, ease:'power2.out', immediateRender:false}, 1.60);
+      tl.to('#demonSvg .core', {fill:'#ff2a4d', duration:0.3}, 1.60);
+      tl.fromTo('#demonSvg .glowL, #demonSvg .glowR', {opacity:0, scale:0.5, transformOrigin:'50% 50%'}, {opacity:1, scale:1, duration:0.14, ease:'power2.out'}, 1.60);
+      tl.to('#demonSvg .glowL, #demonSvg .glowR', {opacity:0.55, duration:0.5, ease:'power2.out'}, 1.74);
+      tl.fromTo('#demonSvg .glowC', {opacity:0}, {opacity:0.55, duration:0.4}, 1.62);
+      // 光線が一瞬強まる
+      tl.fromTo('#sunglow', {opacity:0.8}, {opacity:1, duration:0.2, ease:'power2.out'}, 1.60);
+      // 魔王の反動
+      tl.fromTo('#demonWrap', {y:0}, {y:10, duration:0.06, ease:'power2.out'}, 1.60);
+      tl.to('#demonWrap', {y:0, duration:0.4, ease:'elastic.out(1,0.5)'}, 1.66);
+
+      // 小さな衝撃(1回目) 1.60
+      function shake(t0, amp, n){
+        const ox=[1,-0.8,0.7,-0.6,0.45,-0.35,0.25,-0.18,0.1,-0.06], oy=[-0.6,0.9,-0.5,0.55,-0.35,0.25,-0.2,0.12,-0.08,0.04];
+        for(let i=0;i<n;i++){ tl.to('#shake', {x:ox[i]*amp, y:oy[i]*amp, rotation:ox[i]*amp*0.04, duration:F, ease:'none'}, t0+i*F); }
+        tl.to('#shake', {x:0, y:0, rotation:0, duration:F, ease:'none'}, t0+n*F);
+      }
+      gsap.set('#shake', {transformOrigin:'960px 540px'});
+      shake(1.60, 16, 9);
+
+      // 黒帯(シネスコ)が2.0から入る
+      tl.fromTo('#barT', {y:0}, {y:66, duration:0.3, ease:'power2.out'}, 2.0);
+      tl.fromTo('#barB', {y:0}, {y:-66, duration:0.3, ease:'power2.out'}, 2.0);
+
+      // 台詞プレート + タイプライター(2.00 → 3.20)
+      tl.fromTo('#plate', {opacity:0, y:24}, {opacity:1, y:0, duration:0.12, ease:'power2.out'}, 1.92);
+      const chars = sayEl.querySelectorAll('span'); const n = chars.length;
+      chars.forEach((c,i)=>{ tl.set(c, {opacity:1}, 2.0 + i*(1.17/(n-1))); });
+
+      // テープが剥がれて退場(クローズアップの邪魔をしない)
+      tl.to('#tapeWrap', {y:-180, opacity:0, rotation:-9, duration:0.2, ease:'power2.in'}, 3.12);
+      tl.to('#lv1', {opacity:0, scale:0.6, duration:0.12}, 3.18);
+      tl.to('#lv999', {opacity:0, duration:0.12}, 3.18);
+
+      // CUE-D 3.20 主人公の瞳が白く光る + クローズアップへ寄る
+      gsap.set('#cam', {transformOrigin:'324px 429px'});
+      tl.fromTo('#cam', {scale:1, x:0}, {scale:1.9, x:380, duration:0.4, ease:'power4.out'}, 3.20);
+      tl.fromTo('#bg', {filter:'blur(0px)'}, {filter:'blur(7px)', duration:0.3, ease:'power2.out'}, 3.20);
+      tl.fromTo('#heroSvg .eye', {fill:'#fffdf5'}, {fill:'#ffffff', duration:0.01}, 3.20);
+      tl.fromTo('#flareGlow', {opacity:0, scale:0.2}, {opacity:1, scale:1.1, duration:0.12, ease:'expo.out'}, 3.20);
+      tl.to('#flareGlow', {opacity:0, scale:0.8, duration:0.3, ease:'power2.out'}, 3.32);
+      tl.fromTo('#flareStar', {opacity:0, scale:0.1, rotation:0}, {opacity:1, scale:1.1, rotation:20, duration:0.15, ease:'expo.out'}, 3.20);
+      tl.to('#flareStar', {opacity:0, scale:0.5, rotation:50, duration:0.2, ease:'power2.in'}, 3.32);
+      tl.fromTo('#flareStreak', {opacity:0, scaleX:0}, {opacity:0.9, scaleX:1, duration:0.12, ease:'expo.out'}, 3.20);
+      tl.to('#flareStreak', {opacity:0, duration:0.16, ease:'power2.in'}, 3.30);
+      tl.fromTo('#redtint', {opacity:1}, {opacity:0.4, duration:0.3}, 3.2);
+
+      // CUE-E 3.60 拳がぎゅっと握られる
+      tl.fromTo('#heroSvg .fistg', {scale:1, rotation:0, svgOrigin:'452 267'}, {scale:1.42, rotation:-8, duration:0.1, ease:'power3.out'}, 3.60);
+      tl.to('#heroSvg .fistg', {x:2, y:-1, duration:0.03, yoyo:true, repeat:3, ease:'none'}, 3.70);
+      tl.fromTo('#heroSvg .armrect', {x:0, svgOrigin:'318 267'}, {x:-6, duration:0.1, ease:'power3.out'}, 3.60);
+      tl.fromTo('#fistRing', {opacity:0.95, scale:0.4}, {opacity:0, scale:1.9, duration:0.22, ease:'power2.out', immediateRender:false}, 3.60);
+      shake(3.60, 7, 5);
+
+      // 暗転 3.80 → 純黒(最後の2フレームは純黒)
+      tl.fromTo('#black', {opacity:0}, {opacity:1, duration:0.1, ease:'power1.in'}, 3.80);
+
+      window.__timelines['main'] = tl;
+    </script>
+  </body>
+</html>

@@ -1,0 +1,855 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>s6-title</title>
+    <script src="assets/gsap.min.js"></script>
+    <style>
+      @font-face {
+        font-family: "Dela Gothic One";
+        src: url("assets/fonts/dela-sub.ttf") format("truetype");
+        font-weight: 400;
+      }
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background: #0a0a12;
+      }
+      #root {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: #0a0a12;
+        font-family: "Dela Gothic One", "Noto Sans JP", sans-serif;
+      }
+      .abs {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 1920px;
+        height: 1080px;
+      }
+      #rig {
+        transform-origin: 960px 540px;
+      }
+      #ht {
+        width: 1920px;
+        height: 1080px;
+      }
+      #vignette {
+        background:
+          radial-gradient(ellipse 62% 58% at 50% 52%, rgba(10, 10, 18, 0) 38%, rgba(10, 10, 18, 0.55) 78%, rgba(10, 10, 18, 0.92) 100%);
+      }
+      #glow {
+        background:
+          radial-gradient(ellipse 46% 36% at 50% 53%, rgba(255, 196, 0, 0.5) 0%, rgba(255, 122, 24, 0.22) 45%, rgba(255, 122, 24, 0) 75%);
+        opacity: 0;
+      }
+      #floor {
+        background: radial-gradient(ellipse 34% 5% at 50% 80%, rgba(0, 0, 0, 0.75), rgba(0, 0, 0, 0) 100%);
+      }
+
+      /* ---- 金の押し出し文字 ---- */
+      .row {
+        position: absolute;
+        display: flex;
+        justify-content: center;
+        white-space: nowrap;
+      }
+      #main {
+        left: 0;
+        top: 338px;
+        width: 1920px;
+        height: 420px;
+        gap: 22px;
+        font-size: 384px;
+      }
+      .g {
+        position: relative;
+        display: block;
+        width: 1em;
+        height: 1em;
+        line-height: 1;
+        flex: 0 0 auto;
+        transform-origin: 50% 82%;
+        will-change: transform;
+      }
+      .g i {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        font-style: normal;
+        text-align: center;
+        line-height: 1;
+        white-space: nowrap;
+      }
+      .g .o {
+        color: #000;
+        -webkit-text-stroke: 18px #000;
+        paint-order: stroke fill;
+      }
+      .g .x {
+        color: #8a4b00;
+      }
+      .g .r {
+        color: #fff0a8;
+        -webkit-text-stroke: 7px #fff0a8;
+        paint-order: stroke fill;
+      }
+      .g .f {
+        color: transparent;
+        background-repeat: no-repeat;
+        background-clip: text;
+        -webkit-background-clip: text;
+        background-image:
+          linear-gradient(100deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.95) 50%, rgba(255, 255, 255, 0) 100%),
+          linear-gradient(180deg, #fff8d6 0%, #ffe36e 24%, #ffc400 46%, #ff9d00 50.5%, #ffb81c 60%, #e07a00 100%);
+        background-size: 640px 100%, 100% 100%;
+        background-position: -900px 0, 0 0;
+      }
+      .g .w {
+        color: #fff;
+        opacity: 0;
+      }
+
+      #sub {
+        left: 0;
+        top: 118px;
+        width: 1920px;
+        height: 190px;
+        font-size: 124px;
+        gap: 8px;
+        align-items: flex-start;
+      }
+      #submask {
+        position: absolute;
+        left: 330px;
+        top: 70px;
+        width: 1260px;
+        height: 270px;
+        overflow: hidden;
+      }
+      #sub .g {
+        width: 0.98em;
+        transform-origin: 50% 100%;
+      }
+      #sub .g .o {
+        -webkit-text-stroke: 14px #000;
+      }
+      #sub .g .x {
+        color: #7a1f00;
+      }
+      #sub .g .r {
+        color: #ffd27a;
+        -webkit-text-stroke: 5px #ffd27a;
+      }
+      #sub .g .f {
+        background-image:
+          linear-gradient(100deg, rgba(255, 220, 120, 0) 0%, rgba(255, 255, 255, 0.95) 50%, rgba(255, 220, 120, 0) 100%),
+          linear-gradient(180deg, #ffffff 0%, #fffdf5 46%, #ffe9a8 54%, #ffd36a 100%);
+        background-size: 560px 100%, 100% 100%;
+      }
+      .rule {
+        position: absolute;
+        height: 6px;
+        top: 230px;
+        background: linear-gradient(90deg, rgba(255, 196, 0, 0), #ffc400 30%, #fff1b8 100%);
+        box-shadow: 0 0 18px rgba(255, 196, 0, 0.8);
+        transform-origin: 100% 50%;
+        opacity: 0;
+      }
+      .rule.l {
+        left: 70px;
+        width: 250px;
+      }
+      .rule.r {
+        left: 1600px;
+        width: 250px;
+        background: linear-gradient(270deg, rgba(255, 196, 0, 0), #ffc400 30%, #fff1b8 100%);
+        transform-origin: 0% 50%;
+      }
+      .dia {
+        position: absolute;
+        top: 220px;
+        width: 26px;
+        height: 26px;
+        background: #ffc400;
+        box-shadow: 0 0 16px #ffc400;
+        transform: rotate(45deg);
+        opacity: 0;
+      }
+
+      /* ---- 赤いテープ ---- */
+      #tapewrap {
+        position: absolute;
+        left: 0;
+        top: 818px;
+        width: 1920px;
+        height: 140px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        transform-origin: 50% 50%;
+      }
+      #tape {
+        position: relative;
+        padding: 0 110px;
+        height: 118px;
+        display: flex;
+        align-items: center;
+        background:
+          repeating-linear-gradient(115deg, rgba(255, 255, 255, 0.07) 0 14px, rgba(255, 255, 255, 0) 14px 28px),
+          linear-gradient(180deg, #ff5a74 0%, #ff2a4d 18%, #ff2a4d 78%, #c2123a 100%);
+        clip-path: polygon(0 8%, 1.4% 0, 2.2% 12%, 3% 0, 4% 14%, 5% 0, 96% 0, 97% 13%, 98% 0, 99% 12%, 100% 4%, 99.2% 30%, 100% 50%, 99.2% 70%, 100% 92%, 99% 100%, 97.8% 88%, 97% 100%, 5% 100%, 4% 86%, 3% 100%, 2.2% 88%, 1.4% 100%, 0 92%, 0.8% 70%, 0 50%, 0.8% 30%);
+        transform-origin: 50% 50%;
+      }
+      #tape span {
+        font-family: "Noto Sans JP", sans-serif;
+        font-weight: 700;
+        font-size: 70px;
+        -webkit-text-stroke: 2px #fffdf5;
+        letter-spacing: 0.15em;
+        color: #fffdf5;
+        text-shadow: 0 4px 0 #8a0f2a, 0 0 2px #8a0f2a, 3px 3px 0 #8a0f2a;
+        white-space: nowrap;
+      }
+      #tapeshadow {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        width: 1130px;
+        height: 118px;
+        margin-left: -565px;
+        margin-top: -52px;
+        background: rgba(0, 0, 0, 0.6);
+        filter: blur(14px);
+      }
+      #tapeshine {
+        position: absolute;
+        top: 0;
+        left: 0;
+        height: 100%;
+        width: 160px;
+        background: linear-gradient(100deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0));
+      }
+
+      /* ---- 衝撃のリング ---- */
+      .ring {
+        position: absolute;
+        left: 760px;
+        top: 360px;
+        width: 400px;
+        height: 400px;
+        border-radius: 50%;
+        opacity: 0;
+      }
+      #ring1 {
+        border: 18px solid #fff6cf;
+        box-shadow: 0 0 60px 8px rgba(255, 196, 0, 0.9), inset 0 0 50px rgba(255, 196, 0, 0.7);
+      }
+      #ring2 {
+        border: 7px solid #ff7a18;
+        box-shadow: 0 0 40px rgba(255, 122, 24, 0.9);
+      }
+      #ring3 {
+        border: 14px solid #ffc400;
+        box-shadow: 0 0 60px 6px rgba(255, 196, 0, 0.9);
+      }
+      #ring4 {
+        border: 5px solid #fff6cf;
+        box-shadow: 0 0 30px rgba(255, 246, 207, 0.9);
+      }
+      .streak {
+        position: absolute;
+        left: 0;
+        width: 1920px;
+        height: 10px;
+        top: 555px;
+        background: linear-gradient(90deg, rgba(255, 220, 120, 0) 0%, rgba(255, 244, 200, 0.95) 50%, rgba(255, 220, 120, 0) 100%);
+        box-shadow: 0 0 40px 6px rgba(255, 196, 0, 0.7);
+        opacity: 0;
+        transform-origin: 50% 50%;
+      }
+      #echo {
+        left: 0;
+        top: 338px;
+        width: 1920px;
+        height: 420px;
+        gap: 22px;
+        font-size: 384px;
+        opacity: 0;
+        transform-origin: 50% 50%;
+      }
+      #echo i {
+        display: block;
+        width: 1em;
+        height: 1em;
+        line-height: 1;
+        font-style: normal;
+        text-align: center;
+        color: transparent;
+        -webkit-text-stroke: 4px #ffe27a;
+      }
+      #bar-t,
+      #bar-b {
+        position: absolute;
+        left: 160px;
+        width: 1600px;
+        height: 3px;
+        background: linear-gradient(90deg, rgba(255, 196, 0, 0), #ffc400 20%, #fff1b8 50%, #ffc400 80%, rgba(255, 196, 0, 0));
+        box-shadow: 0 0 14px rgba(255, 196, 0, 0.7);
+        opacity: 0;
+        transform-origin: 50% 50%;
+      }
+      #bar-t {
+        top: 64px;
+      }
+      #bar-b {
+        top: 1016px;
+      }
+      #sweep {
+        position: absolute;
+        left: 0;
+        top: -200px;
+        width: 520px;
+        height: 1500px;
+        background: linear-gradient(90deg, rgba(255, 244, 200, 0), rgba(255, 244, 200, 0.28) 50%, rgba(255, 244, 200, 0));
+        transform: rotate(14deg);
+        mix-blend-mode: screen;
+        opacity: 0;
+      }
+      #flash {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 1920px;
+        height: 1080px;
+        background: #ffffff;
+        opacity: 1;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="5.2" data-width="1920" data-height="1080">
+      <div id="rig" class="abs">
+        <canvas id="ht" data-layout-allow-overflow class="abs" width="1920" height="1080"></canvas>
+        <div id="glow" class="abs"></div>
+        <div id="vignette" class="abs"></div>
+        <div id="floor" class="abs"></div>
+        <div id="bar-t"></div>
+        <div id="bar-b"></div>
+
+        <div id="titlegroup" class="abs">
+          <div id="sub" data-layout-allow-overflow class="row"></div>
+          <div class="rule l"></div>
+          <div class="rule r"></div>
+          <div class="dia" style="left: 326px"></div>
+          <div class="dia" style="left: 1568px"></div>
+          <div id="echo" class="row"></div>
+          <div id="main" class="row"></div>
+        </div>
+
+        <div id="tapewrap">
+          <div id="tapeshadow"></div>
+          <div id="tape">
+            <span>異世界無双、開幕。</span>
+          </div>
+        </div>
+
+        <canvas id="fx" data-layout-allow-occlusion data-layout-allow-overflow class="abs" width="1920" height="1080"></canvas>
+        <div id="ring1" class="ring"></div>
+        <div id="ring2" class="ring"></div>
+        <div id="ring3" class="ring"></div>
+        <div id="ring4" class="ring"></div>
+        <div id="streak1" class="streak"></div>
+        <div id="streak2" class="streak"></div>
+        <div id="sweep"></div>
+      </div>
+      <div id="flash"></div>
+    </div>
+
+    <script>
+      (function () {
+        var W = 1920,
+          H = 1080,
+          DUR = 5.2;
+        function F(n) {
+          return n / 30;
+        }
+        function clamp(x, a, b) {
+          return Math.max(a, Math.min(b, x));
+        }
+        // seed付きPRNG
+        function mulberry32(a) {
+          return function () {
+            a |= 0;
+            a = (a + 0x6d2b79f5) | 0;
+            var t = Math.imul(a ^ (a >>> 15), 1 | a);
+            t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+            return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+          };
+        }
+
+        /* ===== 金の押し出し文字を組み立てる ===== */
+        function lerpHex(c1, c2, k) {
+          var a = parseInt(c1.slice(1), 16),
+            b = parseInt(c2.slice(1), 16);
+          var r = Math.round(((a >> 16) & 255) * (1 - k) + ((b >> 16) & 255) * k);
+          var g = Math.round(((a >> 8) & 255) * (1 - k) + ((b >> 8) & 255) * k);
+          var bl = Math.round((a & 255) * (1 - k) + (b & 255) * k);
+          return "rgb(" + r + "," + g + "," + bl + ")";
+        }
+        function extrusion(n, dx, dy, c1, c2) {
+          var s = [];
+          for (var i = 1; i <= n; i++) {
+            s.push(
+              (dx * i).toFixed(2) + "px " + (dy * i).toFixed(2) + "px 0 " + lerpHex(c1, c2, (i - 1) / (n - 1)),
+            );
+          }
+          return s.join(",");
+        }
+        function blackExtrusion(n, dx, dy) {
+          var s = [];
+          for (var i = 0; i <= n; i++) s.push((dx * i).toFixed(2) + "px " + (dy * i).toFixed(2) + "px 0 #000");
+          // 最後に落ち影
+          s.push((dx * n).toFixed(1) + "px " + (dy * n + 26) + "px 46px rgba(0,0,0,0.85)");
+          return s.join(",");
+        }
+        function buildGlyphs(host, text, exN, dx, dy, c1, c2) {
+          var out = [];
+          Array.from(text).forEach(function (ch) {
+            var g = document.createElement("div");
+            g.className = "g";
+            g.setAttribute("data-layout-allow-overlap", "");
+            g.innerHTML =
+              '<i data-layout-allow-overlap data-layout-allow-occlusion data-layout-allow-overflow class="o">' + ch + '</i><i data-layout-allow-overlap data-layout-allow-occlusion data-layout-allow-overflow class="x">' + ch + '</i><i data-layout-allow-overlap data-layout-allow-occlusion data-layout-allow-overflow class="r">' + ch + '</i><i data-layout-allow-overlap data-layout-allow-occlusion data-layout-allow-overflow class="f">' + ch + '</i><i data-layout-allow-overlap data-layout-allow-occlusion data-layout-allow-overflow class="w">' + ch + "</i>";
+            g.querySelector(".x").style.textShadow = extrusion(exN, dx, dy, c1, c2);
+            g.querySelector(".o").style.textShadow = blackExtrusion(exN, dx, dy);
+            host.appendChild(g);
+            out.push(g);
+          });
+          return out;
+        }
+
+        var mainHost = document.getElementById("main");
+        var subHost = document.getElementById("sub");
+        var echoHost = document.getElementById("echo");
+        var mainG = buildGlyphs(mainHost, "世界最強", 26, 0.5, 1, "#e69a00", "#4a2300");
+        // サブ行はマスクの中に入れる
+        var submask = document.createElement("div");
+        submask.id = "submask";
+        document.getElementById("titlegroup").insertBefore(submask, subHost);
+        submask.appendChild(subHost);
+        subHost.style.left = "-330px";
+        subHost.style.top = "28px";
+        subHost.setAttribute("data-layout-allow-overflow", "");
+        var subG = buildGlyphs(subHost, "レベル1なのに", 12, 0.4, 0.9, "#ff8a2a", "#5c1800");
+        Array.from("世界最強").forEach(function (ch) {
+          var e = document.createElement("i");
+          e.textContent = ch;
+          e.setAttribute('data-layout-allow-overlap','');e.setAttribute('data-layout-allow-occlusion','');e.setAttribute('data-layout-allow-overflow','');
+          echoHost.appendChild(e);
+        });
+
+        /* ===== 散らばり(弾け飛び)の初期位置 ===== */
+        var scat = [
+          { x: -760, y: -300, r: -75, s: 1.9 },
+          { x: 520, y: -380, r: 100, s: 2.2 },
+          { x: -420, y: 330, r: 120, s: 1.7 },
+          { x: 760, y: 260, r: -130, s: 2.1 },
+        ];
+        var landT = [F(20), F(22), F(25), F(27)]; // 0.667, 0.733, 0.833, 0.90
+        var startT = [F(6), F(7), F(8), F(9)];
+        mainG.forEach(function (g, i) {
+          gsap.set(g, { x: scat[i].x, y: scat[i].y, rotation: scat[i].r, scale: scat[i].s, opacity: 0 });
+        });
+        subG.forEach(function (g) {
+          gsap.set(g, { y: 230 });
+        });
+
+        /* ===== 光の走り(light-sweep-pass 風: 1本の位置から全パーツが連動) ===== */
+        var homes = []; // 各グリフの画面内の左端
+        function measure() {
+          homes = [];
+          mainG.forEach(function (g) {
+            homes.push({ el: g.querySelector(".f"), left: mainHost.offsetLeft + g.offsetLeft, band: 640 });
+          });
+          subG.forEach(function (g) {
+            homes.push({
+              el: g.querySelector(".f"),
+              left: submask.offsetLeft + subHost.offsetLeft + g.offsetLeft,
+              band: 560,
+              sub: true,
+            });
+          });
+        }
+        function sweepPos(t) {
+          // 2回: 着地の金の光(0.90-1.45) と CUE-D(2.00-2.85)
+          if (t >= 0.9 && t <= 1.45) return -500 + ((t - 0.9) / 0.55) * 2900;
+          if (t >= 2.0 && t <= 2.85) return -500 + ((t - 2.0) / 0.85) * 2900;
+          return -9999;
+        }
+
+        /* ===== halftone-field (WebGL) : 金と黒のパレットに差し替え、衝撃で波が走る ===== */
+        var canvas = document.getElementById("ht");
+        var gl = canvas.getContext("webgl", { alpha: false, antialias: false, depth: false, stencil: false, preserveDrawingBuffer: true });
+        var VERT = "attribute vec2 aPos;\nvoid main(){ gl_Position = vec4(aPos,0.0,1.0); }";
+        var FRAG =
+          "precision highp float;\n" +
+          "uniform vec2 uRes; uniform float uTime; uniform float uT;\n" +
+          "vec3 mod289(vec3 x){return x-floor(x*(1.0/289.0))*289.0;}\n" +
+          "vec4 mod289(vec4 x){return x-floor(x*(1.0/289.0))*289.0;}\n" +
+          "vec4 permute(vec4 x){return mod289(((x*34.0)+1.0)*x);}\n" +
+          "vec4 taylorInvSqrt(vec4 r){return 1.79284291400159-0.85373472095314*r;}\n" +
+          "float snoise(vec3 v){const vec2 C=vec2(1.0/6.0,1.0/3.0);const vec4 D=vec4(0.0,0.5,1.0,2.0);\n" +
+          "vec3 i=floor(v+dot(v,C.yyy));vec3 x0=v-i+dot(i,C.xxx);vec3 g=step(x0.yzx,x0.xyz);vec3 l=1.0-g;\n" +
+          "vec3 i1=min(g.xyz,l.zxy);vec3 i2=max(g.xyz,l.zxy);vec3 x1=x0-i1+C.xxx;vec3 x2=x0-i2+C.yyy;vec3 x3=x0-D.yyy;\n" +
+          "i=mod289(i);vec4 p=permute(permute(permute(i.z+vec4(0.0,i1.z,i2.z,1.0))+i.y+vec4(0.0,i1.y,i2.y,1.0))+i.x+vec4(0.0,i1.x,i2.x,1.0));\n" +
+          "float n_=0.142857142857;vec3 ns=n_*D.wyz-D.xzx;vec4 j=p-49.0*floor(p*ns.z*ns.z);vec4 x_=floor(j*ns.z);vec4 y_=floor(j-7.0*x_);\n" +
+          "vec4 x=x_*ns.x+ns.yyyy;vec4 y=y_*ns.x+ns.yyyy;vec4 h=1.0-abs(x)-abs(y);vec4 b0=vec4(x.xy,y.xy);vec4 b1=vec4(x.zw,y.zw);\n" +
+          "vec4 s0=floor(b0)*2.0+1.0;vec4 s1=floor(b1)*2.0+1.0;vec4 sh=-step(h,vec4(0.0));\n" +
+          "vec4 a0=b0.xzyw+s0.xzyw*sh.xxyy;vec4 a1=b1.xzyw+s1.xzyw*sh.zzww;\n" +
+          "vec3 p0=vec3(a0.xy,h.x);vec3 p1=vec3(a0.zw,h.y);vec3 p2=vec3(a1.xy,h.z);vec3 p3=vec3(a1.zw,h.w);\n" +
+          "vec4 norm=taylorInvSqrt(vec4(dot(p0,p0),dot(p1,p1),dot(p2,p2),dot(p3,p3)));p0*=norm.x;p1*=norm.y;p2*=norm.z;p3*=norm.w;\n" +
+          "vec4 m=max(0.6-vec4(dot(x0,x0),dot(x1,x1),dot(x2,x2),dot(x3,x3)),0.0);m=m*m;\n" +
+          "return 42.0*dot(m*m,vec4(dot(p0,x0),dot(p1,x1),dot(p2,x2),dot(p3,x3)));}\n" +
+          "vec3 ramp(float v){float x=clamp(v,0.0,1.0)*3.0;\n" +
+          "vec3 c=mix(vec3(0.28,0.12,0.0),vec3(1.0,0.48,0.09),clamp(x,0.0,1.0));\n" +
+          "c=mix(c,vec3(1.0,0.77,0.0),clamp(x-1.0,0.0,1.0));\n" +
+          "c=mix(c,vec3(1.0,0.96,0.78),clamp(x-2.0,0.0,1.0));return c;}\n" +
+          "float wave(float dist,float t0,float speed,float width,float decay){\n" +
+          "float tau=uT-t0; if(tau<0.0) return 0.0;\n" +
+          "float d=(dist-tau*speed)/width; return exp(-d*d)*exp(-tau*decay);}\n" +
+          "float lift(float t0,float decay){float tau=uT-t0; if(tau<0.0) return 0.0; return exp(-tau*decay);}\n" +
+          "void main(){\n" +
+          "float cell=44.0;\n" +
+          "vec2 cellId=floor(gl_FragCoord.xy/cell);vec2 centre=(cellId+0.5)*cell;\n" +
+          "vec2 st=centre/uRes;st.x*=uRes.x/uRes.y;\n" +
+          "float n=abs(snoise(vec3(st*1.9,uTime*0.22)));\n" +
+          "float field=pow(n,2.2);\n" +
+          "vec2 c0=vec2(960.0,540.0);float dist=length(centre-c0);\n" +
+          "float v=field*1.15+0.13;\n" +
+          "v+=wave(dist,0.20,2700.0,170.0,1.9)*0.95+wave(dist,0.90,2300.0,150.0,2.8)*0.6+wave(dist,2.60,1700.0,110.0,3.6)*0.4;\n" +
+          "v+=0.30*lift(0.20,2.4)+0.2*lift(0.90,2.6)+0.12*lift(2.60,3.0);\n" +
+          // 中央(タイトルの後ろ)は少し暗くして文字を立たせる / 外側は落とす
+          "vec2 q=(centre-c0)/vec2(820.0,430.0);float e=length(q);\n" +
+          "float mid=smoothstep(0.15,0.75,e);\n" +
+          "v*=mix(0.5,1.0,mid);\n" +
+          "v*=1.0-smoothstep(1.0,1.8,e)*0.7;\n" +
+          "v=clamp(v,0.0,1.0);\n" +
+          "float radius=v*0.5*cell*1.04;\n" +
+          "float d=length(gl_FragCoord.xy-centre);\n" +
+          "float mask=1.0-smoothstep(radius-1.0,radius+1.0,d);\n" +
+          "vec3 bg=vec3(0.039,0.039,0.072);\n" +
+          "gl_FragColor=vec4(mix(bg,ramp(v),mask),1.0);}\n";
+        var uni = {},
+          glReady = false;
+        function compile(type, src) {
+          var sh = gl.createShader(type);
+          gl.shaderSource(sh, src);
+          gl.compileShader(sh);
+          if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) throw new Error("shader: " + gl.getShaderInfoLog(sh));
+          return sh;
+        }
+        if (gl) {
+          var prog = gl.createProgram();
+          gl.attachShader(prog, compile(gl.VERTEX_SHADER, VERT));
+          gl.attachShader(prog, compile(gl.FRAGMENT_SHADER, FRAG));
+          gl.linkProgram(prog);
+          gl.useProgram(prog);
+          var buf = gl.createBuffer();
+          gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+          gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+          var loc = gl.getAttribLocation(prog, "aPos");
+          gl.enableVertexAttribArray(loc);
+          gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+          ["uRes", "uTime", "uT"].forEach(function (n) {
+            uni[n] = gl.getUniformLocation(prog, n);
+          });
+          gl.viewport(0, 0, W, H);
+          gl.uniform2f(uni.uRes, W, H);
+          glReady = true;
+        }
+        function drawHalftone(t) {
+          if (!glReady) return;
+          gl.uniform1f(uni.uTime, t);
+          gl.uniform1f(uni.uT, t);
+          gl.drawArrays(gl.TRIANGLES, 0, 3);
+          gl.flush();
+        }
+
+        /* ===== 火花と金の粒(毎フレーム t の関数として全再描画) ===== */
+        var fx = document.getElementById("fx").getContext("2d");
+        var sprite = document.createElement("canvas");
+        sprite.width = sprite.height = 64;
+        (function () {
+          var c = sprite.getContext("2d");
+          var gr = c.createRadialGradient(32, 32, 0, 32, 32, 32);
+          gr.addColorStop(0, "rgba(255,250,220,1)");
+          gr.addColorStop(0.25, "rgba(255,200,40,0.85)");
+          gr.addColorStop(0.6, "rgba(255,150,20,0.25)");
+          gr.addColorStop(1, "rgba(255,120,20,0)");
+          c.fillStyle = gr;
+          c.fillRect(0, 0, 64, 64);
+        })();
+
+        function makeBurst(seed, t0, x, y, n, vmin, vmax, life, grav, drag, a0, a1, palette) {
+          var r = mulberry32(seed);
+          var arr = [];
+          for (var i = 0; i < n; i++) {
+            arr.push({
+              a: a0 + r() * (a1 - a0),
+              v: vmin + Math.pow(r(), 0.6) * (vmax - vmin),
+              l: life[0] + r() * (life[1] - life[0]),
+              w: 1.4 + r() * 3.2,
+              c: palette[Math.floor(r() * palette.length)],
+            });
+          }
+          return { t0: t0, x: x, y: y, g: grav, d: drag, p: arr };
+        }
+        var GOLD = ["255,196,0", "255,214,80", "255,240,170", "255,122,24", "255,255,255"];
+        var RED = ["255,42,77", "255,196,0", "255,255,255", "255,122,24"];
+        var UP = [-Math.PI * 0.95, -Math.PI * 0.05];
+        var bursts = [
+          makeBurst(11, F(6), 960, 560, 320, 500, 2600, [0.45, 1.2], 1100, 2.4, 0, Math.PI * 2, GOLD),
+          makeBurst(12, F(6), 960, 560, 90, 900, 3200, [0.25, 0.6], 0, 3.2, 0, Math.PI * 2, ["255,255,255", "255,240,170"]),
+          makeBurst(21, F(20), 640, 730, 70, 300, 1300, [0.5, 1.1], 1500, 2.6, UP[0], UP[1], GOLD),
+          makeBurst(22, F(22), 880, 730, 70, 300, 1300, [0.5, 1.1], 1500, 2.6, UP[0], UP[1], GOLD),
+          makeBurst(23, F(25), 1080, 730, 70, 300, 1300, [0.5, 1.1], 1500, 2.6, UP[0], UP[1], GOLD),
+          makeBurst(24, F(27), 1280, 730, 80, 300, 1400, [0.5, 1.1], 1500, 2.6, UP[0], UP[1], GOLD),
+          makeBurst(31, F(27), 960, 620, 420, 600, 3000, [0.6, 1.5], 1300, 2.2, 0, Math.PI * 2, GOLD),
+          makeBurst(32, F(27), 960, 740, 130, 400, 1700, [0.8, 1.6], 900, 2.0, UP[0], UP[1], ["255,255,255", "255,240,170", "255,196,0"]),
+          makeBurst(41, F(78), 960, 870, 170, 300, 1900, [0.5, 1.2], 1200, 2.4, 0, Math.PI * 2, RED),
+          makeBurst(42, F(78), 960, 870, 80, 500, 2000, [0.4, 0.9], 1300, 2.4, UP[0], UP[1], GOLD),
+        ];
+        // 金の粒(降る)
+        var dust = [];
+        (function () {
+          var r = mulberry32(777);
+          for (var i = 0; i < 170; i++) {
+            var big = r() < 0.18;
+            dust.push({
+              x: r() * W,
+              y: r() * (H + 240),
+              vy: big ? 28 + r() * 26 : 45 + r() * 85,
+              sw: 14 + r() * 40,
+              sf: 0.5 + r() * 1.4,
+              ph: r() * 6.28,
+              s: big ? 34 + r() * 56 : 10 + r() * 20,
+              a: big ? 0.22 + r() * 0.2 : 0.5 + r() * 0.5,
+              tf: 1.5 + r() * 3.5,
+            });
+          }
+        })();
+
+        function drawFx(t) {
+          fx.clearRect(0, 0, W, H);
+          fx.globalCompositeOperation = "lighter";
+          fx.lineCap = "round";
+          // 火花
+          for (var b = 0; b < bursts.length; b++) {
+            var B = bursts[b];
+            var tau = t - B.t0;
+            if (tau < 0) continue;
+            for (var i = 0; i < B.p.length; i++) {
+              var p = B.p[i];
+              if (tau > p.l) continue;
+              var k = tau / p.l;
+              var dd = (p.v * (1 - Math.exp(-B.d * tau))) / B.d;
+              var x = B.x + Math.cos(p.a) * dd;
+              var y = B.y + Math.sin(p.a) * dd + 0.5 * B.g * tau * tau;
+              var tp = Math.max(0, tau - 0.04);
+              var dp = (p.v * (1 - Math.exp(-B.d * tp))) / B.d;
+              var xp = B.x + Math.cos(p.a) * dp;
+              var yp = B.y + Math.sin(p.a) * dp + 0.5 * B.g * tp * tp;
+              var al = Math.pow(1 - k, 1.3);
+              fx.strokeStyle = "rgba(" + p.c + "," + al.toFixed(3) + ")";
+              fx.lineWidth = p.w * (1 - k * 0.6);
+              fx.beginPath();
+              fx.moveTo(xp, yp);
+              fx.lineTo(x, y);
+              fx.stroke();
+            }
+          }
+          // 金の粒
+          var fade = clamp((t - 2.3) / 0.9, 0, 1);
+          // 着地直後からうっすら舞う(少量)
+          var pre = clamp((t - 0.9) / 1.2, 0, 1) * 0.35;
+          var amt = Math.max(fade, pre);
+          if (amt > 0) {
+            for (var j = 0; j < dust.length; j++) {
+              var d = dust[j];
+              var yy = ((d.y + d.vy * t) % (H + 240)) - 120;
+              var xx = d.x + Math.sin(t * d.sf + d.ph) * d.sw;
+              var tw = 0.65 + 0.35 * Math.sin(t * d.tf + d.ph * 2);
+              fx.globalAlpha = d.a * tw * amt * (j % 3 === 0 ? 1 : fade > 0 ? 1 : 0.0);
+              if (fx.globalAlpha <= 0.01) continue;
+              fx.drawImage(sprite, xx - d.s / 2, yy - d.s / 2, d.s, d.s);
+            }
+            fx.globalAlpha = 1;
+          }
+          fx.globalCompositeOperation = "source-over";
+        }
+
+        /* ===== カメラシェイク(camera-shake のノイズを流用、減衰する単発 2 回) ===== */
+        function hash(i, seed) {
+          var h = Math.imul(i | 0, 374761393) + Math.imul(seed | 0, 668265263);
+          h = (h ^ (h >>> 13)) >>> 0;
+          h = Math.imul(h, 1274126177) >>> 0;
+          return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
+        }
+        function vnoise(x, seed) {
+          var i = Math.floor(x),
+            f = x - i;
+          var u = f * f * f * (f * (f * 6 - 15) + 10);
+          return hash(i, seed) * (1 - u) + hash(i + 1, seed) * u;
+        }
+        var rig = document.getElementById("rig");
+        function shakeState(t) {
+          var env = 0;
+          var tau = t - F(27);
+          if (tau >= 0) env += Math.exp(-tau * 7.5) * 1.0;
+          var tau2 = t - F(78);
+          if (tau2 >= 0) env += Math.exp(-tau2 * 11) * 0.4;
+          if (env < 0.003) return { x: 0, y: 0, r: 0, s: 1 };
+          var f = 17;
+          var x = (vnoise(t * f, 3) - 0.5) * 2 * 34 * env;
+          var y = (vnoise(t * f, 7) - 0.5) * 2 * 26 * env;
+          var r = (vnoise(t * f * 0.8, 11) - 0.5) * 2 * 1.3 * env;
+          var rr = (Math.abs(r) * Math.PI) / 180;
+          var cs = Math.cos(rr),
+            sn = Math.sin(rr);
+          var need = Math.max(1 + (2 * Math.abs(x)) / W, 1 + (2 * Math.abs(y)) / H) * Math.max(cs + (H / W) * sn, cs + (W / H) * sn) + 0.01;
+          return { x: x, y: y, r: r, s: need };
+        }
+
+        /* ===== 毎フレームの描画ドライバ(property setter。seek でも必ず呼ばれる) ===== */
+        var gwave = { v: 0 };
+        var driver = {};
+        var tv = 0;
+        Object.defineProperty(driver, "t", {
+          get: function () {
+            return tv;
+          },
+          set: function (t) {
+            tv = t;
+            drawHalftone(t);
+            drawFx(t);
+            var sh = shakeState(t);
+            rig.style.transform = "translate(" + sh.x.toFixed(2) + "px," + sh.y.toFixed(2) + "px) rotate(" + sh.r.toFixed(3) + "deg) scale(" + sh.s.toFixed(4) + ")";
+            // light sweep
+            var lx = sweepPos(t);
+            for (var i = 0; i < homes.length; i++) {
+              var h = homes[i];
+              // 帯の中心が lx に来るよう、各グリフの局所座標へ
+              h.el.style.backgroundPosition = (lx - h.left - h.band / 2).toFixed(1) + "px 0, 0 0";
+            }
+            var sw = document.getElementById("sweep");
+            if (lx > -9000) {
+              sw.style.opacity = "1";
+              sw.style.left = (lx - 260).toFixed(1) + "px";
+            } else sw.style.opacity = "0";
+          },
+        });
+
+        /* ===== タイムライン ===== */
+        var tl = gsap.timeline({ paused: true });
+        measure();
+
+        // 純白 → 減衰 → (0.20) 衝撃のフラッシュ
+        tl.set("#flash", { opacity: 1 }, 0);
+        tl.to("#flash", { opacity: 0, duration: F(3.4), ease: "power1.out" }, F(1.6));
+        tl.set("#flash", { opacity: 1 }, F(6));
+        tl.to("#flash", { opacity: 0, duration: 0.34, ease: "power2.out" }, F(8));
+        // 0.90 金の光フラッシュ
+        tl.set("#flash", { opacity: 0.4, backgroundColor: "#fff1b8" }, F(27));
+        tl.to("#flash", { opacity: 0, duration: 0.2, ease: "power2.out" }, F(28));
+
+        // 背景の光
+        tl.set("#glow", { opacity: 0 }, 0);
+        tl.to("#glow", { opacity: 1, duration: 0.12, ease: "power2.out" }, F(6));
+        tl.to("#glow", { opacity: 0.5, duration: 0.6, ease: "power2.out" }, F(10));
+        tl.to("#glow", { opacity: 1, duration: 0.08, ease: "power2.out" }, F(27));
+        tl.to("#glow", { opacity: 0.62, duration: 1.2, ease: "power2.out" }, F(30));
+        tl.to("#glow", { opacity: 0.85, duration: 0.1, ease: "power2.out" }, F(78));
+        tl.to("#glow", { opacity: 0.6, duration: 1.0, ease: "power2.out" }, F(82));
+
+        // 世界最強 : 弾け飛んだ4文字が再集合して着地
+        mainG.forEach(function (g, i) {
+          var t0 = startT[i],
+            t1 = landT[i];
+          tl.to(g, { x: 0, y: 0, rotation: 0, scale: 1, duration: t1 - t0, ease: "power3.in" }, t0);
+          // 着地のつぶれ→戻り
+          tl.fromTo(g, { scaleY: 1 }, { scaleY: 0.88, scaleX: 1.07, duration: F(2), ease: "power2.out", immediateRender: false }, t1);
+          tl.to(g, { scaleY: 1, scaleX: 1, duration: 0.3, ease: "elastic.out(1.1,0.4)" }, t1 + F(2));
+          // 着地の白いフラッシュ
+          var w = g.querySelector(".w");
+          tl.set(w, { opacity: 1 }, t1);
+          tl.to(w, { opacity: 0, duration: 0.22, ease: "power2.out" }, t1 + F(1));
+        });
+        // 散らばっている間のゆらぎ(0.20 までは見えない/白に埋もれる)
+        mainG.forEach(function (g, i) {
+          tl.fromTo(g, { opacity: 0 }, { opacity: 1, duration: F(2), ease: "none", immediateRender: false }, F(6));
+        });
+
+        // 衝撃のリング(0.20)
+        tl.set("#ring1", { opacity: 0.95, scale: 0.3 }, F(6));
+        tl.to("#ring1", { scale: 7, opacity: 0, duration: 0.7, ease: "power3.out" }, F(6));
+        tl.set("#ring2", { opacity: 0.9, scale: 0.2 }, F(7));
+        tl.to("#ring2", { scale: 9, opacity: 0, duration: 0.8, ease: "power2.out" }, F(7));
+        tl.set("#streak1", { opacity: 1, scaleX: 0.1, scaleY: 1 }, F(6));
+        tl.to("#streak1", { scaleX: 1, scaleY: 0.1, opacity: 0, duration: 0.5, ease: "power3.out" }, F(6));
+        // 着地のリング(0.90)
+        tl.set("#ring3", { opacity: 0.95, scale: 0.5 }, F(27));
+        tl.to("#ring3", { scale: 6, opacity: 0, duration: 0.6, ease: "power3.out" }, F(27));
+        tl.set("#ring4", { opacity: 0.9, scale: 0.4 }, F(28));
+        tl.to("#ring4", { scale: 8.5, opacity: 0, duration: 0.75, ease: "power2.out" }, F(28));
+        tl.set("#streak2", { opacity: 1, scaleX: 0.2, scaleY: 1.2, top: 575 }, F(27));
+        tl.to("#streak2", { scaleX: 1, scaleY: 0.1, opacity: 0, duration: 0.7, ease: "power3.out" }, F(27));
+        // こだま(輪郭だけのコピーが広がる)
+        tl.set("#echo", { opacity: 0.85, scale: 1 }, F(27));
+        tl.to("#echo", { scale: 1.32, opacity: 0, duration: 0.55, ease: "power3.out" }, F(27));
+
+        // 上段 レベル1なのに : マスクで下から迫り上がる(1.00)
+        subG.forEach(function (g, i) {
+          tl.to(g, { y: 0, duration: 0.62, ease: "power4.out" }, 1.0 + i * 0.04);
+        });
+        tl.set(".rule", { opacity: 1 }, 1.3);
+        tl.fromTo(".rule.l", { scaleX: 0 }, { scaleX: 1, duration: 0.5, ease: "power3.out", immediateRender: false }, 1.3);
+        tl.fromTo(".rule.r", { scaleX: 0 }, { scaleX: 1, duration: 0.5, ease: "power3.out", immediateRender: false }, 1.3);
+        tl.to(".dia", { opacity: 1, duration: 0.2, ease: "power2.out" }, 1.45);
+        tl.to("#bar-t", { opacity: 1, duration: 0.2 }, 1.1);
+        tl.to("#bar-b", { opacity: 1, duration: 0.2 }, 1.1);
+        tl.fromTo("#bar-t", { scaleX: 0 }, { scaleX: 1, duration: 0.7, ease: "power3.out", immediateRender: false }, 1.1);
+        tl.fromTo("#bar-b", { scaleX: 0 }, { scaleX: 1, duration: 0.7, ease: "power3.out", immediateRender: false }, 1.1);
+
+        // 赤いテープ(2.60 小さな衝撃)
+        tl.set("#tapewrap", { opacity: 0 }, 0);
+        tl.set("#tapewrap", { opacity: 1, rotation: -8, scale: 1.55, y: -26 }, F(78));
+        tl.to("#tapewrap", { rotation: -2.2, scale: 1, y: 0, duration: F(3), ease: "power4.in" }, F(78));
+        tl.to("#tapewrap", { rotation: -1.4, duration: 0.5, ease: "elastic.out(1,0.35)" }, F(81));
+        // タイトルの微かな呼吸
+        tl.fromTo("#titlegroup", { scale: 1 }, { scale: 1.022, duration: 1.9, ease: "sine.inOut", yoyo: true, repeat: 1, immediateRender: false }, 1.4);
+        tl.fromTo("#tape", { y: 0 }, { y: -3, duration: 1.2, ease: "sine.inOut", yoyo: true, repeat: 1, immediateRender: false }, 2.9);
+
+        // 描画ドライバ
+        tl.to(driver, { t: DUR, duration: DUR, ease: "none" }, 0);
+
+        window.__timelines["main"] = tl;
+        tl.seek(0);
+      })();
+    </script>
+  </body>
+</html>

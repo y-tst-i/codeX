@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <script src="assets/gsap.min.js"></script>
+    <style>
+      @font-face { font-family: "Hachi Maru Pop"; src: url("assets/fonts/hachimarupop.woff2") format("woff2"); font-weight: 400; font-style: normal; }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: #c4ebfa; }
+      #root { position: relative; width: 100%; height: 100%; overflow: hidden; background: #c4ebfa;
+        font-family: "Hachi Maru Pop", "Noto Sans JP", sans-serif; }
+      #world { position: absolute; inset: 0; }
+      .abs { position: absolute; display: block; }
+
+      /* flat pastel world: sky / haze / ground / one line */
+      #sky   { left: 0; top: 0;   width: 1920px; height: 720px; background: #c4ebfa; }
+      #haze  { left: 0; top: 640px; width: 1920px; height: 190px; background: #dcf4fb; }
+      #ground{ left: 0; top: 830px; width: 1920px; height: 250px; background: #fdf1d6; }
+      #ground2{ left: 0; top: 930px; width: 1920px; height: 150px; background: #fbe8c4; }
+      #gline { left: 0; top: 827px; width: 1920px; height: 6px; background: #f6c5b9; }
+
+      #hero { left: 430px; top: 137px; }
+
+      /* speech bubble */
+      #bubble { left: 980px; top: 150px; width: 700px; height: 320px; transform-origin: 0 200px; }
+      #bubbletext { left: 0; top: 0; width: 700px; height: 320px; padding: 52px 0 0 72px; color: #5a4a6a;
+        font-size: 90px; line-height: 108px; letter-spacing: 0.02em; white-space: nowrap; }
+      #bubbletext .ln { display: block; height: 108px; }
+      #bubbletext .ch { display: inline-block; opacity: 0; }
+
+      #qmark { left: 598px; top: 56px; width: 100px; height: 100px; }
+      #qmark .disc { position: absolute; inset: 0; border-radius: 50%; background: #ffb3c7; }
+      #qmark .q { position: absolute; inset: 0; text-align: center; line-height: 100px; font-size: 72px; color: #5a4a6a; }
+
+      #caption { position: absolute; left: 0; width: 1920px; top: 905px; text-align: center; }
+      #captext { position: relative; display: inline-block; font-size: 64px; line-height: 90px; color: #5a4a6a;
+        letter-spacing: 0.04em; padding: 0 20px; opacity: 0; }
+      #captext .t { position: relative; }
+      #capmark { position: absolute; left: 0; right: 0; top: 50px; height: 28px; background: #ffe98f; border-radius: 14px;
+        transform-origin: 0 50%; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="3.6" data-width="1920" data-height="1080">
+
+      <div id="world">
+        <div id="sky" class="abs"></div>
+        <div id="haze" class="abs"></div>
+
+        <!-- flat pale sun, no rays -->
+        <svg id="sun" class="abs" style="left:150px;top:110px" width="320" height="320" viewBox="0 0 320 320">
+          <circle cx="160" cy="160" r="150" fill="#fff6c9"/>
+          <circle cx="160" cy="160" r="92" fill="#fff0a0"/>
+        </svg>
+
+        <!-- clouds -->
+        <svg id="c1" class="abs cloud" style="left:760px;top:70px" width="340" height="150" viewBox="0 -20 340 150"><g fill="#ffffff"><rect x="0" y="70" width="340" height="56" rx="28"/><circle cx="110" cy="66" r="52"/><circle cx="195" cy="48" r="62"/><circle cx="270" cy="76" r="40"/></g></svg>
+        <svg id="c2" class="abs cloud" style="left:1560px;top:520px" width="260" height="115" viewBox="0 -20 340 150"><g fill="#ffffff" opacity="0.9"><rect x="0" y="70" width="340" height="56" rx="28"/><circle cx="110" cy="66" r="52"/><circle cx="195" cy="48" r="62"/><circle cx="270" cy="76" r="40"/></g></svg>
+        <svg id="c3" class="abs cloud" style="left:-60px;top:560px" width="300" height="133" viewBox="0 -20 340 150"><g fill="#ffffff" opacity="0.85"><rect x="0" y="70" width="340" height="56" rx="28"/><circle cx="110" cy="66" r="52"/><circle cx="195" cy="48" r="62"/><circle cx="270" cy="76" r="40"/></g></svg>
+        <svg id="c4" class="abs cloud" style="left:1180px;top:640px" width="190" height="83" viewBox="0 -20 340 150"><g fill="#ffffff" opacity="0.8"><rect x="0" y="70" width="340" height="56" rx="28"/><circle cx="110" cy="66" r="52"/><circle cx="195" cy="48" r="62"/><circle cx="270" cy="76" r="40"/></g></svg>
+        <svg id="c5" class="abs cloud" style="left:420px;top:20px" width="200" height="88" viewBox="0 -20 340 150"><g fill="#ffffff" opacity="0.7"><rect x="0" y="70" width="340" height="56" rx="28"/><circle cx="110" cy="66" r="52"/><circle cx="195" cy="48" r="62"/><circle cx="270" cy="76" r="40"/></g></svg>
+
+        <div id="ground" class="abs"></div>
+        <div id="ground2" class="abs"></div>
+        <div id="gline" class="abs"></div>
+
+        <!-- tiny flowers on the ground line -->
+        <svg class="abs" style="left:1330px;top:760px;overflow:visible" width="60" height="80" viewBox="0 0 60 80">
+          <g id="fl1" transform="translate(30 70)"><g class="fl"><g transform="translate(-30 -70)">
+            <rect x="28" y="30" width="4" height="46" rx="2" fill="#a9dfb6"/>
+            <circle cx="30" cy="22" r="16" fill="#ffb3c7"/><circle cx="30" cy="22" r="7" fill="#fff0a0"/>
+          </g></g></g>
+        </svg>
+        <svg class="abs" style="left:1450px;top:785px;overflow:visible" width="40" height="60" viewBox="0 0 40 60">
+          <g transform="translate(20 50)"><g class="fl"><g transform="translate(-20 -50)">
+            <rect x="18" y="26" width="4" height="30" rx="2" fill="#a9dfb6"/>
+            <circle cx="20" cy="20" r="11" fill="#ffe27a"/><circle cx="20" cy="20" r="4.5" fill="#fffdf5"/>
+          </g></g></g>
+        </svg>
+        <svg class="abs" style="left:1120px;top:792px;overflow:visible" width="60" height="40" viewBox="0 0 60 40">
+          <g transform="translate(30 36)"><g class="fl"><g transform="translate(-30 -36)">
+            <path d="M12 38 Q14 18 18 14 Q22 24 22 38 Z M24 38 Q28 10 34 6 Q36 22 36 38 Z M38 38 Q42 20 48 18 Q48 28 46 38 Z" fill="#b9e6c4"/>
+          </g></g></g>
+        </svg>
+
+        <!-- shadow -->
+        <svg class="abs" style="left:380px;top:800px" width="520" height="60" viewBox="0 0 520 60"><ellipse cx="260" cy="30" rx="215" ry="18" fill="#efd7b4"/></svg>
+
+        <!-- HERO (shared/hero.svg adapted: relaxed pose, two-joint arm, frontal eyes) -->
+        <svg id="hero" class="abs" width="416" height="720" viewBox="0 0 520 900" style="overflow:visible">
+          <g id="hBody">
+            <g class="cape"><path d="M186 262 C96 300 44 440 22 640 L64 604 L58 700 L112 636 L124 726 L166 622 C176 500 194 400 222 300 Z" fill="#0a0a12" stroke="#ffd34d" stroke-width="3" stroke-linejoin="round"/></g>
+            <g class="legs">
+              <path d="M200 515 L258 520 L236 700 L218 846 L254 874 L102 874 L110 848 L172 832 L184 700 Z" fill="#0a0a12" stroke="#ffd34d" stroke-width="3" stroke-linejoin="round"/>
+              <path d="M256 515 L314 505 L332 690 L354 852 L416 874 L272 874 L284 842 L292 690 Z" fill="#0a0a12" stroke="#ffd34d" stroke-width="3" stroke-linejoin="round"/>
+            </g>
+            <g class="backarm"><path d="M192 262 L150 382 L140 482 L172 490 L198 402 L228 292 Z" fill="#0a0a12" stroke="#ffd34d" stroke-width="3" stroke-linejoin="round"/><circle cx="156" cy="498" r="27" fill="#0a0a12" stroke="#ffd34d" stroke-width="3"/></g>
+            <path class="torso" d="M180 252 C215 236 288 236 324 252 L348 402 L362 566 L190 580 L168 402 Z" fill="#0a0a12" stroke="#ffd34d" stroke-width="3" stroke-linejoin="round"/>
+            <path class="belt" d="M186 520 L360 508 L362 534 L188 546 Z" fill="#1a1a26" stroke="#ffd34d" stroke-width="2"/>
+
+            <!-- head: pivot at neck (254,228) -->
+            <g transform="translate(254 228)"><g id="hHead"><g transform="translate(-254 -228)">
+              <path d="M222 205 L286 205 L290 244 L222 244 Z" fill="#0a0a12"/>
+              <ellipse cx="254" cy="170" rx="42" ry="47" fill="#0a0a12" stroke="#ffd34d" stroke-width="3"/>
+              <!-- hair: pivot (262,150) -->
+              <g transform="translate(262 150)"><g id="hHair"><g transform="translate(-262 -150)">
+                <path d="M208 150 L168 100 L216 122 L204 56 L244 110 L264 34 L284 106 L322 64 L308 128 L336 146 L314 156 L212 156 Z" fill="#0a0a12" stroke="#ffd34d" stroke-width="3" stroke-linejoin="round"/>
+              </g></g></g>
+              <!-- band tails: pivot (216,160) -->
+              <g transform="translate(216 160)"><g id="hBand"><g transform="translate(-216 -160)">
+                <path d="M214 150 C170 138 118 170 76 232 C128 190 172 192 218 170 Z M222 156 C190 170 160 206 150 250 C176 214 200 196 226 182 Z" fill="#ff2a4d"/>
+              </g></g></g>
+              <!-- side-glance eye (profile) -->
+              <path id="eyeSlit" d="M262 170 L298 160 L300 173 L266 180 Z" fill="#fffdf5"/>
+              <!-- camera-facing eyes -->
+              <g id="eyes" opacity="0">
+                <g transform="translate(238 174)"><g class="eyeA"><ellipse cx="0" cy="0" rx="11" ry="13" fill="#fffdf5"/><circle class="pup" cx="0" cy="1" r="4.2" fill="#0a0a12"/></g></g>
+                <g transform="translate(275 172)"><g class="eyeA"><ellipse cx="0" cy="0" rx="11" ry="13" fill="#fffdf5"/><circle class="pup" cx="0" cy="1" r="4.2" fill="#0a0a12"/></g></g>
+              </g>
+            </g></g></g>
+
+            <g transform="translate(208 262)"><g id="hScarf"><g transform="translate(-208 -262)">
+              <path d="M208 252 C150 252 96 236 28 296 C96 292 148 306 214 290 Z" fill="#ff2a4d"/><path d="M206 252 L312 250 L318 276 L202 284 Z" fill="#ff2a4d"/>
+            </g></g></g>
+
+            <!-- front arm: shoulder (336,268), upper 106, forearm 114 -->
+            <g transform="translate(336 268)"><g id="uarm">
+              <rect x="-19" y="-18" width="38" height="142" rx="19" fill="#0a0a12" stroke="#ffd34d" stroke-width="3"/>
+              <g transform="translate(0 106)"><g id="farm">
+                <rect x="-17" y="-8" width="34" height="122" rx="17" fill="#0a0a12" stroke="#ffd34d" stroke-width="3"/>
+                <circle cx="0" cy="118" r="30" fill="#0a0a12" stroke="#ffd34d" stroke-width="3"/>
+                <path d="M-14 108 Q0 100 14 108 M-16 120 Q0 112 16 120" fill="none" stroke="#ffd34d" stroke-width="2" stroke-linecap="round" opacity="0.8"/>
+              </g></g>
+            </g></g>
+          </g>
+        </svg>
+
+        <!-- speech bubble -->
+        <div id="bubble" class="abs">
+          <svg class="abs" style="left:-280px;top:-10px;overflow:visible" width="1000" height="340" viewBox="-280 -10 1000 340">
+            <path d="M60 0 H640 A60 60 0 0 1 700 60 V260 A60 60 0 0 1 640 320 H60 A60 60 0 0 1 0 260 V236 L-190 212 L0 170 V60 A60 60 0 0 1 60 0 Z"
+              transform="translate(8 10)" fill="#f7d3dc"/>
+            <path d="M60 0 H640 A60 60 0 0 1 700 60 V260 A60 60 0 0 1 640 320 H60 A60 60 0 0 1 0 260 V236 L-190 212 L0 170 V60 A60 60 0 0 1 60 0 Z"
+              fill="#fffdf5" stroke="#ffb3c7" stroke-width="7" stroke-linejoin="round"/>
+          </svg>
+          <div id="bubbletext" class="abs">
+            <span class="ln" id="ln1"></span>
+            <span class="ln" id="ln2"></span>
+          </div>
+        </div>
+
+        <div id="qmark" class="abs"><div class="disc"></div><div class="q">？</div></div>
+      </div>
+
+      <div id="caption"><span id="captext"><span id="capmark"></span><span class="t">強すぎて、敵がかわいそう。</span></span></div>
+    </div>
+
+    <script>
+      (function () {
+        // split typewriter lines into chars
+        function split(id, text) {
+          var el = document.getElementById(id);
+          var arr = Array.from(text);
+          arr.forEach(function (c) {
+            var s = document.createElement("span");
+            s.className = "ch";
+            s.textContent = c;
+            el.appendChild(s);
+          });
+          return el.querySelectorAll(".ch");
+        }
+        var L1 = split("ln1", "え、今の…");
+        var L2 = split("ln2", "技だったの？");
+
+        var tl = gsap.timeline({ paused: true });
+        var O = { transformOrigin: "0px 0px" };
+
+        // ---------- initial states ----------
+        gsap.set("#uarm", { rotation: -35, transformOrigin: "0px 0px" });
+        gsap.set("#farm", { rotation: -131, transformOrigin: "0px 0px" });
+        gsap.set("#hHead", { rotation: 13, transformOrigin: "0px 0px" });
+        gsap.set("#hHair", { rotation: 0, transformOrigin: "0px 0px" });
+        gsap.set("#hBand", { rotation: 0, transformOrigin: "0px 0px" });
+        gsap.set("#hScarf", { rotation: 0, transformOrigin: "0px 0px" });
+        gsap.set(".eyeA", { scaleY: 1, transformOrigin: "0px 0px" });
+        gsap.set(".fl", { rotation: 0, transformOrigin: "0px 0px" });
+        gsap.set("#bubble", { scale: 0, opacity: 0 });
+        gsap.set("#qmark", { scale: 0, rotation: -14, transformOrigin: "50% 100%" });
+        gsap.set("#capmark", { scaleX: 0 });
+        gsap.set("#world", { scale: 1, transformOrigin: "42% 62%" });
+
+        // ---------- calm world (0 - 3.6) ----------
+        tl.to("#world", { scale: 1.045, duration: 3.6, ease: "none" }, 0);
+        tl.to("#c1", { x: 70, duration: 3.6, ease: "none" }, 0);
+        tl.to("#c2", { x: -50, duration: 3.6, ease: "none" }, 0);
+        tl.to("#c3", { x: 60, duration: 3.6, ease: "none" }, 0);
+        tl.to("#c4", { x: 38, duration: 3.6, ease: "none" }, 0);
+        tl.to("#c5", { x: -34, duration: 3.6, ease: "none" }, 0);
+        tl.to("#sun", { scale: 1.03, transformOrigin: "50% 50%", duration: 3.6, ease: "sine.inOut" }, 0);
+        tl.to("#hBody", { y: -3, duration: 1.8, ease: "sine.inOut", yoyo: true, repeat: 1 }, 0);
+        // small breeze: hair / band / scarf / flowers
+        tl.to("#hHair", { rotation: 2.2, duration: 1.2, ease: "sine.inOut", yoyo: true, repeat: 2 }, 0.1);
+        tl.to("#hBand", { rotation: 3.5, duration: 0.9, ease: "sine.inOut", yoyo: true, repeat: 3 }, 0);
+        tl.to("#hScarf", { rotation: -2.5, duration: 1.0, ease: "sine.inOut", yoyo: true, repeat: 3 }, 0);
+        tl.to(".fl", { rotation: 4, duration: 1.2, ease: "sine.inOut", yoyo: true, repeat: 2, stagger: 0.25 }, 0);
+
+        // ---------- CUE-A 0.50: slowly turn neck toward camera ----------
+        tl.to("#hHead", { rotation: -1, duration: 0.8, ease: "sine.inOut" }, 0.5);
+        tl.to("#eyeSlit", { opacity: 0, duration: 0.2, ease: "none" }, 0.78);
+        tl.to("#eyes", { opacity: 1, duration: 0.2, ease: "none" }, 0.8);
+        // gaze: first glances at fist spot, then locks onto camera
+        tl.fromTo(".pup", { x: 3, y: 3 }, { x: 0, y: 1, duration: 0.5, ease: "sine.inOut", immediateRender: false }, 0.9);
+        // blinks
+        tl.to(".eyeA", { scaleY: 0.08, duration: 0.1, ease: "sine.inOut", yoyo: true, repeat: 1 }, 1.45);
+        tl.to(".eyeA", { scaleY: 0.08, duration: 0.1, ease: "sine.inOut", yoyo: true, repeat: 1 }, 3.2);
+
+        // ---------- CUE-B 1.00: bubble pops, line 1 typed 1.00 - 1.60 ----------
+        tl.to("#bubble", { opacity: 1, duration: 0.1, ease: "none" }, 1.0);
+        tl.to("#bubble", { scale: 1, duration: 0.42, ease: "back.out(1.6)" }, 1.0);
+        var t1 = [1.00, 1.13, 1.30, 1.42, 1.54];
+        L1.forEach(function (c, i) {
+          tl.fromTo(c, { opacity: 0, y: 6 }, { opacity: 1, y: 0, duration: 0.06, ease: "sine.out" }, t1[i]);
+        });
+
+        // ---------- CUE-C 1.80: line 2 typed 1.80 - 2.60 ----------
+        var t2 = [1.80, 1.94, 2.07, 2.20, 2.34, 2.52];
+        L2.forEach(function (c, i) {
+          tl.fromTo(c, { opacity: 0, y: 6 }, { opacity: 1, y: 0, duration: 0.06, ease: "sine.out" }, t2[i]);
+        });
+
+        // scratch head while thinking (2.0 - 2.9)
+        tl.to("#uarm", { rotation: -144, duration: 0.55, ease: "sine.inOut" }, 2.0);
+        tl.to("#farm", { rotation: -87, duration: 0.55, ease: "sine.inOut" }, 2.0);
+        tl.to("#farm", { rotation: -77, duration: 0.14, ease: "sine.inOut", yoyo: true, repeat: 5 }, 2.6);
+        tl.to("#hHead", { rotation: -6, duration: 0.5, ease: "sine.inOut" }, 2.7);
+        tl.to(".pup", { x: -2, y: -2, duration: 0.4, ease: "sine.inOut" }, 2.7);
+
+        // ---------- CUE-D 2.70: small "?" pops (poyon) ----------
+        tl.to("#qmark", { scale: 1, rotation: -6, duration: 0.55, ease: "elastic.out(1, 0.4)" }, 2.7);
+
+        // ---------- CUE-E 3.00: caption fades in softly ----------
+        tl.fromTo("#captext", { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.5, ease: "sine.out" }, 3.0);
+        tl.to("#capmark", { scaleX: 1, duration: 0.5, ease: "sine.out" }, 3.05);
+
+        window.__timelines["main"] = tl;
+        tl.seek(0);
+      })();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1000" width="800" height="1000">
+  <!-- 魔王「ゾルギア」: 巨大。赤い瞳と胸の核が光る。 -->
+  <path class="cape" d="M10 1000 L120 470 L680 470 L790 1000 L640 940 L560 1000 L400 930 L240 1000 L160 940 Z" fill="#2a0a1c"/>
+  <path class="torso" d="M140 1000 L190 520 L290 420 L510 420 L610 520 L660 1000 Z" fill="#14050f" stroke="#ff2a4d" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M250 560 L550 560 M240 650 L560 650 M232 740 L568 740" stroke="#ff2a4d" stroke-opacity=".35" stroke-width="5"/>
+  <path class="core" d="M400 600 L428 650 L400 700 L372 650 Z" fill="#ff2a4d"/>
+  <path class="pauldronL" d="M44 520 L190 420 L230 570 L90 620 Z M78 508 L30 410 L140 470 Z M120 470 L108 366 L184 436 Z" fill="#14050f" stroke="#ff2a4d" stroke-width="4" stroke-linejoin="round"/>
+  <path class="pauldronR" d="M756 520 L610 420 L570 570 L710 620 Z M722 508 L770 410 L660 470 Z M680 470 L692 366 L616 436 Z" fill="#14050f" stroke="#ff2a4d" stroke-width="4" stroke-linejoin="round"/>
+  <path class="head" d="M300 430 L292 290 Q400 246 508 290 L500 430 Z" fill="#14050f" stroke="#ff2a4d" stroke-width="4" stroke-linejoin="round"/>
+  <path class="hornL" d="M306 312 C214 300 112 232 86 92 C168 152 258 188 352 246 Z" fill="#14050f" stroke="#ff2a4d" stroke-width="4" stroke-linejoin="round"/>
+  <path class="hornR" d="M494 312 C586 300 688 232 714 92 C632 152 542 188 448 246 Z" fill="#14050f" stroke="#ff2a4d" stroke-width="4" stroke-linejoin="round"/>
+  <path class="crown" d="M330 292 L350 214 L376 280 L400 190 L424 280 L450 214 L470 292 Z" fill="#14050f" stroke="#ff2a4d" stroke-width="3" stroke-linejoin="round"/>
+  <path class="eyeL" d="M338 346 L388 360 L383 380 L334 366 Z" fill="#ff2a4d"/>
+  <path class="eyeR" d="M462 346 L412 360 L417 380 L466 366 Z" fill="#ff2a4d"/>
+  <path d="M352 416 L376 398 L400 418 L424 398 L448 416" stroke="#ff2a4d" stroke-width="6" fill="none" stroke-linejoin="round"/>
+</svg>

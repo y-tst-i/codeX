@@ -1,0 +1,362 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <script src="assets/gsap.min.js"></script>
+    <style>
+      @font-face { font-family: "RocknRoll One"; src: url("assets/fonts/RocknRollOne.ttf") format("truetype"); font-weight: 400; font-style: normal; }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: #fffdf5; }
+      #root { position: relative; width: 100%; height: 100%; overflow: hidden; background: #fffdf5;
+        font-family: "RocknRoll One", "Noto Sans JP", sans-serif; }
+      #page { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; }
+      .t { position: absolute; white-space: nowrap; line-height: 1; font-weight: 400; }
+      #tape { left: 70px; top: 54px; padding: 20px 56px 24px 40px; background: #ff2a4d; color: #fffdf5; font-size: 88px;
+        clip-path: polygon(0 8%, 3% 0, 6% 10%, 9% 0, 100% 0, 97% 25%, 100% 50%, 97% 75%, 100% 100%, 8% 100%, 5% 88%, 2% 100%, 0 92%, 2% 50%);
+        transform-origin: 0 50%; }
+      #tapeWrap { position: absolute; left: 0; top: 0; filter: drop-shadow(8px 8px 0 #0a0a12); }
+      #word { left: 330px; top: 722px; font-size: 270px; isolation: isolate; color: #ff2a4d; letter-spacing: 8px; transform-origin: 50% 50%;
+        -webkit-text-stroke: 26px #fffdf5; paint-order: stroke fill; z-index: 5; }
+      #word::before { content: attr(data-t); position: absolute; left: 0; top: 0; z-index: -1; letter-spacing: 8px;
+        -webkit-text-stroke: 62px #0a0a12; color: #0a0a12; }
+      #end { left: 1290px; top: 800px; padding: 22px 36px 28px; font-size: 118px; color: #fffdf5; background: #0a0a12; z-index: 6;
+        box-shadow: 0 0 0 8px #0a0a12, 0 0 0 14px #fffdf5, 0 0 0 22px #0a0a12; transform-origin: 50% 50%; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="0.8" data-width="1920" data-height="1080">
+      <svg id="page" viewBox="0 0 1920 1080" width="1920" height="1080" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <filter id="paper" x="0" y="0" width="100%" height="100%">
+            <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="4" result="n"/>
+            <feColorMatrix in="n" type="matrix" values="0 0 0 0 0.45  0 0 0 0 0.36  0 0 0 0 0.2  0 0 0 0.16 0"/>
+          </filter>
+          <pattern id="h1" width="24" height="24" patternUnits="userSpaceOnUse" patternTransform="rotate(28)"><circle cx="12" cy="12" r="2.6" fill="#ff5a7e"/></pattern>
+          <pattern id="h2" width="24" height="24" patternUnits="userSpaceOnUse" patternTransform="rotate(28)"><circle cx="12" cy="12" r="5" fill="#ff5a7e"/></pattern>
+          <pattern id="h3" width="24" height="24" patternUnits="userSpaceOnUse" patternTransform="rotate(28)"><circle cx="12" cy="12" r="7.6" fill="#ff5a7e"/></pattern>
+          <pattern id="h4" width="24" height="24" patternUnits="userSpaceOnUse" patternTransform="rotate(28)"><circle cx="12" cy="12" r="10.4" fill="#ff5a7e"/></pattern>
+          <pattern id="k1" width="14" height="14" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><circle cx="7" cy="7" r="2.4" fill="#0a0a12"/></pattern>
+          <clipPath id="cp1"><polygon id="pg1" points=""/></clipPath>
+          <clipPath id="cp2"><polygon id="pg2" points=""/></clipPath>
+          <clipPath id="cp3"><polygon id="pg3" points=""/></clipPath>
+          <clipPath id="cp4"><polygon id="pg4" points=""/></clipPath>
+        </defs>
+        <rect width="1920" height="1080" fill="#fffdf5"/>
+        <rect width="1920" height="1080" filter="url(#paper)"/>
+
+        <g id="wash"></g>
+        <g id="shake">
+          <!-- P1 : magic circle -->
+          <g clip-path="url(#cp1)"><g id="p1"></g></g>
+          <!-- P2 : palm -->
+          <g clip-path="url(#cp2)"><g id="p2"></g></g>
+          <!-- P3 : flying wizard -->
+          <g clip-path="url(#cp3)"><g id="p3"></g></g>
+          <!-- P4 : aftermath -->
+          <g clip-path="url(#cp4)"><g id="p4"></g></g>
+          <g fill="none" stroke="#0a0a12" stroke-width="11" stroke-linejoin="miter">
+            <polygon id="bd1" points=""/><polygon id="bd2" points=""/><polygon id="bd3" points=""/><polygon id="bd4" points=""/>
+          </g>
+        </g>
+      </svg>
+      <div id="tapeWrap"><div id="tape" class="t">大魔法は、</div></div>
+      <div id="word" class="t" data-t="ビンタ">ビンタ</div>
+      <div id="end" class="t">で終了。</div>
+    </div>
+    <script>
+      const NS = "http://www.w3.org/2000/svg";
+      const INK = "#0a0a12", PAPER = "#fffdf5", RED = "#ff2a4d", PINK = "#ff8fb0", PALE = "#ffe3ea", SKIN = "#ffe9d6";
+      const $ = (id) => document.getElementById(id);
+      function rng(seed) { let s = seed >>> 0; return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; }
+      function el(parent, tag, attrs, html) {
+        const e = document.createElementNS(NS, tag);
+        for (const k in attrs) e.setAttribute(k, attrs[k]);
+        if (html) e.innerHTML = html;
+        parent.appendChild(e); return e;
+      }
+
+      // ---------- panel geometry ----------
+      const PANELS = {
+        1: [[48, 48], [900, 48], [815, 595], [48, 571]],
+        2: [[948, 48], [1872, 48], [1872, 631], [863, 597]],
+        3: [[48, 599], [1230, 640], [1150, 1032], [48, 1032]],
+        4: [[1280, 641], [1872, 659], [1872, 1032], [1200, 1032]]
+      };
+      const ANG = { 1: 62, 2: 118, 3: 70, 4: 112 }; // slash angle per panel (deg)
+      function clipHalf(poly, nx, ny, d) { // keep n.p <= d
+        const out = [];
+        for (let i = 0; i < poly.length; i++) {
+          const a = poly[i], b = poly[(i + 1) % poly.length];
+          const da = nx * a[0] + ny * a[1] - d, db = nx * b[0] + ny * b[1] - d;
+          if (da <= 0) out.push(a);
+          if ((da < 0 && db > 0) || (da > 0 && db < 0)) { const t = da / (da - db); out.push([a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]); }
+        }
+        return out;
+      }
+      function slashed(i, q) {
+        const poly = PANELS[i];
+        if (q <= 0) return [];
+        if (q >= 1) return poly;
+        let cx = 0, cy = 0; poly.forEach(p => { cx += p[0]; cy += p[1]; }); cx /= 4; cy /= 4;
+        const a = ANG[i] * Math.PI / 180, nx = Math.cos(a + Math.PI / 2), ny = Math.sin(a + Math.PI / 2);
+        const r = q * q * 900 + 14, c0 = nx * cx + ny * cy;
+        let p = clipHalf(poly, nx, ny, c0 + r);
+        p = clipHalf(p, -nx, -ny, -(c0 - r));
+        return p;
+      }
+      function setPoly(id, pts) { $(id).setAttribute("points", pts.map(p => p[0].toFixed(1) + "," + p[1].toFixed(1)).join(" ")); }
+
+      // ---------- static builders ----------
+      const g1 = $("p1"), g2 = $("p2"), g3 = $("p3"), g4 = $("p4");
+
+      function halftoneBands(parent, x, y, w, h, vertical, reverse) {
+        const ids = reverse ? ["h4", "h3", "h2", "h1"] : ["h1", "h2", "h3", "h4"];
+        for (let i = 0; i < 4; i++) {
+          if (vertical) el(parent, "rect", { x: x, y: y + i * h / 4, width: w, height: h / 4 + 1, fill: "url(#" + ids[i] + ")" });
+          else el(parent, "rect", { x: x + i * w / 4, y: y, width: w / 4 + 1, height: h, fill: "url(#" + ids[i] + ")" });
+        }
+      }
+
+      (function () { const w = $("wash"); el(w, "rect", { x: 0, y: 540, width: 1920, height: 540, fill: "#fff1f4" }); halftoneBands(w, 0, 540, 1920, 540, true, false); })();
+      // P1: magic circle
+      el(g1, "rect", { x: 40, y: 40, width: 870, height: 560, fill: "#fff1f4" });
+      halftoneBands(g1, 40, 40, 870, 560, false, true);
+      el(g1, "circle", { cx: 470, cy: 312, r: 232, fill: PAPER, stroke: INK, "stroke-width": 9 });
+      const mc = el(g1, "g", { id: "mc" });
+      const ringA = el(mc, "g"), ringB = el(mc, "g"), ringC = el(mc, "g"), core = el(mc, "g");
+      el(ringA, "circle", { r: 208, fill: "none", stroke: INK, "stroke-width": 10 });
+      el(ringA, "circle", { r: 190, fill: "none", stroke: INK, "stroke-width": 4, "stroke-dasharray": "4 15" });
+      (function () {
+        const r = rng(5);
+        for (let i = 0; i < 18; i++) {
+          const a = i * 360 / 18, k = Math.floor(r() * 4);
+          const d = ["M0,-15 L0,15 M-10,-6 L10,-6", "M-10,-14 L10,14 M-10,14 L10,-14", "M-10,-12 L10,-12 L0,14 Z", "M0,-15 L0,15 M-11,4 L0,-8 L11,4"][k];
+          el(ringB, "path", { d: d, transform: "rotate(" + a + ") translate(0,-163)", fill: "none", stroke: INK, "stroke-width": 6, "stroke-linecap": "round", "stroke-linejoin": "round" });
+        }
+        el(ringB, "circle", { r: 140, fill: "none", stroke: INK, "stroke-width": 6 });
+        el(ringB, "circle", { r: 184, fill: "none", stroke: INK, "stroke-width": 3 });
+      })();
+      const tri = (rad, rot) => { let p = []; for (let i = 0; i < 3; i++) { const a = (rot + i * 120 - 90) * Math.PI / 180; p.push((Math.cos(a) * rad).toFixed(1) + "," + (Math.sin(a) * rad).toFixed(1)); } return p.join(" "); };
+      el(ringC, "polygon", { points: tri(128, 0), fill: "none", stroke: INK, "stroke-width": 8, "stroke-linejoin": "miter" });
+      el(ringC, "polygon", { points: tri(128, 180), fill: "none", stroke: INK, "stroke-width": 8, "stroke-linejoin": "miter" });
+      el(core, "circle", { r: 62, fill: RED, stroke: INK, "stroke-width": 8 });
+      el(core, "circle", { r: 38, fill: PAPER, stroke: INK, "stroke-width": 5 });
+      el(core, "circle", { r: 16, fill: RED });
+      const sparks1 = el(g1, "g", { id: "sp1" });
+
+      // P2: palm + wizard face
+      el(g2, "rect", { x: 940, y: 40, width: 940, height: 600, fill: PAPER });
+      halftoneBands(g2, 940, 40, 940, 600, true, false);
+      const lines2 = el(g2, "path", { id: "ln2", d: "", fill: INK });
+      const burstG = el(g2, "g", { id: "burst" });
+      const faceG = el(g2, "g", { id: "face" });
+      (function () {
+        // hat
+        el(faceG, "path", { d: "M-150,-90 C-100,-190 -40,-300 60,-360 C70,-250 120,-170 150,-100 Z", fill: RED, stroke: INK, "stroke-width": 9, "stroke-linejoin": "round" });
+        el(faceG, "path", { d: "M40,-250 l9,22 l24,2 l-18,16 l6,24 l-21,-13 l-21,13 l6,-24 l-18,-16 l24,-2 Z", fill: PAPER, stroke: INK, "stroke-width": 4 });
+        el(faceG, "ellipse", { cx: 0, cy: -92, rx: 200, ry: 40, fill: "#c4112f", stroke: INK, "stroke-width": 9 });
+        el(faceG, "circle", { cx: 0, cy: 10, r: 142, fill: SKIN, stroke: INK, "stroke-width": 9 });
+        el(faceG, "path", { d: "M-20,20 q-24,38 4,52 q14,-6 8,-26", fill: "none", stroke: INK, "stroke-width": 6, "stroke-linecap": "round" }); // nose
+        // beard
+        el(faceG, "path", { d: "M-130,60 C-100,200 -40,240 0,262 C40,240 100,200 130,60 C90,100 60,90 0,96 C-60,90 -90,100 -130,60 Z", fill: PAPER, stroke: INK, "stroke-width": 9, "stroke-linejoin": "round" });
+        el(faceG, "path", { d: "M-60,150 q10,30 0,60 M0,150 q8,30 0,70 M60,150 q-10,30 0,60", fill: "none", stroke: INK, "stroke-width": 4, "stroke-linecap": "round" });
+      })();
+      const eyesA = el(faceG, "g", { id: "eyesA" }), eyesB = el(faceG, "g", { id: "eyesB" }), cheek = el(faceG, "g", { id: "cheek" });
+      [[-56, -6], [56, -6]].forEach((p, i) => {
+        el(eyesA, "circle", { cx: p[0], cy: p[1], r: 27, fill: PAPER, stroke: INK, "stroke-width": 7 });
+        el(eyesA, "circle", { cx: p[0] + (i ? -4 : 4), cy: p[1] + 2, r: 9, fill: INK });
+        el(eyesA, "path", { d: "M" + (p[0] - 34) + "," + (p[1] - 48 + (i ? 14 : 0)) + " L" + (p[0] + 34) + "," + (p[1] - 48 + (i ? 0 : 14)), stroke: INK, "stroke-width": 8, "stroke-linecap": "round" });
+      });
+      el(eyesA, "ellipse", { cx: 0, cy: 78, rx: 12, ry: 15, fill: INK });
+      el(eyesB, "path", { d: "M-84,-34 L-34,-4 L-84,26", fill: "none", stroke: INK, "stroke-width": 12, "stroke-linecap": "round", "stroke-linejoin": "round" });
+      el(eyesB, "path", { d: "M84,-34 L34,-4 L84,26", fill: "none", stroke: INK, "stroke-width": 12, "stroke-linecap": "round", "stroke-linejoin": "round" });
+      el(eyesB, "path", { d: "M-44,76 q14,-22 28,0 q14,22 28,0 q14,-22 28,0 L44,100 q-44,26 -88,0 Z", fill: INK, stroke: INK, "stroke-width": 6, "stroke-linejoin": "round" });
+      el(cheek, "ellipse", { cx: -86, cy: 36, rx: 52, ry: 62, fill: RED, opacity: 0.8 });
+      [-30, -6, 18, 42].forEach((y, i) => el(cheek, "rect", { x: -62 + i * 2, y: y - 34, width: 54, height: 12, rx: 6, fill: RED, opacity: 0.8 }));
+      // hand
+      const handG = el(g2, "g", { id: "hand" });
+      (function () {
+        el(handG, "path", { d: "M-96,150 L-120,900 L120,900 L96,150 Z", fill: INK, stroke: INK, "stroke-width": 6 }); // sleeve
+        el(handG, "rect", { x: -108, y: 150, width: 216, height: 44, fill: RED, stroke: INK, "stroke-width": 8 });
+        [[-93, -6], [-31, -2], [31, 2], [91, 6]].forEach((f, i) => {
+          const len = i === 1 || i === 2 ? 150 : 128 - (i === 3 ? 12 : 0);
+          el(handG, "rect", { x: f[0] - 29, y: -len, width: 58, height: len + 70, rx: 29, fill: SKIN, stroke: INK, "stroke-width": 8, transform: "rotate(" + f[1] + " " + f[0] + " 40)" });
+        });
+        el(handG, "rect", { x: -112, y: -16, width: 224, height: 178, rx: 56, fill: SKIN, stroke: INK, "stroke-width": 8 });
+        el(handG, "rect", { x: 80, y: 40, width: 128, height: 54, rx: 27, fill: SKIN, stroke: INK, "stroke-width": 8, transform: "rotate(-48 104 72)" });
+        el(handG, "path", { d: "M-70,70 q40,24 90,6 M-40,110 q36,16 70,2", fill: "none", stroke: "#e98a8a", "stroke-width": 6, "stroke-linecap": "round" });
+        el(handG, "path", { d: "M-90,-6 L-90,70 M-30,-10 L-30,70 M30,-10 L30,70 M90,-4 L90,70", stroke: INK, "stroke-width": 5, opacity: 0.0 });
+      })();
+      const smear2 = el(g2, "path", { id: "sm2", d: "", fill: INK });
+
+      // P3: flying wizard
+      el(g3, "rect", { x: 40, y: 590, width: 1210, height: 460, fill: "#fff1f4" });
+      halftoneBands(g3, 40, 590, 1210, 460, true, true);
+      const lines3 = el(g3, "path", { id: "ln3", d: "", fill: INK });
+      const wiz = el(g3, "g", { id: "wiz" });
+      (function () {
+        el(wiz, "path", { d: "M-34,10 L-76,70 L-60,78 L-8,36", fill: INK, stroke: INK, "stroke-width": 6, "stroke-linejoin": "round" });
+        el(wiz, "path", { d: "M-30,-4 L-100,-34 L-110,-14 L-34,28", fill: RED, stroke: INK, "stroke-width": 7, "stroke-linejoin": "round" });
+        el(wiz, "path", { d: "M-34,-12 L34,-12 L56,96 L-56,96 Z", fill: "#7a1d86", stroke: INK, "stroke-width": 7, "stroke-linejoin": "round" });
+        el(wiz, "path", { d: "M30,-4 L100,-44 L112,-26 L38,26", fill: RED, stroke: INK, "stroke-width": 7, "stroke-linejoin": "round" });
+        el(wiz, "path", { d: "M-40,96 L-50,150 L-24,150 L-6,96 M14,96 L40,150 L66,142 L48,96", fill: INK, stroke: INK, "stroke-width": 6, "stroke-linejoin": "round" });
+        el(wiz, "path", { d: "M-34,-52 L10,-130 L36,-52 Z", fill: RED, stroke: INK, "stroke-width": 7, "stroke-linejoin": "round" });
+        el(wiz, "ellipse", { cx: 0, cy: -50, rx: 56, ry: 12, fill: "#c4112f", stroke: INK, "stroke-width": 7 });
+        el(wiz, "circle", { cx: 0, cy: -22, r: 36, fill: SKIN, stroke: INK, "stroke-width": 7 });
+        el(wiz, "path", { d: "M-34,-6 C-28,26 0,34 0,40 C0,34 28,26 34,-6 C16,6 -16,6 -34,-6 Z", fill: PAPER, stroke: INK, "stroke-width": 6, "stroke-linejoin": "round" });
+        el(wiz, "path", { d: "M-24,-30 l12,8 l-12,8 M24,-30 l-12,8 l12,8", fill: "none", stroke: INK, "stroke-width": 5, "stroke-linecap": "round", "stroke-linejoin": "round" });
+      })();
+
+      // P4: aftermath
+      el(g4, "rect", { x: 1190, y: 630, width: 700, height: 420, fill: PALE });
+      halftoneBands(g4, 1190, 630, 700, 420, false, false);
+      const twink = el(g4, "g", { id: "twink" });
+      el(twink, "path", { d: "M0,-90 C8,-20 20,-8 90,0 C20,8 8,20 0,90 C-8,20 -20,8 -90,0 C-20,-8 -8,-20 0,-90 Z", fill: PAPER, stroke: INK, "stroke-width": 7, "stroke-linejoin": "round" });
+      const hat = el(g4, "g", { id: "hat" });
+      el(hat, "path", { d: "M-34,40 L6,-56 L38,40 Z", fill: RED, stroke: INK, "stroke-width": 7, "stroke-linejoin": "round" });
+      el(hat, "ellipse", { cx: 0, cy: 42, rx: 60, ry: 13, fill: "#c4112f", stroke: INK, "stroke-width": 7 });
+
+      // ---------- dynamic helpers ----------
+      function radial(cx, cy, r0, n, f, seed, spread) {
+        const r = rng(seed); let d = "";
+        for (let i = 0; i < n; i++) {
+          const a = i * Math.PI * 2 / n + (r() - 0.5) * 0.06 + ((f % 2) ? 0.012 : -0.012);
+          const w = 0.006 + r() * (spread || 0.02), in0 = r0 + r() * 90, out = 1500;
+          const P = (aa, rr) => (cx + Math.cos(aa) * rr).toFixed(1) + "," + (cy + Math.sin(aa) * rr * 0.9).toFixed(1);
+          d += "M" + P(a, in0) + "L" + P(a - w, out) + "L" + P(a + w, out) + "Z";
+        }
+        return d;
+      }
+      function hlines(x0, x1, y0, y1, n, f, seed, len, speed, dir) {
+        const r = rng(seed); let d = "";
+        for (let i = 0; i < n; i++) {
+          const y = y0 + r() * (y1 - y0), L = len * (0.4 + r() * 0.9), t = 3 + r() * 6;
+          const sx = ((r() * (x1 - x0) + f * speed * (0.6 + r() * 0.8) * dir) % (x1 - x0 + L)) + x0 - L * (dir < 0 ? 0 : 0);
+          d += "M" + sx.toFixed(1) + "," + y.toFixed(1) + "l" + L.toFixed(1) + ",0 l" + (-L * 0.9).toFixed(1) + "," + t.toFixed(1) + " Z";
+        }
+        return d;
+      }
+      function jag(cx, cy, rIn, rOut, n, rot) {
+        const pts = [];
+        for (let i = 0; i < n * 2; i++) { const a = rot + i * Math.PI / n, r = i % 2 ? rIn : rOut; pts.push((cx + Math.cos(a) * r).toFixed(1) + "," + (cy + Math.sin(a) * r * 0.86).toFixed(1)); }
+        return pts.join(" ");
+      }
+
+      const $tape = $("tape"), $word = $("word"), $end = $("end"), $shake = $("shake");
+      const TAPE_X = [-640, -380, -190, -60, 0];
+      const Q = { 1: [1], 2: [0.2, 0.56, 1], 3: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.18, 0.56, 1], 4: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.18, 0.56, 1] };
+      const FPS = 30;
+
+      function draw(tt) {
+        const f = Math.max(0, Math.min(23, Math.round(tt * FPS)));
+        // panels
+        for (let i = 1; i <= 4; i++) {
+          const arr = Q[i], q = arr[Math.min(f, arr.length - 1)];
+          const pts = slashed(i, q);
+          setPoly("pg" + i, pts); setPoly("bd" + i, pts);
+        }
+        // shake (2 hits max): impact f8-f10, end-card land f18-f19
+        let sx = 0, sy = 0;
+        if (f === 8) { sx = -14; sy = 8; } else if (f === 9) { sx = 12; sy = -8; } else if (f === 10) { sx = -6; sy = 4; }
+        if (f === 18) { sx = 4; sy = 10; } else if (f === 19) { sx = -2; sy = -4; }
+        $shake.setAttribute("transform", "translate(" + sx + " " + sy + ")");
+
+        // P1 magic circle
+        const hit = f >= 8;
+        const spin = hit ? 7 * 6 - (f - 7) * 1.5 : f * 6;
+        ringA.setAttribute("transform", "rotate(" + spin + ")");
+        ringB.setAttribute("transform", "rotate(" + (-spin * 1.6) + ")");
+        ringC.setAttribute("transform", "rotate(" + (spin * 2.2) + ")");
+        const pulse = hit ? 0.9 : 1 + 0.05 * Math.sin(f * 1.4) + f * 0.012;
+        core.setAttribute("transform", "scale(" + pulse.toFixed(3) + ")");
+        $("mc").setAttribute("transform", "translate(470 312)" + (hit ? " scale(" + (0.97 - Math.min(f - 8, 6) * 0.004).toFixed(3) + ")" : ""));
+        $("mc").setAttribute("opacity", hit ? (f < 12 ? 0.8 : 0.55) : 1);
+        // charge sparks / fizzle
+        {
+          let d = ""; const r = rng(31 + (hit ? f : 0));
+          const n = hit ? 7 : 14;
+          for (let i = 0; i < n; i++) {
+            const a = r() * Math.PI * 2, rr = (hit ? 160 : 90) + r() * (hit ? 120 : 160) * (1 + (hit ? 0 : f / 8));
+            const x = 470 + Math.cos(a) * rr, y = 312 + Math.sin(a) * rr * 0.9, s = 8 + r() * 12;
+            d += "M" + (x - s).toFixed(0) + "," + y.toFixed(0) + "h" + (2 * s).toFixed(0) + "M" + x.toFixed(0) + "," + (y - s).toFixed(0) + "v" + (2 * s).toFixed(0);
+          }
+          sparks1.innerHTML = '<path d="' + d + '" stroke="' + (hit ? INK : RED) + '" stroke-width="6" stroke-linecap="round" fill="none"/>';
+        }
+
+        // P2 : hand + face + lines
+        let hx, hy = 372;
+        if (f <= 4) hx = 640; else hx = [860, 1090, 1300, 1352, 1358, 1364, 1370][Math.min(f - 5, 6)];
+        if (f > 10) hx = 1370 + Math.min(f - 10, 8) * 5;
+        const hrot = 78 + (f >= 8 ? -3 : 0);
+        $("hand").setAttribute("transform", "translate(" + hx + " " + (hy + (f === 9 ? -8 : f === 10 ? 6 : 0)) + ") rotate(" + hrot + ")");
+        // face
+        let fx = 1520, fy = 400, fsx = 1, fsy = 1, frot = 0;
+        if (f === 7) { fsx = 0.93; fx = 1530; }
+        else if (f === 8) { fsx = 0.74; fsy = 1.06; fx = 1560; frot = 6; }
+        else if (f === 9) { fx = 1700; fy = 380; fsx = 0.85; frot = 24; }
+        else if (f === 10) { fx = 1960; fy = 300; frot = 52; }
+        else if (f > 10) { fx = 2200; }
+        $("face").setAttribute("transform", "translate(" + fx + " " + fy + ") rotate(" + frot + ") scale(" + fsx + " " + fsy + ") scale(0.82)");
+        $("eyesA").setAttribute("opacity", f >= 8 ? 0 : 1);
+        $("eyesB").setAttribute("opacity", f >= 8 ? 1 : 0);
+        $("cheek").setAttribute("opacity", f >= 8 ? 1 : 0);
+        // lines in P2
+        if (f < 8) {
+          $("ln2").setAttribute("d", hlines(940, 1880, 60, 620, 26, f, 9, 520, 150, 1));
+          $("ln2").setAttribute("fill", INK);
+        } else {
+          $("ln2").setAttribute("d", radial(1470, 350, 300 + (f < 11 ? 0 : 20), 78, f, 12 + (f % 2), 0.02));
+        }
+        // smear behind the hand just before contact
+        if (f >= 5 && f <= 7) {
+          $("sm2").setAttribute("d", hlines(940, 1500, 150, 600, 9, f, 77 + f, 420, 0, 1).replace(/M/g, "M"));
+        } else $("sm2").setAttribute("d", "");
+        // impact burst
+        let bs = "";
+        if (f === 8) bs = '<polygon points="' + jag(1470, 352, 170, 330, 12, 0.1) + '" fill="' + PAPER + '" stroke="' + INK + '" stroke-width="9" stroke-linejoin="miter"/><polygon points="' + jag(1470, 352, 90, 200, 12, 0.1) + '" fill="' + RED + '"/>';
+        if (f === 9) bs = '<polygon points="' + jag(1470, 352, 210, 410, 12, 0.3) + '" fill="' + PINK + '" stroke="' + INK + '" stroke-width="9" stroke-linejoin="miter"/><polygon points="' + jag(1470, 352, 120, 260, 12, 0.3) + '" fill="' + PAPER + '"/>';
+        if (f === 10) bs = '<polygon points="' + jag(1470, 352, 160, 300, 12, 0.5) + '" fill="' + PAPER + '" stroke="' + INK + '" stroke-width="7" stroke-linejoin="miter"/>';
+        if (f === 11) bs = '<polygon points="' + jag(1470, 352, 90, 170, 12, 0.7) + '" fill="none" stroke="' + INK + '" stroke-width="6" stroke-linejoin="miter"/>';
+        $("burst").innerHTML = bs;
+
+        // P3 : wizard flying
+        const wf = Math.max(0, f - 11);
+        const wx = 230 + wf * 118, wy = 745 - wf * 4, wr = wf * 38;
+        $("wiz").setAttribute("transform", "translate(" + wx + " " + wy + ") rotate(" + wr + ") scale(0.62)");
+        $("wiz").setAttribute("opacity", f >= 10 ? 1 : 0);
+        $("ln3").setAttribute("d", hlines(40, 1250, 600, 1030, 40, f, 21, 560, 120, 1));
+
+        // P4
+        const tw = f >= 15 ? 1 : 0;
+        const ts = f >= 15 ? [0.5, 0.9, 1.15, 1, 1.1, 1, 1.12, 1, 1][Math.min(f - 15, 8)] : 0;
+        $("twink").setAttribute("transform", "translate(1700 760) scale(" + (ts * 0.9).toFixed(2) + ")");
+        $("twink").setAttribute("opacity", tw);
+        const hf = Math.max(0, f - 13);
+        $("hat").setAttribute("transform", "translate(" + (1360 + hf * 14) + " " + (700 + hf * 7) + ") rotate(" + (hf * 52) + ") scale(1.35)");
+        $("hat").setAttribute("opacity", f >= 13 ? 1 : 0);
+        $("wash").setAttribute("opacity", f >= 10 ? 0 : 1);
+
+        // DOM overlays
+        $tape.style.transform = "translateX(" + TAPE_X[Math.min(f, 4)] + "px) rotate(-4deg)";
+        // word: slides in from the right with a skewed smear, readable by f13
+        const WX = [null, null, null, null, null, null, null, null, null, null, null, 1100, 520, 0, -26, 0];
+        const wxv = f < 11 ? null : (f > 15 ? 0 : WX[f]);
+        if (wxv === null) { $word.style.visibility = "hidden"; }
+        else { $word.style.visibility = "visible"; $word.style.transform = "translateX(" + wxv + "px) rotate(-5deg) skewX(" + (f === 11 ? -22 : f === 12 ? -12 : 0) + "deg)"; }
+        // end card: stamped down, settles at f18
+        const EY = [null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, -300, -170, -60, 0, 0];
+        const ev = f < 15 ? null : (f > 18 ? 0 : EY[f]);
+        if (ev === null) $end.style.visibility = "hidden";
+        else { $end.style.visibility = "visible"; $end.style.transform = "translateY(" + ev + "px) rotate(" + (f === 15 ? -14 : f === 16 ? -9 : f === 17 ? -6 : -3) + "deg)"; }
+      }
+
+      const st = { t: 0 };
+      const tl = gsap.timeline({ paused: true });
+      tl.to(st, { t: 0.8, duration: 0.8, ease: function (p) { draw(p * 0.8); return p; } }, 0);
+      draw(0);
+      window.__timelines["main"] = tl;
+      tl.seek(0);
+    </script>
+  </body>
+</html>
