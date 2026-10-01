@@ -1,3 +1,4 @@
+import { measureFrozen, type FrozenReport } from "./frames";
 import { VIDEO } from "./knowledge";
 
 /** HTML側が公開するモーショングラフィックスの契約 */
@@ -143,6 +144,8 @@ export interface ValidationReport {
   problems: string[];
   warnings: string[];
   msPerFrame: number;
+  /** 止まっている時間の計測結果（計測できなかったら null） */
+  frozen: FrozenReport | null;
 }
 
 /** 書き出し前の動作検証（決定性・サイズ・尺・描画速度・t=0が真っ白/真っ黒でないか） */
@@ -160,6 +163,7 @@ export function validateGraphic(loaded: LoadedGraphic, expectedDuration: number)
   }
 
   let msPerFrame = 0;
+  let frozen: FrozenReport | null = null;
   try {
     const probe = Math.min(1.234, Math.max(0, expectedDuration / 3));
     mg.render(probe);
@@ -177,10 +181,20 @@ export function validateGraphic(loaded: LoadedGraphic, expectedDuration: number)
     for (let i = 0; i < samples; i++) mg.render((expectedDuration * i) / samples);
     msPerFrame = (performance.now() - started) / samples;
     if (msPerFrame > 33) warnings.push(`1フレームの描画に${msPerFrame.toFixed(0)}msかかります。プレビューがカクつく可能性があります（書き出しは問題なし）`);
+
+    // 画が止まっている時間を測る（目安：30秒あたり合計1秒以内、1回0.6秒まで）
+    frozen = measureFrozen((t) => mg.render(t), canvas, expectedDuration);
+    const allowance = expectedDuration / 30;
+    if (frozen.longStretches.length > 0 || frozen.frozenSeconds > allowance) {
+      const where = frozen.longStretches.map((s) => `${s.start.toFixed(1)}〜${s.end.toFixed(1)}s`).join("、");
+      warnings.push(
+        `画が止まっている時間が合計${frozen.frozenSeconds.toFixed(1)}秒あります${where ? `（0.6秒以上止まる区間：${where}）` : ""}。離脱の原因になるので「磨き込み」で動きを足しましょう`
+      );
+    }
   } catch (error) {
     problems.push(`render(t) でエラー: ${(error as Error).message}`);
   }
 
   problems.push(...loaded.errors().map((message) => `実行時エラー: ${message}`));
-  return { ok: problems.length === 0, problems, warnings, msPerFrame };
+  return { ok: problems.length === 0, problems, warnings, msPerFrame, frozen };
 }

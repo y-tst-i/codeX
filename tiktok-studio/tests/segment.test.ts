@@ -60,3 +60,14 @@ describe("回数制限", () => {
     expect(quotaDay(new Date("2026-09-30T08:00:00Z"))).toBe("2026-09-30"); // 日本時間17時
   });
 });
+
+describe("止まっている時間の計測", () => {
+  it("差分が小さいコマを合計し、0.6秒を超える停止区間を拾う（最後の読ませる部分は除く）", async () => {
+    const { summarizeFrozen } = await import("../src/lib/frames");
+    // 10fps：0〜1秒は動く、1.0〜2.0秒（10コマ）止まる、2〜3秒動く、最後の1秒止まる
+    const diffs = [...Array(10).fill(5), ...Array(10).fill(0.1), ...Array(10).fill(5), ...Array(10).fill(0.1)];
+    const report = summarizeFrozen(diffs, 10, 4);
+    expect(report.frozenSeconds).toBeCloseTo(2, 1);
+    expect(report.longStretches).toEqual([{ start: 1, end: 2.1 }]);
+  });
+});

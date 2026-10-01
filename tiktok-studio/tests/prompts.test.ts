@@ -87,3 +87,22 @@ describe("演出テクニック", () => {
     }
   });
 });
+
+describe("批評と映像の文法", () => {
+  it("モーションプロンプトに映像の文法と絵コンテ表の指示が入る", () => {
+    const timeline = buildTimeline(script.scenes, [2, 1.5]);
+    const prompt = buildMotionPrompt({ concept, script, timeline });
+    expect(prompt).toContain("前景が転換になる");
+    expect(prompt).toContain("60〜85%");
+    expect(prompt).toContain("絵コンテ表");
+  });
+
+  it("批評プロンプトに予定と計測値が入る", async () => {
+    const { buildCriticPrompt } = await import("../src/lib/prompts");
+    const timeline = buildTimeline(script.scenes, [2, 1.5]);
+    const prompt = buildCriticPrompt({ concept, script, timeline }, { frozenSeconds: 1.2, longStretches: [{ start: 3, end: 3.8 }] });
+    expect(prompt).toContain("作ったのはあなたではありません");
+    expect(prompt).toContain("青？");
+    expect(prompt).toContain("3.0〜3.8s");
+  });
+});

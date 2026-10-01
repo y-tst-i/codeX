@@ -5,6 +5,8 @@ export interface ClaudeCallOptions {
   settings: ApiSettings;
   system: string;
   prompt: string;
+  /** 一緒に見せるPNG画像（base64、data:の前置きなし） */
+  images?: string[];
   /** JSONで受け取りたいときのJSON Schema（構造化出力） */
   schema?: Record<string, unknown>;
   signal?: AbortSignal;
@@ -23,7 +25,7 @@ function client(apiKey: string): Anthropic {
  * サーバー側のフォールバック（fallbacks: "default"）で別モデルに回す。
  */
 export async function askClaude(options: ClaudeCallOptions): Promise<string> {
-  const { settings, system, prompt, schema, signal, onProgress } = options;
+  const { settings, system, prompt, images, schema, signal, onProgress } = options;
   if (!settings.anthropicKey) throw new Error("Anthropic APIキーが未設定です（⚙ 設定）");
 
   const stream = client(settings.anthropicKey).beta.messages.stream(
@@ -31,7 +33,15 @@ export async function askClaude(options: ClaudeCallOptions): Promise<string> {
       model: settings.claudeModel,
       max_tokens: 64000,
       system,
-      messages: [{ role: "user", content: prompt }],
+      messages: [
+        {
+          role: "user",
+          content: [
+            ...(images ?? []).map((data) => ({ type: "image" as const, source: { type: "base64" as const, media_type: "image/png" as const, data } })),
+            { type: "text" as const, text: prompt }
+          ]
+        }
+      ],
       output_config: {
         effort: settings.effort,
         ...(schema ? { format: { type: "json_schema" as const, schema } } : {})

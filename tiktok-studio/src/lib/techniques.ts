@@ -59,13 +59,23 @@ export const TECHNIQUES: Technique[] = [
   { id: "TECH-032", category: "場面転換", name: "円形アイリスワイプ", when: "焦点の切り替え", recipe: "次シーンを arc の clip の中にだけ描き、半径を 0→画面対角線 に easeInOutCubic で広げる" },
   { id: "TECH-033", category: "場面転換", name: "斜めスラッシュワイプ", when: "テンポよく次の話題へ", recipe: "画面を斜めの帯に分け、各帯を時間差（帯 i×0.03秒）で横に抜いて次シーンを見せる" },
   { id: "TECH-034", category: "場面転換", name: "モザイク転換", when: "ゲーム風・デジタル", recipe: "画面を小さいオフスクリーンに縮小して imageSmoothingEnabled=false で拡大表示。粒度を細→粗→細と変え、一番粗い瞬間に次シーンへ差し替える" },
-  { id: "TECH-035", category: "場面転換", name: "インクがにじむ転換", when: "やわらかい場面転換", recipe: "シード付き乱数で決めた数十個の円を、それぞれ時間差で半径を広げてマスクにし、その中に次シーンを描く" }
+  { id: "TECH-035", category: "場面転換", name: "インクがにじむ転換", when: "やわらかい場面転換", recipe: "シード付き乱数で決めた数十個の円を、それぞれ時間差で半径を広げてマスクにし、その中に次シーンを描く" },
+
+  // 転換メカニズム（echris6/motion-video-kit のメカニズム集より、縦型2D向けに翻案）
+  { id: "MECH-01", category: "転換メカニズム", name: "前景が突き抜ける", when: "シーン転換の基本", recipe: "見出しや図形を easeInCubic で3〜5倍に拡大しながらカメラを突き抜けさせ（拡大方向に引き伸ばし＋透明化）、その下には次のシーンを最初から描いておく。空白のコマを作らない" },
+  { id: "MECH-02", category: "転換メカニズム", name: "主役を引き継ぐ", when: "スライドショー感を消したいとき", recipe: "1つの物体（カード・円・キーワード）を複数シーンで使い回し、シーン境界の前後で座標と大きさを一致させたまま、色・形・中身だけを変える" },
+  { id: "MECH-03", category: "転換メカニズム", name: "選んだものが広がる", when: "一覧から1つを詳しく", recipe: "並んだ候補の1つがハイライトされ、そのカードの矩形を画面いっぱいまで補間して広げ、広がった中に次シーンの内容を描く" },
+  { id: "MECH-04", category: "転換メカニズム", name: "枠→中身の順に出来上がる", when: "結果・答え・診断の発表", recipe: "まず空の枠（輪郭線）が描かれ、中の領域（見出し→数字→説明）が上から順にスタッガーで埋まっていく" },
+  { id: "MECH-05", category: "転換メカニズム", name: "カードの束・扇", when: "複数の例・ランキング", recipe: "カードが手前に重なりながら次々に到着して前のカードを隠す。最後に扇状に広げて全体を見せる（または逆に1枚に収束）" },
+  { id: "MECH-06", category: "転換メカニズム", name: "折りたたみ転換", when: "話題の切り替え", recipe: "パネルを scaleY で細い光る帯に折りたたみ、その帯から次のパネルが scaleY 0→1 で立ち上がる" },
+  { id: "MECH-07", category: "転換メカニズム", name: "情報の洪水→1つに収束", when: "フック・『結論はこれ』", recipe: "画面いっぱいに小さな単語やアイコンを敷き詰めてから、1つを残して他を外側へ飛ばし、残った1つを主役サイズへ拡大する" },
+  { id: "MECH-08", category: "転換メカニズム", name: "回転リストの強調", when: "選択肢・候補の比較", recipe: "縦に回るリストで、中央の1項目だけを明るく大きく、上下の項目は小さく暗く・少しぼかして奥に下げる" },
 ];
 
 /** スタイルごとの「おまかせ」テクニック */
 export const STYLE_TECHNIQUES: Record<string, string[]> = {
-  "kinetic-type": ["TECH-011", "TECH-002", "TECH-001", "TECH-010", "TECH-033"],
-  infographic: ["TECH-006", "TECH-002", "TECH-024", "TECH-021", "TECH-032"],
+  "kinetic-type": ["TECH-011", "TECH-002", "TECH-001", "TECH-010", "MECH-01"],
+  infographic: ["TECH-006", "MECH-04", "MECH-02", "TECH-021", "TECH-032"],
   "neo-brutal": ["TECH-001", "TECH-010", "TECH-033", "TECH-014", "TECH-017"],
   cinematic: ["TECH-005", "TECH-022", "TECH-037", "TECH-030", "TECH-036"],
   "glass-gradient": ["TECH-005", "TECH-008", "TECH-028", "TECH-038", "TECH-032"],

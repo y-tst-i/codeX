@@ -4,6 +4,7 @@ import { extractHtml, lintHtml, loadGraphic, validateGraphic, type ValidationRep
 import { buildFixPrompt, buildMotionPrompt, buildPolishPrompt, motionSystemPrompt } from "../lib/prompts";
 import type { ApiSettings, Concept, Script, Timeline } from "../lib/types";
 import { Field, Notice, PromptBox, StepNav, downloadBlob } from "./common";
+import { CriticPanel } from "./CriticPanel";
 import { TimelineBar } from "./VoiceStep";
 
 interface Props {
@@ -45,7 +46,7 @@ export function MotionStep({ concept, script, timeline, settings, html, onHtml, 
         loaded.dispose();
       }
     } catch (e) {
-      setReport({ ok: false, problems: [(e as Error).message], warnings: [], msPerFrame: 0 });
+      setReport({ ok: false, problems: [(e as Error).message], warnings: [], msPerFrame: 0, frozen: null });
     } finally {
       setChecking(false);
     }
@@ -116,7 +117,7 @@ export function MotionStep({ concept, script, timeline, settings, html, onHtml, 
               if (clean !== html) onHtml(clean);
               void validate(clean);
             } catch (e) {
-              setReport({ ok: false, problems: [(e as Error).message], warnings: [], msPerFrame: 0 });
+              setReport({ ok: false, problems: [(e as Error).message], warnings: [], msPerFrame: 0, frozen: null });
             }
           }}>
             {checking ? "チェック中…" : "動作チェック"}
@@ -156,9 +157,15 @@ export function MotionStep({ concept, script, timeline, settings, html, onHtml, 
 
       {html.trim() ? (
         <>
-          <h2>{report && !report.ok ? "4" : "3"}. もっと良くする（磨き込み）</h2>
+          {report?.ok ? (
+            <>
+              <h2>3. 批評してもらう（別のClaudeの目で）</h2>
+              <CriticPanel input={input} html={html} settings={settings} frozen={report.frozen} onReport={setPolishRequest} />
+            </>
+          ) : null}
+          <h2>{report && !report.ok ? "4" : report?.ok ? "4" : "3"}. もっと良くする（磨き込み）</h2>
           <div className="card stack">
-            <Field label="直したいところ（空欄ならClaudeがディレクター目線で弱点を見つけて直します）">
+            <Field label="直したいところ（批評家のレポートを貼るのがおすすめ。空欄ならClaudeがディレクター目線で弱点を見つけて直します）">
               <textarea value={polishRequest} onChange={(e) => setPolishRequest(e.target.value)} placeholder="例：フックをもっと派手に。3シーン目の数字をカウントアップさせて。字幕を少し大きく。" />
             </Field>
           </div>
