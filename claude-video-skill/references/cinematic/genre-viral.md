@@ -363,3 +363,100 @@
 
 ---
 
+## 第2部 バイラルルック(44技法)
+
+#### 第2部の選び方ガイド(目的 → 技法)
+- バイラルルックは「SNSで流行するAI画像・動画スタイル」。1つの強い素材処理(質感・色・構図)で一目で伝わる。**1作品に1ルック**が基本で、混ぜるなら「質感+色」まで(例: 紙+ツートーン)。
+- **絵画・描画系**: 油彩=キャンバス、点描=モネ・ミューズ、動いている途中の絵筆=ハンドペイント、厚塗りの樹脂感=アクリル、線画=スケッチ、液体の飛散=インクライオット、漫画=コミック / フラッシュコミック。
+- **素材・立体系**: 紙=ペーパー、折り紙=オリガミ、大理石=マーブル、溶岩=ラバ、おもちゃ=アクションフィギュア、CG=3Dレンダー、水晶の割れ=ブロークンミラー。
+- **色・光の発想系**: 青の奥行き=ブルーデプス、赤青の2色=ツートーン、紫外線の蛍光=ウルトラバイオレット、ネオン風=ランダムグロー、毒=トキシック、冷たい視覚=コールドビジョン、白黒=ノワール。
+- **場面・キャラの型**: 騎士の日記・本の中・多元宇宙・ご当地ライド(イルカ/ペンギン/パフィン)・スケート犬・ハトなど、題材の型。見た目より「状況の型」。
+- **入門3つ**(コードで再現しやすく効果が大きい): ツートーン(`feComponentTransfer`で2色化)、ペーパー/コミック(紙の質感+ハーフトーン)、ランダムグロー(ブラー重ね+screen)。
+- **コードで不向き**(実写・生成前提で、ベクター/テクスチャ表現の代替が要る): 騎士・モンスター・動物・人物の実写的な演技や被写体生成を含む型(例: ペンギンライド、パフィンライド、気だるいモンスター退治)。
+
+#### 共通パーツ(第2部のエントリで「V1」のように参照)
+- **V1 キャンバス目/紙目**: SVG `feTurbulence baseFrequency="0.04 0.5"` と `"0.5 0.04"` を合成 → `feDiffuseLighting surfaceScale="1.5"`(`feDistantLight azimuth=45 elevation=60`)で織り目。`mix-blend-mode: multiply; opacity .3`。紙なら baseFrequency 0.8 の不規則ノイズ。
+- **V2 絵画化(ポスタリゼーション+筆跡)**: 素材に `feGaussianBlur stdDeviation=1.5` → `feComponentTransfer` の `feFuncR/G/B type="discrete" tableValues` で5〜6階調 → `feMorphology operator="dilate" radius=1` → `feTurbulence`+`feDisplacementMap scale=6` で輪郭を荒らす。本格派は WebGL の Kuwahara シェーダー(半径4〜6)。
+- **V3 ハーフトーン**: `npx hyperframes add halftone-field` / `halftone-dissolve`、または `radial-gradient(circle,#000 30%,transparent 31%) 0 0/6px 6px` を mask に使う。
+- **V4 白フラッシュ**: `npx hyperframes add editorial-flash-overlay`(2〜3コマの白)。
+- **V5 グロー**: 同じ要素の複製に `filter: blur(12〜30px)` + `mix-blend-mode: screen`、opacity .4〜.8。
+
+#### 技法一覧(エントリ) — バイラルルック
+
+### 2000年代パパラッチ / 2000s Paparazzi  (`viral-looks/2000s-paparazzi`)
+- **一言**: コンパクトデジカメの正面フラッシュで、壁に硬い影、緑がかった白、準備のできていない顔を撮る「盗まれた光」の見た目。
+- **見た目の分解**: 配色=緑かぶりの白 #E8F0E0、夜の闇 #0A0A12、赤目 #C0392B。光=カメラ直射、背景は急に暗い。構図=胸〜目線の高さ、顔が準備できていない。質感=コンパクト機のJPEGっぽさ、ブレ。
+- **HyperFramesでの作り方**: 被写体に `hue-rotate(-8deg) contrast(1.25) brightness(1.1)`、中心に明るい `radial-gradient(rgba(255,255,230,.6))`、背景は `brightness(.4)`。**壁の硬い影**は被写体の複製を `brightness(0)` で黒く、右下に28px ずらして `blur(1px) opacity .6` で背後に。フラッシュ瞬間は V4。
+- **適性**: ★★ / 注意: 美しい補光を足さない(ファッションになる)。
+- **AI動画生成プロンプト**: `2000s paparazzi of [Subject], on-camera flash, compact digital, sidewalk fame, a decade of glare.`
+
+### 3Dレンダー / 3D Render  (`viral-looks/3d-render`)
+- **一言**: 人物を製品ビジュアルのように、きれいなGI、少し均一すぎる肌、無限の背景(シクロラマ)で「計算された」見た目にする。
+- **見た目の分解**: 配色=淡い灰の背景 #E9ECF0→#C9CFD6、肌は均一な暖色。光=スタジオHDRIの柔らかい光、接地影は汚れない。構図=正面か3/4、ターンテーブル。質感=粒子なし。
+- **HyperFramesでの作り方**: Three.js で `MeshPhysicalMaterial`(sheen/clearcoat)+ `RoomEnvironment` の環境光、`y回転 = t*0.5rad/s` のターンテーブル(timelineで毎コマ描画)、床に `ShadowMaterial`、フィルムグレインは入れない。2D素材なら `drop-shadow(0 20px 18px rgba(0,0,0,.18))` で接地影。
+- **適性**: ★★ / 注意: 毛穴や粒子が残ると「実写」に戻る。
+- **AI動画生成プロンプト**: `3D-render look of [Subject], CG shader, clean GI, a person as a product visualization.`
+
+### アシッド(焼けたプリント) / Acid  (`viral-looks/acid`)
+- **一言**: 日に焼けたプリントのように、溶ける縁、焼けた色、ずれた銀を持つ「壊れた写真」の見た目。軌跡(LSD)は付けない。
+- **見た目の分解**: 配色=マゼンタ #FF2D95、黄 #FFE81A、ずれた銀 #9FA8B8。光=飛んだハイライト。構図=顔は読める固定。質感=縁の融解。
+- **HyperFramesでの作り方**: `saturate(2.2) contrast(1.4) hue-rotate(-20deg)`。融解は SVG `feTurbulence baseFrequency="0.008 0.02"` + `feDisplacementMap scale` を 0→40(4秒、縦方向を強く)。顔は mask で変位を弱める。ハイライトは `radial-gradient(#fff,transparent)` を screen で焼く。
+- **適性**: ★★ / 注意: お祭りの虹色LUTにしない(「損傷」であり「パーティー」ではない)。
+- **AI動画生成プロンプト**: `Acid look on [Subject], burned chroma, melting edges, a print left in the sun too long.`
+
+### アクションフィギュア / Action Figure  (`viral-looks/action-figure`)
+- **一言**: 人物を商品化する。プラスチックの関節、塗装された衣装、ブリスターパック風の照明で「ヒーローの玩具」にする。
+- **見た目の分解**: 配色=おもちゃの原色 #E63946 / #1D6FE5 / #FFD60A、背景 #F2F2F2。光=硬い製品用キー、鋭いハイライト。構図=やや高いカメラ、ジオラマ台。質感=樹脂、リベット。パッケージの文字は出さない。
+- **HyperFramesでの作り方**: Three.js で球・円柱を関節にした簡易人形に `MeshStandardMaterial roughness .35`、またはSVGで関節の丸(`stroke #00000040`)を重ねる。白い斜めの鋭い帯で樹脂の艶(`linear-gradient`+screen)。ミニチュア感は上下に `backdrop-filter: blur(6px)` をマスクで。
+- **適性**: ★★ / 注意: 実在の人物写真に重ねるだけだと「衣装を着た俳優」になる。
+- **AI動画生成プロンプト**: `Action-figure of [Subject], plastic joints, blister-card lighting, a toy of a person.`
+
+### アガメムノン(青銅の黄昏) / Agamemnon  (`viral-looks/agamemnon`)
+- **一言**: 硬い太陽、青銅の照り返し、痣色の夕空で、生身の人間を古代の金属のように見せる、悲劇的な叙事詩のグレード。
+- **見た目の分解**: 配色=青銅 #B8742A、血色の夕空 #6B1E2E、痣の紫 #4B2A5C、影 #0E0A0C(不透明)。光=硬い太陽(左または背後)、フィルなし。構図=尾根の騎手など、小さい人物か巨像のような大きさ。動き=静止か非常に遅い押し込み。
+- **HyperFramesでの作り方**: 空 `linear-gradient(#2E1B3C,#7A2E3F 55%,#D08A3C)`、素材に `contrast(1.35) saturate(.85) sepia(.3)`、左から `linear-gradient(90deg,rgba(255,170,80,.45),transparent 50%)` を screen。押し込みは scale 1.00→1.04 を8秒。タイトルは `Cinzel` を青銅色で。
+- **適性**: ★ / 注意: 普通の暖色LUTにしない、美しいだけの空にしない。
+- **AI動画生成プロンプト**: `Agamemnon look on [Subject], bronze, blood-dusk, tragic scale, a king under a bad sky, antique epic as grade.`
+
+### アクリル絵具 / Akrill  (`viral-looks/akrill`)
+- **一言**: 厚く盛られた樹脂のような絵具、ポスター的な縁、高彩度、まだ濡れて光る絵肌。
+- **見た目の分解**: 配色=キャンディ色 #FF3B8B / #00C2FF / #FFD400 / #7C3AED。光=硬めのスタジオキーで盛り上がりに濡れたハイライト。構図=図形的な面で顔は立体を保つ。質感=筋の盛り、プラスチックの艶。
+- **HyperFramesでの作り方**: V2(5段階)に加え、ぼかした輝度を高さマップとして `feSpecularLighting surfaceScale=4 specularExponent=25` でハイライトを合成し、輪郭に `feMorphology dilate` の黒縁(#111)。水彩のように薄くしない。
+- **適性**: ★★ / 注意: キャンバス(油彩)と混ぜない。
+- **AI動画生成プロンプト**: `Acrylic look on [Subject], thick plastic color, poster edges, paint that still looks wet.`
+
+### ブルーデプス(青の奥行き) / Blue Depth  (`viral-looks/blue-depth`)
+- **一言**: 遠いほど深いシアンになる平面の積み重ねで、距離を「青の勾配」として見せる(水中や夜のガラス)。
+- **見た目の分解**: 配色=遠景 #04304F、中景 #0C5C80、近景 #5EC8E5、前景の被写体 #D6F3F8。光=拡散した水中光、コースティクス。構図=スケールを示す被写体(人・桟橋・塔)。質感=海中の粒子。
+- **HyperFramesでの作り方**: 4〜5層を CSS 3D で奥行き配置し、各層に深度ごとの青の面を `mix-blend-mode: multiply` で重ねる(遠いほど濃く・低コントラスト)。視差は層ごとに x を 0.3/0.6/1.0 倍速。コースティクスは `feTurbulence`+`feSpecularLighting`。粒子は seed付きcanvas。
+- **適性**: ★★ / 注意: 近景と遠景が同じ青だと単なる青被せ。
+- **AI動画生成プロンプト**: `Blue-depth world of [Subject], stacked cyan planes, underwater or night glass, distance as a blue gradient.`
+
+### 割れた鏡 / Broken Mirror  (`viral-looks/broken-mirror`)
+- **一言**: ひび割れた銀の破片に顔が散らばり、破片ごとに少しずつ違う角度・時間の同じ人物が映る(同意しない顔)。
+- **見た目の分解**: 配色=銀 #C9D1D6、浴室の暖色実用光。光=浴室の電球。構図=鏡越しに固定。質感=ガラスのヒビ、白い細線。
+- **HyperFramesでの作り方**: seed付きPRNGで12〜20点から破片を作り、各破片を `clip-path: polygon()` で切り出す。**各破片に同じ素材を回転±5度・移動±30pxで少しずらし、時間もずらす(t−オフセットi)**。ヒビは白1pxの線+黒い `drop-shadow`。割れる瞬間は `npx hyperframes add vfx-shatter`。
+- **適性**: ★★ / 注意: 全破片が同じ内容だとただのフィルタ。
+- **AI動画生成プロンプト**: `Broken-mirror of [Subject], silver shards, one face that does not agree with itself.`
+
+### キャンバス(油絵) / Canvas  (`viral-looks/canvas`)
+- **一言**: 写真の被写体が油彩をまとう。筆の毛先、キャンバスの目、光の部分に厚い絵具、目はまだ生きている。
+- **見た目の分解**: 配色=アンバー #6B4A2B、黄土 #C9A04A、鉛白 #F2E8D0。光=北窓の柔らかい光。構図=ポートレート距離の固定。質感=筆跡に方向と重さがある。
+- **HyperFramesでの作り方**: V2(筆跡は `feTurbulence baseFrequency=".02 .15"` で横方向)+ V1(織り目 multiply .35)+ ハイライトの盛りを `feSpecularLighting`。顔は円形マスクで変位を弱め目は鮮明に。本格的には WebGL の Kuwahara シェーダー。
+- **適性**: ★★(★★★ for シェーダー) / 注意: 筆跡のない滑らかなフィルタにしない。
+- **AI動画生成プロンプト**: `Canvas treatment of [Subject], visible brush, oil tooth, a painting that still has a face.`
+
+### 気だるいモンスター退治 / Casual Monster Slayer  (`viral-looks/casual-monster-slayer`)
+- **一言**: 普段着の人物が、巨大な怪物と戦うのを日常の用事のようにこなす。服と光は日常、怪物だけが豪華。
+- **見た目の分解**: 配色=自然な日常色(パーカー、買い物袋)。光=街灯・台所・曇天の自然光、人物と怪物で同一。構図=通勤を撮る目線の高さ、手持ちか固定。動き=淡々とした間。
+- **HyperFramesでの作り方**: 実写の怪物生成は不向き。代替: 怪物を SVG/ベクターの大きな影絵・イラストにして、**人物と怪物を1つの親要素にまとめ同一フィルタ(`saturate(.9)`)をかける**。手持ちは `camera-shake` を弱く。字幕は淡々と(「牛乳を買ってから戻る」等)、効果音は日常の延長。
+- **適性**: 不向き(怪物の高品質表現)。★★(ベクター代替)。
+- **AI動画生成プロンプト**: `Casual monster-slayer of [Subject], everyday clothes, impossible creature work, deadpan heroism, a commute that includes a dragon.`
+
+### コールドビジョン / Cold Vision  (`viral-looks/cold-vision`)
+- **一言**: 世界を「温度」として見る。北極の写真的なグレード(息・氷)か、サーモ偽色(熱の縁)か、どちらか1つのセンサーに決める。
+- **見た目の分解**: 配色=氷 #DCEBF5、青い影 #2B4A66、サーモ黒→紫 #4B006E→赤 #E0301E→橙 #FF9A00→黄 #FFE600→白。光=冬の太陽か曇天。質感=息、雪、熱の縁。
+- **HyperFramesでの作り方**: A案(北極)=寒色グレード `saturate(.7)` と青い面を multiply、息は canvas の粒子(seed付き、blur 6px、1.5秒で減衰)。B案(サーモ)=`grayscale(1) contrast(1.4)` の後に SVG `feComponentTransfer` の `feFuncR/G/B type="table"` で上記の6色に写像。**ナイトビジョンの緑と混ぜない**。
+- **適性**: ★★ / 注意: 青い色調だけだと単なる「寒色LUT」。
+- **AI動画生成プロンプト**: `Cold vision of [Subject], arctic grade, thermal edges, a world seen as temperature and threat.`
+
