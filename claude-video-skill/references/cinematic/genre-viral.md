@@ -537,3 +537,168 @@
 - **適性**: ★★ / 注意: アシッド(焼けたプリント)の融解や万華鏡パックと混ぜない。
 - **AI動画生成プロンプト**: `LSD look on [Subject], trails, breathing walls, too much chroma, a room that will not stay put.`
 
+### マガジン(雑誌の表紙) / Magazine  (`viral-looks/magazine`)
+- **一言**: 誌名(マストヘッド)を載せる余白を前提にデザインされたポートレート。ファッション照明、サムネで読める衣装、売られるページとしての構図。
+- **見た目の分解**: 配色=単色の背景(#E8E1D8 または #D93A5A)と高コントラストの衣装。光=柔らかい大きなビューティーキー。構図=上または横に大きな余白、人物は端寄り。質感=クリーン。文字は描かない(崩れる)。
+- **HyperFramesでの作り方**: 人物素材を縁寄りに配置し、上20%を空ける。素材に `contrast(1.05) brightness(1.05)`、背景はベタ面+薄い放射グラデ。**文字は実際のHTMLテキストで後から載せる前提**(誌名は自分で組む。フォントは `Playfair Display` 900 など、ロゴの捏造はしない)。動きは scale 1.00→1.02 だけ。
+- **適性**: ★ / 注意: 余白がない詰まった画面や、パパラッチ風のフラッシュにしない。
+- **AI動画生成プロンプト**: `Magazine cover of [Subject], masthead space, fashion lighting, a page that knows it will be sold.`
+
+### マーブル(大理石) / Marble  (`viral-looks/marble`)
+- **一言**: 石が肌になる。白い大理石の脈、冷たい磨き、なお息をしている彫像。
+- **見た目の分解**: 配色=白 #F4F2EE、脈の灰 #8E8E96、冷たい影 #B7BCC6。光=北向きの柔らかい光か美術館の天窓。構図=ポートレート固定。質感=脈、磨かれた艶。
+- **HyperFramesでの作り方**: 脈は SVG `feTurbulence baseFrequency=".012 .03" numOctaves=5` → `feComponentTransfer` の `table`(`1 .2 1`)で中間値を暗い帯にして細い線に。被写体に `grayscale(.9) brightness(1.1) contrast(1.1)` をかけ、脈を `mix-blend-mode: multiply`。磨きの艶は `npx hyperframes add light-sweep-pass` か斜めの白帯のスイープ(3秒)。
+- **適性**: ★★ / 注意: 脈のない色白は「石」ではない。シェーダー的な滑らかさ(3Dレンダー)にしない。
+- **AI動画生成プロンプト**: `Marble look on [Subject], veined stone as flesh, cold polish, a statue that still breathes.`
+
+### マイティファイター / Mighty Fighter  (`viral-looks/mighty-fighter`)
+- **一言**: 格闘ゲームの選択画面のように、大きなスタンスで決めた勝者のポーズ。硬いリム、おもちゃ箱の色、背景は舞台。
+- **見た目の分解**: 配色=黄 #FFD60A、赤 #E63946、青 #1D4ED8、白のリム。光=硬い背面リム+鮮やかなキー。構図=3/4の煽り、人物1人、小さな街のシルエット。文字=Anton/Bangers の名前板。動き=ポーズが決まる一瞬。
+- **HyperFramesでの作り方**: 背景は `repeating-conic-gradient(#FFD60A 0 10deg,#E63946 10deg 20deg)` の放射、下端に街のシルエット。人物の切り抜きに `drop-shadow(3px -3px 0 #fff)` でリム、scale 1.15 の煽り。登場は scale 0.9→1.0(back.out(2)、0.4秒)でポーズが「決まる」。名前板は `Anton` を斜めに。
+- **適性**: ★★ / 注意: 疲れた生っぽい肌や、関節が見える人形(アクションフィギュア)にしない。
+- **AI動画生成プロンプト**: `Mighty-fighter frame of [Subject], toy-box combat, oversized stance, a champion posed for a cabinet art.`
+
+### モダン建築 / Modern  (`viral-looks/modern`)
+- **一言**: 部屋が主題。ガラスの面、設計された空虚、ミース/安藤のような幾何の中の小さな人物。
+- **見た目の分解**: 配色=2色の灰 #D5D7D9 / #8A8F94 と暖かい木 #B98A5E。光=ガラスを抜ける刃のような昼光。構図=固定の建築カメラ、物は3つ以下。質感=コンクリ、ガラス。
+- **HyperFramesでの作り方**: 大きな矩形面(壁・床)を CSS/SVG で組み、ガラス面は `backdrop-filter: blur(8px)` と薄い白。**昼光の刃**は鋭い斜めの `clip-path: polygon` の白 `rgba(255,255,255,.7)` を、床上で20秒かけてゆっくり移動(ease none)。人物は画面高の8%ほどの小さなシルエット。文字は `Noto Sans JP` 200 を小さく。
+- **適性**: ★ / 注意: ごちゃついた部屋やストリングライトの生活感は入れない。
+- **AI動画生成プロンプト**: `Modern architecture around [Subject], glass planes, a designed void, the room as the thesis.`
+
+### モネ・ミューズ / Monet Muse  (`viral-looks/monet-muse`)
+- **一言**: 写真の景色を「分割された色の点」に溶かす。庭の筆触、水は線、混色は見る人の目の中。ぼかしではない。
+- **見た目の分解**: 配色=水 #7FB7BE、日 #F2D388、庭 #A5C882、桃 #C97BA0、藤 #6C5B7B。光=高い太陽が主題。構図=庭や水辺、人物の輪郭は残す。質感=短い筆触。
+- **HyperFramesでの作り方**: canvas に素材を描いて小さな格子で色を決定的にサンプリングし、**6〜14pxの楕円筆触を約2万個**、seed付きPRNGで位置・角度(輝度勾配方向)・色(色相±8、明度±6)をずらして描く。水は横の短い線に。筆触は静的、ゆらぎは±1pxだけ。ぼかし(blur)で代用しない。
+- **適性**: ★★ / 注意: 夜のネオンや黒い墨線(コミック)と混ぜない。
+- **AI動画生成プロンプト**: `Monet-muse image of [Subject], broken color, garden light, water as dabs, impression as grade.`
+
+### マルチバース / Multiverse  (`viral-looks/multiverse`)
+- **一言**: 同じ人物を、平行する別々の部屋・グレード・衣装に同時に置く。複数の世界が分離して見える。
+- **見た目の分解**: 配色=世界ごとに別グレード(暖 #F2B880 / 青緑 #4FB0C6 / マゼンタ #D63AA6)。構図=2〜3分割か重なる部屋、顔は同一。動き=世界の出入りの合図(扉、分割線)。
+- **HyperFramesでの作り方**: 画面を `clip-path: polygon()` の斜め帯で3つに分け、各帯に同じ人物素材と**世界ごとのグレード**(`hue-rotate`/色面は背景にだけ、顔は据え置き)を配置。分割線は白1px。登場は帯を順に 0.3秒間隔でスライド(power3.out)。ダブルエクスポージャー(重ね合わせ)にしない。
+- **適性**: ★★ / 注意: 世界を言葉で区別できないなら使わない(ただのゴースト)。
+- **AI動画生成プロンプト**: `Multiverse split of [Subject], many versions, many grades, the same person in parallel rooms.`
+
+### ノワール(プリセット) / Noir  (`viral-looks/noir`)
+- **一言**: 濡れた路面、ブラインドの影、動機のある硬いキー、顔の半分が消える。映画のフィルムノワールを1つのプリセットとして圧縮した見た目。
+- **見た目の分解**: 配色=銀と黒(または濡れたネオン)。光=硬いキー1灯、フィルなし。構図=目線やや下、固定。質感=真っ黒なプール(黒がにごらない)。
+- **HyperFramesでの作り方**: 第1部「フィルムノワール」の手順を簡約: `grayscale(1) contrast(1.6) brightness(.8)`(黒を締める)、ブラインドの影は `repeating-linear-gradient(-12deg,#000 0 26px,transparent 26px 52px)` を multiply、濡れ路面は `scaleY(-1)` の反射。共通P1/P2。
+- **適性**: ★ / 注意: ティールがかった暗い写真(黒がにごる)や柔らかいキーは「ムーディ」であってノワールではない。
+- **AI動画生成プロンプト**: `Noir look on [Subject], wet streets, venetian gobos, a crime already in the lighting.`
+
+### オービタル・プレゼンス(軌道上の存在) / Orbital Presence  (`viral-looks/orbital-presence`)
+- **一言**: 惑星の上の真空に人間が浮かぶ。硬い無フィルの太陽光、鋭い惑星の縁、衛星としての人物。
+- **見た目の分解**: 配色=黒 #000000、海 #1E4D8C→#2E7FD6、縁の青 #78B4FF、太陽の白。光=硬い太陽1灯、空気の回り込みなし。構図=惑星が下1/3、人物は小さく。動き=ゆっくり回転。
+- **HyperFramesでの作り方**: Three.js で球+`DirectionalLight`(左上から)、テクスチャは canvas の seed付きノイズで大陸風に。縁の薄い大気は球の外側の半透明シェルだけ。星は seed付き canvas の点(明滅なし)。人物は小さなシルエットに片側だけ白いリム、反対側は真っ黒。惑星の自転は 0.02rad/s。HUD文字は入れない。
+- **適性**: ★★(Three.js) / 注意: スタジオに地球の背景を置いただけにしない(空気が人物に回らない)。
+- **AI動画生成プロンプト**: `Orbital presence of [Subject], a body hanging over a planet, scale of prayer or threat, the person as a satellite.`
+
+### 折り紙 / Origami  (`viral-looks/origami`)
+- **一言**: 紙が「折り目という法則」を持つ彫刻になる。折り目、平面の色、人物や街が折りたたまれて形になる。
+- **見た目の分解**: 配色=朱 #E4572E、山吹 #F3A712、若草 #A8C686、青 #669BBC、紙白 #FAF3E0。光=硬いスタジオ光か日光で面ごとに明度差。構図=折られた生き物や街。質感=鋭い縁、折り目の細い線。
+- **HyperFramesでの作り方**: 面ごとに `clip-path: polygon()` の div を CSS 3D で配置し、折り目線を `transform-origin` にして `rotateX/Y` を GSAP stagger(0.1秒、power2.inOut)で 0→−160度。面の明度は法線と光の内積で決めて fill を変える。折り目は `rgba(0,0,0,.2)` の1px線。
+- **適性**: ★★★(複雑な折りは重い。平面に簡略化した折り筋や、数枚の面だけなら★★)。
+- **AI動画生成プロンプト**: `Origami world of [Subject], lawful creases, planar color, a person or city becoming a fold.`
+
+### ペーパー(ちぎり紙) / Paper  (`viral-looks/paper`)
+- **一言**: 世界が紙の繊維でできている。ちぎった縁、見える繊維、紙から切り抜かれた人物。
+- **見た目の分解**: 配色=クラフト #C9A878、クリーム #F2EBDD、朱 #C0392B、青灰 #5B7C99。光=紙の凹凸を斜めに照らす光。質感=繊維、ちぎれ縁。動き=コマ落としの揺れ。
+- **HyperFramesでの作り方**: 形を SVG で作り、縁に `feTurbulence baseFrequency=".04"` + `feDisplacementMap scale=8` でちぎれ縁にし、**下に白い繊維の縁(同じ形を3px大きく、白)**を重ねる。紙目は V1(`feDiffuseLighting` の elevation を25度に下げて斜光)。動きは `npx hyperframes add stop-motion-cadence` の考え方(8fps量子化+2コマのゆらぎ)。
+- **適性**: ★★ / 注意: 折り目のある紙(折り紙)や、紙を小道具として持つだけにしない。
+- **AI動画生成プロンプト**: `Paper world of [Subject], torn stock, visible fibers, a person as a cut-out on pulp.`
+
+### 真珠の耳飾り(フェルメール風) / Pearl Earring  (`viral-looks/pearl-earring`)
+- **一言**: 北向きの窓1つ、暗い土色の背景、光で描いたような肌、宝石の小さな反射。オランダの室内をグレードとして使う。
+- **見た目の分解**: 配色=昼光 #DCE6EE、肌 #E9C9A8、背景 #1F1A14→#3A2E22、群青 #2A4E9B、黄 #D9A441。光=左の窓1つだけ。構図=少し振り向く顔、目は少しカメラ外。質感=古い絵のひび(クラクレ)。
+- **HyperFramesでの作り方**: 左から `linear-gradient(90deg,rgba(220,230,238,.5),transparent 55%)` の1灯のみ。背景は暗い土色のグラデ+ビネット。真珠は `radial-gradient(circle,#fff,#cfd8dc 50%,transparent 52%)` の14pxを耳元に(キャッチライト)。V1 を弱く+ひびの細線。動きは scale 1.00→1.03(10秒)。**原作の構図・ターバンを複製しない**。
+- **適性**: ★ / 注意: ビューティーディッシュ(別の光)を足さない。
+- **AI動画生成プロンプト**: `Pearl-earring portrait of [Subject], Vermeer window, turban implied, a quiet Dutch interior as grade.`
+
+### ペンギンライド / Penguin Ride  (`viral-looks/penguin-ride`)
+- **一言**: ペンギンにまたがって氷や、場違いな街を進む不条理を真顔で見せる。乗り物がオチで、横に立たせるだけでは成立しない。
+- **見た目の分解**: 配色=氷 #E8F4FA / #A8D3E6、ペンギン #1B1F2A と腹 #F4F7FA、足 #FF9A3C。光=曇りの白か硬い極地の日差し。構図=低め広角、水平線は水平、乗り手は真剣。質感=空中の氷の粒、シャーベット。
+- **HyperFramesでの作り方**: 実写の動物は不向き。代替: SVGの大きなペンギンのシルエット+乗り手が左右に揺れながら進み、背景(氷塊の列、街のシャーベット道)を逆方向へ。氷の粒は seed付きcanvas粒子。軽い `camera-shake`(記録映像の揺れ)。顔の表情は変えない(ウィンクしない)。
+- **適性**: 不向き(実写の動物) / ★★(ベクター代替)。
+- **AI動画生成プロンプト**: `Penguin-ride of [Subject], an absurd mount, ice gag, tourism of the wrong animal.`
+
+### ハト(群れの飛び立ち) / Pigeons  (`viral-looks/pigeons`)
+- **一言**: 街中で人物は静止、周りでハトの群れが紙吹雪のように爆発的に飛び立ち、羽が空を満たしてまた落ち着く。
+- **見た目の分解**: 配色=石 #C9C2B5、鳩灰 #8D93A0 / #5F6674、首の玉虫 #3FA39B / #B05CA8、日差し #FFE8B0。光=硬い太陽か石の反射。構図=広場の低め広角、人物は静止で顔が羽の隙間から見える。動き=飛び立ちの頂点。
+- **HyperFramesでの作り方**: canvas で鳩を200〜400羽(V字の2枚の翼を `sin(t·freq+phase)` で羽ばたき、seed付き)。位置は `origin + dir·speed·ease(t)`(power3.out で外へ爆ぜ、その後ゆっくり降りる)。奥の層は blur 2px、手前は大きく速く。**顔の領域は鳥が通らないよう clip で避ける**。落ちる羽根は小さな回転粒子。
+- **適性**: ★★ / 注意: 3羽だけ、または顔が鳥で隠れるのは失敗。
+- **AI動画生成プロンプト**: `Pigeons bursting around [Subject], a city takeoff, wings as confetti, the square exploding into birds.`
+
+### パフィンライド / Puffin Ride  (`viral-looks/puffin-ride`)
+- **一言**: 断崖と波しぶきの中、人物がパフィン(海鳥)にまたがって「通勤」する不条理を真顔で見せる。
+- **見た目の分解**: 配色=崖 #4F6B58、海 #2C5F7C、曇天 #C9D3D6、くちばし #FF7A1A、羽 #111 と #F5F5F5。光=北大西洋の曇りか硬い海岸の日差し。構図=広角、断崖が入り、くちばしが読める。動き=しぶき、上下動。
+- **HyperFramesでの作り方**: 実写の鳥と人物は不向き。代替: SVGで崖(視差2層)と波、パフィンの大きなシルエット(オレンジのくちばしを強調)に乗り手を重ねる。しぶきは canvas の放物線粒子、海は feTurbulence の細かい波。水平線は固定。ロゴなし。
+- **適性**: 不向き(実写の鳥) / ★★(ベクター代替)。
+- **AI動画生成プロンプト**: `Puffin-ride of [Subject], an absurd seabird mount, cliffs and spray, a commute on the wrong bird.`
+
+### レーストラック / Race Track  (`viral-looks/race-track`)
+- **一言**: 人や機械をサーキットの幾何(楕円、縁石の塗装、フェンス、観客席)に縫い付け、速度を「閉じた周回」として見せる。
+- **見た目の分解**: 配色=アスファルト #3A3D42、縁石 #D62828 と #F8F9FA、芝 #3F7D3A、空 #8EC5E8。光=強い日差しと陽炎。構図=楕円が読める高さか、長玉で圧縮した直線。質感=縞の縁石、フェンス。スポンサー文字は描かない。
+- **HyperFramesでの作り方**: SVGで楕円コース(`stroke-dasharray` の赤白縁石、フェンスの格子、観客席の矩形列)を作り、車は楕円の媒介変数 `θ=ω·t` で周回(t関数)。長玉の直線は Y軸を圧縮して車の列を詰める。陽炎は `feTurbulence`+`feDisplacementMap scale=3`。カメラは車を追ってわずかに回す。
+- **適性**: ★★ / 注意: 一般道にしない(楕円と塗装が必須)。
+- **AI動画生成プロンプト**: `Race-track world of [Subject], oval geometry, painted curbs, grandstands, speed as a closed loop.`
+
+### ランダムグロー / Random Glow  (`viral-looks/random-glow`)
+- **一言**: 理由のない光の玉とアナログな光漏れで、ランプに取りつかれたような画。拡散が均一なのは失敗。
+- **見た目の分解**: 配色=ピンク #FF9ECF、水色 #7FD8FF、橙 #FFD27F、薄紫 #B79CFF、漏れの橙赤 #FF5A1F。光=不規則なブルーム。構図=顔はきれいに残す。動き=ゆっくりのドリフトと明滅。
+- **HyperFramesでの作り方**: 大小(40〜400px)の円を seed付きPRNGで配置し、V5(blur 20〜60px)で `mix-blend-mode: screen`、位置は t の sin 和でゆっくり漂い、不透明度も sin 和で明滅。光漏れは `npx hyperframes add organic-light-leak-overlay`。顔はマスク(中央を抜いた radial)で光を避ける。全画面に均一に敷かない。
+- **適性**: ★(入門向け) / 注意: 画面全体が白く溢れて被写体が死ぬのは失敗。
+- **AI動画生成プロンプト**: `Random glow on [Subject], unmotivated orbs and analog leaks, a frame haunted by lamps.`
+
+### スケートドッグ / Skatedog  (`viral-looks/skatedog`)
+- **一言**: 地面すれすれ、広角、手前にアスファルト。動物や乗り手がストリートのスポーツをこなす、低くてバカバカしい舗装の文法。
+- **見た目の分解**: 配色=アスファルト #2F3236、ナトリウム灯 #FFB347 または真昼 #FFF2C4。光=硬い太陽か街灯、長い影。構図=カメラは地上15〜40cm、広角14〜24mm。質感=汚れた車輪、路面の粒。動き=路面が手前へ流れる。
+- **HyperFramesでの作り方**: 実写の動物は不向き。代替: CSS 3Dの地面(`perspective:300px; rotateX(75deg)` に `feTurbulence` の路面粒)を `backgroundPosition` で手前へ流し、地平線を画面の約40%に置く。SVGのシルエットの犬(または人)と板が中景を進み、車輪を回転、火花は seed付き粒子。**ヒーローのリム光は付けない**。
+- **適性**: 不向き(実写の動物) / ★★(ベクター代替)。
+- **AI動画生成プロンプト**: `Skatedog energy around [Subject], low wide, pavement, a creature or rider in street grammar, joke as sport.`
+
+### スケッチ / Sketch  (`viral-looks/sketch`)
+- **一言**: 絵具の前の段階。探るような輪郭、影のハッチング、光の部分は紙の白のまま。未完成であることが見た目。
+- **見た目の分解**: 配色=紙 #F4EFE6、鉛筆 #3A3A3A。光=紙白がハイライト。構図=ポートレート固定。質感=紙目、二重にずれた線、ハッチング。動き=線が描かれていく。
+- **HyperFramesでの作り方**: 輪郭は SVG `feConvolveMatrix` のエッジ抽出を2枚、1.5pxずらして「探る線」に。影は `repeating-linear-gradient(45deg,#333 0 1px,transparent 1px 4px)` を暗部の輝度マスクで。紙は V1。**描き込み**は線→ハッチングの順に、`mask`/`clip-path` を4秒かけて走らせる。線の揺れは `feTurbulence`+`displacement scale=2` の seed を 8fps で更新。線画のドロー風は `npx hyperframes add whiteboard-ink`。
+- **適性**: ★★ / 注意: きれいなベクターの輪郭にしない。
+- **AI動画生成プロンプト**: `Sketch treatment of [Subject], line, paper tooth, unfinished hatching, a drawing that still looks.`
+
+### スーパースター / Superstar  (`viral-looks/superstar`)
+- **一言**: 表紙のための顔。ビューティーキー、キャッチライト、フラッシュの壁(観客)が暗示された、見られることが前提の画。
+- **見た目の分解**: 配色=赤絨毯 #7A0F1C、金 #F4E4C1、黒の衣装。光=大きな光源のキー、わずかな拡散、目にキャッチライト。構図=目線を保持、清潔な画面。動き=ゆっくり押し込み。
+- **HyperFramesでの作り方**: 素材に `contrast(1.05) brightness(1.08) saturate(1.1)`+弱いブルーム(V5、blur 18px、opacity .25)。目に小さな白の radial-gradient(キャッチライト)。背景にぼかした小さな閃光の点(seed付きcanvas、blur 6px、明滅)でフラッシュの壁を暗示し、間隔を空けて V4。動きは scale 1.00→1.05。
+- **適性**: ★ / 注意: コンパクトカメラの赤目・硬い影(パパラッチ)にしない。
+- **AI動画生成プロンプト**: `Superstar treatment of [Subject], paparazzi bloom, flash wall, a face built for covers.`
+
+### トキシック / Toxic  (`viral-looks/toxic`)
+- **一言**: 空気が汚染として見える。病的な緑、黄色い霞、逆光で見える煙。空気が危険物。
+- **見た目の分解**: 配色=酸性の緑 #8BE000 / #B8FF00、尿の黄 #D9C400、濡れた地面 #1B2418、空 #2D3A12。光=煙の逆光。構図=煙の中の人物。質感=粒子、湿った地面。バイオハザード文字は使わない。
+- **HyperFramesでの作り方**: SVG `feTurbulence baseFrequency=".008" numOctaves=4` → `feColorMatrix` で黄緑のアルファ付き煙を作り、大きな層を t でゆっくり平行移動(opacity .5、2層で逆方向)。逆光は `radial-gradient(circle at 70% 30%,#E6FF4A,transparent 60%)` を screen。濡れ地面は反射(`scaleY(-1)`+blur)。灰の粒は seed付き。緑のグレードだけで済ませない。
+- **適性**: ★★ / 注意: 空気が汚染として「見えない」と、ただの緑色の色被せ。
+- **AI動画生成プロンプト**: `Toxic air around [Subject], sick greens, yellow haze, poison you can see.`
+
+### ツートーン(2色) / Two Color  (`viral-looks/two-color`)
+- **一言**: 2つの色相だけで画を描く(デュオトーン)。2色以外は消す。または白黒+1色のスポットカラー。
+- **見た目の分解**: 配色=例: 紺 #0B1F3A + 橙 #FF5A36、黒 #111 + 赤 #E63946、青緑 #0F4C5C + クリーム #FFE8CC。光=影と光に2色を割り当てる。構図=衣装や壁を2色に合わせて計画。質感=印刷物のような平坦さ。
+- **HyperFramesでの作り方**: SVGフィルタ1本で完結する。`feColorMatrix type="saturate" values="0"` → `feComponentTransfer`(`feFuncR tableValues="0.04 1"`、`feFuncG "0.12 0.35"`、`feFuncB "0.23 0.21"` のように暗色と明色のRGBを2値で指定)で輝度→2色に写像、`filter: url(#duotone)`。スポットカラーは `grayscale(1)` の上に衣装形のマスク要素を `mix-blend-mode: color` で重ね、マスクは被写体の動きに追従する t関数に。
+- **適性**: ★(入門向け、効果が大きい) / 注意: 余分な色相を漏らさない。ティール&オレンジにしない。
+- **AI動画生成プロンプト**: `Two-color law on [Subject], a pair of hues doing all the drawing, print as cinematography.`
+
+### ウルトラバイオレット(ブラックライト) / Ultraviolet  (`viral-looks/ultraviolet`)
+- **一言**: ブラックライトの映画。白が叫び、UV下でしか存在しない色が出る。周囲は虚無に沈む。
+- **見た目の分解**: 配色=虚無 #0A0014、紫 #8A2BE2、蛍光シアン #00F0FF、蛍光ピンク #FF2DAA、白の発光 #E8D8FF。光=UVランプが唯一のキー。構図=歯や綿の服が光る顔、周囲は黒。質感=蛍光塗料の飛沫。
+- **HyperFramesでの作り方**: 素材に `hue-rotate(250deg) saturate(1.5) brightness(.4)` で暗い紫の下地、**白い部分だけ**を `brightness(2.2) contrast(2) saturate(0)` の複製を `mix-blend-mode: screen` + `drop-shadow(0 0 12px #B070FF)` で発光させる。周囲は radial mask で黒に落とす。蛍光塗料の飛沫は seed付きの色円(#00F0FF/#FF2DAA)をグロー(V5)で。上端に薄いUV管の紫の帯。
+- **適性**: ★★ / 注意: 昼の景色に紫を被せるだけにしない(歯・白布が光らなければUVではない)。
+- **AI動画生成プロンプト**: `Ultraviolet light on [Subject], black-light cinema, whites that scream, colors that only exist under that lamp.`
+
+#### 組み合わせ例(バイラルルック)
+1. **SNS用の肖像紹介(8秒): ツートーン+ペーパー**。人物写真を紺+橙のデュオトーンにし、縁をちぎれ紙(feDisplacementMap)で切り抜き、クラフト紙の背景に stop-motion-cadence の8fpsで揺らす。色は2色、質感は紙だけ(ルールを2つに絞る)。
+2. **音楽リリースのジャケ動画(10秒): ランダムグロー+スーパースター**。顔を中央に残し、ぼかした光玉と閃光点を漂わせ、2〜3秒おきに弱い白フラッシュを入れる。人物は目線を保ち、光玉は顔をマスクで避ける。
+3. **ナイトクラブの告知(10秒): ウルトラバイオレット+コミック**。UV下の白が光る人物に、コミックの墨線とハーフトーンをだけ足して「ポスターが動く」形に。差し色は蛍光ピンク1色。
+4. **アート紹介の連作(各5秒): キャンバス → モネ・ミューズ → スケッチ**。同じ肖像を、油彩(筆跡)→筆触の点描→線画の順にクロスフェード(1秒)して、「描く前の線」へ戻る時間の逆回しで見せる。質感を1つずつ見せることで違いが分かる。
+5. **コメディ告知(6秒): ペンギンライド/ハト+定型字幕**。ベクターのシルエットで真顔の乗り手を中央に固定、字幕を淡々と置き、最後の1秒だけハトの飛び立ちで画面を満たす。実写の動物は使わず、シルエットで笑いの形だけを作る。
+
+---
+
+## 件数メモ
+- 第1部 ジャンルルック 27 / 第2部 バイラルルック 44 / 合計 71(`### ` 見出しの数)

@@ -1,6 +1,6 @@
 ---
 name: video-with-claude-code
-description: Claude Codeで動画・モーショングラフィックス・PV・解説動画・ポッドキャスト用アニメを作るときの実践ノウハウ集。HyperFrames(HTML→MP4)を前提に、プロンプトの型、事前に渡す素材、音(BGM/SFX/ナレーション)、マルチエージェント分業、品質チェック、コスト感をまとめる。Use when the user asks to make/animate/render a video, promo, launch video, explainer, motion graphic, captions, or podcast overlays with Claude Code. 動画を作る前に必ず読む。
+description: Claude Codeで動画・モーショングラフィックス・PV・解説動画・ポッドキャスト用アニメを作るときの実践ノウハウ集。HyperFrames(HTML→MP4)を前提に、プロンプトの型、事前に渡す素材、音(BGM/SFX/ナレーション)、マルチエージェント分業、品質チェック、コスト感をまとめる。Use when the user asks to make/animate/render a video, promo, launch video, explainer, motion graphic, captions, or podcast overlays with Claude Code. 動画を作る前に必ず読む。 映画の技法424件(カメラ・光・構図・色・編集・時間・効果)を、場面カードに落として使う辞書(references/cinematic/)つき。「かっこよく」ではなく技法名と数値で設計する。
 ---
 
 # Claude Code × 動画制作 実践ガイド
@@ -16,6 +16,7 @@ description: Claude Codeで動画・モーショングラフィックス・PV・
 
 0. **このスキル自体を最初に読み、§11 の手順に従う。** スキルが `~/.claude/skills` に無い環境(クラウド等)でも、リポジトリ内の `SKILL.md` を Read して従う。「入っていないから使わない」は禁止(実際にこれで1作目の品質が落ちた)。
 1. 動画系の依頼が来たら、まず `/hyperframes`(ルーター)を読む。無ければ §1 で導入する。
+1b. **場面を設計する時は `references/cinematic/START_HERE.md`(§14)と `references/shot-spec-template.md`(場面カード)を使う。** 「かっこよく」「映画っぽく」ではなく、技法名・数値・つなぎで指示する。
 2. **作る前に確認する3点**(曖昧なら聞く。決まっていれば聞かない):尺、用途(SNS/LP/社内)、トーン。
 3. 実装は小さく始める。最初の1本は **10〜15秒**。当たりが出てから伸ばす。
 
@@ -175,3 +176,19 @@ lint が1件でもエラーだと layout/contrast 監査が走らず「0 samples
 - **音の最終段**: loudnorm(-14 LUFS)後にAAC化するとピークが上がる。最終mp4で `volume=-1.5dB` を掛けて -1dBFS 以下に収める。
 - **Karplus-Strong のバッファ長**: `int(SR*L/SR)` は丸めで L-1 になる。`rng.standard_normal(L)` で長さLを直接作る。
 - 実例: リポジトリの `anime-ad/ep1/`(設計書 `docs/`、`make_audio.py`、`assemble.sh`、場面別ソース)。
+
+## 14. 映画の技法辞書(424件)で「設計」を強くする
+
+`references/cinematic/` に、映画の技法424件を**コードで作る人向けに翻訳した辞書**がある(出典: melies.co/cinematic-techniques を要約・再構成。HyperFramesでの実装レシピは独自)。
+各エントリ = 一言 / 物語での役割 / 使う・使わない / よくある失敗 / **HyperFramesでの作り方(数値・数式・CSS/SVG/canvas/WebGL/ffmpeg・既製部品名)** / 音との合わせ方 / 難易度 / AI動画生成プロンプト。
+
+**使い方(場面を作る時の標準手順)**
+1. `references/cinematic/START_HERE.md` を読む(映画の文法10原則、目的→技法の早見表、必修30技法、隣接場面の差分チェック)。
+2. SCENES.md の各場面に `references/shot-spec-template.md` の**場面カード**を書く(サイズ/アングル/動き/光/色/構図/時間/効果/つなぎ(両側の絵))。書けない欄=企画不足。
+3. 技法の本文は `INDEX.md` か `grep -n '`camera-movement/dolly-zoom`' references/cinematic/*.md` で引き、**そのエントリだけ**を担当に読ませる(エントリの「HyperFramesでの作り方」の数値がそのまま実装の出発点になる)。
+4. 隣り合う場面で、サイズ・動き・光・色・つなぎの**5軸のうち3つ以上を変える**。同じ技法を2場面で主役にしない(専売化)。
+5. 審査では START_HERE の §8「効いているか」の確認項目で、場面カードと実際のコマを見比べる。
+
+**この辞書が変えること(実績)**: 1作目は「かっこよく」で作って似たカットの連続になった。2作目以降は、設計書に技法名を書き、場面ごとに別の技法を主役にして、品質が上がった。技法は**物語の役割に仕える**ものだけを選ぶ(飾りで足さない)。
+
+**再利用できる道具** `tools/`: `sheet.sh`(コンタクトシート)/ `assemble.sh`(連結+音)/ `sync_check.py`(映像と音の同期)/ `audio_instruments.py`(音の合成ライブラリ)/ `make_cinematic_index.py`(索引の再生成と網羅検証)。
