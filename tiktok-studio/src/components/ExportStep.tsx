@@ -2,12 +2,13 @@ import { useEffect, useRef, useState } from "react";
 import { encodeWav } from "../lib/audio";
 import { exportVideo } from "../lib/exporter";
 import { VIDEO } from "../lib/knowledge";
-import { loadGraphic, type LoadedGraphic } from "../lib/mg";
+import { loadGraphic, type HostExtras, type LoadedGraphic } from "../lib/mg";
 import type { Script, Timeline } from "../lib/types";
 import { CopyButton, Notice, StepNav, downloadBlob, formatSeconds } from "./common";
 import { TimelineBar } from "./VoiceStep";
 
 interface Props {
+  extras: HostExtras;
   html: string;
   script: Script | null;
   timeline: Timeline;
@@ -25,7 +26,7 @@ const CHECKLIST = [
   "投稿後1時間はコメントに返信する（初速の反応が大事）"
 ];
 
-export function ExportStep({ html, script, timeline, mixed, onBack }: Props) {
+export function ExportStep({ extras, html, script, timeline, mixed, onBack }: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [graphic, setGraphic] = useState<LoadedGraphic | null>(null);
@@ -61,7 +62,7 @@ export function ExportStep({ html, script, timeline, mixed, onBack }: Props) {
     setGraphic(null);
     setLoadError("");
     if (!html.trim()) return;
-    loadGraphic(html)
+    loadGraphic(html, extras)
       .then((result) => {
         if (disposed) return result.dispose();
         loaded = result;
@@ -72,7 +73,7 @@ export function ExportStep({ html, script, timeline, mixed, onBack }: Props) {
       disposed = true;
       loaded?.dispose();
     };
-  }, [html]);
+  }, [html, extras]);
 
   const draw = (t: number) => {
     const canvas = canvasRef.current;

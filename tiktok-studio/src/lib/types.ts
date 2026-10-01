@@ -1,3 +1,5 @@
+import type { CharacterSettings } from "./character";
+
 export type SceneRole = "hook" | "body" | "twist" | "cta" | "loop";
 
 export interface Concept {
@@ -21,6 +23,8 @@ export interface Concept {
   tone: string;
   /** 使う演出テクニック（TECH-xxx）。空ならスタイルのおまかせ */
   techniqueIds?: string[];
+  /** 看板キャラクターを登場させるか（キャラ設定がある場合。未指定なら登場させる） */
+  useCharacter?: boolean;
 }
 
 export interface Scene {
@@ -97,6 +101,8 @@ export interface ApiSettings {
   accountVoice?: VoiceSettings;
   /** アカウントの「らしさ」。新しい動画はこのジャンル・見た目で始まる */
   accountBrand?: AccountBrand;
+  /** 看板キャラクター */
+  character?: CharacterSettings;
 }
 
 /** 動画ごとに変えず、アカウントで固定する企画項目（フックの型やテーマは毎回変える） */

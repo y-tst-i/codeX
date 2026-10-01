@@ -1,0 +1,128 @@
+import type { Palette } from "./knowledge";
+
+/**
+ * アカウントの看板キャラクター。
+ * Canvas 2D で描く関数として1回だけデザインし、毎回の動画に同じコードを差し込む
+ * （＝毎回まったく同じ見た目で登場する）。口は実際のナレーションの音量で動く。
+ */
+export interface CharacterSettings {
+  name: string;
+  concept: string;
+  /** window.CHARACTER を定義する JavaScript（<script>の中身） */
+  script: string;
+}
+
+export const EXPRESSIONS = ["normal", "happy", "surprised", "thinking", "sad", "wink", "smug"] as const;
+export const POSES = ["idle", "point", "wave", "cheer", "shrug"] as const;
+
+export const EXPRESSION_LABELS: Record<string, string> = {
+  normal: "ふつう",
+  happy: "笑顔",
+  surprised: "びっくり",
+  thinking: "考え中",
+  sad: "しょんぼり",
+  wink: "ウインク",
+  smug: "ドヤ顔"
+};
+export const POSE_LABELS: Record<string, string> = { idle: "立ち", point: "指さし", wave: "手を振る", cheer: "バンザイ", shrug: "お手上げ" };
+
+export const CHARACTER_PRESETS: { label: string; text: string }[] = [
+  { label: "丸いマスコット", text: "まんまるのからだに短い手足がついた、ゆるくてかわいいマスコット。大きな目と小さな口。" },
+  { label: "うさぎの先生", text: "恋愛や心理学を教えてくれる、丸メガネをかけたうさぎの先生。少しおませで物知り。" },
+  { label: "ねこの相棒", text: "ちょっと生意気だけど憎めない、二頭身のねこ。しっぽで感情を表現する。" },
+  { label: "デフォルメの人物", text: "二頭身にデフォルメした、親しみやすい解説役のお姉さん（実在の人物には似せない）。" },
+  { label: "ふしぎ生物", text: "ゼリーのようにぷるぷるした、表情豊かなふしぎ生物。感情で色が少し変わる。" }
+];
+
+export function buildCharacterPrompt(name: string, concept: string, palette: Palette): string {
+  return `# 依頼
+TikTokの縦型モーショングラフィックス動画に毎回登場する「看板キャラクター」を、**HTML Canvas 2D の描画コード**としてデザインしてください。
+このコードは今後すべての動画にそのまま差し込まれ、表情・ポーズ・口の開き具合を変えながら使われます。
+
+# キャラクター
+- 名前: ${name || "（未定。似合う名前を考えて）"}
+- イメージ: ${concept}
+- アカウントの配色（キャラはこの世界観になじむ色で。背景は ${palette.colors.bg}、アクセント ${palette.colors.accent} / ${palette.colors.accent2}）
+
+# デザインの条件
+- 縦型動画の中で小さく表示されても判別できる、**シルエットがはっきりした、シンプルで記憶に残る形**
+- 表情が大きく伝わる顔（目・眉・口で感情を出す）
+- 既存のアニメ・ゲーム・企業マスコット等に似せない（完全オリジナル）
+- 線は太め（サイズ1000pxのとき6〜10px）、塗りは2〜4色＋ハイライト。陰影は控えめでよい
+
+# 技術仕様（この契約どおりに作る）
+\`<script id="character">\` の中に、次のグローバルを定義するコードを書く。外部ライブラリ・画像は使わず、Canvas 2D のパスと図形だけで描く。
+
+\`\`\`js
+window.CHARACTER = {
+  name: "キャラの名前",
+  expressions: ["normal", "happy", "surprised", "thinking", "sad", "wink", "smug"],
+  poses: ["idle", "point", "wave", "cheer", "shrug"],
+  /**
+   * キャラを1体描く。
+   * x, y: 足元の中心の座標 / size: 身長(px) / t: 秒（瞬き・呼吸の揺れに使う）
+   * expression: 上の表情のどれか / pose: 上のポーズのどれか
+   * mouth: 0〜1 の口の開き（ナレーションの音量に合わせて外から渡される）
+   * look: -1〜1 の視線（左右） / flip: true なら左右反転
+   */
+  draw(ctx, { x, y, size, t = 0, expression = "normal", pose = "idle", mouth = 0, look = 0, flip = false }) {}
+};
+\`\`\`
+
+- **draw は純粋関数**：同じ引数なら必ず同じ絵。Math.random・Date.now・前回の状態を使わない
+- 瞬きは t から決める（例：(t % 3.7) < 0.12 のとき目を閉じる）。呼吸のわずかな上下も t の sin で
+- draw の中で ctx.save()/restore() を必ず対にし、呼び出し側の状態を汚さない
+- 指さし（point）は画面の右上方向を指す。flip で左右反転できる
+- mouth が 0 なら口を閉じ、1 で最大に開く（表情ごとの口の形を保ったまま開閉させる）
+
+# 確認用の表示
+同じHTMLの中に \`<canvas id="sheet" width="1400" height="1000">\` を置き、全表情（上段）と全ポーズ（下段）を並べて描き、それぞれの下に名前を書く。
+
+# 出力形式
+キャラクターの紹介（2〜3行）のあと、完成したHTMLを \`\`\`html コードブロック1つで出力してください。省略は禁止です。`;
+}
+
+/** 返答・HTMLから <script id="character"> の中身を取り出す */
+export function extractCharacterScript(text: string): string {
+  const match = /<script[^>]*id=["']character["'][^>]*>([\s\S]*?)<\/script>/i.exec(text);
+  if (match?.[1]?.trim()) return match[1].trim();
+  // id が無い場合、window.CHARACTER を定義している script を探す
+  for (const m of text.matchAll(/<script[^>]*>([\s\S]*?)<\/script>/gi)) {
+    if (m[1] && /window\.CHARACTER\s*=/.test(m[1])) return m[1].trim();
+  }
+  throw new Error('キャラクターのコード（<script id="character">）が見つかりませんでした');
+}
+
+export interface CharacterDraw {
+  name?: string;
+  draw(ctx: CanvasRenderingContext2D, opts: Record<string, unknown>): void;
+}
+
+/** モーショングラフィックス側に教える、キャラの使い方 */
+export function characterPromptSection(character: CharacterSettings): string {
+  return `# 看板キャラクター「${character.name}」（必ず登場させる）
+キャラクターの描画関数 \`window.CHARACTER.draw(ctx, opts)\` は、このツールが**HTMLの読み込み前に自動で用意します**。自分でキャラを描いたり、関数を書き直したりしないでください。
+- イメージ: ${character.concept}
+- 呼び出し方: \`window.CHARACTER.draw(ctx, { x, y, size, t, expression, pose, mouth, look, flip })\`
+  - x, y は足元の中心、size は身長(px)
+  - expression: ${EXPRESSIONS.join(" / ")}
+  - pose: ${POSES.join(" / ")}
+  - mouth（0〜1）には必ず \`window.MG_VOICE_LEVEL(t)\` を渡す（ナレーションの実際の音量。口が声に合わせて動く）
+- 単体で開いたときにも落ちないよう、使う前に \`if (window.CHARACTER)\` で存在を確認する。\`window.MG_VOICE_LEVEL\` が無いときは 0 を使う
+- 演出のルール:
+  - キャラは「解説している本人」。ほぼ全編に登場させ、セリフの内容に合わせて表情とポーズを切り替える（驚きの事実で surprised、問いかけで thinking、結論で happy や smug、呼びかけで point や wave）
+  - 表情を切り替える瞬間は、軽く跳ねる（squash & stretch）・大きさをポップさせるなどで変化を見せる
+  - 主役の文字や図解の邪魔をしない位置（画面下寄りの左右どちらか、身長は画面高さの25〜35%程度）に置き、文字とは重ねない。決め所ではキャラを大きく見せてもよい
+  - 登場・退場・場所移動は easeOutBack などで気持ちよく。立っているだけの時間も、呼吸の揺れや視線（look）の変化で止めない`;
+}
+
+/**
+ * 読み込み時に差し込むスクリプト。
+ * MG_VOICE_LEVEL(t) で、ナレーションの音量（0〜1）を時刻から引ける。
+ */
+export function hostExtrasScript(characterScript: string | undefined, voiceLevels: number[] | undefined, fps = 30): string {
+  const levels = voiceLevels ? JSON.stringify(voiceLevels.map((v) => Math.round(v * 100) / 100)) : "[]";
+  const voice = `window.MG_VOICE_LEVEL=(function(L,F){return function(t){if(!L.length)return 0;var i=Math.max(0,Math.min(L.length-1,Math.floor(t*F)));return L[i]||0;};})(${levels},${fps});`;
+  const character = characterScript ? characterScript.replace(/<\/script/gi, "<\\/script") : "";
+  return `<script>${voice}</script>${character ? `<script>${character}</script>` : ""}`;
+}

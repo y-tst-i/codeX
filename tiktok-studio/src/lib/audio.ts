@@ -108,3 +108,29 @@ export function clipToWav(clip: AudioClip): Blob {
   for (let i = 0; i < floats.length; i++) floats[i] = (clip.samples[i] ?? 0) / 32768;
   return encodeWav(floats, clip.sampleRate);
 }
+
+/**
+ * 口パク用の音量カーブ（0〜1）を fps ごとに作る。
+ * 95パーセンタイルで正規化し、口がすばやく開いてゆっくり閉じるようにならす。
+ */
+export function voiceLevels(samples: Float32Array, sampleRate: number, fps = 30): number[] {
+  const window = Math.max(1, Math.round(sampleRate / fps));
+  const frames = Math.ceil(samples.length / window);
+  const rms: number[] = [];
+  for (let f = 0; f < frames; f++) {
+    let sum = 0;
+    const end = Math.min(samples.length, (f + 1) * window);
+    for (let i = f * window; i < end; i++) sum += (samples[i] ?? 0) ** 2;
+    rms.push(Math.sqrt(sum / Math.max(1, end - f * window)));
+  }
+  const sorted = rms.filter((v) => v > 0.005).sort((a, b) => a - b);
+  const reference = sorted[Math.floor(sorted.length * 0.95)] ?? 1;
+  const levels: number[] = [];
+  let current = 0;
+  for (const value of rms) {
+    const target = value < 0.01 ? 0 : Math.min(1, value / reference);
+    current = target > current ? current + (target - current) * 0.7 : current + (target - current) * 0.35;
+    levels.push(current < 0.03 ? 0 : current);
+  }
+  return levels;
+}

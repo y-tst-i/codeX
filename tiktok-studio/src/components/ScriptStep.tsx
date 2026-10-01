@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { askClaude, describeClaudeError } from "../lib/claude";
-import { buildScriptPrompt, scriptSystemPrompt } from "../lib/prompts";
+import { buildScriptPrompt, characterFor, scriptSystemPrompt } from "../lib/prompts";
 import { SCRIPT_JSON_SCHEMA, emptyScene, parseScript } from "../lib/script";
 import { estimateSpeechSeconds, spokenLength } from "../lib/timeline";
 import type { ApiSettings, Concept, Scene, SceneRole, Script } from "../lib/types";
@@ -28,7 +28,7 @@ export function ScriptStep({ concept, script, settings, onChange, onBack, onNext
   const [error, setError] = useState("");
   const [running, setRunning] = useState(false);
   const [progress, setProgress] = useState("");
-  const prompt = buildScriptPrompt(concept);
+  const prompt = buildScriptPrompt(concept, characterFor(concept, settings.character));
 
   const generate = async () => {
     setRunning(true);

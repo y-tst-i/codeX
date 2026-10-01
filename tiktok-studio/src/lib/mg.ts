@@ -1,3 +1,4 @@
+import { hostExtrasScript } from "./character";
 import { measureFrozen, type FrozenReport } from "./frames";
 import { VIDEO } from "./knowledge";
 
@@ -30,11 +31,27 @@ export function extractHtml(text: string): string {
 
 const HOST_BOOTSTRAP = `<script>window.__MG_HOST__=true;window.__MG_ERRORS__=[];addEventListener("error",function(e){window.__MG_ERRORS__.push(String(e.message||e))});addEventListener("unhandledrejection",function(e){window.__MG_ERRORS__.push(String(e.reason&&e.reason.message||e.reason))});</script>`;
 
+/** 読み込み時に一緒に差し込むもの（看板キャラのコード・口パク用の音量） */
+export interface HostExtras {
+  characterScript?: string;
+  voiceLevels?: number[];
+}
+
+function injectHead(html: string, snippet: string): string {
+  if (/<head[^>]*>/i.test(html)) return html.replace(/<head[^>]*>/i, (tag) => `${tag}${snippet}`);
+  if (/<html[^>]*>/i.test(html)) return html.replace(/<html[^>]*>/i, (tag) => `${tag}<head>${snippet}</head>`);
+  return `${snippet}${html}`;
+}
+
+/** 看板キャラ・音量データを差し込む（保存用HTMLにも使う） */
+export function withExtras(html: string, extras?: HostExtras): string {
+  if (!extras || (!extras.characterScript && !extras.voiceLevels)) return html;
+  return injectHead(html, hostExtrasScript(extras.characterScript, extras.voiceLevels));
+}
+
 /** 自動再生を止め、エラーを集める仕込みを<head>の先頭に入れる */
-export function prepareHostHtml(html: string): string {
-  if (/<head[^>]*>/i.test(html)) return html.replace(/<head[^>]*>/i, (tag) => `${tag}${HOST_BOOTSTRAP}`);
-  if (/<html[^>]*>/i.test(html)) return html.replace(/<html[^>]*>/i, (tag) => `${tag}<head>${HOST_BOOTSTRAP}</head>`);
-  return `${HOST_BOOTSTRAP}${html}`;
+export function prepareHostHtml(html: string, extras?: HostExtras): string {
+  return injectHead(withExtras(html, extras), HOST_BOOTSTRAP);
 }
 
 /** 静的チェック（読み込み前にわかる問題） */
@@ -62,7 +79,7 @@ export interface LoadedGraphic {
  * HTMLを画面外のiframeに読み込み、MGとcanvasを取り出す。
  * srcdocのiframeは親と同じオリジンになるので、中のcanvasを直接読める。
  */
-export async function loadGraphic(html: string, timeoutMs = 60000): Promise<LoadedGraphic> {
+export async function loadGraphic(html: string, extras?: HostExtras, timeoutMs = 60000): Promise<LoadedGraphic> {
   const frame = document.createElement("iframe");
   frame.setAttribute("aria-hidden", "true");
   Object.assign(frame.style, {
@@ -83,7 +100,7 @@ export async function loadGraphic(html: string, timeoutMs = 60000): Promise<Load
         clearTimeout(timer);
         resolve();
       });
-      frame.srcdoc = prepareHostHtml(html);
+      frame.srcdoc = prepareHostHtml(html, extras);
     });
 
     const win = frame.contentWindow as HostWindow | null;

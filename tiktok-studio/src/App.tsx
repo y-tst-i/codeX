@@ -1,12 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
-import { clipDuration, mixClips, type AudioClip } from "./lib/audio";
+import { clipDuration, mixClips, voiceLevels, type AudioClip } from "./lib/audio";
 import { EXPORT_SAMPLE_RATE } from "./lib/exporter";
+import { VIDEO } from "./lib/knowledge";
+import type { HostExtras } from "./lib/mg";
 import { brandOf, newProject, restoreSettings } from "./lib/project";
+import { characterFor } from "./lib/prompts";
 import { speakText } from "./lib/script";
 import { clearClips, loadClips, loadIdeas, loadProject, loadSettings, saveClip, saveIdeas, saveProject, saveSettings, type ProjectState } from "./lib/storage";
 import type { Idea } from "./lib/ideas";
 import { buildTimeline } from "./lib/timeline";
 import type { ApiSettings, Concept, VoiceSettings } from "./lib/types";
+import { CharacterStep } from "./components/CharacterStep";
 import { ConceptStep } from "./components/ConceptStep";
 import { ExportStep } from "./components/ExportStep";
 import { GuideStep } from "./components/GuideStep";
@@ -15,7 +19,7 @@ import { ScriptStep } from "./components/ScriptStep";
 import { SettingsStep } from "./components/SettingsStep";
 import { VoiceStep, clipSignature, type ClipMap } from "./components/VoiceStep";
 
-type StepId = "guide" | "concept" | "script" | "voice" | "motion" | "export" | "settings";
+type StepId = "guide" | "character" | "concept" | "script" | "voice" | "motion" | "export" | "settings";
 
 export function App() {
   const [settings, setSettings] = useState<ApiSettings>(() => restoreSettings(loadSettings(), loadProject()));
@@ -59,6 +63,11 @@ export function App() {
     return { samples: mixClips(placements, timeline.duration, EXPORT_SAMPLE_RATE), sampleRate: EXPORT_SAMPLE_RATE };
   }, [timeline]);
 
+  // 看板キャラと口パク用の音量（動画HTMLの読み込み時に差し込む）
+  const character = characterFor(project.concept, settings.character);
+  const levels = useMemo(() => (mixed ? voiceLevels(mixed.samples, mixed.sampleRate, VIDEO.fps) : undefined), [mixed]);
+  const extras = useMemo<HostExtras>(() => ({ characterScript: character?.script, voiceLevels: levels }), [character?.script, levels]);
+
   const onClip = (sceneId: string, clip: AudioClip, signature: string) => {
     setClips((current) => ({ ...current, [sceneId]: { clip, signature } }));
     void saveClip(sceneId, clip, signature).catch(() => undefined);
@@ -85,6 +94,7 @@ export function App() {
 
   const done: Record<StepId, boolean> = {
     guide: false,
+    character: Boolean(settings.character),
     concept: Boolean(project.concept.topic.trim()),
     script: Boolean(project.script?.scenes.length),
     voice: scenes.length > 0 && freshClips.every(Boolean),
@@ -110,6 +120,9 @@ export function App() {
         <button className={`nav-item ${step === "guide" ? "active" : ""}`} type="button" onClick={() => setStep("guide")}>
           <span className="nav-num">📈</span>アカウントの育て方
         </button>
+        <button className={`nav-item ${step === "character" ? "active" : ""}`} type="button" onClick={() => setStep("character")}>
+          <span className="nav-num">🧸</span>看板キャラクター
+        </button>
         <div className="nav-sep" />
         {nav.map((item) => (
           <button key={item.id} type="button" className={`nav-item ${step === item.id ? "active" : ""} ${done[item.id] ? "done" : ""}`} onClick={() => setStep(item.id)}>
@@ -126,6 +139,9 @@ export function App() {
 
       <main className="main">
         {step === "guide" ? <GuideStep /> : null}
+        {step === "character" ? (
+          <CharacterStep settings={settings} concept={project.concept} onChange={(next) => setSettings((current) => ({ ...current, character: next }))} />
+        ) : null}
         {step === "settings" ? <SettingsStep settings={settings} onChange={setSettings} onReset={reset} /> : null}
         {step === "concept" ? (
           <ConceptStep concept={project.concept} settings={settings} ideas={ideas} onIdeas={setIdeas} onChange={changeConcept} onNext={() => setStep("script")} />
@@ -162,12 +178,14 @@ export function App() {
             timeline={timeline}
             settings={settings}
             html={project.html}
+            character={character}
+            extras={extras}
             onHtml={(html) => setProject((current) => ({ ...current, html }))}
             onBack={() => setStep("voice")}
             onNext={() => setStep("export")}
           />
         ) : null}
-        {step === "export" ? <ExportStep html={project.html} script={project.script} timeline={timeline} mixed={mixed} onBack={() => setStep("motion")} /> : null}
+        {step === "export" ? <ExportStep extras={extras} html={project.html} script={project.script} timeline={timeline} mixed={mixed} onBack={() => setStep("motion")} /> : null}
         {(step === "voice" || step === "motion") && !project.script ? <p className="lead">先に②台本を作ってください。</p> : null}
       </main>
     </div>

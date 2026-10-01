@@ -65,6 +65,13 @@ export function ConceptStep({ concept, settings, ideas, onIdeas, onChange, onNex
         </div>
       </div>
 
+      {settings.character ? (
+        <label className="row" style={{ marginTop: 14 }}>
+          <input type="checkbox" style={{ width: "auto" }} checked={concept.useCharacter !== false} onChange={(e) => set("useCharacter", e.target.checked)} />
+          🧸 看板キャラ「{settings.character.name}」を登場させる
+        </label>
+      ) : null}
+
       <h2>フックの型（最初の1秒）</h2>
       <div className="grid-3">
         {HOOKS.map((hook) => (

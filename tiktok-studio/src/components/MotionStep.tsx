@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { askClaude, describeClaudeError } from "../lib/claude";
-import { extractHtml, lintHtml, loadGraphic, validateGraphic, type ValidationReport } from "../lib/mg";
+import { extractHtml, lintHtml, loadGraphic, validateGraphic, withExtras, type HostExtras, type ValidationReport } from "../lib/mg";
+import type { CharacterSettings } from "../lib/character";
 import { buildFixPrompt, buildMotionPrompt, buildPolishPrompt, motionSystemPrompt } from "../lib/prompts";
 import type { ApiSettings, Concept, Script, Timeline } from "../lib/types";
 import { Field, Notice, PromptBox, StepNav, downloadBlob } from "./common";
@@ -13,6 +14,8 @@ interface Props {
   timeline: Timeline;
   settings: ApiSettings;
   html: string;
+  character?: CharacterSettings;
+  extras: HostExtras;
   onHtml: (html: string) => void;
   onBack: () => void;
   onNext: () => void;
@@ -20,7 +23,7 @@ interface Props {
 
 type Job = "create" | "polish" | "fix";
 
-export function MotionStep({ concept, script, timeline, settings, html, onHtml, onBack, onNext }: Props) {
+export function MotionStep({ concept, script, timeline, settings, html, character, extras, onHtml, onBack, onNext }: Props) {
   const [running, setRunning] = useState<Job | null>(null);
   const [progress, setProgress] = useState("");
   const [error, setError] = useState("");
@@ -28,7 +31,7 @@ export function MotionStep({ concept, script, timeline, settings, html, onHtml, 
   const [checking, setChecking] = useState(false);
   const [polishRequest, setPolishRequest] = useState("");
 
-  const input = { concept, script, timeline };
+  const input = { concept, script, timeline, character };
   const motionPrompt = buildMotionPrompt(input);
   const problems = report ? [...report.problems] : [];
   const lint = html.trim() ? lintHtml(html) : [];
@@ -39,7 +42,7 @@ export function MotionStep({ concept, script, timeline, settings, html, onHtml, 
     setChecking(true);
     setReport(null);
     try {
-      const loaded = await loadGraphic(source);
+      const loaded = await loadGraphic(source, extras);
       try {
         setReport(validateGraphic(loaded, timeline.duration));
       } finally {
@@ -122,7 +125,7 @@ export function MotionStep({ concept, script, timeline, settings, html, onHtml, 
           }}>
             {checking ? "チェック中…" : "動作チェック"}
           </button>
-          <button className="btn" type="button" disabled={!html.trim()} onClick={() => downloadBlob(new Blob([html], { type: "text/html" }), "motion.html")}>
+          <button className="btn" type="button" disabled={!html.trim()} onClick={() => downloadBlob(new Blob([withExtras(html, extras)], { type: "text/html" }), "motion.html")}>
             HTMLを保存
           </button>
           <button className="btn ghost" type="button" onClick={loadDemo}>
@@ -160,7 +163,7 @@ export function MotionStep({ concept, script, timeline, settings, html, onHtml, 
           {report?.ok ? (
             <>
               <h2>3. 批評してもらう（別のClaudeの目で）</h2>
-              <CriticPanel input={input} html={html} settings={settings} frozen={report.frozen} onReport={setPolishRequest} />
+              <CriticPanel input={input} html={html} extras={extras} settings={settings} frozen={report.frozen} onReport={setPolishRequest} />
             </>
           ) : null}
           <h2>{report && !report.ok ? "4" : report?.ok ? "4" : "3"}. もっと良くする（磨き込み）</h2>

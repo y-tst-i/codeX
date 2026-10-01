@@ -1,4 +1,5 @@
 import { FONTS, GOALS, HOOKS, PALETTES, STYLES, VIDEO, findOrFirst } from "./knowledge";
+import { characterPromptSection, type CharacterSettings } from "./character";
 import { EASING_LIBRARY, resolveTechniques } from "./techniques";
 import { formatTimelineForPrompt } from "./timeline";
 import type { Concept, Script, Timeline } from "./types";
@@ -15,7 +16,12 @@ export function scriptSystemPrompt(): string {
   ].join("\n");
 }
 
-export function buildScriptPrompt(concept: Concept): string {
+/** この動画に看板キャラを出すか */
+export function characterFor(concept: Concept, character: CharacterSettings | undefined): CharacterSettings | undefined {
+  return character && concept.useCharacter !== false ? character : undefined;
+}
+
+export function buildScriptPrompt(concept: Concept, character?: CharacterSettings): string {
   const hook = findOrFirst(HOOKS, concept.hookId);
   const style = findOrFirst(STYLES, concept.styleId);
   const goal = GOALS[concept.goal] ?? GOALS.follow!;
@@ -34,7 +40,7 @@ ${concept.notes.trim() ? `- 参考情報（事実はここを優先）:\n${inden
 - シーン数の目安: ${sceneCount}前後（1シーン2〜4秒）
 - 語り口: ${concept.tone || "テンポよく親しみやすい"}
 - 映像スタイル: ${style.name}（${style.summary}）
-- 動画のゴール: 視聴者に「${goal.label}」してもらう → ${goal.cta}
+- 動画のゴール: 視聴者に「${goal.label}」してもらう → ${goal.cta}${character ? `\n- 語り手: 看板キャラ「${character.name}」（${character.concept}）が視聴者に話しかけている体で書く。キャラらしい口調・決めゼリフがあると覚えてもらいやすい` : ""}
 
 # フック（最重要）
 - 型: 「${hook.name}」= ${hook.formula}
@@ -92,9 +98,11 @@ export interface MotionPromptInput {
   concept: Concept;
   script: Script;
   timeline: Timeline;
+  /** 登場させる看板キャラ（なければ出さない） */
+  character?: CharacterSettings;
 }
 
-export function buildMotionPrompt({ concept, script, timeline }: MotionPromptInput): string {
+export function buildMotionPrompt({ concept, script, timeline, character }: MotionPromptInput): string {
   const style = findOrFirst(STYLES, concept.styleId);
   const palette = findOrFirst(PALETTES, concept.paletteId);
   const font = findOrFirst(FONTS, concept.fontId);
@@ -137,7 +145,7 @@ ${techniqueLines}
 ## イージング辞典（この式で実装する）
 ${EASING_LIBRARY.map((line) => `- ${line}`).join("\n")}
 
-# タイムライン（音声の実測値。1フレームもずらさないこと）
+${character ? `${characterPromptSection(character)}\n\n` : ""}# タイムライン（音声の実測値。1フレームもずらさないこと）
 ${formatTimelineForPrompt(timeline)}
 
 # モーションの原則（全部守る）

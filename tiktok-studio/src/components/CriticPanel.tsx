@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { askClaude, describeClaudeError } from "../lib/claude";
 import { blobToBase64, makeContactSheets, type FrozenReport } from "../lib/frames";
-import { loadGraphic } from "../lib/mg";
+import { loadGraphic, type HostExtras } from "../lib/mg";
 import { buildCriticPrompt, type MotionPromptInput } from "../lib/prompts";
 import type { ApiSettings } from "../lib/types";
 import { Notice, PromptBox, downloadBlob } from "./common";
@@ -9,6 +9,7 @@ import { Notice, PromptBox, downloadBlob } from "./common";
 interface Props {
   input: MotionPromptInput;
   html: string;
+  extras: HostExtras;
   settings: ApiSettings;
   frozen: FrozenReport | null;
   /** 批評レポートを磨き込みの依頼欄へ入れる */
@@ -19,7 +20,7 @@ interface Props {
  * 別のClaudeに「完成した画」だけを見せて批評してもらう。
  * 作った本人（同じ会話）に自己採点させないのがポイント。
  */
-export function CriticPanel({ input, html, settings, frozen, onReport }: Props) {
+export function CriticPanel({ input, html, extras, settings, frozen, onReport }: Props) {
   const [sheets, setSheets] = useState<Blob[]>([]);
   const [urls, setUrls] = useState<string[]>([]);
   const [making, setMaking] = useState(false);
@@ -41,7 +42,7 @@ export function CriticPanel({ input, html, settings, frozen, onReport }: Props) 
     setMaking(true);
     setError("");
     try {
-      const loaded = await loadGraphic(html);
+      const loaded = await loadGraphic(html, extras);
       try {
         setSheets(await makeContactSheets((t) => loaded.mg.render(t), loaded.canvas, input.timeline.duration));
       } finally {
