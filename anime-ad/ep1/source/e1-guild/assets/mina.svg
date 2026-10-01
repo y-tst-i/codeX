@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 900" width="400" height="900">
+  <!-- 受付嬢「ミナ」: ギルドの受付。ポニーテールと水色のベスト。無表情で淡々とした人。シルエット+金のリム。 -->
+  <g class="ponytail"><path d="M236 118 C310 100 360 170 340 300 C330 240 300 190 244 176 Z" fill="#0a0a12" stroke="#ffd34d" stroke-width="2.5" stroke-linejoin="round"/></g>
+  <path class="skirt" d="M138 470 L262 470 L292 760 L108 760 Z" fill="#0a0a12" stroke="#ffd34d" stroke-width="2.5" stroke-linejoin="round"/>
+  <path class="legs" d="M150 760 L186 760 L184 870 L120 870 L126 850 L152 840 Z M214 760 L250 760 L270 850 L276 870 L216 870 Z" fill="#0a0a12" stroke="#ffd34d" stroke-width="2.5" stroke-linejoin="round"/>
+  <path class="torso" d="M146 250 C170 236 232 236 256 250 L270 470 L132 470 Z" fill="#0a0a12" stroke="#ffd34d" stroke-width="2.5" stroke-linejoin="round"/>
+  <path class="vest" d="M170 252 L232 252 L226 470 L176 470 Z" fill="#19d3ff"/>
+  <path class="ribbon" d="M178 250 L224 250 L214 276 L200 262 L188 276 Z" fill="#fffdf5"/>
+  <g class="head"><path d="M184 205 L218 205 L218 244 L184 244 Z" fill="#0a0a12"/>
+    <ellipse cx="202" cy="160" rx="44" ry="50" fill="#0a0a12" stroke="#ffd34d" stroke-width="2.5"/>
+    <path d="M158 150 C158 100 200 86 244 112 C250 130 244 150 244 150 C220 128 190 126 158 150 Z" fill="#0a0a12" stroke="#ffd34d" stroke-width="2.5" stroke-linejoin="round"/>
+    <path class="eyes" d="M180 168 L194 168 M214 168 L228 168" stroke="#fffdf5" stroke-width="5" stroke-linecap="round"/></g>
+  <g class="armL"><path d="M148 258 L112 390 L124 470 L150 466 L156 396 L176 280 Z" fill="#0a0a12" stroke="#ffd34d" stroke-width="2.5" stroke-linejoin="round"/></g>
+  <g class="armR"><path d="M256 258 L292 390 L282 466 L258 462 L250 396 L232 280 Z" fill="#0a0a12" stroke="#ffd34d" stroke-width="2.5" stroke-linejoin="round"/></g>
+</svg>

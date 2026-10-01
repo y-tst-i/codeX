@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 220" width="300" height="220">
+  <!-- スライム: やさしい緑のゼリー。ぷるぷる。 -->
+  <path class="body" d="M30 190 C20 120 70 40 150 40 C230 40 280 120 270 190 C240 210 60 210 30 190 Z" fill="#46d17a" stroke="#0a0a12" stroke-width="5" stroke-linejoin="round"/>
+  <ellipse cx="108" cy="82" rx="22" ry="12" fill="#fffdf5" opacity=".6" transform="rotate(-30 108 82)"/>
+  <g class="face"><ellipse cx="112" cy="130" rx="12" ry="16" fill="#0a0a12"/><ellipse cx="188" cy="130" rx="12" ry="16" fill="#0a0a12"/>
+  <circle cx="116" cy="124" r="4" fill="#fffdf5"/><circle cx="192" cy="124" r="4" fill="#fffdf5"/>
+  <path d="M136 156 Q150 170 164 156" stroke="#0a0a12" stroke-width="5" fill="none" stroke-linecap="round"/></g>
+</svg>

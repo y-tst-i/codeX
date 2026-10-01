@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 900" width="520" height="900">
+  <!-- 勇者「レオン」: 魔王討伐に来た勇者パーティのリーダー。金髪(金の塗り)、白銀の鎧、剣。自信家。 -->
+  <g class="cape"><path d="M190 262 C100 300 56 450 36 640 L84 604 L72 704 L130 640 L142 724 L184 622 C192 500 204 400 232 300 Z" fill="#1a1a26" stroke="#ffd34d" stroke-width="2.5" stroke-linejoin="round"/></g>
+  <path class="legs" d="M200 515 L260 520 L238 700 L222 850 L258 876 L108 876 L116 850 L176 834 L186 700 Z M258 515 L318 506 L334 690 L352 854 L412 876 L276 876 L286 842 L294 690 Z" fill="#cfd3dc" stroke="#0a0a12" stroke-width="3" stroke-linejoin="round"/>
+  <path class="torso" d="M178 252 C216 234 292 234 328 252 L352 404 L362 568 L192 580 L170 404 Z" fill="#e6e9f0" stroke="#0a0a12" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M250 250 L252 570" stroke="#0a0a12" stroke-width="3"/>
+  <path class="belt" d="M188 520 L360 508 L362 534 L190 546 Z" fill="#ffc400" stroke="#0a0a12" stroke-width="3"/>
+  <g class="head">
+    <path d="M226 205 L290 205 L292 244 L226 244 Z" fill="#f0c9a0"/>
+    <ellipse cx="258" cy="170" rx="42" ry="47" fill="#f0c9a0" stroke="#0a0a12" stroke-width="3"/>
+    <path class="hair" d="M212 156 C206 100 250 70 300 94 C320 112 316 140 312 160 C292 128 252 122 212 156 Z M214 150 L196 176 L214 168 Z" fill="#ffc400" stroke="#0a0a12" stroke-width="3" stroke-linejoin="round"/>
+    <path d="M262 168 L286 164 M272 190 L286 188" stroke="#0a0a12" stroke-width="4" stroke-linecap="round"/></g>
+  <g class="arm"><rect class="armrect" x="322" y="246" width="110" height="44" rx="22" fill="#e6e9f0" stroke="#0a0a12" stroke-width="3"/>
+    <g class="sword"><rect x="420" y="262" width="150" height="14" rx="4" fill="#e8f4ff" stroke="#0a0a12" stroke-width="3"/><rect x="408" y="240" width="14" height="60" rx="4" fill="#ffc400" stroke="#0a0a12" stroke-width="3"/></g></g>
+</svg>

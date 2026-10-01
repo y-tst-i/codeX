@@ -1,0 +1,506 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <script src="assets/gsap.min.js"></script>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 1920px; height: 1080px; overflow: hidden; background: #03050a; }
+      #root { position: relative; width: 100%; height: 100%; overflow: hidden; background: #03050a; font-family: "Noto Sans JP", sans-serif; }
+      #stage, .shot, .lit, .glow, .fill { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; }
+      #stage { transform-origin: 960px 540px; }
+      .shot { display: none; }
+      .lit { opacity: 0; }
+      .glow { opacity: 0; }
+      .lit > svg, .lit > canvas, .glow > svg, .glow > canvas { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; }
+      #rain, #vig { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; }
+      #vig { background: radial-gradient(ellipse 75% 80% at 50% 50%, rgba(0,0,0,0) 45%, rgba(0,0,0,.62) 100%); }
+      #burst { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; background: #dfeaff; opacity: 0; }
+      #dot { position: absolute; left: 1262px; top: 672px; width: 8px; height: 8px; border-radius: 50%; background: #ffffff; opacity: 0;
+             box-shadow: 0 0 10px 4px rgba(230,240,255,.85), 0 0 36px 14px rgba(160,190,255,.35); }
+      .sub { position: absolute; left: 210px; top: 930px; width: 1500px; height: 80px; line-height: 80px; text-align: center;
+             font-family: "Noto Sans JP", sans-serif; font-weight: 700; font-size: 48px; color: #fffdf5; white-space: nowrap; opacity: 0; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="9" data-width="1920" data-height="1080">
+      <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+        <defs>
+          <filter id="gl" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="9" /></filter>
+          <filter id="gl2" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="22" /></filter>
+          <filter id="bl3" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur stdDeviation="3.5" /></filter>
+          <filter id="bl8" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur stdDeviation="9" /></filter>
+          <filter id="eyeGlow" x="-100%" y="-300%" width="300%" height="700%"><feGaussianBlur stdDeviation="9" /></filter>
+          <filter id="cl1" filterUnits="userSpaceOnUse" x="0" y="0" width="1920" height="1080"><feTurbulence type="fractalNoise" baseFrequency="0.0032 0.010" numOctaves="5" seed="7" /><feColorMatrix type="matrix" values="0 0 0 0 .04  0 0 0 0 .07  0 0 0 0 .13  0 0 0 2.7 -.95" /></filter>
+          <filter id="cl2" filterUnits="userSpaceOnUse" x="0" y="0" width="1920" height="1080"><feTurbulence type="fractalNoise" baseFrequency="0.006 0.013" numOctaves="5" seed="21" /><feColorMatrix type="matrix" values="0 0 0 0 .04  0 0 0 0 .07  0 0 0 0 .13  0 0 0 2.7 -.9" /></filter>
+          <filter id="cl3" filterUnits="userSpaceOnUse" x="0" y="0" width="1920" height="1080"><feTurbulence type="fractalNoise" baseFrequency="0.0022 0.017" numOctaves="5" seed="5" /><feColorMatrix type="matrix" values="0 0 0 0 .04  0 0 0 0 .07  0 0 0 0 .13  0 0 0 2.8 -.9" /></filter>
+          <filter id="cl5" filterUnits="userSpaceOnUse" x="0" y="0" width="1920" height="1080"><feTurbulence type="fractalNoise" baseFrequency="0.004 0.011" numOctaves="5" seed="33" /><feColorMatrix type="matrix" values="0 0 0 0 .04  0 0 0 0 .07  0 0 0 0 .13  0 0 0 2.7 -.92" /></filter>
+          <filter id="cl6" filterUnits="userSpaceOnUse" x="0" y="0" width="1920" height="1080"><feTurbulence type="fractalNoise" baseFrequency="0.007 0.007" numOctaves="5" seed="11" /><feColorMatrix type="matrix" values="0 0 0 0 .03  0 0 0 0 .05  0 0 0 0 .10  0 0 0 3 -1.05" /></filter>
+        </defs>
+      </svg>
+
+      <div id="stage">
+        <div class="shot" id="s1"><div class="lit" id="l1"></div><div class="glow" id="g1"></div></div>
+        <div class="shot" id="s2"><div class="lit" id="l2"></div><div class="glow" id="g2"></div></div>
+        <div class="shot" id="s3"><div class="lit" id="l3"></div><div class="glow" id="g3"><canvas id="eyes3" width="1920" height="1080"></canvas></div></div>
+        <div class="shot" id="s4"><div class="lit" id="l4"></div><div class="glow" id="g4"><canvas id="eyes4" width="1920" height="1080"></canvas></div></div>
+        <div class="shot" id="s5"><div class="lit" id="l5"></div><div class="glow" id="g5"><canvas id="eyes5" width="1920" height="1080"></canvas></div></div>
+        <div class="shot" id="s6"><div class="lit" id="l6"></div><div class="glow" id="g6"></div></div>
+      </div>
+      <canvas id="rain" width="1920" height="1080"></canvas>
+      <div id="burst"></div>
+      <div id="vig"></div>
+      <div id="dot"></div>
+      <div class="sub" id="sub1">魔王よ、覚悟！</div>
+      <div class="sub" id="sub2">…やれ。</div>
+      <div class="sub" id="sub3">ここまで、か…</div>
+    </div>
+
+    <script>
+      const W = 1920, H = 1080, FPS = 30;
+      function prng(seed) { let a = seed >>> 0; return function () { a = (a + 0x6d2b79f5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+      const $ = (id) => document.getElementById(id);
+
+      /* ---------- subtitle ring (text-shadow) ---------- */
+      (function () {
+        const s = [];
+        for (let i = 0; i < 16; i++) { const a = (i / 16) * Math.PI * 2; s.push((3 * Math.cos(a)).toFixed(2) + "px " + (3 * Math.sin(a)).toFixed(2) + "px 0 #0a0a12"); }
+        for (let i = 0; i < 8; i++) { const a = (i / 8) * Math.PI * 2 + 0.2; s.push((1.5 * Math.cos(a)).toFixed(2) + "px " + (1.5 * Math.sin(a)).toFixed(2) + "px 0 #0a0a12"); }
+        document.querySelectorAll(".sub").forEach((e) => (e.style.textShadow = s.join(",")));
+      })();
+
+      /* ---------- shared svg helpers ---------- */
+      const SIL = 'fill="#05070c" stroke="rgba(205,222,245,.62)" stroke-width="2.2" stroke-linejoin="round"';
+      function grad(id, stops, x2, y2) {
+        return '<linearGradient id="' + id + '" x1="0" y1="0" x2="' + (x2 || 0) + '" y2="' + (y2 === undefined ? 1 : y2) + '">' + stops.map((s) => '<stop offset="' + s[0] + '" stop-color="' + s[1] + '"/>').join("") + "</linearGradient>";
+      }
+      function boltPts(r, x0, y0, x1, y1, segs, jag) {
+        const p = [[x0, y0]];
+        for (let i = 1; i < segs; i++) { const t = i / segs; p.push([x0 + (x1 - x0) * t + (r() - 0.5) * jag, y0 + (y1 - y0) * t + (r() - 0.5) * jag * 0.35]); }
+        p.push([x1, y1]);
+        return p;
+      }
+      const pd = (p) => "M" + p.map((q) => q[0].toFixed(0) + " " + q[1].toFixed(0)).join(" L");
+      function bolt(seed, x0, y0, x1, y1, jag, nb, wmul) {
+        const r = prng(seed), w = wmul || 1;
+        const main = boltPts(r, x0, y0, x1, y1, 11, jag);
+        let paths = [[pd(main), 1]];
+        for (let k = 0; k < nb; k++) {
+          const i = 2 + Math.floor(r() * (main.length - 4));
+          const [px, py] = main[i];
+          const dir = r() < 0.5 ? -1 : 1;
+          const ex = px + dir * (160 + r() * 340), ey = py + 120 + r() * 260;
+          const br = boltPts(r, px, py, ex, ey, 6, jag * 0.7);
+          paths.push([pd(br), 0.55]);
+          if (r() < 0.6) { const j = 2 + Math.floor(r() * 3); const [qx, qy] = br[j]; const b2 = boltPts(r, qx, qy, qx + dir * (80 + r() * 160), qy + 80 + r() * 150, 4, jag * 0.45); paths.push([pd(b2), 0.3]); }
+        }
+        const glow = paths.map((p) => '<path d="' + p[0] + '" stroke="#cfe0ff" stroke-opacity=".9" stroke-width="' + (30 * p[1] * w).toFixed(1) + '" fill="none" stroke-linejoin="round"/>').join("");
+        const core = paths.map((p) => '<path d="' + p[0] + '" stroke="#ffffff" stroke-width="' + (7 * p[1] * w + 1.5).toFixed(1) + '" fill="none" stroke-linejoin="round" stroke-linecap="round"/>').join("");
+        return '<g filter="url(#gl2)" opacity=".8">' + glow + '</g><g filter="url(#gl)" opacity=".9">' + paths.map((p) => '<path d="' + p[0] + '" stroke="#fff" stroke-width="' + (14 * p[1] * w).toFixed(1) + '" fill="none"/>').join("") + "</g>" + core;
+      }
+      function cren(x0, x1, y, tw, th) { let s = ""; for (let x = x0; x + tw <= x1; x += tw * 2) s += "M" + x + " " + y + "h" + tw + "v" + -th + "h" + -tw + "z"; return s; }
+
+      /* ---------- party (back view silhouettes), feet at (0,0) ---------- */
+      const P = {
+        warrior: () => `<g ${SIL}>
+          <path d="M-46 0 L-42 -100 L-6 -100 L-4 0 Z M6 0 L8 -100 L44 -100 L48 0 Z"/>
+          <path d="M-70 -252 Q0 -280 70 -252 L60 -96 L-60 -96 Z"/>
+          <ellipse cx="-78" cy="-248" rx="35" ry="25"/><ellipse cx="78" cy="-248" rx="35" ry="25"/>
+          <circle cx="0" cy="-294" r="33"/>
+          <path d="M-26 -310 Q-74 -314 -72 -376 Q-54 -334 -18 -324 Z M26 -310 Q74 -314 72 -376 Q54 -334 18 -324 Z"/>
+          <circle cx="0" cy="-172" r="76"/><circle cx="0" cy="-172" r="60" fill="none" stroke-width="2"/><circle cx="0" cy="-172" r="15"/>
+          <path d="M64 -60 L84 -64 L112 -404 L98 -406 Z"/><path d="M98 -406 Q176 -446 172 -350 Q142 -374 106 -352 Z"/></g>`,
+        mage: () => `<g ${SIL}>
+          <path d="M-30 -250 Q0 -264 30 -250 L66 0 L42 -12 L22 4 L0 -10 L-22 4 L-42 -12 L-66 0 Z"/>
+          <ellipse cx="0" cy="-246" rx="42" ry="16"/>
+          <circle cx="0" cy="-282" r="21"/>
+          <ellipse cx="0" cy="-298" rx="62" ry="11"/>
+          <path d="M-34 -300 C-30 -362 0 -402 44 -452 C30 -412 38 -352 38 -300 Z"/>
+          <rect x="62" y="-432" width="9" height="432"/><circle cx="66" cy="-448" r="20"/>
+          <path d="M46 -438 Q52 -482 66 -472 Q80 -482 86 -438" fill="none" stroke-width="5"/>
+          <path d="M26 -240 L64 -200 L58 -186 L18 -214 Z"/></g>`,
+        priest: () => `<g ${SIL}>
+          <path d="M-36 -254 Q0 -272 36 -254 L60 0 L-60 0 Z"/><path d="M0 -250 L0 -4" fill="none" stroke-width="1.6"/>
+          <ellipse cx="0" cy="-250" rx="54" ry="18"/>
+          <path d="M-34 -262 Q-40 -332 0 -338 Q40 -332 34 -262 Q0 -250 -34 -262 Z"/>
+          <rect x="-78" y="-412" width="9" height="412"/>
+          <circle cx="-73" cy="-442" r="26" fill="none" stroke="#05070c" stroke-width="9"/><circle cx="-73" cy="-442" r="30.5" fill="none" stroke-width="1.5"/><circle cx="-73" cy="-442" r="21.5" fill="none" stroke-width="1.5"/>
+          <path d="M-30 -236 L-70 -196 L-62 -182 L-22 -212 Z"/></g>`,
+        leon: () => `<g ${SIL}>
+          <path d="M-54 -302 Q0 -320 54 -302 L86 -22 L52 -44 L28 -8 L0 -42 L-26 -10 L-50 -44 L-88 -20 Z"/>
+          <path d="M-36 0 L-32 -40 L-8 -40 L-8 0 Z M8 0 L8 -40 L32 -40 L36 0 Z"/>
+          <ellipse cx="-62" cy="-298" rx="30" ry="20"/><ellipse cx="62" cy="-298" rx="30" ry="20"/>
+          <circle cx="0" cy="-344" r="30"/>
+          <path d="M-35 -352 Q-32 -396 4 -398 Q42 -396 35 -352 L29 -370 L16 -354 L6 -376 L-6 -354 L-18 -376 L-27 -352 Z" fill="#323846" stroke="rgba(255,226,140,.8)"/>
+          <path d="M50 -302 L84 -332 L98 -396 L84 -400 L68 -342 L44 -288 Z"/><circle cx="92" cy="-404" r="12"/>
+          <path d="M85 -414 L85 -568 L91 -590 L97 -568 L97 -414 Z"/><rect x="66" y="-418" width="50" height="10" rx="3"/></g>`,
+      };
+      function figure(name, x, y, s) {
+        const g = P[name]();
+        return `<g transform="translate(${x} ${y}) scale(${s})">${g}</g><g transform="translate(${x} ${y}) scale(${s} ${-s})" opacity=".2">${g}</g>`;
+      }
+
+      /* ---------- SHOT 1 : rear wide, castle gate ---------- */
+      function shot1() {
+        let castle = "";
+        castle += "M300 790 L300 560 " + "h1320 L1620 790 Z ";
+        castle += cren(300, 1620, 560, 22, 20);
+        castle += "M296 790 V440 h138 V790 Z " + cren(296, 434, 440, 23, 20) + "M284 440 L365 290 L446 440 Z ";
+        castle += "M1486 790 V440 h138 V790 Z " + cren(1486, 1624, 440, 23, 20) + "M1474 440 L1555 290 L1636 440 Z ";
+        castle += "M618 790 V350 h124 V790 Z " + cren(618, 742, 350, 20, 18) + "M604 350 L680 170 L756 350 Z ";
+        castle += "M1178 790 V372 h124 V790 Z " + cren(1178, 1302, 372, 20, 18) + "M1164 372 L1240 196 L1316 372 Z ";
+        castle += "M796 790 V250 h328 V790 Z " + cren(796, 1124, 250, 24, 22);
+        castle += "M880 250 V100 h160 V250 Z M860 100 L960 -70 L1060 100 Z M958 -70 V-150 ";
+        const gate = "M876 790 V610 Q960 496 1044 610 V790 Z";
+        let slits = "";
+        [[670, 440], [670, 560], [1250, 460], [1250, 580], [930, 330], [990, 330], [930, 430], [990, 430], [350, 560], [1570, 560], [350, 650], [1570, 650]].forEach((q) => (slits += `<rect x="${q[0] - 4}" y="${q[1]}" width="8" height="26" rx="3" fill="#2a3850"/>`));
+        const r = prng(9);
+        let cob = "";
+        for (let i = -14; i <= 14; i++) cob += `<path d="M960 792 L${960 + i * 120} 1090" stroke="#1f2938" stroke-width="2" opacity=".28"/>`;
+        for (let k = 0; k < 11; k++) { const y = 792 + Math.pow(k / 10, 1.8) * 290; cob += `<path d="M0 ${y.toFixed(0)} L1920 ${y.toFixed(0)}" stroke="#1f2938" stroke-width="${1 + k * 0.25}" opacity=".2"/>`; }
+        const mount = "M0 720 L120 640 L240 700 L330 610 L430 690 L520 640 L600 720 L1320 720 L1420 650 L1520 700 L1640 600 L1760 690 L1860 640 L1920 690 V800 H0 Z";
+        return `<svg viewBox="0 0 1920 1080" xmlns="http://www.w3.org/2000/svg"><defs>
+          ${grad("sk1", [[0, "#566b92"], [0.45, "#b9cbe4"], [0.8, "#f8fbff"], [1, "#e6eefa"]])}
+          ${grad("gr1", [[0, "#7c8ea8"], [0.18, "#46556c"], [1, "#0f1520"]])}
+          ${grad("rd1", [[0, "#aebfd8"], [1, "#6c7e99"]])}
+          ${grad("cs1", [[0, "#04060b"], [0.6, "#080c14"], [1, "#2a3547"]])}
+          ${grad("hz1", [[0, "rgba(235,243,255,0)"], [0.7, "rgba(235,243,255,.55)"], [1, "rgba(235,243,255,0)"]])}
+        </defs>
+        <rect width="1920" height="800" fill="url(#sk1)"/>
+        <rect width="1920" height="1080" filter="url(#cl1)"/>
+        ${bolt(14, 1480, -20, 1330, 380, 90, 3)}
+        <path d="${mount}" fill="#1a2230"/>
+        <rect y="780" width="1920" height="300" fill="url(#gr1)"/>
+        <path d="M900 790 L1020 790 L1520 1080 L400 1080 Z" fill="url(#rd1)" opacity=".85"/>
+        ${cob}
+        <ellipse cx="560" cy="960" rx="190" ry="26" fill="#d7e4f6" opacity=".7"/><ellipse cx="1420" cy="900" rx="150" ry="18" fill="#d7e4f6" opacity=".6"/><ellipse cx="960" cy="1040" rx="320" ry="22" fill="#d7e4f6" opacity=".55"/>
+        <path d="${castle}" fill="url(#cs1)" stroke="#070a11" stroke-width="2"/>
+        ${slits}
+        <rect y="690" width="1920" height="130" fill="url(#hz1)"/>
+        <path d="${gate}" fill="#000"/>
+        <path d="M916 610 V790 M960 540 V790 M1004 610 V790 M876 650 H1044 M876 710 H1044" stroke="#222c3d" stroke-width="3" fill="none"/>
+        <path d="M960 -150 l70 18 l-20 22 l40 26 l-80 -6 z" fill="#070a11"/>
+        ${figure("warrior", 690, 922, 1.0)}${figure("mage", 828, 912, 1.0)}${figure("priest", 1106, 906, 1.0)}${figure("leon", 966, 950, 1.1)}
+        </svg>`;
+      }
+
+      /* ---------- demon (inline from demon.svg) ---------- */
+      const DEMON = `<path d="M10 1000 L120 470 L680 470 L790 1000 L640 940 L560 1000 L400 930 L240 1000 L160 940 Z" fill="#2a0a1c"/>
+        <path d="M140 1000 L190 520 L290 420 L510 420 L610 520 L660 1000 Z" fill="#14050f" stroke="#ff2a4d" stroke-width="4" stroke-linejoin="round"/>
+        <path d="M250 560 L550 560 M240 650 L560 650 M232 740 L568 740" stroke="#ff2a4d" stroke-opacity=".35" stroke-width="5"/>
+        <path d="M44 520 L190 420 L230 570 L90 620 Z M78 508 L30 410 L140 470 Z M120 470 L108 366 L184 436 Z" fill="#14050f" stroke="#ff2a4d" stroke-width="4" stroke-linejoin="round"/>
+        <path d="M756 520 L610 420 L570 570 L710 620 Z M722 508 L770 410 L660 470 Z M680 470 L692 366 L616 436 Z" fill="#14050f" stroke="#ff2a4d" stroke-width="4" stroke-linejoin="round"/>
+        <path d="M300 430 L292 290 Q400 246 508 290 L500 430 Z" fill="#14050f" stroke="#ff2a4d" stroke-width="4" stroke-linejoin="round"/>
+        <path d="M306 312 C214 300 112 232 86 92 C168 152 258 188 352 246 Z" fill="#14050f" stroke="#ff2a4d" stroke-width="4" stroke-linejoin="round"/>
+        <path d="M494 312 C586 300 688 232 714 92 C632 152 542 188 448 246 Z" fill="#14050f" stroke="#ff2a4d" stroke-width="4" stroke-linejoin="round"/>
+        <path d="M330 292 L350 214 L376 280 L400 190 L424 280 L450 214 L470 292 Z" fill="#14050f" stroke="#ff2a4d" stroke-width="3" stroke-linejoin="round"/>
+        <path d="M352 416 L376 398 L400 418 L424 398 L448 416" stroke="#ff2a4d" stroke-width="6" fill="none" stroke-linejoin="round"/>`;
+      const DEMON_T = "translate(590 -30) scale(.92)";
+      const DEMON_EYES = `<path d="M338 346 L388 360 L383 380 L334 366 Z M462 346 L412 360 L417 380 L466 366 Z" fill="#ff2a4d"/>`;
+
+      /* ---------- SHOT 2 : low angle, demon on the balcony ---------- */
+      function shot2() {
+        let bal = "";
+        for (let x = 330; x < 1600; x += 46) bal += `<path d="M${x} 700 L${x + 4} 676 Q${x + 2} 664 ${x + 9} 656 Q${x + 16} 664 ${x + 14} 676 L${x + 18} 700 Z M${x + 4} 676 h12 v-22 h-12z"/>`;
+        let corb = "";
+        for (let x = 340; x < 1600; x += 120) corb += `M${x} 770 L${x + 80} 770 L${x + 50} 860 L${x + 30} 860 Z `;
+        const tl = "M0 1080 V230 L70 200 L100 20 L136 200 L200 180 L240 -120 L286 180 L360 200 V1080 Z";
+        const tr = "M1920 1080 V240 L1850 210 L1824 40 L1790 210 L1720 190 L1680 -100 L1636 190 L1560 210 V1080 Z";
+        return `<svg viewBox="0 0 1920 1080" xmlns="http://www.w3.org/2000/svg"><defs>
+          ${grad("sk2", [[0, "#3f5276"], [0.55, "#b5c8e4"], [1, "#eef5ff"]])}
+          ${grad("wl2", [[0, "#0d121c"], [1, "#04060a"]])}
+        </defs>
+        <rect width="1920" height="1080" fill="url(#sk2)"/>
+        <rect width="1920" height="1080" filter="url(#cl2)"/>
+        ${bolt(31, 1210, -40, 1100, 560, 120, 4, 1.25)}
+        <g transform="${DEMON_T}">${DEMON}</g>
+        <path d="${tl}" fill="#070a11" stroke="rgba(205,222,245,.35)" stroke-width="2"/><path d="${tr}" fill="#070a11" stroke="rgba(205,222,245,.35)" stroke-width="2"/>
+        <path d="M110 420 v90 q18 -30 36 0 v-90 q-18 -26 -36 0z M1790 440 v90 q18 -30 36 0 v-90 q-18 -26 -36 0z" fill="#2a3850"/>
+        <rect x="290" y="770" width="1340" height="320" fill="url(#wl2)"/>
+        <rect x="290" y="696" width="1340" height="78" fill="#070a11" stroke="rgba(205,222,245,.45)" stroke-width="2"/>
+        <path d="${corb}" fill="#070a11" stroke="rgba(205,222,245,.3)" stroke-width="2"/>
+        <g fill="#070a11" stroke="rgba(205,222,245,.5)" stroke-width="2">${bal}<rect x="316" y="624" width="1288" height="34" rx="6"/></g>
+        <path d="M290 696 H1630" stroke="rgba(205,222,245,.5)" stroke-width="2"/>
+        </svg>`;
+      }
+      function glow2() {
+        return `<svg viewBox="0 0 1920 1080" xmlns="http://www.w3.org/2000/svg"><g transform="${DEMON_T}">
+          <g filter="url(#eyeGlow)" id="eyeBlur2" opacity=".95">${DEMON_EYES}</g>${DEMON_EYES}
+          <g id="core2"><path d="M400 600 L428 650 L400 700 L372 650 Z" fill="#ff2a4d"/></g></g></svg>`;
+      }
+
+      /* ---------- SHOT 3 : cinemascope horizon, the horde ---------- */
+      function shot3bg() {
+        let pud = "";
+        const r = prng(77);
+        for (let i = 0; i < 26; i++) { const y = 672 + Math.pow(r(), 1.5) * 260, w = 40 + (y - 650) * 1.2 * r(); pud += `<ellipse cx="${(r() * 1920).toFixed(0)}" cy="${y.toFixed(0)}" rx="${w.toFixed(0)}" ry="${(1.5 + (y - 650) * 0.04).toFixed(1)}" fill="#f0f6ff" opacity=".75"/>`; }
+        return `<svg viewBox="0 0 1920 1080" xmlns="http://www.w3.org/2000/svg"><defs>
+          ${grad("sk3", [[0, "#36486c"], [0.5, "#8fa5c6"], [0.86, "#f2f7ff"], [1, "#e7f0fd"]])}
+          ${grad("gr3", [[0, "#aebfd8"], [0.2, "#63748f"], [1, "#1a2231"]])}
+        </defs>
+        <rect width="1920" height="652" fill="url(#sk3)"/>
+        <rect width="1920" height="652" filter="url(#cl3)"/>
+        ${bolt(52, 360, 120, 300, 640, 70, 3, 0.9)}
+        ${bolt(66, 1300, 140, 1500, 360, 120, 2, 0.8)}
+        <path d="M0 646 Q480 628 960 640 T1920 636 V660 H0Z" fill="#101725"/>
+        <rect y="650" width="1920" height="300" fill="url(#gr3)"/>
+        ${pud}
+        </svg>`;
+      }
+      function shot3fg() {
+        return `<svg viewBox="0 0 1920 1080" xmlns="http://www.w3.org/2000/svg">
+          <g filter="url(#bl3)" fill="#04060a">
+            <path d="M-70 1010 L-10 1010 L470 330 L452 318 Z"/><rect x="383" y="326" width="120" height="16" rx="5" transform="rotate(-55 443 334)"/>
+            <rect x="1738" y="300" width="14" height="700" transform="rotate(4 1745 650)"/>
+            <path d="M1744 310 L1560 340 L1600 390 L1530 430 L1590 470 L1744 440Z"/>
+          </g>
+          <rect y="0" width="1920" height="138" fill="#000"/><rect y="942" width="1920" height="138" fill="#000"/></svg>`;
+      }
+
+      /* ---------- SHOT 4 : high angle, the fallen ---------- */
+      const limb = (x1, y1, x2, y2, w) => `<path d="M${x1} ${y1} L${x2} ${y2}" stroke="rgba(205,222,245,.6)" stroke-width="${w + 4}" stroke-linecap="round" fill="none"/><path d="M${x1} ${y1} L${x2} ${y2}" stroke="#05070c" stroke-width="${w}" stroke-linecap="round" fill="none"/>`;
+      function shot4() {
+        const r = prng(404);
+        let stones = "";
+        for (let gy = -1; gy < 15; gy++) for (let gx = -1; gx < 26; gx++) {
+          const x = gx * 84 + (gy % 2) * 42, y = gy * 68;
+          const j = () => (r() - 0.5) * 14;
+          const sh = Math.floor(72 + r() * 40);
+          stones += `<path d="M${x + j()} ${y + j()} L${x + 82 + j()} ${y + j()} L${x + 82 + j()} ${y + 66 + j()} L${x + j()} ${y + 66 + j()}Z" fill="rgb(${sh - 8},${sh + 8},${sh + 36})" stroke="#111823" stroke-width="3"/>`;
+        }
+        const warrior = `<g transform="translate(500 450) rotate(-22)">
+          ${limb(-80, -30, -290, -62, 42)}${limb(-80, 30, -272, 56, 42)}<g ${SIL}><ellipse cx="-300" cy="-64" rx="34" ry="24"/><ellipse cx="-282" cy="58" rx="34" ry="24"/></g>
+          ${limb(46, -66, 118, -196, 34)}${limb(46, 66, 76, 200, 34)}
+          <g ${SIL}><ellipse cx="0" cy="0" rx="104" ry="74"/><circle cx="48" cy="-72" r="38"/><circle cx="48" cy="72" r="38"/><circle cx="124" cy="-204" r="20"/><circle cx="80" cy="210" r="20"/>
+          <circle cx="146" cy="0" r="38"/><path d="M130 -30 Q96 -70 126 -104 Q134 -70 152 -44 Z M130 30 Q96 70 126 104 Q134 70 152 44 Z"/></g>
+          <g ${SIL}><path d="M-60 -30 L-60 30" stroke-width="3"/></g></g>
+          <g transform="translate(640 700)" ${SIL}><circle r="84"/><circle r="66" fill="none" stroke-width="2"/><circle r="16"/></g>
+          <g transform="translate(250 250) rotate(-28)" ${SIL}><rect x="-210" y="-6" width="420" height="12" rx="4"/><path d="M130 -6 Q200 -74 232 -2 Q196 -22 150 6 Z"/></g>`;
+        const mage = `<g transform="translate(1030 650) rotate(24)">
+          ${limb(40, -34, 120, -110, 26)}${limb(40, 30, 90, 104, 26)}
+          <g ${SIL}><path d="M-220 -70 L-250 80 L80 46 L96 -40 Z"/><circle cx="130" cy="0" r="26"/><circle cx="124" cy="-110" r="16"/><circle cx="94" cy="108" r="16"/></g></g>
+          <g transform="translate(1290 880) rotate(-8)" ${SIL}><ellipse rx="70" ry="48"/><path d="M-38 -14 L74 -156 L36 12 Z"/></g>
+          <g transform="translate(880 900) rotate(-13)" ${SIL}><rect x="-230" y="-5" width="440" height="10" rx="3"/><circle cx="246" cy="0" r="22"/></g>`;
+        const priest = `<g transform="translate(1470 460) rotate(-64)">
+          ${limb(30, -40, 100, -100, 26)}${limb(30, 38, 96, 96, 26)}
+          <g ${SIL}><path d="M-190 -76 Q-230 0 -190 84 L56 62 Q100 0 56 -56 Z"/><circle cx="112" cy="0" r="28"/><circle cx="108" cy="-104" r="16"/><circle cx="104" cy="100" r="16"/></g></g>
+          <g transform="translate(1560 150) rotate(30)" ${SIL}><rect x="-8" y="-210" width="14" height="420" rx="4"/><circle cx="0" cy="-240" r="30" fill="none" stroke="#05070c" stroke-width="10"/><circle cx="0" cy="-240" r="35" fill="none" stroke-width="1.6"/></g>`;
+        const sword = `<g transform="translate(980 250) rotate(16)" ${SIL}><path d="M-210 -9 L180 -9 L214 0 L180 9 L-210 9Z"/><rect x="-232" y="-30" width="14" height="60" rx="4"/><rect x="-290" y="-8" width="64" height="16" rx="5"/></g>`;
+        let rip = "";
+        [[780, 800, 330, 120], [250, 960, 230, 80], [1660, 940, 280, 76], [1180, 330, 200, 60]].forEach((p, i) => {
+          rip += `<ellipse cx="${p[0]}" cy="${p[1]}" rx="${p[2]}" ry="${p[3]}" fill="#f1f7ff" opacity=".95"/>`;
+          for (let k = 1; k < 4; k++) rip += `<ellipse cx="${p[0] + i * 10}" cy="${p[1]}" rx="${p[2] * k * 0.24}" ry="${p[3] * k * 0.24}" fill="none" stroke="#8ea3c3" stroke-width="2" opacity=".7"/>`;
+        });
+        return `<svg viewBox="0 0 1920 1080" xmlns="http://www.w3.org/2000/svg"><defs>
+          <radialGradient id="vg4" cx=".5" cy=".5" r=".75"><stop offset=".5" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".7"/></radialGradient></defs>
+          <g transform="rotate(5 960 540) scale(1.12) translate(-80 -30)">${stones}${rip}${sword}${warrior}${mage}${priest}</g>
+          <rect width="1920" height="1080" fill="url(#vg4)"/></svg>`;
+      }
+
+      /* ---------- SHOT 5 : Leon kneeling, profile ---------- */
+      const KNEEL = () => `<g style="filter:grayscale(.8) contrast(1.45) brightness(.8)">
+        <g transform="translate(0 150)"><path d="M190 262 C100 300 56 450 36 640 L84 604 L72 704 L130 640 L142 724 L184 622 C192 500 204 400 232 300 Z" fill="#1a1a26" stroke="#ffd34d" stroke-width="2.5" stroke-linejoin="round"/></g>
+        <g fill="#cfd3dc" stroke="#0a0a12" stroke-width="3" stroke-linejoin="round">
+          <path d="M270 826 L350 814 L470 862 L462 930 L300 910 Z" transform="translate(0 -138)"/>
+          <path d="M440 740 L500 748 L482 858 L444 860 Z"/><path d="M428 848 L498 848 L530 876 L424 880 Z"/>
+          <path d="M180 818 L270 830 L252 944 L214 1010 L150 1000 Z" transform="translate(0 -150)"/>
+          <path d="M176 832 L214 862 L110 880 L72 862 Z"/><path d="M60 856 L112 872 L108 884 L56 884 Z"/></g>
+        <g transform="translate(0 150) rotate(5 270 560)">
+          <path d="M178 252 C216 234 292 234 328 252 L352 404 L362 568 L192 580 L170 404 Z" fill="#e6e9f0" stroke="#0a0a12" stroke-width="3" stroke-linejoin="round"/>
+          <path d="M250 250 L252 570" stroke="#0a0a12" stroke-width="3"/>
+          <path d="M188 520 L360 508 L362 534 L190 546 Z" fill="#ffc400" stroke="#0a0a12" stroke-width="3"/>
+          <g transform="rotate(17 258 244)">
+            <path d="M226 205 L290 205 L292 244 L226 244 Z" fill="#f0c9a0"/>
+            <ellipse cx="258" cy="170" rx="42" ry="47" fill="#f0c9a0" stroke="#0a0a12" stroke-width="3"/>
+            <path d="M212 156 C206 100 250 70 300 94 C320 112 316 140 312 160 C292 128 252 122 212 156 Z M214 150 L196 176 L214 168 Z" fill="#ffc400" stroke="#0a0a12" stroke-width="3" stroke-linejoin="round"/>
+            <path d="M262 168 L286 164 M272 190 L286 188" stroke="#0a0a12" stroke-width="4" stroke-linecap="round"/></g>
+          <g transform="rotate(66 332 268)"><rect x="322" y="246" width="110" height="44" rx="22" fill="#e6e9f0" stroke="#0a0a12" stroke-width="3"/>
+            <g transform="rotate(24 420 268)"><rect x="420" y="262" width="330" height="14" rx="4" fill="#e8f4ff" stroke="#0a0a12" stroke-width="3"/><rect x="408" y="240" width="14" height="60" rx="4" fill="#ffc400" stroke="#0a0a12" stroke-width="3"/></g></g>
+        </g></g>`;
+      function shot5bg() {
+        return `<svg viewBox="0 0 1920 1080" xmlns="http://www.w3.org/2000/svg"><defs>
+          ${grad("sk5", [[0, "#3b4d70"], [0.5, "#a3b7d4"], [0.82, "#f1f7ff"], [1, "#e3edfb"]])}
+          ${grad("gr5", [[0, "#9db0ca"], [0.15, "#55657f"], [1, "#0e141f"]])}
+        </defs>
+        <rect width="1920" height="660" fill="url(#sk5)"/><rect width="1920" height="660" filter="url(#cl5)"/>
+        ${bolt(88, 1560, -20, 1420, 470, 100, 3, 0.9)}
+        <rect y="640" width="1920" height="440" fill="url(#gr5)"/>
+        <ellipse cx="760" cy="960" rx="560" ry="46" fill="#e6effc" opacity=".72"/><ellipse cx="1500" cy="880" rx="300" ry="26" fill="#e6effc" opacity=".6"/>
+        </svg>`;
+      }
+      function shot5fg() {
+        const k = KNEEL();
+        return `<svg viewBox="0 0 1920 1080" xmlns="http://www.w3.org/2000/svg">
+          <g transform="translate(380 258) scale(.9)">${k}</g>
+          <g filter="url(#bl3)" fill="#04060a" stroke="rgba(205,222,245,.5)" stroke-width="3"><ellipse cx="1590" cy="1040" rx="230" ry="96"/><ellipse cx="1590" cy="1040" rx="176" ry="70" fill="none"/></g></svg>`;
+      }
+
+      /* ---------- SHOT 6 : extreme close-up, face to the sky ---------- */
+      function shot6() {
+        const head = `<g style="filter:grayscale(.88) contrast(1.5) brightness(.82)">
+          <path d="M190 262 C100 300 56 450 36 640 L84 604 L72 704 L130 640 L142 724 L184 622 C192 500 204 400 232 300 Z" fill="#1a1a26" stroke="#ffd34d" stroke-width="2.5" stroke-linejoin="round"/>
+          <path d="M178 252 C216 234 292 234 328 252 L352 404 L362 568 L192 580 L170 404 Z" fill="#e6e9f0" stroke="#0a0a12" stroke-width="3" stroke-linejoin="round"/>
+          <path d="M226 205 L290 205 L292 244 L226 244 Z" fill="#f0c9a0"/>
+          <ellipse cx="258" cy="170" rx="42" ry="47" fill="#f0c9a0" stroke="#0a0a12" stroke-width="3"/>
+          <path d="M212 156 C206 100 250 70 300 94 C320 112 316 140 312 160 C292 128 252 122 212 156 Z M214 150 L196 176 L214 168 Z" fill="#ffc400" stroke="#0a0a12" stroke-width="3" stroke-linejoin="round"/>
+          <path d="M262 160 L290 152" stroke="#0a0a12" stroke-width="4" stroke-linecap="round"/>
+          <ellipse cx="277" cy="170" rx="8.5" ry="6" fill="#fff" stroke="#0a0a12" stroke-width="2"/><circle cx="279.5" cy="167.5" r="3.4" fill="#0a0a12"/>
+          <ellipse cx="282" cy="193" rx="4.6" ry="6.4" fill="#2b0f12" stroke="#0a0a12" stroke-width="2"/>
+          <g fill="#eaf4ff" opacity=".85"><ellipse cx="268" cy="188" rx="1.6" ry="2.6"/><ellipse cx="248" cy="150" rx="1.3" ry="2.2"/><ellipse cx="288" cy="206" rx="1.4" ry="2.4"/><ellipse cx="240" cy="176" rx="1.2" ry="2"/></g></g>`;
+        return `<svg viewBox="0 0 1920 1080" xmlns="http://www.w3.org/2000/svg"><defs>
+          ${grad("sk6", [[0, "#9db2d3"], [0.5, "#f4f8ff"], [1, "#ffffff"]])}
+          <linearGradient id="sh6" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#000" stop-opacity=".9"/><stop offset=".62" stop-color="#000" stop-opacity="0"/></linearGradient>
+        </defs>
+        <rect width="1920" height="1080" fill="url(#sk6)"/><rect width="1920" height="1080" filter="url(#cl6)" opacity=".9"/>
+        ${bolt(123, 1040, -40, 1500, 1000, 200, 6, 1.7)}
+        ${bolt(130, 300, -30, 120, 520, 100, 2, 0.8)}
+        <g transform="translate(860 700) rotate(-33) scale(5.6) translate(-258 -170)">${head}</g>
+        <rect width="1920" height="1080" fill="url(#sh6)"/></svg>`;
+      }
+
+      /* ---------- build shots ---------- */
+      $("l1").innerHTML = shot1();
+      $("g1").innerHTML = '<canvas id="eyes1" width="1920" height="1080"></canvas>';
+      $("l2").innerHTML = shot2();
+      $("g2").innerHTML = glow2();
+      $("l3").innerHTML = shot3bg() + '<canvas id="lit3" width="1920" height="1080"></canvas>' + shot3fg();
+      $("l4").innerHTML = shot4();
+      $("l5").innerHTML = shot5bg() + '<canvas id="lit5" width="1920" height="1080" style="filter:blur(2.5px)"></canvas>' + shot5fg();
+      $("l6").innerHTML = shot6();
+      $("s2").style.transform = "rotate(-4.5deg) scale(1.13)"; $("s2").style.transformOrigin = "960px 540px";
+      $("s6").style.transform = "rotate(3deg) scale(1.06)"; $("s6").style.transformOrigin = "960px 540px";
+
+      /* ---------- red eyes sprite + horde ---------- */
+      const spr = document.createElement("canvas"); spr.width = spr.height = 64;
+      (function () { const c = spr.getContext("2d"); const g = c.createRadialGradient(32, 32, 0, 32, 32, 32); g.addColorStop(0, "rgba(255,120,140,1)"); g.addColorStop(0.18, "rgba(255,42,77,.95)"); g.addColorStop(0.5, "rgba(255,42,77,.28)"); g.addColorStop(1, "rgba(255,42,77,0)"); c.fillStyle = g; c.fillRect(0, 0, 64, 64); })();
+      function eye(ctx, x, y, r, a) { if (a <= 0.01) return; ctx.globalAlpha = Math.min(1, a); ctx.drawImage(spr, x - r, y - r, 2 * r, 2 * r); ctx.globalAlpha = Math.min(1, a * 1.2); ctx.fillStyle = "#ff8aa0"; ctx.beginPath(); ctx.arc(x, y, Math.max(0.6, r * 0.2), 0, 6.283); ctx.fill(); ctx.globalAlpha = 1; }
+      function makeHorde(seed, N, zmin, zmax, xs) {
+        const r = prng(seed), a = [];
+        for (let i = 0; i < N; i++) { const Z = Math.sqrt(zmin * zmin + r() * (zmax * zmax - zmin * zmin)); a.push({ X: (r() * 2 - 1) * Z * xs, Z, ph: r() * 6.283, hh: 1.65 + r() * 0.45, sp: r() < 0.35, hn: r() < 0.55, wd: 0.7 + r() * 0.3 }); }
+        a.sort((p, q) => q.Z - p.Z); return a;
+      }
+      const HC3 = { f: 1900, h: 1.25, H0: 640, v: 16, t0: 4.0, zmin: 14, cx: 0 };
+      const HC5 = { f: 900, h: 1.1, H0: 640, v: 2.5, t0: 6.0, zmin: 8, cx: 0 };
+      const HD3 = makeHorde(303, 4600, 30, 520, 1.0);
+      const HD5 = makeHorde(505, 300, 11, 85, 1.05);
+      function drawLit(ctx, list, c, t) {
+        ctx.clearRect(0, 0, W, H); ctx.fillStyle = "#04060b"; ctx.strokeStyle = "#04060b";
+        for (const s of list) {
+          const Z = s.Z - c.v * (t - c.t0); if (Z < c.zmin) continue;
+          const k = c.f / Z, x = W / 2 + s.X * k + c.cx, yg = c.H0 + c.h * k, hg = s.hh * k, w = s.wd * 0.8 * k;
+          if (x < -80 || x > W + 80) continue;
+          ctx.fillRect(x - w / 2, yg - hg * 0.84, w, hg * 0.84);
+          ctx.beginPath(); ctx.arc(x, yg - hg * 0.91, 0.23 * k, 0, 6.283); ctx.fill();
+          if (s.hn) { ctx.beginPath(); ctx.moveTo(x - 0.2 * k, yg - hg * 0.97); ctx.lineTo(x - 0.36 * k, yg - hg * 1.2); ctx.lineTo(x - 0.06 * k, yg - hg * 1.02); ctx.moveTo(x + 0.2 * k, yg - hg * 0.97); ctx.lineTo(x + 0.36 * k, yg - hg * 1.2); ctx.lineTo(x + 0.06 * k, yg - hg * 1.02); ctx.fill(); }
+          if (s.sp) { const sw = Math.max(1, 0.06 * k); ctx.fillRect(x + w * 0.65, yg - 3.4 * k, sw, 3.4 * k); ctx.beginPath(); ctx.moveTo(x + w * 0.65 - sw, yg - 3.4 * k); ctx.lineTo(x + w * 0.65 + sw * 0.5, yg - 3.4 * k - 0.35 * k); ctx.lineTo(x + w * 0.65 + sw * 2, yg - 3.4 * k); ctx.fill(); }
+        }
+      }
+      function drawEyes(ctx, list, c, t, gain) {
+        ctx.clearRect(0, 0, W, H);
+        for (const s of list) {
+          const Z = s.Z - c.v * (t - c.t0); if (Z < c.zmin) continue;
+          const k = c.f / Z, x = W / 2 + s.X * k + c.cx, yg = c.H0 + c.h * k, ey = yg - s.hh * k * 0.91;
+          if (x < -40 || x > W + 40) continue;
+          const a = (0.62 + 0.38 * Math.sin(t * 2.7 + s.ph)) * gain, gr = Math.max(2.4, k * 0.2), dx = 0.1 * k;
+          eye(ctx, x - dx, ey, gr, a); eye(ctx, x + dx, ey, gr, a);
+        }
+      }
+      const ctxL3 = $("lit3").getContext("2d"), ctxL5 = $("lit5").getContext("2d");
+      const ctxE1 = $("eyes1").getContext("2d"), ctxE3 = $("eyes3").getContext("2d"), ctxE4 = $("eyes4").getContext("2d"), ctxE5 = $("eyes5").getContext("2d");
+
+      const L_TORSO = new Path2D("M178 252 C216 234 292 234 328 252 L352 404 L362 568 L192 580 L170 404 Z");
+      const L_CAPE = new Path2D("M190 262 C100 300 56 450 36 640 L84 604 L72 704 L130 640 L142 724 L184 622 C192 500 204 400 232 300 Z");
+      function occludeLeon(ctx) {
+        ctx.save(); ctx.globalCompositeOperation = "destination-out"; ctx.fillStyle = "#000";
+        ctx.translate(380, 258); ctx.scale(0.9, 0.9); ctx.translate(0, 150); ctx.fill(L_CAPE);
+        ctx.translate(270, 560); ctx.rotate(5 * Math.PI / 180); ctx.translate(-270, -560); ctx.fill(L_TORSO);
+        ctx.translate(258, 244); ctx.rotate(17 * Math.PI / 180); ctx.translate(-258, -244);
+        ctx.beginPath(); ctx.ellipse(262, 150, 58, 70, 0, 0, 6.283); ctx.fill(); ctx.restore();
+      }
+      /* shot 4: pairs of eyes closing in from the edges */
+      const E4 = (function () { const r = prng(44), a = []; for (let i = 0; i < 16; i++) { const side = i % 4; let x, y, vx, vy; if (side === 0) { x = 40 + r() * 260; y = 120 + r() * 800; vx = 6; vy = 0; } else if (side === 1) { x = 1620 + r() * 260; y = 120 + r() * 800; vx = -6; vy = 0; } else if (side === 2) { x = 300 + r() * 1300; y = 60 + r() * 120; vx = 0; vy = 5; } else { x = 300 + r() * 1300; y = 880 + r() * 120; vx = 0; vy = -5; } a.push({ x, y, vx, vy, on: 150 + 2 + Math.floor(r() * 24), g: 8 + r() * 12 }); } return a; })();
+
+      /* ---------- rain ---------- */
+      const rainCtx = $("rain").getContext("2d");
+      const RAIN = (function () { const r = prng(2024), L = [{ n: 230, w: 1, len: 46, sp: 1500, a: 0.7 }, { n: 150, w: 1.6, len: 90, sp: 2100, a: 0.85 }, { n: 46, w: 3, len: 190, sp: 2900, a: 1 }]; return L.map((l) => ({ ...l, d: Array.from({ length: l.n }, () => [r() * (W + 600), r() * (H + 260)]) })); })();
+      const SLOPE = 0.27;
+      function drawRain(t, I) {
+        rainCtx.clearRect(0, 0, W, H); rainCtx.lineCap = "round";
+        for (const L of RAIN) {
+          const base = 0.1 + 0.02 * L.w, a = (base + I * 0.5) * L.a;
+          rainCtx.strokeStyle = I > 0.04 ? "rgba(" + Math.round(120 + 30 * (1 - I)) + "," + Math.round(145 + 25 * (1 - I)) + "," + Math.round(185 + 20 * (1 - I)) + "," + a.toFixed(3) + ")" : "rgba(140,165,205," + a.toFixed(3) + ")";
+          rainCtx.lineWidth = L.w; rainCtx.beginPath();
+          for (const d of L.d) {
+            const yy = ((d[1] + L.sp * t) % (H + L.len + 80)) - L.len;
+            const xx = ((d[0] - yy * SLOPE) % (W + 500) + (W + 500)) % (W + 500) - 250;
+            rainCtx.moveTo(xx, yy); rainCtx.lineTo(xx - L.len * SLOPE / 1.03, yy + L.len);
+          }
+          rainCtx.stroke();
+        }
+      }
+
+      /* ---------- lightning table ---------- */
+      const FL = [
+        { f: 30, p: [1, 0.36, 0.92, 0.55, 0.26, 0.09] },
+        { f: 75, p: [1, 0.48, 0.95, 0.4, 0.13] },
+        { f: 120, p: [1, 0.26, 0.82, 0.16] },
+        { f: 150, p: [1, 0.62, 0.9, 0.28] },
+        { f: 180, p: [1, 0.46, 0.18] },
+        { f: 225, p: [1, 1, 1, 0.82, 0.64, 0.5, 0.4, 0.31, 0.24, 0.18, 0.13, 0.09, 0.06, 0.03] },
+      ];
+      const ZOOM = [0.0016, 0.0022, 0.0012, 0.0016, 0.0014, 0.0018];
+      const SHAKE = [5, 9, 6, 6, 8, 14];
+      const shots = [1, 2, 3, 4, 5, 6].map((i) => $("s" + i)), lits = [1, 2, 3, 4, 5, 6].map((i) => $("l" + i)), glows = [1, 2, 3, 4, 5, 6].map((i) => $("g" + i));
+      const stage = $("stage"), burst = $("burst"), dot = $("dot");
+      const subs = [[$("sub1"), 30, 66], [$("sub2"), 75, 108], [$("sub3"), 180, 225]];
+      const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+      function glowAlpha(k, n) {
+        if (k === 0) return n >= 66 ? clamp((n - 66) / 8, 0, 1) * 0.9 : 0;
+        if (k === 1) { const d = n - 75; if (d < 0) return 0; let a = 0.82 + 0.18 * Math.sin(d * 0.33); if (d >= 24 && d < 27) a *= 0.18; if (d >= 36) a *= 1 + 0.1 * Math.sin(d * 0.9); return Math.min(1, a); }
+        if (k === 2) return 1;
+        if (k === 3) return 1;
+        if (k === 4) return 1;
+        return 0;
+      }
+
+      function render(t) {
+        const n = Math.floor(t * FPS + 1e-4), tt = n / FPS;
+        let k = -1, I = 0, off = 0;
+        for (let i = 0; i < FL.length; i++) if (n >= FL[i].f) k = i;
+        if (k >= 0) { off = n - FL[k].f; if (off < FL[k].p.length) I = FL[k].p[off]; }
+        for (let i = 0; i < 6; i++) shots[i].style.display = i === k ? "block" : "none";
+        if (k >= 0) {
+          lits[k].style.opacity = I.toFixed(3);
+          glows[k].style.opacity = Math.max(glowAlpha(k, n), I > 0 && k >= 1 && k <= 4 ? 1 : 0).toFixed(3);
+          if (k === 0) { ctxE1.clearRect(0, 0, W, H); const a = glowAlpha(0, n); eye(ctxE1, 934, 304, 30, a); eye(ctxE1, 986, 304, 30, a); }
+          if (k === 1) { const c = 0.5 + 0.5 * Math.sin((n - 75) * 0.25); $("core2").style.opacity = (0.35 + 0.65 * c).toFixed(3); }
+          if (k === 2) { if (I > 0) drawLit(ctxL3, HD3, HC3, tt); drawEyes(ctxE3, HD3, HC3, tt, 1); }
+          if (k === 3) {
+            ctxE4.clearRect(0, 0, W, H);
+            for (const e of E4) { const d = n - e.on; if (d < 0) continue; const a = clamp(d / e.g, 0, 1) * (0.7 + 0.3 * Math.sin(n * 0.4 + e.x)); eye(ctxE4, e.x - 14 + e.vx * d * 0.3, e.y + e.vy * d * 0.3, 18, a); eye(ctxE4, e.x + 14 + e.vx * d * 0.3, e.y + e.vy * d * 0.3, 18, a); }
+          }
+          if (k === 4) { if (I > 0) drawLit(ctxL5, HD5, HC5, tt); drawEyes(ctxE5, HD5, HC5, tt, 1); occludeLeon(ctxE5); }
+        }
+        /* camera: slow push + hit jitter */
+        const z = 1 + (k >= 0 ? ZOOM[k] * off : 0);
+        let dx = 0, dy = 0;
+        if (k >= 0 && I > 0) { const r = prng(n * 977 + 13); const a = SHAKE[k] * I; dx = (r() - 0.5) * 2 * a; dy = (r() - 0.5) * 2 * a; }
+        stage.style.transform = "translate(" + dx.toFixed(1) + "px," + dy.toFixed(1) + "px) scale(" + z.toFixed(4) + ")";
+        burst.style.opacity = (k >= 0 && off === 0 ? 0.07 : 0).toFixed(3);
+        drawRain(tt, I);
+        for (const s of subs) { const a = s[1], b = s[2]; s[0].style.opacity = (n < a || n >= b ? 0 : Math.min(1, (n - a + 1) / 3, (b - n) / 3)).toFixed(3); }
+        let da = 0;
+        if (n >= 242 && n < 248) da = n < 244 ? 1 : 0.5; else if (n >= 254 && n < 260) da = n < 256 ? 1 : 0.5; else if (n >= 266) da = n < 268 ? 0.8 : 1;
+        dot.style.opacity = da.toFixed(2);
+      }
+
+      const tl = gsap.timeline({ paused: true });
+      const drv = { t: 0 };
+      tl.to(drv, { t: 9, duration: 9, ease: "none", onUpdate: () => render(drv.t) }, 0);
+      render(0);
+      window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>

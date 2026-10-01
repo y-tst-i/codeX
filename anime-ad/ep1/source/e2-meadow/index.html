@@ -1,0 +1,658 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>草原のドタバタ</title>
+    <script src="assets/gsap.min.js"></script>
+    <style>
+      @font-face { font-family: "Noto Sans JP"; src: url("assets/fonts/NotoSansJP700.ttf") format("truetype"); font-weight: 700; }
+      @font-face { font-family: "DotGothic16"; src: url("assets/fonts/DotGothic16.ttf") format("truetype"); font-weight: 400; }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: #8fd3f5; }
+      #root { position: relative; width: 100%; height: 100%; overflow: hidden; background: #8fd3f5; }
+      #cam { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; }
+      .lay { position: absolute; left: 0; top: 0; height: 1080px; }
+      .lay svg { display: block; }
+      #sky { position: absolute; left: -40px; top: -40px; width: 2000px; height: 1160px;
+        background: linear-gradient(180deg, #62c1f2 0%, #9bdcfa 38%, #d3f1ff 62%, #f3fbe6 78%, #f3fbe6 100%); }
+      .act { position: absolute; left: 0; top: 0; }
+      .fx { position: absolute; left: 0; top: 0; }
+      #hero { position: absolute; left: 630px; top: 450px; width: 260px; height: 450px; }
+      #hero svg { overflow: visible; display: block; }
+
+      #ui { position: absolute; right: 56px; top: 40px; width: 360px; height: 150px; }
+      #uipanel { position: absolute; right: 0; top: 0; display: flex; align-items: center; gap: 20px; padding: 8px 28px 8px 26px;
+        background: rgba(10,10,18,0.88); border: 3px solid #ffc400; border-radius: 18px; box-shadow: 0 6px 0 rgba(10,10,18,0.22); }
+      #uilab { font-family: "DotGothic16", "Noto Sans JP", sans-serif; font-size: 34px; color: #fffdf5; letter-spacing: 4px; line-height: 84px; }
+      #uiwin { width: 60px; height: 84px; overflow: hidden; }
+      #uistrip { position: relative; width: 60px; height: 84px; }
+      #uistrip div { position: absolute; left: 0; top: 0; width: 60px; height: 84px; line-height: 84px; text-align: center; font-family: "DotGothic16", "Noto Sans JP", sans-serif; font-size: 78px; color: #ffc400; }
+      #uiplus { position: absolute; right: 36px; top: 128px; font-family: "DotGothic16", "Noto Sans JP", sans-serif; font-size: 40px; color: #ff7a18; opacity: 0;
+        text-shadow: 2px 0 0 #0a0a12, -2px 0 0 #0a0a12, 0 2px 0 #0a0a12, 0 -2px 0 #0a0a12, 2px 2px 0 #0a0a12, -2px -2px 0 #0a0a12, 2px -2px 0 #0a0a12, -2px 2px 0 #0a0a12; }
+
+      #subs { position: absolute; left: 0; top: 930px; width: 1920px; height: 80px; }
+      .sub { position: absolute; left: 210px; top: 0; width: 1500px; height: 80px; line-height: 80px; text-align: center; white-space: nowrap;
+        font-family: "Noto Sans JP", sans-serif; font-weight: 700; font-size: 48px; color: #fffdf5; opacity: 0; }
+      #warm { position: absolute; left: -3000px; top: 0; opacity: 0.01; font-size: 20px; pointer-events: none; }
+      #warm span { font-family: "Noto Sans JP", sans-serif; font-weight: 700; }
+      #warm i { font-family: "DotGothic16", sans-serif; font-style: normal; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="10" data-width="1920" data-height="1080">
+      <div id="cam">
+        <div id="sky"></div>
+        <div id="lSun" class="lay" data-layout-allow-overflow style="width:1920px"></div>
+        <div id="lCloudF" class="lay" data-layout-allow-overflow></div>
+        <div id="lBirds" class="lay" data-layout-allow-overflow style="width:1920px"></div>
+        <div id="lMount" class="lay" data-layout-allow-overflow></div>
+        <div id="lFar" class="lay" data-layout-allow-overflow></div>
+        <div id="lCloudN" class="lay" data-layout-allow-overflow></div>
+        <div id="lMid" class="lay" data-layout-allow-overflow></div>
+        <div id="lNear" class="lay" data-layout-allow-overflow></div>
+        <div id="lGBack" class="lay" data-layout-allow-overflow></div>
+
+        <!-- 影 -->
+        <div id="shHero" class="act" style="left:645px;top:874px;width:230px;height:36px;border-radius:50%;background:rgba(30,90,20,0.32)"></div>
+        <div id="shSlime" class="act" style="left:0;top:880px;width:150px;height:22px;border-radius:50%;background:rgba(30,90,20,0.3)"></div>
+        <div id="shWolf" class="act" style="left:0;top:880px;width:310px;height:28px;border-radius:50%;background:rgba(30,90,20,0.3)"></div>
+        <div id="shBear" class="act" style="left:0;top:872px;width:420px;height:44px;border-radius:50%;background:rgba(30,90,20,0.36)"></div>
+
+        <!-- 狼 -->
+        <div id="wolf" class="act" style="top:690px">
+          <div id="wolfSpin"><div id="wolfFlip">
+            <svg viewBox="0 0 520 320" width="325" height="200" style="overflow:visible;display:block">
+              <circle id="wGlow" cx="460" cy="98" r="30" fill="#ff2a4d" opacity="0"/>
+              <g id="wTail"><path d="M60 160 C20 120 10 70 30 30 C50 80 70 110 96 140 Z" fill="#3a3d4a" stroke="#0a0a12" stroke-width="5" stroke-linejoin="round"/></g>
+              <path d="M30 250 L60 160 L150 130 L300 130 L400 110 L470 60 L500 90 L470 150 L420 180 L430 290 L390 290 L380 210 L320 220 L300 290 L260 290 L250 220 L150 230 L130 290 L90 290 L100 230 Z M470 60 L474 20 L440 56 Z M440 56 L430 14 L412 66 Z" fill="#3a3d4a" stroke="#0a0a12" stroke-width="5" stroke-linejoin="round"/>
+              <g id="wTeeth" opacity="0"><path d="M452 112 L460 134 L468 114 L476 136 L486 110 Z" fill="#fffdf5" stroke="#0a0a12" stroke-width="3" stroke-linejoin="round"/></g>
+              <path d="M446 90 L474 96 L470 108 L444 100 Z" fill="#ff2a4d"/>
+              <path d="M436 78 L480 90" stroke="#0a0a12" stroke-width="6" stroke-linecap="round"/>
+            </svg>
+          </div></div>
+        </div>
+        <!-- スライム -->
+        <div id="slime" class="act" style="top:771px">
+          <div id="slimeSq">
+            <svg viewBox="0 0 300 220" width="165" height="121" style="display:block;overflow:visible">
+              <path d="M30 190 C20 120 70 40 150 40 C230 40 280 120 270 190 C240 210 60 210 30 190 Z" fill="#46d17a" stroke="#0a0a12" stroke-width="5" stroke-linejoin="round"/>
+              <ellipse cx="108" cy="82" rx="22" ry="12" fill="#fffdf5" opacity=".6" transform="rotate(-30 108 82)"/>
+              <g><ellipse cx="112" cy="130" rx="12" ry="16" fill="#0a0a12"/><ellipse cx="188" cy="130" rx="12" ry="16" fill="#0a0a12"/>
+              <circle cx="116" cy="124" r="4" fill="#fffdf5"/><circle cx="192" cy="124" r="4" fill="#fffdf5"/>
+              <path d="M136 156 Q150 170 164 156" stroke="#0a0a12" stroke-width="5" fill="none" stroke-linecap="round"/></g>
+            </svg>
+          </div>
+        </div>
+
+        <div id="lGFront" class="lay" data-layout-allow-overflow></div>
+
+        <!-- 熊 -->
+        <div id="bear" class="act" style="top:296px">
+          <div id="bearSpin"><div id="bearPop">
+            <svg viewBox="0 0 520 640" width="494" height="608" style="overflow:visible;display:block">
+              <g id="bFootL"><path d="M110 560 Q104 628 150 632 L248 632 Q268 596 238 540 Z" fill="#6b4630" stroke="#0a0a12" stroke-width="5" stroke-linejoin="round"/>
+                <path d="M130 632 l0 -14 M168 632 l0 -14 M206 632 l0 -14" stroke="#0a0a12" stroke-width="4" stroke-linecap="round"/></g>
+              <g id="bFootR"><path d="M282 540 Q262 600 292 632 L396 632 Q432 614 402 548 Z" fill="#6b4630" stroke="#0a0a12" stroke-width="5" stroke-linejoin="round"/>
+                <path d="M312 632 l0 -14 M350 632 l0 -14 M388 632 l0 -14" stroke="#0a0a12" stroke-width="4" stroke-linecap="round"/></g>
+              <g id="bArmR"><path d="M356 292 C412 300 456 356 458 462 L404 472 C396 404 366 366 318 344 Z" fill="#7a5238" stroke="#0a0a12" stroke-width="5" stroke-linejoin="round"/>
+                <circle cx="430" cy="474" r="44" fill="#7a5238" stroke="#0a0a12" stroke-width="5"/>
+                <path d="M404 498 l8 28 l12 -26 M432 506 l6 30 l12 -28 M456 494 l12 26 l6 -28" fill="#fffdf5" stroke="#0a0a12" stroke-width="3" stroke-linejoin="round"/></g>
+              <ellipse cx="262" cy="396" rx="172" ry="206" fill="#7a5238" stroke="#0a0a12" stroke-width="5"/>
+              <ellipse cx="236" cy="420" rx="98" ry="134" fill="#b58a62"/>
+              <g id="bArmL"><path d="M168 292 C112 300 68 356 66 462 L120 472 C128 404 158 366 206 344 Z" fill="#7a5238" stroke="#0a0a12" stroke-width="5" stroke-linejoin="round"/>
+                <circle cx="94" cy="474" r="44" fill="#7a5238" stroke="#0a0a12" stroke-width="5"/>
+                <path d="M68 498 l8 28 l12 -26 M96 506 l6 30 l12 -28 M120 494 l12 26 l6 -28" fill="#fffdf5" stroke="#0a0a12" stroke-width="3" stroke-linejoin="round"/></g>
+              <g id="bHead">
+                <circle cx="136" cy="92" r="40" fill="#7a5238" stroke="#0a0a12" stroke-width="5"/><circle cx="138" cy="96" r="21" fill="#c98f6a"/>
+                <circle cx="330" cy="92" r="40" fill="#7a5238" stroke="#0a0a12" stroke-width="5"/><circle cx="328" cy="96" r="21" fill="#c98f6a"/>
+                <circle cx="236" cy="180" r="112" fill="#7a5238" stroke="#0a0a12" stroke-width="5"/>
+                <ellipse cx="170" cy="222" rx="72" ry="54" fill="#c9a07a" stroke="#0a0a12" stroke-width="5"/>
+                <ellipse cx="116" cy="204" rx="24" ry="17" fill="#0a0a12"/><ellipse cx="108" cy="198" rx="7" ry="4" fill="#fffdf5" opacity=".7"/>
+                <g id="bMouthA"><path d="M120 236 Q168 292 224 238 Z" fill="#4a0f1c" stroke="#0a0a12" stroke-width="4" stroke-linejoin="round"/>
+                  <path d="M134 238 l9 18 l9 -18 M176 244 l9 18 l9 -20 M206 242 l7 14 l8 -16" fill="#fffdf5" stroke="#0a0a12" stroke-width="2.5" stroke-linejoin="round"/></g>
+                <g id="bMouthS" opacity="0"><ellipse cx="170" cy="250" rx="22" ry="28" fill="#4a0f1c" stroke="#0a0a12" stroke-width="4"/></g>
+                <g id="bEyeA"><circle cx="200" cy="152" r="13" fill="#ff2a4d" stroke="#0a0a12" stroke-width="4"/><circle cx="268" cy="150" r="13" fill="#ff2a4d" stroke="#0a0a12" stroke-width="4"/>
+                  <path d="M170 128 L222 150 M302 124 L252 148" stroke="#0a0a12" stroke-width="10" stroke-linecap="round"/></g>
+                <g id="bEyeS" opacity="0"><circle cx="198" cy="152" r="22" fill="#fffdf5" stroke="#0a0a12" stroke-width="4"/><circle cx="270" cy="150" r="22" fill="#fffdf5" stroke="#0a0a12" stroke-width="4"/>
+                  <circle cx="192" cy="152" r="6" fill="#0a0a12"/><circle cx="264" cy="150" r="6" fill="#0a0a12"/>
+                  <path d="M170 116 L222 108 M304 112 L252 106" stroke="#0a0a12" stroke-width="9" stroke-linecap="round"/></g>
+              </g>
+            </svg>
+          </div></div>
+        </div>
+
+        <!-- アキラ -->
+        <div id="hero">
+          <svg id="hsvg" viewBox="0 0 520 900" width="260" height="450">
+            <g id="hCapeL"><g id="hCape"><path d="M186 262 C96 300 44 440 22 640 L64 604 L58 700 L112 636 L124 726 L166 622 C176 500 194 400 222 300 Z" fill="#0a0a12" stroke="#ffd34d" stroke-width="2.5" stroke-linejoin="round"/></g></g>
+            <g id="hLegA"><path d="M200 515 L258 520 L236 700 L218 846 L254 874 L102 874 L110 848 L172 832 L184 700 Z" fill="#0a0a12" stroke="#ffd34d" stroke-width="2.5" stroke-linejoin="round"/></g>
+            <g id="hLegB"><path d="M256 515 L314 505 L332 690 L354 852 L416 874 L272 874 L284 842 L292 690 Z" fill="#0a0a12" stroke="#ffd34d" stroke-width="2.5" stroke-linejoin="round"/></g>
+            <g id="hUp">
+              <g id="hBack">
+                <path d="M192 262 L150 382 L140 482 L172 490 L198 402 L228 292 Z" fill="#0a0a12" stroke="#ffd34d" stroke-width="2.5" stroke-linejoin="round"/>
+                <circle cx="156" cy="498" r="27" fill="#0a0a12" stroke="#ffd34d" stroke-width="2.5"/>
+                <g id="hBask">
+                  <path d="M92 612 Q156 458 220 612" fill="none" stroke="#7a4a1c" stroke-width="10" stroke-linecap="round"/>
+                  <path d="M76 612 L236 612 L214 716 Q156 734 98 716 Z" fill="#d49a4a" stroke="#0a0a12" stroke-width="5" stroke-linejoin="round"/>
+                  <path d="M88 646 Q156 664 224 646 M96 680 Q156 698 216 680 M120 622 L112 712 M156 626 L156 724 M192 622 L200 712" fill="none" stroke="#a96d28" stroke-width="5" stroke-linecap="round"/>
+                  <ellipse cx="156" cy="612" rx="80" ry="18" fill="#3a2414" stroke="#0a0a12" stroke-width="5"/>
+                </g>
+              </g>
+              <path class="torso" d="M180 252 C215 236 288 236 324 252 L348 402 L362 566 L190 580 L168 402 Z" fill="#0a0a12" stroke="#ffd34d" stroke-width="2.5" stroke-linejoin="round"/>
+              <path class="belt" d="M186 520 L360 508 L362 534 L188 546 Z" fill="#1a1a26" stroke="#ffd34d" stroke-width="2"/>
+              <g id="hHead">
+                <path d="M222 205 L286 205 L290 244 L222 244 Z" fill="#0a0a12"/>
+                <ellipse cx="254" cy="170" rx="42" ry="47" fill="#0a0a12" stroke="#ffd34d" stroke-width="2.5"/>
+                <path d="M208 150 L168 100 L216 122 L204 56 L244 110 L264 34 L284 106 L322 64 L308 128 L336 146 L314 156 L212 156 Z" fill="#0a0a12" stroke="#ffd34d" stroke-width="2.5" stroke-linejoin="round"/>
+                <path d="M214 150 C170 138 118 170 76 232 C128 190 172 192 218 170 Z M222 156 C190 170 160 206 150 250 C176 214 200 196 226 182 Z" fill="#ff2a4d"/>
+                <path id="hEyeN" d="M262 170 L298 160 L300 173 L266 180 Z" fill="#fffdf5"/>
+                <path id="hEyeH" d="M264 178 Q282 156 300 172" fill="none" stroke="#fffdf5" stroke-width="7" stroke-linecap="round" opacity="0"/>
+                <path id="hEyeS" d="M264 154 L294 168 L264 182" fill="none" stroke="#fffdf5" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" opacity="0"/>
+                <g id="hEyeW" opacity="0"><circle cx="282" cy="168" r="13" fill="#fffdf5"/><circle cx="286" cy="168" r="5" fill="#0a0a12"/></g>
+                <path id="hMouthS" d="M274 198 Q288 214 304 194" fill="none" stroke="#fffdf5" stroke-width="5" stroke-linecap="round" opacity="0"/>
+                <ellipse id="hMouthO" cx="290" cy="203" rx="9" ry="12" fill="#fffdf5" opacity="0"/>
+              </g>
+              <g id="hScarf"><path d="M208 252 C150 252 96 236 28 296 C96 292 148 306 214 290 Z" fill="#ff2a4d"/><path d="M206 252 L312 250 L318 276 L202 284 Z" fill="#ff2a4d"/></g>
+              <g id="hArm"><rect x="318" y="244" width="130" height="46" rx="23" fill="#0a0a12" stroke="#ffd34d" stroke-width="2.5"/><circle cx="452" cy="267" r="38" fill="#0a0a12" stroke="#ffd34d" stroke-width="2.5"/></g>
+            </g>
+          </svg>
+        </div>
+
+        <div id="lHerb" class="lay" data-layout-allow-overflow></div>
+        <div id="fx"></div>
+        <div id="lFG" class="lay" data-layout-allow-overflow></div>
+      </div>
+
+      <div id="ui">
+        <div id="uipanel">
+          <div id="uilab">討伐数</div>
+          <div id="uiwin"><div id="uistrip"><div id="ud0">0</div><div id="ud1">1</div><div id="ud2">2</div><div id="ud3">3</div></div></div>
+        </div>
+        <div id="uiplus">+1</div>
+      </div>
+      <div id="subs">
+        <div class="sub" id="sub1">いい天気だなあ。</div>
+        <div class="sub" id="sub2">くしゅんっ！</div>
+        <div class="sub" id="sub3">わっ！</div>
+      </div>
+      <div id="warm"><span>いい天気だなあ。くしゅんっ！わっ！0123</span><i>討伐数0123+</i></div>
+    </div>
+
+    <script>
+      (function () {
+        const DUR = 10;
+        const $ = (id) => document.getElementById(id);
+        const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+        const lerp = (a, b, u) => a + (b - a) * u;
+        const EZ = {
+          lin: (u) => u,
+          s: (u) => u * u * (3 - 2 * u),
+          in: (u) => u * u,
+          out: (u) => 1 - (1 - u) * (1 - u),
+          out3: (u) => 1 - Math.pow(1 - u, 3),
+          io: (u) => (u < 0.5 ? 2 * u * u : 1 - Math.pow(-2 * u + 2, 2) / 2),
+          back: (u) => { const c = 2.0; return 1 + (c + 1) * Math.pow(u - 1, 3) + c * Math.pow(u - 1, 2); },
+          elas: (u) => (u <= 0 ? 0 : u >= 1 ? 1 : Math.pow(2, -9 * u) * Math.sin((u * 9 - 0.75) * ((2 * Math.PI) / 3)) + 1),
+        };
+        // [t, v, ease] : 区間(前の点→この点)に ease を適用
+        function kf(p) {
+          return (t) => {
+            if (t <= p[0][0]) return p[0][1];
+            for (let i = 1; i < p.length; i++) {
+              if (t <= p[i][0]) {
+                const a = p[i - 1], b = p[i];
+                const u = (t - a[0]) / (b[0] - a[0]);
+                return a[1] + (b[1] - a[1]) * EZ[b[2] || "s"](u);
+              }
+            }
+            return p[p.length - 1][1];
+          };
+        }
+        function rng(seed) {
+          let a = seed >>> 0;
+          return () => {
+            a = (a + 0x6d2b79f5) | 0;
+            let t = Math.imul(a ^ (a >>> 15), 1 | a);
+            t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+            return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+          };
+        }
+        const R = rng(20260216);
+        const pick = (arr) => arr[Math.floor(R() * arr.length)];
+
+        const tl = gsap.timeline({ paused: true });
+        function drive(el, prop, fn) {
+          const from = {}, to = {};
+          from[prop] = 0;
+          to[prop] = 1;
+          to.duration = DUR;
+          to.ease = (p) => fn(p * DUR);
+          tl.fromTo(el, from, to, 0);
+        }
+        // 区間 [t0, t0+dur] の局所時間 u(0..1) の関数として動かす
+        function A(el, t0, dur, props) {
+          for (const k in props) drive(el, k, (t) => props[k](clamp((t - t0) / dur, 0, 1)));
+        }
+
+        /* ---------- 横スクロール量 P(t) ---------- */
+        const VS = 400;
+        const wK = kf([
+          [0, 1], [2.55, 1], [2.85, 0], [3.5, 0], [3.8, 1, "s"], [5.3, 1], [5.45, 0, "s"], [6.0, 0], [6.3, 1, "s"], [7.5, 1], [7.8, 0, "s"], [10, 0],
+        ]);
+        const NS = 240, NN = DUR * NS;
+        const Ptab = new Float64Array(NN + 3);
+        { let acc = 0; for (let i = 1; i <= NN + 2; i++) { acc += (VS * wK((i - 0.5) / NS)) / NS; Ptab[i] = acc; } }
+        const P = (t) => { const x = clamp(t, 0, DUR) * NS; const i = Math.floor(x); const f = x - i; return Ptab[i] * (1 - f) + Ptab[i + 1] * f; };
+        const PMAX = P(DUR);
+        const PH = (t) => (2 * Math.PI * P(t)) / 200; // 歩行位相(1周期=地面200px)
+
+        /* ---------- 風景(多層) ---------- */
+        const SKYL = 700;
+        const mk = (id, W, inner) => { $(id).style.width = W + "px"; $(id).innerHTML = `<svg width="${W}" height="1080" viewBox="0 0 ${W} 1080">${inner}</svg>`; };
+        const wave = (x, base, a, L1, p1, b, L2, p2) => base - a * (0.5 + 0.5 * Math.sin((x * 2 * Math.PI) / L1 + p1)) - b * (0.5 + 0.5 * Math.sin((x * 2 * Math.PI) / L2 + p2));
+        const hillPath = (W, f, step = 24) => { let d = `M0,1080 L0,${f(0).toFixed(1)}`; for (let x = step; x <= W + step; x += step) d += ` L${x},${f(x).toFixed(1)}`; return d + ` L${W + step},1080 Z`; };
+        const KS = { cloudF: 0.03, mount: 0.06, far: 0.14, cloudN: 0.08, mid: 0.3, near: 0.55, gb: 1, gf: 1, fg: 1.7 };
+        const DR = { cloudF: 9, cloudN: 18 };
+        const WIDTH = (k, d = 0) => Math.ceil(1920 + k * PMAX + d * DUR + 260);
+
+        // 太陽(固定)
+        $("lSun").innerHTML = `<svg width="1920" height="1080"><circle cx="250" cy="200" r="150" fill="#fff6bf" opacity=".22"/><circle cx="250" cy="200" r="108" fill="#fff6bf" opacity=".4"/><circle cx="250" cy="200" r="72" fill="#fff3a8"/></svg>`;
+
+        // 雲
+        const cloud = (x, y, s) => `<g transform="translate(${x},${y}) scale(${s})"><g fill="#cfe7f5" transform="translate(0,9)"><circle cx="0" cy="0" r="38"/><circle cx="48" cy="-18" r="50"/><circle cx="106" cy="-6" r="42"/><circle cx="150" cy="8" r="30"/><rect x="-38" y="0" width="218" height="38" rx="19"/></g><g fill="#ffffff"><circle cx="0" cy="0" r="38"/><circle cx="48" cy="-18" r="50"/><circle cx="106" cy="-6" r="42"/><circle cx="150" cy="8" r="30"/><rect x="-38" y="0" width="218" height="34" rx="17"/></g></g>`;
+        const cloudRow = (W, ys, sc, n) => { let s = ""; for (let i = 0; i < n; i++) s += cloud(((i + R() * 0.5) * W) / n, ys[i % ys.length] + R() * 30, sc * (0.8 + R() * 0.5)); return s; };
+        { const W = WIDTH(KS.cloudF, DR.cloudF); mk("lCloudF", W, cloudRow(W, [150, 250, 120, 290], 0.8, 8)); }
+        { const W = WIDTH(KS.cloudN, DR.cloudN); mk("lCloudN", W, cloudRow(W, [330, 190, 400, 240], 1.15, 6)); }
+
+        // 山
+        { const W = WIDTH(KS.mount); let s = "";
+          for (let layer = 0; layer < 2; layer++) {
+            let x = -120 + layer * 170;
+            while (x < W + 200) {
+              const h = (layer ? 190 : 250) + R() * 120, w = 230 + R() * 60, col = layer ? "#bde4ee" : "#9fd0e0";
+              s += `<path d="M${x - w},720 Q${x - w * 0.4},${720 - h * 0.5} ${x},${720 - h} Q${x + w * 0.4},${720 - h * 0.55} ${x + w},720 Z" fill="${col}" stroke="${col}" stroke-width="10" stroke-linejoin="round"/>`;
+              if (h > 260 && !layer) { const top = 720 - h, c = h * 0.28, ww = c * 0.95; s += `<path d="M${x},${top} L${x - ww},${top + c} L${x - ww * 0.5},${top + c * 0.8} L${x - ww * 0.12},${top + c * 1.02} L${x + ww * 0.3},${top + c * 0.82} L${x + ww * 0.6},${top + c * 1.0} L${x + ww},${top + c} Z" fill="#fffdf5"/>`; }
+              x += w * 1.15 + R() * 80;
+            }
+          }
+          s += `<defs><linearGradient id="mist" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f3fbe6" stop-opacity="0"/><stop offset="1" stop-color="#f3fbe6" stop-opacity=".95"/></linearGradient></defs><rect x="0" y="560" width="${W}" height="170" fill="url(#mist)"/>`;
+          mk("lMount", W, s); }
+
+        // 遠い丘
+        { const W = WIDTH(KS.far); const f = (x) => wave(x, 730, 50, 760, 0.6, 22, 290, 1.7);
+          let s = `<path d="${hillPath(W, f)}" fill="#cbed97"/>`;
+          for (let x = 60; x < W; x += 90 + R() * 130) { const y = f(x) + 6, r = 11 + R() * 9; s += `<rect x="${x - 2}" y="${y - r}" width="4" height="${r}" fill="#7c9a52"/><circle cx="${x}" cy="${y - r - 8}" r="${r}" fill="#9fd668"/>`; }
+          mk("lFar", W, s); }
+
+        // 中の丘 + 風車
+        const midF = (x) => wave(x, 780, 60, 980, 2.1, 26, 330, 0.4);
+        { const W = WIDTH(KS.mid); let s = `<path d="${hillPath(W, midF)}" fill="#aadf5f"/>`;
+          const wx = 1330, wy = midF(wx) + 6;
+          s += `<g><path d="M${wx - 20},${wy} L${wx - 11},${wy - 118} L${wx + 11},${wy - 118} L${wx + 20},${wy} Z" fill="#fbf3dc"/><path d="M${wx - 16},${wy - 112} L${wx},${wy - 150} L${wx + 16},${wy - 112} Z" fill="#d9573b"/><rect x="${wx - 6}" y="${wy - 30}" width="12" height="30" rx="3" fill="#8c5a36"/>
+            <g id="windBlades">${[0, 90, 180, 270].map((a) => `<g transform="rotate(${a} ${wx} ${wy - 118})"><rect x="${wx - 3}" y="${wy - 118 - 78}" width="6" height="78" fill="#8c5a36"/><rect x="${wx + 3}" y="${wy - 118 - 76}" width="22" height="50" fill="#fffdf5" stroke="#8c5a36" stroke-width="2"/></g>`).join("")}</g><circle cx="${wx}" cy="${wy - 118}" r="7" fill="#8c5a36"/></g>`;
+          for (let x = 120; x < W; x += 260 + R() * 220) { const y = midF(x) + 6, r = 16 + R() * 10; s += `<rect x="${x - 3}" y="${y - r}" width="6" height="${r}" fill="#7a5a3a"/><circle cx="${x}" cy="${y - r - 10}" r="${r + 4}" fill="#6fc24e"/><circle cx="${x - 5}" cy="${y - r - 16}" r="${(r + 4) * 0.5}" fill="#8bd664"/>`; }
+          mk("lMid", W, s);
+          $("lMid").dataset.wx = wx; $("lMid").dataset.wy = wy - 118; }
+
+        // 近い丘 + 木
+        { const W = WIDTH(KS.near); const f = (x) => wave(x, 850, 44, 760, 4.0, 18, 250, 2.3);
+          let s = `<path d="${hillPath(W, f)}" fill="#8cd24a"/>`;
+          for (let x = 160; x < W; x += 420 + R() * 380) { const y = f(x) + 16, r = 44 + R() * 22;
+            s += `<ellipse cx="${x}" cy="${y + 2}" rx="${r * 1.1}" ry="9" fill="rgba(40,110,30,.28)"/><rect x="${x - 9}" y="${y - r * 1.2}" width="18" height="${r * 1.2}" fill="#7d5a38"/><circle cx="${x}" cy="${y - r * 1.55}" r="${r}" fill="#4fb64b"/><circle cx="${x - r * 0.45}" cy="${y - r * 1.1}" r="${r * 0.62}" fill="#4fb64b"/><circle cx="${x + r * 0.5}" cy="${y - r * 1.15}" r="${r * 0.6}" fill="#4fb64b"/><circle cx="${x - r * 0.3}" cy="${y - r * 1.8}" r="${r * 0.42}" fill="#74cf62"/>`; }
+          mk("lNear", W, s); }
+
+        /* ---------- 地面(後ろ): 草・道・花・薬草 ---------- */
+        const GW = WIDTH(KS.gb);
+        const flower = (x, y, r, c) => `<g transform="translate(${x},${y})"><g fill="${c}">${[0, 72, 144, 216, 288].map((a) => `<circle cx="${(Math.cos((a * Math.PI) / 180) * r).toFixed(1)}" cy="${(Math.sin((a * Math.PI) / 180) * r).toFixed(1)}" r="${(r * 0.72).toFixed(1)}"/>`).join("")}</g><circle r="${(r * 0.6).toFixed(1)}" fill="#ffd34d"/></g>`;
+        const tuft = (x, y, s, c) => `<path d="M${x - 10 * s},${y} L${x - 6 * s},${y - 22 * s} L${x - 1 * s},${y} L${x + 3 * s},${y - 30 * s} L${x + 8 * s},${y} L${x + 12 * s},${y - 19 * s} L${x + 17 * s},${y} Z" fill="${c}"/>`;
+        const herb = (x, y, s) => `<g transform="translate(${x},${y}) scale(${s})"><path d="M0,0 L0,-30" stroke="#2f8f3a" stroke-width="5" stroke-linecap="round"/><ellipse cx="-15" cy="-34" rx="17" ry="8" transform="rotate(-28 -15 -34)" fill="#3dbb4f"/><ellipse cx="15" cy="-34" rx="17" ry="8" transform="rotate(28 15 -34)" fill="#3dbb4f"/><ellipse cx="0" cy="-48" rx="8" ry="17" fill="#55d266"/><ellipse cx="-17" cy="-36" rx="8" ry="3" transform="rotate(-28 -17 -36)" fill="#8be58f"/></g>`;
+        const pathTop = (x) => 868 + 6 * Math.sin(x / 130);
+        const pathBot = (x) => 958 + 8 * Math.sin(x / 170 + 1);
+        let herbEnd = 0;
+        { let s = `<rect x="0" y="838" width="${GW}" height="242" fill="#7fcd3f"/><rect x="0" y="838" width="${GW}" height="12" fill="#98dc54"/><rect x="0" y="1018" width="${GW}" height="62" fill="#6dbd36"/>`;
+          let top = "", bot = "";
+          for (let x = 0; x <= GW; x += 40) { top += `${x},${pathTop(x).toFixed(1)} `; }
+          for (let x = GW; x >= 0; x -= 40) { bot += `${x},${pathBot(x).toFixed(1)} `; }
+          s += `<polygon points="${top}${bot}" fill="#efdca3"/>`;
+          let ed = ""; for (let x = 0; x <= GW; x += 40) ed += (x ? " L" : "M") + `${x},${(pathTop(x) + 2).toFixed(1)}`; s += `<path d="${ed}" fill="none" stroke="#d6bd7c" stroke-width="6"/>`;
+          ed = ""; for (let x = 0; x <= GW; x += 40) ed += (x ? " L" : "M") + `${x},${(pathBot(x) - 2).toFixed(1)}`; s += `<path d="${ed}" fill="none" stroke="#d6bd7c" stroke-width="6"/>`;
+          for (let x = 30; x < GW; x += 70 + R() * 90) { const y = pathTop(x) + 22 + R() * 50; s += `<ellipse cx="${x}" cy="${y}" rx="${6 + R() * 8}" ry="${3 + R() * 3}" fill="#d9c38a"/>`; }
+          for (let x = 20; x < GW; x += 36 + R() * 40) { s += tuft(x, 852 + R() * 14, 0.7 + R() * 0.6, pick(["#5cae2d", "#67b934", "#4f9f28"])); }
+          for (let x = 40; x < GW; x += 90 + R() * 120) { s += flower(x, 850 + R() * 14, 6 + R() * 4, pick(["#ffffff", "#fff2a8", "#ff9fbd", "#d4b8ff"])); }
+          for (let x = 30; x < GW; x += 60 + R() * 90) { s += tuft(x, 972 + R() * 60, 0.9 + R() * 0.8, pick(["#559f2a", "#4d9425", "#62ae33"])); }
+          for (let x = 60; x < GW; x += 140 + R() * 160) { s += flower(x, 985 + R() * 70, 7 + R() * 5, pick(["#ffffff", "#fff2a8", "#ff9fbd", "#d4b8ff"])); }
+          // 薬草(アキラは気づかない)
+          [360, 1120, 1710, 2330, 2780].forEach((x, i) => { s += herb(x, 872 + (i % 2) * 6, 0.95); });
+          herbEnd = 2370 + 135; // 終盤にアキラの足もとへ来る(後で正確に置く)
+                    mk("lGBack", GW, s); }
+
+        /* ---------- 地面(前): 茂み・石 ---------- */
+        const bush = (cx, w, h, id) => {
+          const c1 = "#3cae45", c2 = "#5cc85a";
+          return `<g ${id ? `id="${id}"` : ""} transform="translate(${cx},892)"><ellipse cx="0" cy="3" rx="${w * 0.56}" ry="11" fill="rgba(30,90,20,.34)"/>
+            <rect x="${-w * 0.44}" y="${-h * 0.3}" width="${w * 0.88}" height="${h * 0.3}" fill="${c1}"/>
+            <circle cx="${-w * 0.28}" cy="${-h * 0.36}" r="${h * 0.38}" fill="${c1}"/><circle cx="${w * 0.27}" cy="${-h * 0.38}" r="${h * 0.37}" fill="${c1}"/><circle cx="0" cy="${-h * 0.56}" r="${h * 0.46}" fill="${c1}"/><circle cx="${-w * 0.08}" cy="${-h * 0.3}" r="${h * 0.34}" fill="${c1}"/><circle cx="${w * 0.14}" cy="${-h * 0.3}" r="${h * 0.34}" fill="${c1}"/>
+            <circle cx="${-w * 0.12}" cy="${-h * 0.72}" r="${h * 0.22}" fill="${c2}"/><circle cx="${-w * 0.34}" cy="${-h * 0.46}" r="${h * 0.15}" fill="${c2}"/><circle cx="${w * 0.26}" cy="${-h * 0.58}" r="${h * 0.14}" fill="${c2}"/>
+            <circle cx="${w * 0.12}" cy="${-h * 0.2}" r="6" fill="#ff4d6d"/><circle cx="${-w * 0.2}" cy="${-h * 0.14}" r="6" fill="#ff4d6d"/><circle cx="${w * 0.3}" cy="${-h * 0.22}" r="6" fill="#ff4d6d"/></g>`;
+        };
+        const stoneScreenAt54 = 883 + 22; // つまずく石(5.4sに爪先の位置)
+        const wolfWorldX = 1610 + P(4.5);
+        const slimeBushWorld = 380 + P(2.5);
+        const stoneWorld = stoneScreenAt54 + P(5.4);
+        { const GFW = WIDTH(KS.gf);
+          let s = "";
+          [{ x: 250, w: 220, h: 120 }, { x: 1790, w: 240, h: 130 }, { x: 2420, w: 230, h: 126 }, { x: 3850, w: 250, h: 136 }].forEach((b) => (s += bush(b.x, b.w, b.h)));
+          s += bush(slimeBushWorld, 250, 150, "bushS");
+          s += bush(wolfWorldX, 340, 195, "bushW");
+          s += `<g id="stone"><g transform="translate(${stoneWorld},893)"><ellipse cx="0" cy="3" rx="56" ry="9" fill="rgba(30,90,20,.35)"/><path d="M-50,0 C-56,-26 -32,-56 2,-58 C36,-60 58,-32 52,0 Z" fill="#aaa699"/><path d="M-50,0 C-52,-14 -46,-22 -36,-28 C-20,-22 20,-20 52,0 Z" fill="#8f8b7e"/><ellipse cx="-14" cy="-38" rx="18" ry="9" fill="#d6d2c4" transform="rotate(-25 -14 -38)"/></g></g>`;
+          mk("lGFront", GFW, s); }
+
+        /* ---------- 手前の花(視差大) ---------- */
+        { const W = WIDTH(KS.fg); let s = "";
+          for (let x = 60; x < W; x += 250 + R() * 260) { const y = 1060 + R() * 20, h = 70 + R() * 60, c = pick(["#fffdf5", "#ffd34d", "#ff9fbd"]);
+            s += `<g id="fg${Math.round(x)}" class="fgf"><path d="M${x},${y} Q${x + 10},${y - h * 0.5} ${x},${y - h}" stroke="#3f9a2a" stroke-width="7" fill="none" stroke-linecap="round"/><path d="M${x},${y - h * 0.35} q-30,-22 -44,-8 q18,22 44,8" fill="#4cae35"/>${flower(x, y - h - 4, 20, c)}</g>`; }
+          for (let x = 20; x < W; x += 120 + R() * 150) { s += tuft(x, 1090, 1.9 + R() * 1.2, "#3f9a2a"); }
+          mk("lFG", W, s); }
+
+        /* ---------- 鳥 ---------- */
+        { let s = "";
+          [[1980, 250, 1], [2080, 285, 0.8], [2160, 230, 0.9], [2260, 275, 0.7]].forEach((b, i) => {
+            s += `<g id="bird${i}"><g id="birdW${i}"><path d="M-22,2 Q-11,-14 0,0 Q11,-14 22,2" fill="none" stroke="#2a3a4a" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/></g></g>`;
+          });
+          $("lBirds").innerHTML = `<svg width="1920" height="1080" style="overflow:visible">${s}</svg>`; }
+
+        /* ---------- ヒーローの顔状態 ---------- */
+        const face = (t) => (t < 1.0 ? "N" : t < 2.45 ? "H" : t < 3.0 ? "N" : t < 3.4 ? "S" : t < 5.38 ? "N" : t < 5.95 ? "W" : t < 7.55 ? "N" : t < 7.62 ? "W" : "H");
+        const faceOn = (el, states) => drive(el, "opacity", (t) => (states.indexOf(face(t)) >= 0 ? 1 : 0));
+
+        /* ============ 初期化(origin) ============ */
+        gsap.set("#hero", { transformOrigin: "130px 437px" });
+        gsap.set("#hLegA", { svgOrigin: "229 518" });
+        gsap.set("#hLegB", { svgOrigin: "285 512" });
+        gsap.set("#hUp", { svgOrigin: "255 520" });
+        gsap.set("#hCapeL", { svgOrigin: "255 520" });
+        gsap.set("#hCape", { svgOrigin: "200 280" });
+        gsap.set("#hHead", { svgOrigin: "254 235" });
+        gsap.set("#hArm", { svgOrigin: "330 267" });
+        gsap.set("#hBack", { svgOrigin: "205 275" });
+        gsap.set("#hBask", { svgOrigin: "156 498" });
+        gsap.set("#hScarf", { svgOrigin: "210 270" });
+        gsap.set("#wTail", { svgOrigin: "60 160" });
+        gsap.set("#wolf", { x: 0 });
+        gsap.set("#wolfFlip", { scaleX: -1, transformOrigin: "50% 50%" });
+        gsap.set("#wolfSpin", { transformOrigin: "50% 50%" });
+        gsap.set("#bearSpin", { transformOrigin: "50% 55%" });
+        gsap.set("#bearPop", { transformOrigin: "50% 100%" });
+        gsap.set("#bArmL", { svgOrigin: "170 300" });
+        gsap.set("#bArmR", { svgOrigin: "356 300" });
+        gsap.set("#bHead", { svgOrigin: "236 250" });
+        gsap.set("#slimeSq", { transformOrigin: "50% 100%" });
+        gsap.set("#cam", { scale: 1.02, transformOrigin: "50% 50%" });
+        gsap.set("#uipanel", { transformOrigin: "100% 0%" });
+        gsap.set("#windBlades", { svgOrigin: `${$("lMid").dataset.wx} ${$("lMid").dataset.wy}` });
+
+        /* ============ 視差レイヤー ============ */
+        const par = (id, k, drift) => drive($(id), "x", (t) => -(k * P(t)) - (drift || 0) * t);
+        par("lCloudF", KS.cloudF, DR.cloudF);
+        par("lMount", KS.mount);
+        par("lFar", KS.far);
+        par("lCloudN", KS.cloudN, DR.cloudN);
+        par("lMid", KS.mid);
+        par("lNear", KS.near);
+        par("lGBack", KS.gb);
+        par("lGFront", KS.gf);
+        par("lFG", KS.fg);
+        drive($("windBlades"), "rotation", (t) => 34 * t);
+        // 手前の花のそよ風
+        document.querySelectorAll(".fgf").forEach((el, i) => {
+          const b = el.querySelector("path").getAttribute("d").match(/M([\d.]+),([\d.]+)/);
+          gsap.set(el, { svgOrigin: `${b[1]} ${b[2]}` });
+          drive(el, "rotation", (t) => 4 * Math.sin(t * 2.4 + i * 1.3));
+        });
+        // 鳥
+        [[1980, 250, 1], [2080, 285, 0.8], [2160, 230, 0.9], [2260, 275, 0.7]].forEach((b, i) => {
+          drive($("bird" + i), "x", (t) => b[0] - 205 * t - 40 * Math.sin(t * 0.6 + i));
+          drive($("bird" + i), "y", (t) => b[1] + 14 * Math.sin(t * 2.2 + i * 1.7));
+          gsap.set($("bird" + i), { scale: b[2], svgOrigin: "0 0" });
+          gsap.set($("birdW" + i), { svgOrigin: "0 0" });
+          drive($("birdW" + i), "scaleY", (t) => 0.35 + 0.65 * Math.abs(Math.sin(t * 7 + i)));
+        });
+
+        /* ============ カメラ・シェイク ============ */
+        const shEv = [[2.967, 3], [5.467, 6], [7.5, 11], [7.967, 4]];
+        const shake = (t, ph) => { let s = 0; for (const [t0, a] of shEv) { if (t >= t0) { const u = t - t0; s += a * Math.exp(-u * 11) * Math.sin(u * 62 + ph); } } return s; };
+        drive($("cam"), "x", (t) => shake(t, 0));
+        drive($("cam"), "y", (t) => shake(t, 1.7) * 0.8);
+
+        /* ============ アキラ ============ */
+        const W_ = (t) => wK(t);
+        const heroBase = (t) => -9 * W_(t) * Math.abs(Math.sin(PH(t)));
+        const heroY = (t) => heroBase(t) + kf([[5.4, 0], [5.5, -26, "out"], [5.7, 0, "in"], [7.5, 0], [7.56, -18, "out"], [7.7, 0, "in"], [9.0, 0], [9.08, -26, "out"], [9.3, 0, "in"], [9.5, 0], [9.57, -11, "out"], [9.7, 0, "in"]])(t);
+        const heroX = kf([[5.45, 0], [5.65, 28, "out"], [6.3, 0, "s"]]);
+        const heroRot = kf([[5.4, 0], [5.55, 11, "out"], [5.9, 6, "s"], [6.3, 0, "s"]]);
+        drive($("hero"), "x", heroX);
+        drive($("hero"), "y", heroY);
+        drive($("hero"), "rotation", heroRot);
+        drive($("shHero"), "scaleX", (t) => 1 + heroY(t) / 130);
+        drive($("shHero"), "x", (t) => heroX(t));
+
+        const lookUp = kf([[0.9, 0], [1.2, -5], [2.3, -5], [2.6, 0]]);
+        const upLean = (t) => 3 * W_(t) + lookUp(t) + kf([[2.7, 0], [2.93, -12, "out"], [2.97, -12], [3.07, 26, "out"], [3.3, 16, "s"], [3.7, 2, "s"], [3.9, 0], [5.3, 0], [5.4, 6], [5.55, 22, "out"], [5.8, 18], [6.2, 4], [6.4, 0], [7.5, 0], [7.55, -6, "out"], [7.9, -3], [8.5, 0], [9.0, 0], [9.1, -4, "out"], [9.5, -2], [10, -2]])(t);
+        drive($("hUp"), "rotation", upLean);
+        drive($("hCapeL"), "rotation", upLean);
+        const capeEv = kf([[2.95, 0], [3.1, 14, "out"], [3.5, 0], [5.4, 0], [5.55, 22, "out"], [6.0, 0], [7.5, 0], [7.6, 10, "out"], [8.0, 0]]);
+        drive($("hCape"), "rotation", (t) => 3 * Math.sin(PH(t) * 2 + 0.6) * W_(t) + 1.2 * Math.sin(t * 2.1) + capeEv(t));
+        const scarfEv = kf([[2.95, 0], [3.05, 38, "out"], [3.45, 0, "s"], [5.4, 0], [5.55, 42, "out"], [6.1, -4, "s"], [6.4, 0], [7.5, 0], [7.58, 22, "out"], [8.1, 0, "s"]]);
+        drive($("hScarf"), "rotation", (t) => 7 * Math.sin(PH(t) * 2 + 1) * W_(t) + 2.5 * Math.sin(t * 5.3) * (0.4 + W_(t)) + scarfEv(t));
+        const headBase = kf([[0, 8], [0.5, 12], [0.9, 6], [1.15, -22], [2.25, -20], [2.6, 6], [2.7, 3], [2.93, -34, "out"], [2.97, -34], [3.07, 30, "out"], [3.35, 22], [3.6, 4], [3.9, 8], [4.1, 8], [4.4, 16], [5.0, 18], [5.3, 14], [5.4, 18], [5.55, 34, "out"], [5.9, 10], [6.2, 2], [6.4, -7], [7.0, -7], [7.2, 14], [7.45, 14], [7.55, -22, "out"], [8.0, -24], [8.5, -10], [9.0, -4], [9.2, -12], [9.45, -4], [9.7, -12], [10, -6]]);
+        drive($("hHead"), "rotation", (t) => headBase(t) + 3 * W_(t) * Math.sin(PH(t) * 2) + (t > 3.5 && t < 4.1 ? 3 * Math.sin((t - 3.5) * 50) : 0) + (t > 4.3 && t < 5.3 ? 6 * Math.sin((t - 4.3) * 5.2) : 0));
+        // 脚
+        const legOv = kf([[5.3, 0], [5.38, 1], [5.9, 1], [6.3, 0]]);
+        drive($("hLegA"), "rotation", (t) => { const w = 22 * W_(t) * Math.sin(PH(t)); return lerp(w, 58, legOv(t)); });
+        drive($("hLegB"), "rotation", (t) => { const w = -22 * W_(t) * Math.sin(PH(t)); return lerp(w, -22, legOv(t)); });
+        // 前腕
+        const armPose = kf([[0, 66], [1.2, -48, "out"], [2.3, -52], [2.6, 66], [2.95, 66], [3.05, 110, "out"], [3.3, 100], [3.5, 100], [3.65, -60], [3.75, -72], [3.85, -58], [3.95, -72], [4.05, -58], [4.25, 66], [5.3, 66], [5.4, 125, "out"], [5.5, 25, "out"], [5.7, -70], [5.95, -30], [6.3, 66], [6.45, -68, "s"], [6.55, -80], [6.65, -66], [6.75, -80], [6.85, -66], [7.0, 66, "s"], [7.5, 66], [7.62, -70, "out"], [7.75, -105], [8.0, -48], [8.25, -105], [8.5, -48], [8.75, -105], [9.0, 62, "s"], [9.25, 76], [10, 76]]);
+        const armMask = kf([[0, 0], [0.95, 0], [1.2, 1], [2.3, 1], [2.6, 0], [2.95, 0], [3.0, 1], [4.05, 1], [4.25, 0], [5.3, 0], [5.35, 1], [7.0, 1], [7.1, 0], [7.5, 0], [7.6, 1], [10, 1]]);
+        drive($("hArm"), "rotation", (t) => lerp(66 - 20 * W_(t) * Math.sin(PH(t)), armPose(t), armMask(t)));
+        // 後ろ腕(カゴ)
+        const backEv = kf([[3.0, 0], [3.1, 12], [3.4, 0], [5.35, 0], [5.5, -40, "out"], [5.7, -70], [6.0, -10], [6.3, 0], [7.55, 0], [7.6, -20, "out"], [7.9, 0], [9.0, 0], [9.28, -122, "back"], [9.5, -114, "s"], [10, -114]]);
+        const backA = (t) => 14 * W_(t) * Math.sin(PH(t)) + backEv(t);
+        drive($("hBack"), "rotation", backA);
+        drive($("hBask"), "rotation", (t) => -(backA(t) + upLean(t) + heroRot(t)) + 7 * W_(t) * Math.sin(PH(t) - 0.9) + 2.5 * Math.sin(t * 3.1));
+        // 顔
+        faceOn($("hEyeN"), ["N"]);
+        faceOn($("hEyeH"), ["H"]);
+        faceOn($("hEyeS"), ["S"]);
+        faceOn($("hEyeW"), ["W"]);
+        faceOn($("hMouthS"), ["H"]);
+        faceOn($("hMouthO"), ["S", "W"]);
+
+        /* ============ スライム(2.5 出現 / 3.0 蒸発) ============ */
+        const slAdv = kf([[2.5, 0, "lin"], [2.78, 105, "s"], [2.8, 105], [2.98, 138, "s"]]);
+        const slideX = (t) => 380 + 42 + slAdv(t) - (P(t) - P(2.5)) - 82;
+        const slHop = (t) => {
+          if (t < 2.5) return 0;
+          if (t < 2.78) { const u = (t - 2.5) / 0.28; return -112 * Math.sin(Math.PI * Math.pow(u, 0.7)); }
+          if (t >= 2.8 && t < 2.98) { const u = (t - 2.8) / 0.18; return -4 * 38 * u * (1 - u); }
+          return 0;
+        };
+        const slideY = (t) => (t < 2.5 ? 12 : slHop(t) + (t < 2.78 ? 12 * (1 - clamp((t - 2.5) / 0.28)) : 0));
+        drive($("slime"), "x", slideX);
+        drive($("slime"), "y", slideY);
+        drive($("slime"), "opacity", kf([[2.49, 0], [2.5, 1], [3.03, 1], [3.07, 0]]));
+        const sqY = (t) => {
+          if (t < 2.5) return 1;
+          let v = 1 + 0.04 * Math.sin((t - 2.5) * 22) * Math.exp(-(t - 2.5) * 1.2);
+          // 着地のぷにっ
+          if (t > 2.76 && t < 2.86) v = lerp(1, 0.78, Math.sin(((t - 2.76) / 0.1) * Math.PI));
+          if (t > 2.94 && t < 2.967) v = 1.0;
+          if (t >= 2.967) v = lerp(1, 0.1, EZ.out(clamp((t - 2.967) / 0.07)));
+          return v;
+        };
+        drive($("slimeSq"), "scaleY", sqY);
+        drive($("slimeSq"), "scaleX", (t) => (t >= 2.967 ? lerp(1, 1.6, EZ.out(clamp((t - 2.967) / 0.07))) : 1 + (1 - sqY(t)) * 0.6));
+        drive($("shSlime"), "x", (t) => slideX(t) + 8);
+        drive($("shSlime"), "opacity", kf([[2.49, 0], [2.5, 1], [2.967, 1], [3.07, 0]]));
+        drive($("shSlime"), "scaleX", (t) => 1 + slHop(t) / 220);
+
+        /* ============ 狼(4.5 出現 / 5.467 かすり飛ぶ) ============ */
+        const wOwn = kf([[4.5, 0], [5.2, 105, "lin"], [5.467, 265, "out"]]);
+        const wolfX0 = (t) => 1610 + 0 - (P(t) - P(4.5)) - wOwn(t);
+        const flyU = (t) => clamp((t - 5.467) / 0.6);
+        const wolfX = (t) => (t < 5.467 ? wolfX0(t) : wolfX0(5.467) + (1560 - wolfX0(5.467)) * EZ.out3(flyU(t)) * 0.9 + (1560 - wolfX0(5.467)) * 0.1 * flyU(t)) - 162;
+        const wolfY = (t) => {
+          if (t < 4.5) return 0;
+          if (t < 4.62) return lerp(0, -34, EZ.out((t - 4.5) / 0.12));
+          if (t < 5.2) return -34 + lerp(0, 34, EZ.s((t - 4.62) / 0.58)) * 0.6 + 3 * Math.sin((t - 4.62) * 18);
+          if (t < 5.467) { const u = (t - 5.2) / 0.3; return -14 - 76 * Math.sin(u * Math.PI * 0.5); }
+          const u = flyU(t); return -(90 + 222 * EZ.out(u));
+        };
+        const wolfS = (t) => (t < 5.467 ? 1 : lerp(1, 0.07, EZ.s(flyU(t))));
+        drive($("wolf"), "x", wolfX);
+        drive($("wolf"), "y", wolfY);
+        drive($("wolf"), "scale", wolfS);
+        drive($("wolfSpin"), "rotation", (t) => {
+          if (t < 5.2) return 2.5 * Math.sin(t * 9) * (t > 4.6 ? 1 : 0);
+          if (t < 5.467) return lerp(0, -16, EZ.s((t - 5.2) / 0.3));
+          return lerp(-16, -16 - 900, EZ.out(flyU(t)));
+        });
+        drive($("wolfFlip"), "x", (t) => (t > 4.55 && t < 5.2 ? 2.2 * Math.sin(t * 160) : 0)); // うなりの震え
+        drive($("wTeeth"), "opacity", (t) => (t > 4.58 && t < 5.7 ? 1 : 0));
+        drive($("wGlow"), "opacity", (t) => (t >= 4.5 && t < 5.467 ? 0.35 + 0.3 * Math.sin((t - 4.5) * 24) : 0));
+        drive($("wTail"), "rotation", (t) => 9 * Math.sin(t * 11));
+        drive($("wolf"), "opacity", (t) => (t < 3.8 || t > 6.1 ? 0 : 1));
+        drive($("shWolf"), "x", (t) => (t < 5.467 ? wolfX0(t) - 155 : wolfX0(5.467) - 155));
+        drive($("shWolf"), "opacity", (t) => (t >= 4.6 && t < 5.467 ? 1 : t >= 5.467 && t < 5.4675 ? 0 : 0));
+
+        /* ============ 石(つまずき 5.4) ============ */
+        gsap.set("#stone", { svgOrigin: `${stoneWorld} 893` });
+        drive($("stone"), "rotation", kf([[5.39, 0], [5.46, -14, "out"], [5.7, 3, "s"], [5.9, 0]]));
+        drive($("stone"), "y", kf([[5.39, 0], [5.45, -14, "out"], [5.58, 0, "in"]]));
+
+        /* ============ 熊(7.5 出現 / 7.967 手を振られて飛ぶ) ============ */
+        const bearCX = 1430;
+        const bFly = (t) => clamp((t - 7.967) / 0.78);
+        drive($("bear"), "x", (t) => { const u = bFly(t); return bearCX - 247 + (1030 - bearCX) * EZ.out3(u) - 0; });
+        drive($("bear"), "y", (t) => { const u = bFly(t); return -(490 * EZ.out(u)) + (t >= 7.967 && t < 8.1 ? 8 * Math.sin((t - 7.967) * 80) : 0); });
+        drive($("bear"), "scale", (t) => lerp(1, 0.16, EZ.s(bFly(t))));
+        drive($("bearSpin"), "rotation", (t) => lerp(0, -1080, EZ.out(bFly(t))));
+        drive($("bearPop"), "scaleY", kf([[7.49, 0.05], [7.5, 0.3], [7.56, 1.1, "out"], [7.64, 0.96, "s"], [7.72, 1.0, "s"]]));
+        drive($("bearPop"), "scaleX", kf([[7.49, 1.2], [7.5, 1.25], [7.56, 0.94, "out"], [7.64, 1.04, "s"], [7.72, 1.0, "s"]]));
+        drive($("bear"), "opacity", (t) => (t < 7.5 || t > 8.75 ? 0 : 1));
+        drive($("bArmL"), "rotation", kf([[7.5, 8], [7.62, 8], [7.78, 120, "back"], [7.95, 122], [7.967, 140, "out"], [8.27, 40]]));
+        drive($("bArmR"), "rotation", kf([[7.5, -8], [7.62, -8], [7.8, -120, "back"], [7.95, -122], [7.967, -140, "out"], [8.27, -40]]));
+        drive($("bHead"), "rotation", kf([[7.5, 0], [7.7, -6], [7.85, 5], [7.967, -4], [7.9675, 12, "out"]]));
+        const bShock = (t) => t >= 7.967;
+        drive($("bEyeA"), "opacity", (t) => (bShock(t) ? 0 : 1));
+        drive($("bEyeS"), "opacity", (t) => (bShock(t) ? 1 : 0));
+        drive($("bMouthA"), "opacity", (t) => (bShock(t) ? 0 : 1));
+        drive($("bMouthS"), "opacity", (t) => (bShock(t) ? 1 : 0));
+        drive($("shBear"), "x", () => bearCX - 210);
+        drive($("shBear"), "opacity", (t) => (t >= 7.5 && t < 7.967 ? 1 : t >= 7.967 && t < 8.1 ? lerp(1, 0, (t - 7.967) / 0.12) : 0));
+        drive($("shBear"), "scaleX", kf([[7.5, 0.3], [7.58, 1.05, "out"], [7.7, 1.0]]));
+
+        /* ============ FX ============ */
+        const fxL = $("fx");
+        const addFx = (html, css) => { const d = document.createElement("div"); d.className = "fx"; d.style.cssText = css || ""; d.innerHTML = html; fxL.appendChild(d); return d; };
+        const star5 = (r, fill) => { let p = ""; for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + (i * Math.PI) / 5, rr = i % 2 ? r * 0.45 : r; p += `${(Math.cos(a) * rr).toFixed(1)},${(Math.sin(a) * rr).toFixed(1)} `; } return `<svg width="${r * 2 + 8}" height="${r * 2 + 8}" viewBox="${-r - 4} ${-r - 4} ${r * 2 + 8} ${r * 2 + 8}" style="display:block"><polygon points="${p}" fill="${fill}" stroke="#0a0a12" stroke-width="3" stroke-linejoin="round"/></svg>`; };
+        const spark4 = (r, fill) => `<svg width="${r * 2}" height="${r * 2}" viewBox="${-r} ${-r} ${r * 2} ${r * 2}" style="display:block"><path d="M0,${-r} Q${r * 0.12},${-r * 0.12} ${r},0 Q${r * 0.12},${r * 0.12} 0,${r} Q${-r * 0.12},${r * 0.12} ${-r},0 Q${-r * 0.12},${-r * 0.12} 0,${-r} Z" fill="${fill}" stroke="#ffb300" stroke-width="2"/></svg>`;
+        const puff = (d, c) => `<svg width="${d}" height="${d}" viewBox="0 0 ${d} ${d}" style="display:block"><circle cx="${d / 2}" cy="${d / 2}" r="${d / 2 - 3}" fill="${c || "#fffdf5"}" stroke="#bfe3f3" stroke-width="3"/></svg>`;
+        const place = (el, w, h) => { gsap.set(el, { transformOrigin: "50% 50%", xPercent: 0, left: -w / 2, top: -h / 2 }); };
+
+        // くしゃみの衝撃リング(3.0)  頭の前方
+        [0, 0.05].forEach((dl, i) => {
+          const el = addFx(`<svg width="200" height="200" viewBox="0 0 200 200" style="display:block"><circle cx="100" cy="100" r="92" fill="none" stroke="#fffdf5" stroke-width="${i ? 6 : 12}"/><circle cx="100" cy="100" r="98" fill="none" stroke="#bfe3f3" stroke-width="3"/></svg>`);
+          place(el, 200, 200);
+          const cx = 800, cy = 548;
+          A(el, 2.967 + dl, 0.34, { x: (u) => cx, y: (u) => cy, scale: (u) => lerp(0.2, 2.7, EZ.out3(u)), opacity: (u) => (u <= 0 ? 0 : 0.95 * (1 - EZ.in(u))) });
+        });
+        // 風の筋
+        [[548, 0], [596, 0.03], [640, 0.05]].forEach(([y, dl], i) => {
+          const el = addFx(`<div style="width:${150 - i * 20}px;height:9px;border-radius:5px;background:#fffdf5;box-shadow:0 0 0 3px #bfe3f3"></div>`);
+          A(el, 2.967 + dl, 0.24, { x: (u) => lerp(700, 470, EZ.out(u)), y: () => y, opacity: (u) => (u <= 0 ? 0 : 1 - EZ.in(u)) });
+        });
+        // 蒸気(スライム位置 約 (590, 810))
+        const slx = 478, sly = 835;
+        for (let i = 0; i < 8; i++) {
+          const d = 46 + R() * 40, el = addFx(puff(d, i % 3 ? "#fffdf5" : "#f2fbff")); place(el, d, d);
+          const ang = -Math.PI * (0.15 + 0.7 * (i / 7)), dist = 60 + R() * 70, dl = R() * 0.08;
+          A(el, 2.967 + dl, 0.75, { x: (u) => slx + Math.cos(ang) * dist * EZ.out(u) - 30 * u, y: (u) => sly - 30 + Math.sin(ang) * dist * EZ.out(u) - 80 * u, scale: (u) => lerp(0.3, 1.5, EZ.out(u)), opacity: (u) => (u <= 0 ? 0 : u < 0.55 ? 0.96 : 0.96 * (1 - (u - 0.55) / 0.45)) });
+        }
+        // 小さな星
+        for (let i = 0; i < 6; i++) {
+          const r = 13 + R() * 6, el = addFx(star5(r, "#ffd34d")); place(el, r * 2 + 8, r * 2 + 8);
+          const ang = -Math.PI * (0.1 + 0.8 * (i / 5)), dist = 130 + R() * 90;
+          A(el, 2.99, 0.62, { x: (u) => slx + Math.cos(ang) * dist * EZ.out3(u), y: (u) => sly - 20 + Math.sin(ang) * dist * EZ.out3(u) + 50 * u * u, rotation: (u) => 360 * u * (i % 2 ? 1 : -1), scale: (u) => lerp(0.4, 1, EZ.out(u)) * (1 - 0.4 * u), opacity: (u) => (u <= 0 ? 0 : u < 0.7 ? 1 : 1 - (u - 0.7) / 0.3) });
+        }
+
+        // 狼ヒット(5.5): 接触点のフラッシュ
+        { const el = addFx(spark4(70, "#fffdf5")); place(el, 140, 140);
+          A(el, 5.467, 0.2, { x: () => 905, y: () => 668, rotation: (u) => 30 * u, scale: (u) => (u < 0.35 ? lerp(0.2, 1.3, EZ.out(u / 0.35)) : lerp(1.3, 0, EZ.in((u - 0.35) / 0.65))), opacity: (u) => (u <= 0 ? 0 : 1) }); }
+        // 狼のキラーン(遠景 約 (1560, 470))
+        { const el = addFx(spark4(80, "#fffdf5")); place(el, 160, 160);
+          A(el, 6.03, 0.5, { x: () => 1568, y: () => 478, rotation: (u) => 45 * u, scale: (u) => (u < 0.3 ? lerp(0, 1.15, EZ.out(u / 0.3)) : lerp(1.15, 0, EZ.in((u - 0.3) / 0.7))), opacity: (u) => (u <= 0 ? 0 : 1) });
+          const el2 = addFx(spark4(36, "#fff3a8")); place(el2, 72, 72);
+          A(el2, 6.11, 0.4, { x: () => 1620, y: () => 440, scale: (u) => (u < 0.3 ? lerp(0, 1, EZ.out(u / 0.3)) : lerp(1, 0, EZ.in((u - 0.3) / 0.7))), opacity: (u) => (u <= 0 ? 0 : 1) }); }
+
+        // 熊: 着地の砂煙(7.5)
+        for (let i = 0; i < 8; i++) {
+          const d = 70 + R() * 60, el = addFx(puff(d, "#f3e7c4").replace("#bfe3f3", "#d8c79a")); place(el, d, d);
+          const side = i % 2 ? 1 : -1, dist = 120 + R() * 220, dl = R() * 0.05;
+          A(el, 7.5 + dl, 0.7, { x: (u) => bearCX + side * (60 + dist * EZ.out3(u)), y: (u) => 880 - 40 * u - (i % 3) * 8, scale: (u) => lerp(0.4, 1.4, EZ.out(u)), opacity: (u) => (u <= 0 ? 0 : 0.92 * (1 - EZ.in(u))) });
+        }
+        // 手を振る風圧(7.93→8.0)
+        { const el = addFx(`<svg width="260" height="260" viewBox="0 0 260 260" style="display:block"><path d="M60 40 Q220 130 60 220" fill="none" stroke="#fffdf5" stroke-width="16" stroke-linecap="round"/><path d="M60 40 Q220 130 60 220" fill="none" stroke="#bfe3f3" stroke-width="5" stroke-linecap="round" transform="translate(6 0)"/></svg>`); place(el, 260, 260);
+          A(el, 7.86, 0.14, { x: (u) => lerp(960, 1190, EZ.out(u)), y: () => 640, scale: (u) => lerp(0.5, 1.2, u), opacity: (u) => (u <= 0 ? 0 : u < 0.7 ? 1 : 1 - (u - 0.7) / 0.3) }); }
+        // 熊ヒットのフラッシュ(8.0)
+        { const el = addFx(spark4(110, "#fffdf5")); place(el, 220, 220);
+          A(el, 7.967, 0.3, { x: () => 1330, y: () => 560, rotation: (u) => 40 * u, scale: (u) => (u < 0.3 ? lerp(0.2, 1.2, EZ.out(u / 0.3)) : lerp(1.2, 0, EZ.in((u - 0.3) / 0.7))), opacity: (u) => (u <= 0 ? 0 : 1) }); }
+        // 熊のキラーン(上空 約 (1080, 110))
+        { const el = addFx(spark4(95, "#fffdf5")); place(el, 190, 190);
+          A(el, 8.68, 0.5, { x: () => 1085, y: () => 112, rotation: (u) => 45 * u, scale: (u) => (u < 0.3 ? lerp(0, 1.2, EZ.out(u / 0.3)) : lerp(1.2, 0, EZ.in((u - 0.3) / 0.7))), opacity: (u) => (u <= 0 ? 0 : 1) });
+          const el2 = addFx(spark4(40, "#fff3a8")); place(el2, 80, 80);
+          A(el2, 8.76, 0.4, { x: () => 1160, y: () => 76, scale: (u) => (u < 0.3 ? lerp(0, 1, EZ.out(u / 0.3)) : lerp(1, 0, EZ.in((u - 0.3) / 0.7))), opacity: (u) => (u <= 0 ? 0 : 1) }); }
+        // 9.0 満足のきらめき
+        [[-110, -40, 0], [120, -80, 0.12], [175, 30, 0.24]].forEach(([dx, dy, dl], i) => {
+          const el = addFx(spark4(26 - i * 4, "#fff3a8")); place(el, 52, 52);
+          A(el, 9.05 + dl, 0.45, { x: () => 800 + dx, y: () => 540 + dy, rotation: (u) => 40 * u, scale: (u) => (u < 0.4 ? lerp(0, 1, EZ.out(u / 0.4)) : lerp(1, 0, EZ.in((u - 0.4) / 0.6))), opacity: (u) => (u <= 0 ? 0 : 1) });
+        });
+
+        /* ============ 足もとの薬草(最後まで気づかない) ============ */
+        { const x = 905 + P(8.0), W = WIDTH(1);
+          mk("lHerb", W, `<g transform="translate(${x},948) scale(1.7)"><path d="M0,0 L0,-30" stroke="#2f8f3a" stroke-width="5" stroke-linecap="round"/><ellipse cx="-15" cy="-34" rx="17" ry="8" transform="rotate(-28 -15 -34)" fill="#3dbb4f"/><ellipse cx="15" cy="-34" rx="17" ry="8" transform="rotate(28 15 -34)" fill="#3dbb4f"/><ellipse cx="0" cy="-48" rx="8" ry="17" fill="#55d266"/><ellipse cx="-17" cy="-36" rx="8" ry="3" transform="rotate(-28 -17 -36)" fill="#8be58f"/></g><g id="herbGlint"><path transform="translate(${x + 44},870)" d="M0,-16 Q2,-2 16,0 Q2,2 0,16 Q-2,2 -16,0 Q-2,-2 0,-16 Z" fill="#fffdf5"/></g>`);
+          par("lHerb", 1);
+          gsap.set("#herbGlint", { svgOrigin: `${x + 44} 870` });
+          drive($("herbGlint"), "scale", (t) => (t < 7.9 ? 0 : 0.7 + 0.3 * Math.sin(t * 5)));
+        }
+
+        /* ============ UI ============ */
+        drive($("ui"), "y", kf([[0.15, -170], [0.55, 0, "back"]]));
+        const incs = [2.967, 5.467, 7.967];
+        const cnt = kf([[2.967, 0], [3.167, 1, "back"], [5.467, 1], [5.667, 2, "back"], [7.967, 2], [8.167, 3, "back"]]);
+        const blink = (t) => (t >= 9.0 && t < 9.6 ? (Math.floor((t - 9.0) / 0.1) % 2 === 0 ? 0.25 : 1) : 1);
+        for (let i = 0; i < 4; i++) {
+          drive($("ud" + i), "y", (t) => 84 * (i - cnt(t)));
+          drive($("ud" + i), "opacity", (t) => (Math.abs(i - cnt(t)) < 0.98 ? blink(t) : 0));
+        }
+        let pp = [[2.95, 1]];
+        incs.forEach((e) => { pp.push([e, 1], [e + 0.06, 1.16, "out"], [e + 0.28, 1, "s"]); });
+        drive($("uipanel"), "scale", kf(pp));
+        drive($("uiplus"), "opacity", (t) => { let o = 0; for (const e of incs) { const u = (t - e) / 0.8; if (u > 0 && u < 1) o = Math.max(o, Math.min(u / 0.08, 1) * (1 - clamp((u - 0.5) / 0.5))); } return o; });
+        drive($("uiplus"), "y", (t) => { let y = 0; for (const e of incs) { const u = (t - e) / 0.8; if (u > 0 && u < 1) y = -8 + 26 * EZ.out(u); } return y; });
+        drive($("uiwin"), "scale", (t) => (t >= 9.0 && t < 9.6 ? (Math.floor((t - 9.0) / 0.1) % 2 === 0 ? 0.9 : 1) : 1));
+
+        /* ============ 字幕 ============ */
+        const ring = (r, n) => Array.from({ length: n }, (_, i) => `${(Math.cos((i / n) * 6.2832) * r).toFixed(2)}px ${(Math.sin((i / n) * 6.2832) * r).toFixed(2)}px 0 #0a0a12`).join(",");
+        const shadow = [ring(4.2, 24), ring(2.4, 12)].join(",");
+        const subs = [["sub1", 1.0, 2.2], ["sub2", 3.0, 4.0], ["sub3", 5.5, 6.5]];
+        subs.forEach(([id, a, b]) => {
+          $(id).style.textShadow = shadow;
+          drive($(id), "opacity", kf([[a, 0], [a + 0.1, 1, "lin"], [b - 0.1, 1], [b, 0, "lin"]]));
+        });
+
+        window.__timelines["main"] = tl;
+      })();
+    </script>
+  </body>
+</html>

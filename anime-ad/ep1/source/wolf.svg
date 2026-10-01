@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 320" width="520" height="320">
+  <!-- 森の狼: 群れの1頭。灰色シルエット+赤い目。 -->
+  <path class="body" d="M30 250 L60 160 L150 130 L300 130 L400 110 L470 60 L500 90 L470 150 L420 180 L430 290 L390 290 L380 210 L320 220 L300 290 L260 290 L250 220 L150 230 L130 290 L90 290 L100 230 Z M470 60 L474 20 L440 56 Z M440 56 L430 14 L412 66 Z" fill="#3a3d4a" stroke="#0a0a12" stroke-width="5" stroke-linejoin="round"/>
+  <path class="tail" d="M60 160 C20 120 10 70 30 30 C50 80 70 110 96 140 Z" fill="#3a3d4a" stroke="#0a0a12" stroke-width="5" stroke-linejoin="round"/>
+  <path class="eye" d="M446 90 L474 96 L470 108 L444 100 Z" fill="#ff2a4d"/>
+</svg>
