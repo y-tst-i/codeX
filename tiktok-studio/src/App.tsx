@@ -97,7 +97,11 @@ export function App() {
     };
   }, [character?.kind, character?.name, character?.updatedAt, imageKeysKey]);
   const characterScript = character?.kind === "image" || character?.kind === "rig" ? imageScript || undefined : character?.script;
-  const extras = useMemo<HostExtras>(() => ({ characterScript, voiceLevels: levels }), [characterScript, levels]);
+  const captions = useMemo(
+    () => timeline.scenes.flatMap((scene) => scene.captions.map((c) => ({ start: c.start, end: c.end, text: c.text, emphasis: scene.emphasis }))),
+    [timeline]
+  );
+  const extras = useMemo<HostExtras>(() => ({ characterScript, voiceLevels: levels, captions }), [characterScript, levels, captions]);
 
   const onClip = (sceneId: string, clip: AudioClip, signature: string) => {
     setClips((current) => ({ ...current, [sceneId]: { clip, signature } }));

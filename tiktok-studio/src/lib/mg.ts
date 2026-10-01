@@ -36,6 +36,13 @@ const HOST_BOOTSTRAP = `<script>window.__MG_HOST__=true;window.__MG_ERRORS__=[];
 export interface HostExtras {
   characterScript?: string;
   voiceLevels?: number[];
+  /** 字幕（K.caption が使う） */
+  captions?: { start: number; end: number; text: string; emphasis: string[] }[];
+}
+
+/** データを <script> に安全に埋め込む */
+function dataScript(name: string, value: unknown): string {
+  return `<script>window.${name}=${JSON.stringify(value).replace(/</g, "\\u003c")};</script>`;
 }
 
 function injectHead(html: string, snippet: string): string {
@@ -47,7 +54,8 @@ function injectHead(html: string, snippet: string): string {
 /** 看板キャラ・音量データを差し込む（保存用HTMLにも使う） */
 export function withExtras(html: string, extras?: HostExtras): string {
   // 演出の道具箱（window.MGK）はいつも入れる。キャラと音量は用意できたときだけ
-  return injectHead(html, `<script>${MGK_SCRIPT}</script>${hostExtrasScript(extras?.characterScript, extras?.voiceLevels)}`);
+  const data = extras?.captions ? dataScript("MG_CAPTIONS", extras.captions) : "";
+  return injectHead(html, `${data}<script>${MGK_SCRIPT}</script>${hostExtrasScript(extras?.characterScript, extras?.voiceLevels)}`);
 }
 
 /** 自動再生を止め、エラーを集める仕込みを<head>の先頭に入れる */

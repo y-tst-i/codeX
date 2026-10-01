@@ -37,6 +37,7 @@ export const MGK_PROMPT = `# 演出の道具箱 window.MGK（必ず使う）
 ## 文字
 - \`K.text(ctx, t, "文字", x, y, {size, family, weight, color, stroke, strokeWidth, shadow, accent:["強調語"], accentColor, maxWidth, align, start, stagger, dur, anim, end})\`
   anim: "pop"（弾む）/ "slam"（叩きつけ）/ "rise"（下から）/ "drop"（上から落ちて跳ねる）/ "wave"（波打つ）/ "type"（タイプ）。1文字ずつ時間差で動く。end を渡すとその時刻から退場。日本語の禁則つき自動改行
+- \`K.caption(ctx, t, {style:"karaoke"|"pop"|"plain", y, size, family, highlight, accentColor, box})\` 字幕（データはツールが用意。下の「字幕」参照）
 - \`K.marker(ctx, t, x, y, w, h, start, color)\` 蛍光ペンの帯（文字の下に先に描く）／ \`K.bubble(ctx, t, x, y, w, h, {start, color, stroke, tailX, tailY})\` キャラの吹き出し ／ \`K.count(t, start, dur, from, to)\` 数字のカウントアップ
 - \`K.shape.{heart, star, sparkle, roundRect, circle}(ctx, ...)\` パスを作る（そのあと fill / stroke）
 
