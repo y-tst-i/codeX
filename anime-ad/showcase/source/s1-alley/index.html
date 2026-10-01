@@ -1,0 +1,359 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>s1-alley</title>
+    <script src="assets/gsap.min.js"></script>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: #000; }
+      #root { position: relative; width: 100%; height: 100%; background: #000; }
+      #cv { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; display: block; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="3.5" data-width="1920" data-height="1080">
+      <canvas id="cv" width="1920" height="1080"></canvas>
+    </div>
+    <script>
+      // ===== s1-alley: 濡れた路地 =====
+      // 一点透視(VP=1100,470)+ドリーイン(本物の前進: 世界のz座標からカメラ前進量eを引いて投影 s=F/zc)
+      // + 濡れ路面の反射(発光体をY反転して描き、水面の揺らぎ+縦のにじみ) + 雨3層ストリーク
+      const W = 1920, H = 1080, F = 1000, VPX = 1100, VPY = 470, CAMH = 1.7, HW = 2.2;
+      const NEAR = 0.6, ZEND = 31, TEND = 104 / 30;
+      const Z0 = 5.3, WALK = 0.7, UMB_R = 0.5, UMB_H = CAMH - 70 / 360, PX = (960 - VPX) / 360;
+      const E1 = Z0 + WALK * TEND - F / 360; // 最終コマで傘の円が直径360px
+      const EASE = gsap.parseEase("power1.inOut");
+      const SM = (a, b, x) => { const k = Math.min(1, Math.max(0, (x - a) / (b - a))); return k * k * (3 - 2 * k); };
+      function mulberry(a) { return function () { a |= 0; a = (a + 0x6d2b79f5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+      const hv = (n) => mulberry(n * 7919 + 13)();
+      const rgba = (c, a) => `rgba(${c[0]},${c[1]},${c[2]},${a})`;
+      const PINK = [255, 61, 139], ORG = [255, 154, 61], TEAL = [63, 201, 214];
+
+      const cv = document.getElementById("cv"), ctx = cv.getContext("2d");
+      const mk = () => { const c = document.createElement("canvas"); c.width = W; c.height = H; return c; };
+      const Ec = mk(), Ex = Ec.getContext("2d"), Rc = mk(), Rx = Rc.getContext("2d"), Dc = mk(), Dx = Dc.getContext("2d");
+
+      function P(X, Y, zc, m) { return [VPX + (X * F) / zc, VPY + (CAMH - (m ? -Y : Y)) * F / zc]; }
+      function wallPoly(side, z1, z2, Ya, Yb, e, m) {
+        const a = Math.max(z1 - e, NEAR), b = z2 - e; if (b <= a + 0.001) return null;
+        return [P(side * HW, Ya, a, m), P(side * HW, Ya, b, m), P(side * HW, Yb, b, m), P(side * HW, Yb, a, m)];
+      }
+      function floorPoly(e) { return [P(-HW, 0, NEAR), P(HW, 0, NEAR), P(HW, 0, ZEND - e), P(-HW, 0, ZEND - e)]; }
+      function path(c, pts) { c.beginPath(); pts.forEach((p, i) => (i ? c.lineTo(p[0], p[1]) : c.moveTo(p[0], p[1]))); c.closePath(); }
+      function ell(c, cx, cy, rx, ry, stops) {
+        c.save(); c.translate(cx, cy); c.scale(1, ry / rx);
+        const g = c.createRadialGradient(0, 0, 0, 0, 0, rx); stops.forEach((s) => g.addColorStop(s[0], s[1]));
+        c.fillStyle = g; c.fillRect(-rx, -rx, rx * 2, rx * 2); c.restore();
+      }
+
+      // ---------- 世界の定義(seed付き) ----------
+      const rnd = mulberry(20260);
+      const TOP = { "-1": 11, "1": 8.5 };
+      const panels = { "-1": [], "1": [] };
+      const litWins = [];
+      [-1, 1].forEach((side) => {
+        let z = 0;
+        while (z < ZEND) {
+          const L = 2.4 + rnd() * 2.2, z2 = Math.min(ZEND, z + L);
+          const col = [9 + rnd() * 9, 17 + rnd() * 13, 25 + rnd() * 15];
+          const wins = [];
+          [2.9, 5.1, 7.3, 9.5].forEach((Yf) => {
+            if (Yf + 1.3 > TOP[side]) return;
+            const n = L > 3.6 ? 2 : 1;
+            for (let k = 0; k < n; k++) {
+              const zc = z + (L * (k + 0.5)) / n, lit = rnd() < 0.2;
+              const w = { za: zc - 0.5, zb: zc + 0.5, Ya: Yf, Yb: Yf + 1.2, lit };
+              wins.push(w);
+              if (lit) litWins.push({ k: "win", side, z1: w.za, z2: w.zb, Y1: w.Ya, Y2: w.Yb, c: rnd() < 0.7 ? [255, 176, 100] : [255, 120, 150], a: 0.42 });
+            }
+          });
+          panels[side].push({ z1: z, z2, col, wins, shutter: rnd() < 0.45, door: rnd() < 0.5, pipe: rnd() < 0.5, pz: z + 0.25 });
+          z = z2;
+        }
+      });
+      const cables = [{ z: 8, y: 6.4, sag: 0.5 }, { z: 13.5, y: 6.9, sag: 0.6 }, { z: 21, y: 6.6, sag: 0.5 }];
+      const puddles = [[0.1, 4.6, 1.7, 2.0], [-0.9, 7.2, 1.5, 2.4], [0.7, 9.8, 1.9, 2.6], [-0.2, 12.8, 1.6, 2.6], [0.9, 16, 1.8, 3.0], [-0.7, 19.5, 1.6, 3.0], [0.2, 24, 1.8, 3.4]];
+      const lights = [
+        { X: -1.9, Y: 3.5, z: 6.5, c: PINK, r: 3.2, a: 0.5, sides: [-1] },
+        { X: -2.2, Y: 1.4, z: 9.8, c: ORG, r: 3.6, a: 0.6, sides: [-1] },
+        { X: 2.2, Y: 1.2, z: 6.3, c: PINK, r: 3.2, a: 0.5, sides: [1] },
+        { X: 1.8, Y: 3.7, z: 9.5, c: TEAL, r: 3.0, a: 0.42, sides: [1] },
+        { X: -2.0, Y: 3.4, z: 12.5, c: ORG, r: 3.4, a: 0.5, sides: [-1] },
+        { X: 1.8, Y: 3.1, z: 15, c: ORG, r: 3.2, a: 0.42, sides: [1] },
+        { X: -2.0, Y: 3.6, z: 16.5, c: ORG, r: 3.0, a: 0.4, sides: [-1] },
+        { X: 2.0, Y: 3.6, z: 20.5, c: PINK, r: 3.4, a: 0.42, sides: [1] },
+        { X: 0, Y: 2.5, z: 28.5, c: [255, 150, 120], r: 6, a: 0.5, sides: [-1, 1], exit: true },
+      ];
+      const items = [
+        { k: "win", side: -1, z1: 8.6, z2: 11.2, Y1: 0.35, Y2: 2.4, c: ORG, a: 0.42 }, // 店の窓(橙)
+        { k: "win", side: 1, z1: 5.0, z2: 7.4, Y1: 0, Y2: 2.2, c: PINK, a: 0.38 }, // 桃の扉
+        { k: "win", side: 1, z1: 12.2, z2: 14.2, Y1: 0.4, Y2: 2.3, c: [60, 170, 190], a: 0.4 },
+        { k: "blade", X1: -2.2, X2: -1.45, Y1: 2.7, Y2: 4.3, z: 6.5, c: PINK, kind: 0, id: 1 },
+        { k: "blade", X1: 1.45, X2: 2.2, Y1: 3.0, Y2: 4.5, z: 9.5, c: TEAL, kind: 1, id: 2 },
+        { k: "blade", X1: 1.4, X2: 2.2, Y1: 2.4, Y2: 3.8, z: 15, c: ORG, kind: 2, id: 3 },
+        { k: "blade", X1: -2.2, X2: -1.4, Y1: 2.9, Y2: 4.4, z: 17.5, c: PINK, kind: 1, id: 4 },
+        { k: "tube", p1: [-2.2, 3.7, 20], p2: [-2.2, 3.7, 24], c: ORG, w: 0.05 },
+        { k: "tube", p1: [2.2, 4.2, 19], p2: [2.2, 4.2, 23], c: PINK, w: 0.05 },
+        { k: "tube", p1: [2.2, 3.4, 11.5], p2: [2.2, 3.4, 13.0], c: ORG, w: 0.045 },
+        { k: "halo", X: -2.0, Y: 3.4, z: 12.5, c: [255, 170, 80], r: 0.9, core: 1 }, // 街灯
+        { k: "halo", X: 2.0, Y: 3.5, z: 20.5, c: [255, 170, 80], r: 0.8, core: 1 },
+        { k: "exit" },
+      ].concat(litWins);
+
+      // ---------- 描画部品 ----------
+      function drawEmissive(c, e, m, fi, u) {
+        c.globalCompositeOperation = "lighter";
+        const kx = 0.62 + 0.38 * EASE(u);
+        items.forEach((it) => {
+          const fl = it.id ? (hv(fi * 11 + it.id * 97) < 0.1 ? 0.55 : 1) : 1;
+          if (it.k === "win") {
+            const pl = wallPoly(it.side, it.z1, it.z2, it.Y1, it.Y2, e, m); if (!pl) return;
+            path(c, pl); c.fillStyle = rgba(it.c, it.a); c.fill();
+          } else if (it.k === "blade") {
+            const zc = it.z - e; if (zc < 0.8) return; const s = F / zc;
+            const a = P(it.X1, it.Y2, zc, m), b = P(it.X2, it.Y1, zc, m);
+            const x1 = a[0], x2 = b[0], y1 = Math.min(a[1], b[1]), y2 = Math.max(a[1], b[1]);
+            c.fillStyle = rgba(it.c, 0.13 * fl); c.fillRect(x1, y1, x2 - x1, y2 - y1);
+            const lw = Math.max(2, 0.03 * s * 1.6);
+            c.lineCap = "round"; c.lineJoin = "round";
+            const strokes = (col, w, al) => {
+              c.strokeStyle = rgba(col, al * fl); c.lineWidth = w;
+              c.strokeRect(x1 + lw, y1 + lw, x2 - x1 - 2 * lw, y2 - y1 - 2 * lw);
+              c.beginPath();
+              const cx = (x1 + x2) / 2, cy = (y1 + y2) / 2, w2 = x2 - x1, h2 = y2 - y1;
+              if (it.kind === 0) c.arc(cx, cy, Math.min(w2, h2) * 0.28, 0, Math.PI * 2);
+              else if (it.kind === 1) { c.moveTo(x1 + w2 * 0.2, y1 + h2 * 0.3); c.lineTo(x2 - w2 * 0.2, y1 + h2 * 0.3); c.moveTo(x1 + w2 * 0.2, cy); c.lineTo(x2 - w2 * 0.2, cy); c.moveTo(x1 + w2 * 0.2, y2 - h2 * 0.3); c.lineTo(x2 - w2 * 0.2, y2 - h2 * 0.3); }
+              else { c.moveTo(x1 + w2 * 0.25, y1 + h2 * 0.2); c.lineTo(x2 - w2 * 0.25, cy); c.lineTo(x1 + w2 * 0.25, y2 - h2 * 0.2); }
+              c.stroke();
+            };
+            strokes(it.c, lw * 2.2, 0.55); strokes([255, 235, 235], lw * 0.8, 0.9);
+          } else if (it.k === "tube") {
+            const z1 = it.p1[2] - e, z2 = it.p2[2] - e; if (Math.min(z1, z2) < 0.8) return;
+            const a = P(it.p1[0], it.p1[1], z1, m), b = P(it.p2[0], it.p2[1], z2, m), s = F / ((z1 + z2) / 2);
+            c.lineCap = "round";
+            c.strokeStyle = rgba(it.c, 0.5); c.lineWidth = Math.max(4, it.w * s * 2.4); c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); c.stroke();
+            c.strokeStyle = "rgba(255,236,230,.9)"; c.lineWidth = Math.max(1.5, it.w * s * 0.8); c.stroke();
+          } else if (it.k === "halo") {
+            const zc = it.z - e; if (zc < 0.6) return; const p = P(it.X, it.Y, zc, m), s = F / zc;
+            ell(c, p[0], p[1], it.r * s * 2.2, it.r * s * 2.2, [[0, rgba(it.c, 0.5)], [0.25, rgba(it.c, 0.18)], [1, rgba(it.c, 0)]]);
+            c.fillStyle = "rgba(255,238,205,.95)"; c.beginPath(); c.arc(p[0], p[1], Math.max(2, 0.07 * s), 0, 7); c.fill();
+          } else if (it.k === "exit") {
+            const zc = ZEND - e, a = P(-HW, 9, zc, m), b = P(HW, 0, zc, m);
+            const ya = P(0, 9, zc, m)[1], yb = P(0, 0, zc, m)[1];
+            const g = c.createLinearGradient(0, yb, 0, ya);
+            g.addColorStop(0, `rgba(255,170,128,${0.95 * kx})`); g.addColorStop(0.35, `rgba(255,86,140,${0.6 * kx})`);
+            g.addColorStop(0.75, `rgba(31,111,134,${0.35 * kx})`); g.addColorStop(1, "rgba(31,111,134,0)");
+            c.fillStyle = g; c.fillRect(Math.min(a[0], b[0]), Math.min(ya, yb), Math.abs(b[0] - a[0]), Math.abs(yb - ya));
+          }
+        });
+        c.globalCompositeOperation = "source-over";
+      }
+
+      function spill(c, e, fi, u) {
+        const fp = floorPoly(e);
+        lights.forEach((L, i) => {
+          const zc = L.z - e; if (zc < -L.r) return;
+          const k = (L.exit ? 0.6 + 0.4 * EASE(u) : 1) * L.a * (hv(fi * 5 + i * 31) < 0.08 && !L.exit ? 0.75 : 1);
+          const col = L.c;
+          // 壁
+          L.sides.forEach((side) => {
+            const pts = [];
+            for (let q = 0; q < 16; q++) { const th = (q / 16) * Math.PI * 2; pts.push(P(side * HW, L.Y + Math.sin(th) * L.r, Math.max(NEAR, zc + Math.cos(th) * L.r))); }
+            let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9; pts.forEach((p) => { x0 = Math.min(x0, p[0]); x1 = Math.max(x1, p[0]); y0 = Math.min(y0, p[1]); y1 = Math.max(y1, p[1]); });
+            const wp = wallPoly(side, e + NEAR, ZEND, 0, TOP[side], e); if (!wp) return;
+            c.save(); path(c, wp); c.clip(); c.globalCompositeOperation = "lighter";
+            ell(c, (x0 + x1) / 2, (y0 + y1) / 2, Math.max(8, (x1 - x0) / 2), Math.max(8, (y1 - y0) / 2), [[0, rgba(col, k)], [0.45, rgba(col, k * 0.4)], [1, rgba(col, 0)]]);
+            c.restore();
+          });
+          // 床
+          if (zc > -L.r) {
+            const pts = [];
+            for (let q = 0; q < 16; q++) { const th = (q / 16) * Math.PI * 2; pts.push(P(L.X * 0.5 + Math.cos(th) * L.r * 0.9, 0, Math.max(NEAR, zc + Math.sin(th) * L.r))); }
+            let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9; pts.forEach((p) => { x0 = Math.min(x0, p[0]); x1 = Math.max(x1, p[0]); y0 = Math.min(y0, p[1]); y1 = Math.max(y1, p[1]); });
+            c.save(); path(c, fp); c.clip(); c.globalCompositeOperation = "lighter";
+            ell(c, (x0 + x1) / 2, (y0 + y1) / 2, Math.max(8, (x1 - x0) / 2), Math.max(8, (y1 - y0) / 2), [[0, rgba(col, k * 0.55)], [1, rgba(col, 0)]]);
+            c.restore();
+          }
+        });
+      }
+
+      function drawWalls(c, e) {
+        [-1, 1].forEach((side) => {
+          panels[side].forEach((pn) => {
+            const base = wallPoly(side, pn.z1, pn.z2, 0, TOP[side], e); if (!base) return;
+            path(c, base); c.fillStyle = `rgb(${pn.col[0] | 0},${pn.col[1] | 0},${pn.col[2] | 0})`; c.fill();
+            c.strokeStyle = "rgba(0,0,0,.55)"; c.lineWidth = 2; c.stroke();
+            if (pn.shutter) { const sp = wallPoly(side, pn.z1 + 0.3, pn.z2 - 0.3, 0, 2.3, e); if (sp) { path(c, sp); c.fillStyle = "rgba(60,80,90,.22)"; c.fill(); c.strokeStyle = "rgba(0,0,0,.35)"; c.lineWidth = 1; for (let yy = 0.2; yy < 2.3; yy += 0.2) { const l = wallPoly(side, pn.z1 + 0.3, pn.z2 - 0.3, yy, yy, e); if (l) { c.beginPath(); c.moveTo(l[0][0], l[0][1]); c.lineTo(l[1][0], l[1][1]); c.stroke(); } } } }
+            else if (pn.door) { const dp = wallPoly(side, pn.z1 + 0.8, pn.z1 + 1.8, 0, 2.2, e); if (dp) { path(c, dp); c.fillStyle = "rgba(2,3,6,.7)"; c.fill(); } }
+            pn.wins.forEach((w) => { if (w.lit) return; const wp = wallPoly(side, w.za, w.zb, w.Ya, w.Yb, e); if (wp) { path(c, wp); c.fillStyle = "rgba(24,58,72,.55)"; c.fill(); } });
+            if (pn.pipe) { const pp = wallPoly(side, pn.pz, pn.pz + 0.12, 0, TOP[side] - 0.5, e); if (pp) { path(c, pp); c.fillStyle = "rgba(34,52,60,.8)"; c.fill(); } }
+          });
+          // 水平の庇ライン(導線)
+          [2.5, 5.0, 7.5].forEach((Y) => {
+            const l = wallPoly(side, e + NEAR, ZEND, Y, Y, e); if (!l) return;
+            c.strokeStyle = "rgba(160,200,215,.07)"; c.lineWidth = 2; c.beginPath(); c.moveTo(l[0][0], l[0][1]); c.lineTo(l[1][0], l[1][1]); c.stroke();
+          });
+        });
+      }
+
+      function drawCables(c, e) {
+        cables.forEach((cb) => {
+          const zc = cb.z - e; if (zc < 0.8) return; const s = F / zc;
+          c.strokeStyle = "rgba(3,5,9,.9)"; c.lineWidth = Math.max(1, 0.025 * s); c.beginPath();
+          for (let q = 0; q <= 24; q++) { const k = q / 24, p = P(-HW + 2 * HW * k, cb.y - cb.sag * 4 * k * (1 - k), zc); q ? c.lineTo(p[0], p[1]) : c.moveTo(p[0], p[1]); }
+          c.stroke();
+        });
+      }
+
+      function puddlePath(c, e) {
+        puddles.forEach((p) => {
+          const z = p[1] - e; if (z - p[3] / 2 < NEAR + 0.2) return;
+          c.moveTo(0, 0); c.beginPath;
+          for (let q = 0; q <= 28; q++) { const th = (q / 28) * Math.PI * 2, pt = P(p[0] + Math.cos(th) * p[2] / 2, 0, z + Math.sin(th) * p[3] / 2); q ? c.lineTo(pt[0], pt[1]) : c.moveTo(pt[0], pt[1]); }
+          c.closePath();
+        });
+      }
+
+      // ---------- 人物(赤い傘) ----------
+      function person(c, t, u, e) {
+        const zr = Z0 + WALK * t - e, s = F / zr, sx = VPX + PX * s;
+        const Yp = (Y) => VPY + (CAMH - Y) * s;
+        const bob = 0.014 * Math.abs(Math.sin(Math.PI * 1.9 * t)), ph = Math.PI * 1.9 * t;
+        const Xp = (x) => sx + x * s;
+        const fl = 0.09 * Math.max(0, Math.sin(ph)), fr = 0.09 * Math.max(0, -Math.sin(ph));
+        const body = "#04040a";
+        c.fillStyle = body;
+        // 脚
+        [[-0.09, fl], [0.09, fr]].forEach(([x, lift]) => { const top = Yp(0.66 + bob); const bot = Yp(lift); c.fillRect(Xp(x - 0.07), top, 0.14 * s, bot - top); c.beginPath(); c.ellipse(Xp(x), bot, 0.09 * s, 0.025 * s, 0, 0, 7); c.fill(); });
+        // コート
+        const coat = [[-0.27, 1.38], [0.27, 1.38], [0.31, 0.6], [-0.31, 0.6]].map(([x, y]) => [Xp(x), Yp(y + bob)]);
+        path(c, coat); c.fill();
+        c.beginPath(); c.arc(Xp(0), Yp(1.53 + bob), 0.11 * s, 0, 7); c.fill();
+        // 縁のリムライト(左=桃/右=橙: 路地の看板の側光)
+        c.save(); path(c, coat); c.clip();
+        const g = c.createLinearGradient(Xp(-0.31), 0, Xp(0.31), 0);
+        g.addColorStop(0, "rgba(255,61,139,.5)"); g.addColorStop(0.14, "rgba(255,61,139,0)"); g.addColorStop(0.86, "rgba(255,154,61,0)"); g.addColorStop(1, "rgba(255,154,61,.45)");
+        c.fillStyle = g; c.fillRect(Xp(-0.4), Yp(1.5), 0.8 * s, 1.0 * s); c.restore();
+        // 傘の柄
+        c.strokeStyle = "#1a1a22"; c.lineWidth = Math.max(2, 0.02 * s); c.beginPath(); c.moveTo(Xp(0), Yp(UMB_H)); c.lineTo(Xp(0.1), Yp(1.0 + bob)); c.stroke();
+        // 傘(後半で少し傾けて円に開く)
+        const rho = 0.5 + 0.5 * SM(1.45, TEND, t);
+        const cx = Xp(0), cy = Yp(UMB_H), rx = UMB_R * s, ry = rx * rho;
+        c.save(); c.translate(cx, cy); c.scale(1, rho);
+        c.beginPath(); c.arc(0, 0, rx, 0, Math.PI * 2);
+        const cg = c.createRadialGradient(-rx * 0.15, -rx * 0.2, rx * 0.1, 0, 0, rx);
+        cg.addColorStop(0, "#ff3a58"); cg.addColorStop(1, "#ff2a4d");
+        c.fillStyle = cg; c.fill(); c.clip();
+        // 骨(リブ)
+        c.strokeStyle = "rgba(120,0,30,.33)"; c.lineWidth = Math.max(1.5, rx * 0.012);
+        for (let q = 0; q < 8; q++) { const a = (q / 8) * Math.PI * 2 + 0.2; c.beginPath(); c.moveTo(0, 0); c.lineTo(Math.cos(a) * rx, Math.sin(a) * rx); c.stroke(); }
+        // 縁の暗がりと側光(縁の外には出ない)
+        c.strokeStyle = "rgba(150,10,40,.45)"; c.lineWidth = rx * 0.035; c.beginPath(); c.arc(0, 0, rx * 0.985, 0, 7); c.stroke();
+        const lg = c.createLinearGradient(-rx, 0, rx, 0);
+        lg.addColorStop(0, "rgba(255,110,170,.22)"); lg.addColorStop(0.3, "rgba(255,110,170,0)"); lg.addColorStop(0.7, "rgba(255,170,90,0)"); lg.addColorStop(1, "rgba(255,170,90,.2)");
+        c.fillStyle = lg; c.fillRect(-rx, -rx, rx * 2, rx * 2);
+        c.fillStyle = "rgba(90,0,25,.6)"; c.beginPath(); c.arc(0, 0, rx * 0.025, 0, 7); c.fill();
+        c.restore();
+        return { s, sx, feet: Yp(0) };
+      }
+
+      // ---------- 雨 ----------
+      const RL = [{ n: 400, len: 14, a: 0.15, v: 900 }, { n: 250, len: 32, a: 0.3, v: 1500 }, { n: 80, len: 80, a: 0.45, v: 2200 }];
+      const rr = mulberry(777);
+      const rain = RL.map((L) => { const a = []; for (let i = 0; i < L.n; i++) a.push([rr() * (W + 200), rr() * (H + 200), 0.7 + rr() * 0.6]); return a; });
+      const ripples = []; for (let i = 0; i < 70; i++) ripples.push([rr() * W, 0.84 * H + rr() * 0.14 * H, rr() * 0.9, 0.7 + rr() * 0.6]);
+      const WIND = (12 * Math.PI) / 180;
+
+      function drawRain(c, t, back) {
+        c.lineCap = "round";
+        RL.forEach((L, li) => {
+          const vx = L.v * Math.sin(WIND), vy = L.v * Math.cos(WIND), dx = Math.sin(WIND) * L.len, dy = Math.cos(WIND) * L.len;
+          c.lineWidth = li === 2 ? 2.2 : li === 1 ? 1.5 : 1;
+          rain[li].forEach((d) => {
+            const x = ((d[0] + vx * t * d[2]) % (W + 200)) - 100, y = ((d[1] + vy * t * d[2]) % (H + L.len + 200)) - L.len - 100;
+            let k = 0.28; back.forEach((b) => { const ddx = x - b[0], ddy = y - b[1]; k += b[3] * Math.exp(-(ddx * ddx + ddy * ddy) / (b[2] * b[2])); });
+            c.strokeStyle = `rgba(196,224,255,${(L.a * Math.min(1.7, k)).toFixed(3)})`;
+            c.beginPath(); c.moveTo(x, y); c.lineTo(x - dx, y - dy); c.stroke();
+          });
+        });
+        // 着水(下端の帯)
+        c.lineWidth = 1.5;
+        ripples.forEach((r) => {
+          const age = (((t / 0.9 + r[2]) % 1) * 0.9) % 0.9; if (age > 0.25) return; const k = age / 0.25;
+          c.strokeStyle = `rgba(200,225,255,${(0.32 * (1 - k)).toFixed(3)})`; c.beginPath(); c.ellipse(r[0], r[1], 14 * k * r[3] + 1, (14 * k * r[3] + 1) * 0.3, 0, 0, 7); c.stroke();
+        });
+      }
+
+      // ---------- 1フレーム描画(tの関数、状態を積まない) ----------
+      function draw(t) {
+        t = Math.max(0, t);
+        const u = Math.min(1, t / TEND), e = E1 * EASE(u), fi = Math.round(t * 30);
+        const c = ctx; c.setTransform(1, 0, 0, 1, 0, 0); c.globalAlpha = 1; c.filter = "none"; c.globalCompositeOperation = "source-over";
+        // 空
+        c.fillStyle = "#06080e"; c.fillRect(0, 0, W, H);
+        ell(c, VPX, VPY - 120, 700, 420, [[0, "rgba(31,111,134,.38)"], [1, "rgba(31,111,134,0)"]]);
+        // 床
+        const fp = floorPoly(e), fg = c.createLinearGradient(0, VPY, 0, H); fg.addColorStop(0, "#1b202c"); fg.addColorStop(1, "#090b11");
+        path(c, fp); c.fillStyle = fg; c.fill();
+        // 床の導線(縁石・わだち)
+        c.save(); path(c, fp); c.clip();
+        [[-2.0, 0.22], [-0.75, 0.06], [0.75, 0.06], [2.0, 0.22]].forEach(([X, a]) => { const p1 = P(X, 0, NEAR), p2 = P(X, 0, ZEND - e); c.strokeStyle = `rgba(150,190,210,${a})`; c.lineWidth = X > 1.5 || X < -1.5 ? 4 : 10; c.beginPath(); c.moveTo(p1[0], p1[1]); c.lineTo(p2[0], p2[1]); c.stroke(); });
+        c.restore();
+        drawWalls(c, e); drawCables(c, e);
+        spill(c, e, fi, u);
+        // 発光体 → Eレイヤー → ブルーム
+        Ex.setTransform(1, 0, 0, 1, 0, 0); Ex.clearRect(0, 0, W, H); drawEmissive(Ex, e, false, fi, u);
+        c.globalCompositeOperation = "lighter"; c.drawImage(Ec, 0, 0);
+        c.filter = "blur(14px)"; c.globalAlpha = 0.75; c.drawImage(Ec, 0, 0);
+        c.filter = "blur(46px)"; c.globalAlpha = 0.6; c.drawImage(Ec, 0, 0);
+        c.filter = "none"; c.globalAlpha = 1; c.globalCompositeOperation = "source-over";
+        // 路面の反射(発光体をY反転 → 縦に切れた揺らぎ → 縦ににじむ)
+        Rx.setTransform(1, 0, 0, 1, 0, 0); Rx.clearRect(0, 0, W, H); drawEmissive(Rx, e, true, fi, u);
+        const zr = Z0 + WALK * t - e, ps = F / zr, psx = VPX + PX * ps, feet = VPY + CAMH * ps;
+        Rx.globalCompositeOperation = "lighter";
+        const sg = Rx.createLinearGradient(0, feet, 0, feet + 1.3 * ps); sg.addColorStop(0, "rgba(255,42,77,.5)"); sg.addColorStop(1, "rgba(255,42,77,0)");
+        Rx.fillStyle = sg; Rx.fillRect(psx - 0.3 * ps, feet, 0.6 * ps, 1.3 * ps); Rx.globalCompositeOperation = "source-over";
+        Dx.setTransform(1, 0, 0, 1, 0, 0); Dx.clearRect(0, 0, W, H);
+        for (let y = VPY; y < H; y += 3) {
+          const A = 2 + ((y - VPY) / (H - VPY)) * 7, dx = Math.sin(y * 0.09 + t * 2.1) * A + Math.sin(y * 0.31 - t * 3.3) * A * 0.5;
+          Dx.drawImage(Rc, 0, y, W, 3, dx, y, W, 3);
+        }
+        c.save(); path(c, fp); c.clip(); c.globalCompositeOperation = "lighter";
+        c.filter = "blur(2px)"; [[0, 0.6], [7, 0.28], [16, 0.16]].forEach(([oy, a]) => { c.globalAlpha = a; c.drawImage(Dc, 0, oy); });
+        c.beginPath(); puddlePath(c, e); c.clip(); c.filter = "blur(1px)"; c.globalAlpha = 0.9; c.drawImage(Dc, 0, 0);
+        c.restore(); c.filter = "none"; c.globalAlpha = 1; c.globalCompositeOperation = "source-over";
+        // 出口の向こうを横切る小さな人影
+        [[0.0, 0.5, "#06070c"], [0.5, 0.9, "#05060a"]].forEach((q, i) => {
+          const zc = ZEND - e - 0.4, s = F / zc, X = -1.4 + ((t * 0.35 + q[0] * 3) % 3.4), pp = P(X, 0, zc);
+          c.fillStyle = q[2]; c.fillRect(pp[0] - 0.12 * s, pp[1] - 1.3 * s, 0.24 * s, 1.3 * s);
+          c.beginPath(); c.ellipse(pp[0], pp[1] - 1.55 * s, 0.4 * s, 0.2 * s, 0, Math.PI, 0); c.fill();
+        });
+        // 薄い霧(出口側)
+        c.globalCompositeOperation = "lighter";
+        ell(c, VPX, VPY + 30, 520, 300, [[0, `rgba(255,140,130,${0.1 + 0.06 * EASE(u)})`], [1, "rgba(255,140,130,0)"]]);
+        c.globalCompositeOperation = "source-over";
+        // 人物
+        person(c, t, u, e);
+        // 雨(逆光=ネオン・街灯・出口の周りで見える)
+        const back = []; lights.forEach((L) => { const zc = L.z - e; if (zc < 0.8) return; const p = P(L.X, L.Y, zc); back.push([p[0], p[1], Math.max(160, 1.6 * F / zc), L.exit ? 1.2 : 0.7]); });
+        back.push([VPX, VPY, 260, 1.0]);
+        drawRain(c, t, back);
+        // ビネット(弱め)
+        c.save(); c.translate(960, 540); c.scale(W / H, 1);
+        const vg = c.createRadialGradient(0, 0, 0, 0, 0, 783); vg.addColorStop(0.5, "rgba(0,0,0,0)"); vg.addColorStop(0.75, "rgba(0,0,0,.13)"); vg.addColorStop(1, "rgba(0,0,0,.4)");
+        c.fillStyle = vg; c.fillRect(-960, -540, 1920, 1080); c.restore();
+        // 純黒から0.4秒でフェードイン
+        c.fillStyle = `rgba(0,0,0,${(1 - Math.min(1, t / 0.4)).toFixed(4)})`; c.fillRect(0, 0, W, H);
+      }
+
+      const st = { t: 0 };
+      const tl = gsap.timeline({ paused: true });
+      tl.to(st, { t: 3.5, duration: 3.5, ease: "none", onUpdate: () => draw(st.t) }, 0);
+      window.__timelines["main"] = tl;
+      draw(0);
+      tl.seek(0);
+    </script>
+  </body>
+</html>

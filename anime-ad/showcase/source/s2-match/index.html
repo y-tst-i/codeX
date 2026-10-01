@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <script src="assets/gsap.min.js"></script>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: #0a0a12; }
+      #root { position: relative; width: 100%; height: 100%; background: #0a0a12; overflow: hidden; }
+      .layer { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; }
+      svg { display: block; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="3.5" data-width="1920" data-height="1080">
+      <!-- 一致表(ANCHOR): 円 中心(960,540) 直径360 色#ff2a4d。A=傘 / B=信号赤ランプ / C=真俯瞰の主役傘(開始時) -->
+      <div id="shotA" class="layer"><svg id="svgA" width="1920" height="1080" viewBox="0 0 1920 1080"></svg></div>
+      <div id="shotB" class="layer">
+        <div id="bBg" class="layer"><svg id="svgBbg" width="1920" height="1080" viewBox="0 0 1920 1080"></svg></div>
+        <div class="layer"><svg id="svgB" width="1920" height="1080" viewBox="0 0 1920 1080"></svg></div>
+      </div>
+      <div id="shotC" class="layer"><svg id="svgC" width="1920" height="1080" viewBox="0 0 1920 1080"></svg></div>
+      <canvas id="rain" class="layer" width="1920" height="1080"></canvas>
+      <div id="vig" class="layer" style="background:radial-gradient(ellipse at 50% 50%, rgba(0,0,0,0) 55%, rgba(0,0,0,0.45) 100%)"></div>
+    </div>
+    <script>
+      const NS = "http://www.w3.org/2000/svg";
+      const RED = "#ff2a4d";
+      const ANCHOR = { cx: 960, cy: 540, r: 180 };
+      function mulberry32(a) { return function () { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+      function el(parent, name, attrs) { const e = document.createElementNS(NS, name); for (const k in attrs) e.setAttribute(k, attrs[k]); parent.appendChild(e); return e; }
+      function defsGrad(svg, id, stops, cx, cy, r) {
+        let d = svg.querySelector("defs") || el(svg, "defs", {});
+        const g = el(d, "radialGradient", { id, cx, cy, r });
+        stops.forEach(s => el(g, "stop", { offset: s[0], "stop-color": s[1], "stop-opacity": s[2] }));
+      }
+
+      /* ---------- Shot A: 傘のクローズアップ ---------- */
+      (function () {
+        const svg = document.getElementById("svgA");
+        const r = mulberry32(11);
+        el(svg, "rect", { x: 0, y: 0, width: 1920, height: 1080, fill: "#0a0a12" });
+        el(svg, "rect", { x: 0, y: 0, width: 1920, height: 1080, fill: "#0f3a4a", opacity: 0.55 });
+        // ぼけたネオン
+        const cols = ["#ff3d8b", "#ff9a3d", "#1f6f86", "#ff3d8b", "#ff9a3d"];
+        const bg = el(svg, "g", { filter: "url(#bk)" });
+        const d = el(svg, "defs", {}); const f = el(d, "filter", { id: "bk", x: "-20%", y: "-20%", width: "140%", height: "140%" });
+        el(f, "feGaussianBlur", { stdDeviation: 14 });
+        for (let i = 0; i < 26; i++) {
+          el(bg, "circle", { cx: 80 + r() * 1760, cy: 60 + r() * 700, r: 30 + r() * 70, fill: cols[i % 5], opacity: 0.18 + r() * 0.3 });
+        }
+        // 濡れた路面の反射
+        el(svg, "rect", { x: 0, y: 860, width: 1920, height: 220, fill: "#ff3d8b", opacity: 0.08 });
+        // 人物のシルエット(肩)
+        el(svg, "path", { d: "M 690 1080 C 700 860 760 760 960 740 C 1160 760 1220 860 1230 1080 Z", fill: "#06060c" });
+        el(svg, "path", { d: "M 690 1080 C 700 860 760 760 960 740", fill: "none", stroke: "#ff3d8b", "stroke-width": 3, opacity: 0.55 });
+        // 傘の骨・柄
+        el(svg, "rect", { x: 954, y: 700, width: 12, height: 260, fill: "#06060c" });
+        // 傘の円
+        el(svg, "circle", { cx: ANCHOR.cx + 10, cy: ANCHOR.cy + 14, r: ANCHOR.r, fill: "#000", opacity: 0.25 });
+        el(svg, "circle", { cx: ANCHOR.cx, cy: ANCHOR.cy, r: ANCHOR.r, fill: RED });
+        for (let i = 0; i < 8; i++) {
+          const a = i * Math.PI / 4 + Math.PI / 8;
+          el(svg, "line", { x1: ANCHOR.cx, y1: ANCHOR.cy, x2: ANCHOR.cx + Math.cos(a) * ANCHOR.r, y2: ANCHOR.cy + Math.sin(a) * ANCHOR.r, stroke: "#c01234", "stroke-width": 3, opacity: 0.8 });
+        }
+        el(svg, "circle", { cx: ANCHOR.cx, cy: ANCHOR.cy, r: 7, fill: "#7a0a22" });
+        // 縁のネオン反射
+        el(svg, "path", { d: "M 800 450 A 180 180 0 0 1 960 360", fill: "none", stroke: "#ff9ab8", "stroke-width": 5, opacity: 0.45, "stroke-linecap": "round" });
+        el(svg, "circle", { cx: ANCHOR.cx, cy: ANCHOR.cy, r: ANCHOR.r, fill: "none", stroke: "#8f1030", "stroke-width": 3, opacity: 0.6 });
+      })();
+
+      /* ---------- Shot B: 信号の赤ランプ(背景は別レイヤー=ラックフォーカス) ---------- */
+      (function () {
+        const bg = document.getElementById("svgBbg");
+        const r = mulberry32(23);
+        el(bg, "rect", { x: -100, y: -100, width: 2120, height: 1280, fill: "#0a0a12" });
+        el(bg, "rect", { x: -100, y: -100, width: 2120, height: 1280, fill: "#0f3a4a", opacity: 0.6 });
+        // 遠くのビルと看板
+        for (let i = 0; i < 12; i++) {
+          const x = -40 + i * 170 + r() * 40, h = 300 + r() * 420, w = 130 + r() * 60;
+          el(bg, "rect", { x, y: 820 - h, width: w, height: h, fill: "#08090f" });
+          for (let k = 0; k < 6; k++) if (r() > 0.45) el(bg, "rect", { x: x + 14 + (k % 3) * 40, y: 820 - h + 30 + Math.floor(k / 3) * 70 + r() * 80, width: 22, height: 14, fill: "#ffc46b", opacity: 0.5 });
+        }
+        const cols = ["#ff3d8b", "#ff9a3d", "#1f6f86", "#ff3d8b", "#ff9a3d", "#ffc46b"];
+        for (let i = 0; i < 14; i++) {
+          const x = 60 + r() * 1800, y = 160 + r() * 600;
+          el(bg, "rect", { x, y, width: 40 + r() * 80, height: 22 + r() * 40, fill: cols[i % 6], opacity: 0.8 });
+        }
+        // 濡れた路面
+        el(bg, "rect", { x: -100, y: 820, width: 2120, height: 400, fill: "#0b1620" });
+        for (let i = 0; i < 12; i++) el(bg, "rect", { x: 100 + r() * 1700, y: 830, width: 30 + r() * 40, height: 240, fill: cols[i % 6], opacity: 0.22 });
+        // 前景の背景ボケ玉(傘の人のネオンボケに寄せる)
+        for (let i = 0; i < 16; i++) el(bg, "circle", { cx: r() * 1920, cy: r() * 1080, r: 22 + r() * 34, fill: cols[i % 6], opacity: 0.25 });
+
+        const svg = document.getElementById("svgB");
+        defsGrad(svg, "bloom", [[0, RED, 0.55], [0.5, RED, 0.18], [1, RED, 0]], 0.5, 0.5, 0.5);
+        el(svg, "circle", { cx: 960, cy: 540, r: 560, fill: "url(#bloom)" });
+        // 信号機の筐体(縦長)
+        el(svg, "rect", { x: 700, y: -120, width: 520, height: 1320, rx: 70, fill: "#07070c" });
+        el(svg, "rect", { x: 700, y: -120, width: 520, height: 1320, rx: 70, fill: "none", stroke: "#2b2f3a", "stroke-width": 6 });
+        // 他のランプ(消灯: 黄・緑)
+        el(svg, "circle", { cx: 960, cy: 130, r: ANCHOR.r, fill: "#2a2410" });
+        el(svg, "circle", { cx: 960, cy: 950, r: ANCHOR.r, fill: "#0e2a22" });
+        // 赤ランプ(点灯): 傘と同じ位置・同じ直径・同じ色
+        el(svg, "circle", { cx: ANCHOR.cx, cy: ANCHOR.cy, r: ANCHOR.r, fill: RED });
+        // レンズのリング(うっすら)
+        for (let k = 1; k <= 3; k++) el(svg, "circle", { cx: 960, cy: 540, r: ANCHOR.r - k * 50, fill: "none", stroke: "#c01234", "stroke-width": 3, opacity: 0.55 });
+        // ひさし(庇): 各ランプの上に三日月
+        [130, 540, 950].forEach(cy => el(svg, "path", { d: `M ${960 - 215} ${cy - 40} A 215 215 0 0 1 ${960 + 215} ${cy - 40} L ${960 + 215} ${cy - 130} L ${960 - 215} ${cy - 130} Z`, fill: "#07070c", opacity: cy === 540 ? 0 : 0 }));
+        el(svg, "path", { d: "M 760 540 A 200 200 0 0 1 960 340 A 230 230 0 0 0 760 540 Z", fill: "#ff9ab8", opacity: 0.35 });
+        // ランプ上の雨滴の光
+        const r2 = mulberry32(5);
+        for (let i = 0; i < 18; i++) { const a = r2() * 6.283, d = Math.sqrt(r2()) * 160; el(svg, "circle", { cx: 960 + Math.cos(a) * d, cy: 540 + Math.sin(a) * d, r: 2 + r2() * 3, fill: "#ffd0da", opacity: 0.35 }); }
+      })();
+
+      /* ---------- Shot C: 真俯瞰の傘の群れ ---------- */
+      const HERO_V = 26; // 主役の世界座標での歩行速度 px/s
+      let heroEl, world, movers = [];
+      (function () {
+        const svg = document.getElementById("svgC");
+        world = el(svg, "g", { id: "world" });
+        el(world, "rect", { x: -5400, y: -3100, width: 8400, height: 5000, fill: "#0b1620" });
+        // ネオンの反射(路面)
+        defsGrad(svg, "pk", [[0, "#ff3d8b", 0.28], [1, "#ff3d8b", 0]], 0.5, 0.5, 0.5);
+        defsGrad(svg, "or", [[0, "#ff9a3d", 0.25], [1, "#ff9a3d", 0]], 0.5, 0.5, 0.5);
+        defsGrad(svg, "tl", [[0, "#1f6f86", 0.35], [1, "#1f6f86", 0]], 0.5, 0.5, 0.5);
+        const r = mulberry32(77);
+        const gs = ["url(#pk)", "url(#or)", "url(#tl)"];
+        for (let i = 0; i < 34; i++) { const rad = 500 + r() * 700; el(world, "circle", { cx: -5000 + r() * 7600, cy: -2700 + r() * 4200, r: rad, fill: gs[i % 3] }); }
+        // 横断歩道
+        for (let j = -8; j <= 4; j++) {
+          const y = 540 + 220 + 440 * j;
+          for (let i = -12; i <= 6; i++) el(world, "rect", { x: 960 + 440 * i - 190 + 220 - 220, y: y - 90, width: 250, height: 180, fill: "#e8ecf0", opacity: 0.2 });
+        }
+        // 傘
+        const colorsB = ["#14141c", "#191924", "#101018"];
+        const colorsBl = ["#2c4fa8", "#1f6f86", "#2a3f8a"];
+        const colorsR = ["#a8182f", "#8e1428", "#b32038"];
+        function umbrella(parent, cx, cy, rad, fill, rib, hero) {
+          const g = el(parent, "g", {});
+          el(g, "circle", { cx: cx + rad * 0.12, cy: cy + rad * 0.16, r: rad, fill: "#000", opacity: 0.32 });
+          el(g, "circle", { cx, cy, r: rad, fill });
+          for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4 + Math.PI / 8; el(g, "line", { x1: cx, y1: cy, x2: cx + Math.cos(a) * rad, y2: cy + Math.sin(a) * rad, stroke: rib, "stroke-width": hero ? 3 : 4, opacity: 0.85 }); }
+          el(g, "circle", { cx, cy, r: Math.max(7, rad * 0.04), fill: rib });
+          if (hero) el(g, "circle", { cx, cy, r: rad - 3, fill: "none", stroke: "#ff8da3", "stroke-width": 5, opacity: 0.6 });
+          return g;
+        }
+        for (let j = -8; j <= 4; j++) {
+          const dir = (j % 2 === 0) ? 1 : -1;
+          for (let i = -12; i <= 6; i++) {
+            if (i === 0 && j === 0) continue;
+            if (r() < 0.22) continue;
+            const cx = 960 + 440 * i + (r() - 0.5) * 80, cy = 540 + 440 * j + (r() - 0.5) * 80, rad = 135 + r() * 40;
+            const q = r(); let fill, rib;
+            if (q < 0.28) { fill = colorsR[Math.floor(r() * 3)]; rib = "#5a0a1a"; }
+            else if (q < 0.62) { fill = colorsB[Math.floor(r() * 3)]; rib = "#2d2d3c"; }
+            else { fill = colorsBl[Math.floor(r() * 3)]; rib = "#142a66"; }
+            const g = umbrella(world, 0, 0, rad, fill, rib, false);
+            g.setAttribute("transform", `translate(${cx} ${cy})`);
+            movers.push({ g, cx, cy, v: dir * (28 + r() * 30) });
+          }
+        }
+        heroEl = umbrella(world, 0, 0, ANCHOR.r, RED, "#c01234", true);
+        heroEl.setAttribute("transform", "translate(960 540)");
+      })();
+
+      /* ---------- 雨(t の関数で毎フレーム全再描画) ---------- */
+      const cv = document.getElementById("rain"); const cx2 = cv.getContext("2d");
+      const rr = mulberry32(2024); const drops = [];
+      for (let i = 0; i < 420; i++) drops.push({ x: rr() * 2200 - 150, y0: rr() * 1300, l: 30 + rr() * 70, sp: 1500 + rr() * 1400, a: 0.12 + rr() * 0.3, w: 1 + rr() * 1.6 });
+      function drawRain(t, mode) {
+        cx2.clearRect(0, 0, 1920, 1080);
+        const n = mode === "C" ? 140 : 420, k = mode === "C" ? 0.55 : 1;
+        cx2.lineCap = "round";
+        for (let i = 0; i < n; i++) {
+          const d = drops[i]; const y = ((d.y0 + d.sp * t) % 1300) - 110; const x = d.x - y * 0.18;
+          const L = d.l * (mode === "C" ? 0.6 : 1);
+          cx2.strokeStyle = `rgba(200,225,255,${d.a * k})`; cx2.lineWidth = d.w;
+          cx2.beginPath(); cx2.moveTo(x, y); cx2.lineTo(x - L * 0.18, y + L); cx2.stroke();
+        }
+      }
+
+      /* ---------- 全体の描画: frame の関数 ---------- */
+      const dA = document.getElementById("shotA"), dB = document.getElementById("shotB"), dC = document.getElementById("shotC"), bBg = document.getElementById("bBg");
+      function render(f) {
+        const t = f / 30;
+        dA.style.display = f < 15 ? "block" : "none";
+        dB.style.display = (f >= 15 && f < 30) ? "block" : "none";
+        dC.style.display = f >= 30 ? "block" : "none";
+        if (f >= 15 && f < 30) {
+          // ラックフォーカス: 背景blur 12→0、0.3秒(9f)、power4.out
+          const u = Math.min(1, (f - 15) / 9), e = 1 - Math.pow(1 - u, 4);
+          bBg.style.filter = `blur(${(12 * (1 - e)).toFixed(2)}px)`;
+        }
+        if (f >= 30) {
+          // クレーンアップ: 2.0秒、power2.out。主役傘の画面位置 (960,540)->(1500,820)、直径 360->90
+          const u = Math.min(1, Math.max(0, (f - 30) / 60)), p = 1 - Math.pow(1 - u, 2);
+          const s = Math.pow(0.25, p);
+          const px = 960 + (1500 - 960) * p, py = 540 + (820 - 540) * p;
+          const dt = t - 1.0;
+          const hx = 960 + HERO_V * dt, hy = 540;
+          heroEl.setAttribute("transform", `translate(${hx} ${hy})`);
+          movers.forEach(m => m.g.setAttribute("transform", `translate(${m.cx + m.v * dt} ${m.cy})`));
+          const Tx = px - s * hx, Ty = py - s * hy;
+          world.setAttribute("transform", `translate(${Tx} ${Ty}) scale(${s})`);
+        }
+        drawRain(t, f >= 30 ? "C" : "AB");
+      }
+
+      const tl = gsap.timeline({ paused: true });
+      const proxy = { t: 0 };
+      tl.to(proxy, { t: 3.5, duration: 3.5, ease: "none", onUpdate: () => render(Math.min(104, Math.round(proxy.t * 30))) }, 0);
+      render(0);
+      window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>
