@@ -155,3 +155,40 @@ export async function loadCharacterImages(keys: string[]): Promise<Record<string
   db.close();
   return result;
 }
+
+/* ---------------- 引っ越し（バックアップ）用：ストアの中身をまるごと読み書き ---------------- */
+
+export const AUDIO_STORE = STORE;
+export const CHARACTER_IMAGE_STORE = IMAGE_STORE;
+
+/** ストアの中身を [キー, 値] の一覧で取り出す */
+export async function dumpStore(store: string): Promise<[string, unknown][]> {
+  const db = await openDb();
+  const entries: [string, unknown][] = [];
+  await new Promise<void>((resolve, reject) => {
+    const request = db.transaction(store).objectStore(store).openCursor();
+    request.onsuccess = () => {
+      const cursor = request.result;
+      if (!cursor) return resolve();
+      entries.push([String(cursor.key), cursor.value]);
+      cursor.continue();
+    };
+    request.onerror = () => reject(request.error);
+  });
+  db.close();
+  return entries;
+}
+
+/** ストアを空にして、渡した中身で置き換える */
+export async function replaceStore(store: string, entries: [string, unknown][]): Promise<void> {
+  const db = await openDb();
+  await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(store, "readwrite");
+    const os = tx.objectStore(store);
+    os.clear();
+    for (const [key, value] of entries) os.put(value, key);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+  db.close();
+}

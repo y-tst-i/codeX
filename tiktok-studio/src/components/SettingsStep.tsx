@@ -1,5 +1,6 @@
 import { CLAUDE_MODELS, TTS_MODELS } from "../lib/knowledge";
 import type { ApiSettings } from "../lib/types";
+import { BackupPanel } from "./BackupPanel";
 import { Field, Notice } from "./common";
 
 interface Props {
@@ -78,6 +79,10 @@ export function SettingsStep({ settings, onChange, onReset }: Props) {
           <li>各社の管理画面で利用上限（予算アラート）を設定しておくと安心です。</li>
         </ul>
       </Notice>
+
+      <div style={{ marginTop: 20 }}>
+        <BackupPanel />
+      </div>
 
       <div className="row" style={{ marginTop: 20 }}>
         <button className="btn danger" type="button" onClick={() => confirm("企画・台本・音声・HTMLをすべて消して新しく始めますか？（APIキー・アカウントの声・ジャンルと見た目の設定は残ります）") && onReset()}>
