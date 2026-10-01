@@ -6,6 +6,8 @@ import { buildFixPrompt, buildMotionPrompt, buildPolishPrompt, motionSystemPromp
 import type { ApiSettings, Concept, Script, Timeline } from "../lib/types";
 import { Field, Notice, PromptBox, StepNav, downloadBlob } from "./common";
 import { CriticPanel } from "./CriticPanel";
+import { AssetsPanel } from "./AssetsPanel";
+import type { AssetInfo } from "../lib/assets";
 import { TimelineBar } from "./VoiceStep";
 
 interface Props {
@@ -16,6 +18,9 @@ interface Props {
   html: string;
   character?: CharacterSettings;
   extras: HostExtras;
+  assets: AssetInfo[];
+  assetsPrompt: string;
+  onAssetsChanged: () => void;
   onHtml: (html: string) => void;
   onBack: () => void;
   onNext: () => void;
@@ -23,7 +28,7 @@ interface Props {
 
 type Job = "create" | "polish" | "fix";
 
-export function MotionStep({ concept, script, timeline, settings, html, character, extras, onHtml, onBack, onNext }: Props) {
+export function MotionStep({ concept, script, timeline, settings, html, character, extras, assets, assetsPrompt, onAssetsChanged, onHtml, onBack, onNext }: Props) {
   const [running, setRunning] = useState<Job | null>(null);
   const [progress, setProgress] = useState("");
   const [error, setError] = useState("");
@@ -31,7 +36,7 @@ export function MotionStep({ concept, script, timeline, settings, html, characte
   const [checking, setChecking] = useState(false);
   const [polishRequest, setPolishRequest] = useState("");
 
-  const input = { concept, script, timeline, character };
+  const input = { concept, script, timeline, character, assets: assetsPrompt };
   const motionPrompt = buildMotionPrompt(input);
   const problems = report ? [...report.problems] : [];
   const lint = html.trim() ? lintHtml(html) : [];
@@ -97,6 +102,16 @@ export function MotionStep({ concept, script, timeline, settings, html, characte
       {timeline.scenes.some((scene) => scene.timingSource === "estimate") ? (
         <Notice kind="warn">音声がまだのシーンは推定タイミングです。音声を作ってからモーションを生成すると、声と動きがぴったり揃います。</Notice>
       ) : null}
+
+      <h2>0. 素材（背景イラスト・小物・Lottie）</h2>
+      <details className="card" open={assets.length > 0}>
+        <summary style={{ cursor: "pointer", fontWeight: 600 }}>
+          🖼 素材を使う（任意・{assets.length}個登録済み）— 入れると背景の情報量が一気に増えます
+        </summary>
+        <div style={{ marginTop: 10 }}>
+          <AssetsPanel concept={concept} script={script} assets={assets} onChanged={onAssetsChanged} />
+        </div>
+      </details>
 
       <h2>1. 生成する</h2>
       <PromptBox

@@ -17,6 +17,8 @@ import { ConceptStep } from "./components/ConceptStep";
 import { ExportStep } from "./components/ExportStep";
 import { GuideStep } from "./components/GuideStep";
 import { MotionStep } from "./components/MotionStep";
+import type { Viseme } from "./lib/localTts";
+import { assetsForVideo, assetsPromptSection, listAssets, loadNotes, type AssetInfo } from "./lib/assets";
 import { ScriptStep } from "./components/ScriptStep";
 import { SettingsStep } from "./components/SettingsStep";
 import { VoiceStep, clipSignature, type ClipMap } from "./components/VoiceStep";
@@ -97,15 +99,44 @@ export function App() {
     };
   }, [character?.kind, character?.name, character?.updatedAt, imageKeysKey]);
   const characterScript = character?.kind === "image" || character?.kind === "rig" ? imageScript || undefined : character?.script;
+  // 母音ごとの口の形（VOICEVOX / AivisSpeech の声のときだけ）。各シーンの声の開始位置へずらしてつなぐ
+  const visemes = useMemo(() => {
+    const out: Viseme[] = [];
+    timeline.scenes.forEach((scene, i) => {
+      const entry = clips[scene.id];
+      if (!freshClips[i] || !entry?.visemes) return;
+      for (const v of entry.visemes) out.push({ t: +(v.t + scene.speechStart).toFixed(3), e: +(v.e + scene.speechStart).toFixed(3), v: v.v });
+    });
+    return out;
+  }, [timeline, clips]);
   const captions = useMemo(
     () => timeline.scenes.flatMap((scene) => scene.captions.map((c) => ({ start: c.start, end: c.end, text: c.text, emphasis: scene.emphasis }))),
     [timeline]
   );
-  const extras = useMemo<HostExtras>(() => ({ characterScript, voiceLevels: levels, captions }), [characterScript, levels, captions]);
+  // 素材（背景イラスト・小物・Lottie）
+  const [assetsVersion, setAssetsVersion] = useState(0);
+  const [assetList, setAssetList] = useState<AssetInfo[]>([]);
+  const [assetData, setAssetData] = useState<{ images: Record<string, string>; lotties: Record<string, unknown> }>({ images: {}, lotties: {} });
+  useEffect(() => {
+    let cancelled = false;
+    void Promise.all([listAssets(), assetsForVideo()]).then(([list, data]) => {
+      if (cancelled) return;
+      setAssetList(list);
+      setAssetData(data);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [assetsVersion]);
+  const assetsPrompt = assetsPromptSection(assetList, loadNotes());
+  const extras = useMemo<HostExtras>(
+    () => ({ characterScript, voiceLevels: levels, captions, images: assetData.images, lotties: assetData.lotties, visemes }),
+    [characterScript, levels, captions, assetData, visemes]
+  );
 
-  const onClip = (sceneId: string, clip: AudioClip, signature: string) => {
-    setClips((current) => ({ ...current, [sceneId]: { clip, signature } }));
-    void saveClip(sceneId, clip, signature).catch(() => undefined);
+  const onClip = (sceneId: string, clip: AudioClip, signature: string, visemes?: Viseme[]) => {
+    setClips((current) => ({ ...current, [sceneId]: { clip, signature, ...(visemes ? { visemes } : {}) } }));
+    void saveClip(sceneId, clip, signature, visemes).catch(() => undefined);
   };
 
   // 声を変えたら、それがアカウントの声になる（次の動画にも引き継ぐ）
@@ -215,6 +246,9 @@ export function App() {
             html={project.html}
             character={character}
             extras={extras}
+            assets={assetList}
+            assetsPrompt={assetsPrompt}
+            onAssetsChanged={() => setAssetsVersion((v) => v + 1)}
             onHtml={(html) => setProject((current) => ({ ...current, html }))}
             onBack={() => setStep("voice")}
             onNext={() => setStep("export")}

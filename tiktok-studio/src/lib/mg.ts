@@ -1,7 +1,11 @@
 import { hostExtrasScript } from "./character";
-import { MGK_SCRIPT } from "./mgKit";
+import LOTTIE_SOURCE from "lottie-web/build/player/lottie_canvas.min.js?raw";
 import { measureFrozen, type FrozenReport } from "./frames";
 import { VIDEO } from "./knowledge";
+import { MGK_SCRIPT } from "./mgKit";
+
+/** Lottie の再生ライブラリ（MIT）。</script> が混ざっても壊れないようにしておく */
+const LOTTIE_SCRIPT = LOTTIE_SOURCE.replace(/<\/script/gi, "<\\/script");
 
 /** HTML側が公開するモーショングラフィックスの契約 */
 export interface MotionGraphic {
@@ -38,6 +42,12 @@ export interface HostExtras {
   voiceLevels?: number[];
   /** 字幕（K.caption が使う） */
   captions?: { start: number; end: number; text: string; emphasis: string[] }[];
+  /** 背景などの画像（名前 → data URL。K.image が使う） */
+  images?: Record<string, string>;
+  /** Lottieアニメ（名前 → JSON。K.lottie が使う） */
+  lotties?: Record<string, unknown>;
+  /** 母音ごとの口の形のタイミング（VOICEVOX / AivisSpeech） */
+  visemes?: { t: number; e: number; v: string }[];
 }
 
 /** データを <script> に安全に埋め込む */
@@ -54,7 +64,12 @@ function injectHead(html: string, snippet: string): string {
 /** 看板キャラ・音量データを差し込む（保存用HTMLにも使う） */
 export function withExtras(html: string, extras?: HostExtras): string {
   // 演出の道具箱（window.MGK）はいつも入れる。キャラと音量は用意できたときだけ
-  const data = extras?.captions ? dataScript("MG_CAPTIONS", extras.captions) : "";
+  const data = [
+    extras?.captions ? dataScript("MG_CAPTIONS", extras.captions) : "",
+    extras?.images && Object.keys(extras.images).length ? dataScript("MG_IMAGES", extras.images) : "",
+    extras?.lotties && Object.keys(extras.lotties).length ? `${dataScript("MG_LOTTIES", extras.lotties)}<script>${LOTTIE_SCRIPT}</script>` : "",
+    extras?.visemes?.length ? dataScript("MG_VISEMES", extras.visemes) : ""
+  ].join("");
   return injectHead(html, `${data}<script>${MGK_SCRIPT}</script>${hostExtrasScript(extras?.characterScript, extras?.voiceLevels)}`);
 }
 

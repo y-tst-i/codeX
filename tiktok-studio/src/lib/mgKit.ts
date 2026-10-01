@@ -239,9 +239,67 @@ function caption(c,t,o){
   }
   c.restore();return true;
 }
+/* ---------- 画像（ツールが用意する window.MG_IMAGES）とLottieアニメ（window.MG_LOTTIES） ---------- */
+var IMGS={},imgWaits=[];
+Object.keys(window.MG_IMAGES||{}).forEach(function(name){var im=new Image();imgWaits.push(new Promise(function(r){im.onload=r;im.onerror=r;}));im.src=window.MG_IMAGES[name];IMGS[name]=im;});
+if(imgWaits.length){var prevReady=window.MG_ASSETS_READY;window.MG_ASSETS_READY=Promise.all(imgWaits.concat(prevReady?[prevReady]:[]));}
+function img(name){var im=IMGS[name];return im&&im.naturalWidth?im:null;}
+/**
+ * 画像を描く。o = {x, y, w, h（省略で全画面）, fit:"cover"|"contain", zoom, panX, panY（-1〜1）, alpha, radius（角丸）}
+ * 画像が無ければ何もしない（false を返す）
+ */
+function image(c,name,o){
+  o=o||{};var im=img(name);if(!im)return false;
+  var x=o.x||0,y=o.y||0,w=o.w||W,h=o.h||H,z=o.zoom||1,iw=im.naturalWidth,ih=im.naturalHeight;
+  var sc=(o.fit==="contain"?Math.min(w/iw,h/ih):Math.max(w/iw,h/ih))*z,dw=iw*sc,dh=ih*sc;
+  var dx=x+(w-dw)/2+(o.panX||0)*Math.max(0,dw-w)/2,dy=y+(h-dh)/2+(o.panY||0)*Math.max(0,dh-h)/2;
+  c.save();if(o.alpha!==undefined)c.globalAlpha*=o.alpha;
+  if(o.radius){shape.roundRect(c,x,y,w,h,o.radius);c.clip();}else if(o.fit!=="contain"){c.beginPath();c.rect(x,y,w,h);c.clip();}
+  c.imageSmoothingQuality="high";c.drawImage(im,dx,dy,dw,dh);c.restore();return true;
+}
+/** ゆっくり寄る・流れる（ケン・バーンズ）。from / to = {zoom, panX, panY}。背景画像を止めないために使う */
+function kenBurns(c,t,name,start,dur,from,to,o){var p=ease.inOutCubic(prog(t,start,start+dur));from=from||{zoom:1.05};to=to||{zoom:1.18};
+  return image(c,name,Object.assign({},o||{},{zoom:mix(from.zoom||1,to.zoom||1,p),panX:mix(from.panX||0,to.panX||0,p),panY:mix(from.panY||0,to.panY||0,p)}));}
+var LOTS={};
+/** Lottieアニメを t に合わせて描く。o = {x, y, w, h（中心と大きさ）, start, speed, loop} */
+function lottie(c,t,name,o){
+  o=o||{};var data=(window.MG_LOTTIES||{})[name];if(!data||!window.lottie)return false;
+  var L=LOTS[name];
+  if(!L){var cv=canvas(data.w||512,data.h||512);L=LOTS[name]={canvas:cv,anim:window.lottie.loadAnimation({renderer:"canvas",loop:false,autoplay:false,animationData:JSON.parse(JSON.stringify(data)),rendererSettings:{context:cv.getContext("2d"),clearCanvas:true,preserveAspectRatio:"xMidYMid meet"}})};}
+  var fr=data.fr||30,total=Math.max(1,(data.op||60)-(data.ip||0)),s=(t-(o.start||0))*(o.speed||1)*fr;
+  if(s<0)return false;var f=o.loop?s%total:Math.min(s,total-1);
+  L.anim.goToAndStop((data.ip||0)+f,true);
+  var w=o.w||400,h=o.h||w*(L.canvas.height/L.canvas.width);c.save();if(o.alpha!==undefined)c.globalAlpha*=o.alpha;c.drawImage(L.canvas,(o.x===undefined?W/2:o.x)-w/2,(o.y===undefined?H/2:o.y)-h/2,w,h);c.restore();return true;
+}
+
+/* ---------- 立体っぽい演出（2.5D） ---------- */
+/** 厚みのある立体文字。text と同じ引数に {depth, sideColor, dx, dy} を足す */
+function text3d(c,t,str,x,y,o){o=o||{};var d=o.depth===undefined?18:o.depth,dx=o.dx===undefined?0.5:o.dx,dy=o.dy===undefined?1:o.dy,side=o.sideColor||"#140a1e";
+  for(var k=d;k>0;k-=3){text(c,t,str,x+dx*k,y+dy*k,Object.assign({},o,{color:side,accentColor:side,stroke:o.stroke?side:undefined,shadow:undefined}));}
+  return text(c,t,str,x,y,o);}
+/**
+ * 平面のカードを立体的に回す。drawFn(ctx2) で幅w×高さhのカードの中身を描く（左上が0,0）。
+ * o = {x, y（中心）, w, h, rotY（左右に回す・ラジアン）, rotX（上下に倒す）, perspective, back: 裏面を描く関数}
+ */
+function card3d(c,drawFn,o){
+  o=o||{};var w=Math.round(o.w||600),h=Math.round(o.h||800),P=o.perspective||1600,ry=o.rotY||0,rx=o.rotX||0,cx=o.x===undefined?W/2:o.x,cy=o.y===undefined?H/2:o.y;
+  var key="card"+w+"x"+h,buf=CACHE[key]||(CACHE[key]=canvas(w,h)),b=buf.getContext("2d");
+  var horizontal=Math.abs(rx)>Math.abs(ry),a=horizontal?rx:ry,back=Math.cos(a)<0;
+  b.setTransform(1,0,0,1,0,0);b.clearRect(0,0,w,h);
+  if(back&&o.back){o.back(b);}else{if(back){b.translate(horizontal?0:w,horizontal?h:0);b.scale(horizontal?1:-1,horizontal?-1:1);}drawFn(b);}
+  var n=48,len=horizontal?h:w,cs=Math.cos(a),sn=Math.sin(a);
+  for(var i=0;i<n;i++){
+    var u0=-len/2+len*i/n,u1=-len/2+len*(i+1)/n,z0=u0*sn,z1=u1*sn,s0=P/(P+z0),s1=P/(P+z1),p0=u0*cs*s0,p1=u1*cs*s1,sm=(s0+s1)/2;
+    if(Math.abs(p1-p0)<0.01)continue;
+    var lo=Math.min(p0,p1),span=Math.abs(p1-p0)+0.8,srcI=back?n-1-i:i;
+    if(horizontal)c.drawImage(buf,0,(srcI*len)/n,w,len/n+0.5,cx-w*sm/2,cy+lo,w*sm,span);
+    else c.drawImage(buf,(srcI*len)/n,0,len/n+0.5,h,cx+lo,cy-h*sm/2,span,h*sm);
+  }
+}
+
 /** 数字のカウントアップ */
 function count(t,start,dur,from,to,decimals){var v=mix(from,to,ease.outExpo(prog(t,start,start+dur)));return v.toFixed(decimals||0);}
 
 window.MGK={W:W,H:H,clamp:clamp,mix:mix,prog:prog,rand:rand,noise:noise,ease:ease,anim:anim,spring:spring,punch:punch,envelope:envelope,keys:keys,hop:hop,shake:shake,voice:voice,
-  rgb:rgb,alpha:alpha,mixColor:mixColor,shape:shape,bg:bg,particles:particles,fx:fx,camera:camera,drift:drift,transition:transition,text:text,caption:caption,marker:marker,bubble:bubble,count:count};
+  rgb:rgb,alpha:alpha,mixColor:mixColor,shape:shape,bg:bg,particles:particles,fx:fx,camera:camera,drift:drift,transition:transition,text:text,caption:caption,marker:marker,bubble:bubble,count:count,img:img,image:image,kenBurns:kenBurns,lottie:lottie,text3d:text3d,card3d:card3d};
 })();`;

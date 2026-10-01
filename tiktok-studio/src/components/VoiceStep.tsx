@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { clipDuration, clipToWav, encodeWav, type AudioClip } from "../lib/audio";
 import { SplitError, synthesize, synthesizeScript } from "../lib/geminiTts";
-import { LOCAL_ENGINES, creditText, listSpeakers, synthesizeLocal, type LocalEngine, type LocalSpeaker } from "../lib/localTts";
+import { LOCAL_ENGINES, creditText, listSpeakers, synthesizeLocal, type LocalEngine, type LocalSpeaker, type Viseme } from "../lib/localTts";
 import { todayTtsCalls } from "../lib/usage";
 import { VOICES, VOICE_DIRECTIONS } from "../lib/knowledge";
 import { speakText } from "../lib/script";
@@ -9,7 +9,7 @@ import { estimateSpeechSeconds } from "../lib/timeline";
 import type { ApiSettings, Script, Timeline, VoiceSettings } from "../lib/types";
 import { CopyButton, Field, Notice, StepNav, downloadBlob, formatSeconds } from "./common";
 
-export type ClipMap = Record<string, { clip: AudioClip; signature: string }>;
+export type ClipMap = Record<string, { clip: AudioClip; signature: string; visemes?: Viseme[] }>;
 
 /** 音声の作り方を変えたら上げる（古い音声を「作り直しが必要」にするため） */
 const TTS_FORMAT_VERSION = "v2";
@@ -29,7 +29,7 @@ interface Props {
   mixed: { samples: Float32Array; sampleRate: number } | null;
   onVoiceChange: (voice: VoiceSettings) => void;
   onSettingsChange: (settings: ApiSettings) => void;
-  onClip: (sceneId: string, clip: AudioClip, signature: string) => void;
+  onClip: (sceneId: string, clip: AudioClip, signature: string, visemes?: Viseme[]) => void;
   onBack: () => void;
   onNext: () => void;
 }
@@ -128,7 +128,7 @@ export function VoiceStep({ script, voice, settings, clips, timeline, mixed, onV
         setBusy(id);
         setStatus(`音声を生成中… ${n + 1}/${sceneIds.length}`);
         if (local) {
-          const clip = await synthesizeLocal({
+          const { clip, visemes } = await synthesizeLocal({
             engine: local,
             speaker: voice.localSpeaker!,
             text,
@@ -137,7 +137,7 @@ export function VoiceStep({ script, voice, settings, clips, timeline, mixed, onV
             intonation: voice.intonation,
             signal: controller.signal
           });
-          onClip(id, clip, clipSignature(voice, text));
+          onClip(id, clip, clipSignature(voice, text), visemes);
           continue;
         }
         const { clip, directionDropped } = await synthesize(

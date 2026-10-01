@@ -55,6 +55,10 @@ export const RIG_PARTS = [
   "mouth_o",
   "mouth_smile",
   "mouth_sad",
+  "mouth_a",
+  "mouth_i",
+  "mouth_u",
+  "mouth_e",
   "fx_blush",
   "fx_heart_eyes",
   "fx_sweat",
@@ -98,6 +102,10 @@ export const RIG_PART_LABELS: Record<string, string> = {
   mouth_o: "口・お",
   mouth_smile: "口・笑顔",
   mouth_sad: "口・への字",
+  mouth_a: "口・あ",
+  mouth_i: "口・い",
+  mouth_u: "口・う",
+  mouth_e: "口・え",
   fx_blush: "照れ（ほっぺ）",
   fx_heart_eyes: "ハートの目",
   fx_sweat: "汗",
@@ -324,6 +332,9 @@ var REST={normal:"mouth_closed",happy:"mouth_closed",surprised:"mouth_o",thinkin
 var BLINKS={eyes_open:1,eyes_surprised:1,eyes_sad:1,eyes_half:1};
 var FXP={blush:"fx_blush",heart:"fx_heart_eyes",sweat:"fx_sweat",sparkle:"fx_sparkle",tears:"fx_tears",anger:"fx_anger",question:"fx_question"};
 var EYEBUF=null;
+// 母音ごとの口（VOICEVOX / AivisSpeech の声のとき、ツールが window.MG_VISEMES を用意する）
+var VMAP={a:["mouth_a","mouth_open","mouth_half"],i:["mouth_i","mouth_half","mouth_smile"],u:["mouth_u","mouth_o","mouth_half"],e:["mouth_e","mouth_half","mouth_open"],o:["mouth_o","mouth_open"],N:["mouth_closed"],x:["mouth_closed"]};
+function viseme(t){var V=window.MG_VISEMES;if(!V||!V.length)return null;var lo=0,hi=V.length-1;while(lo<=hi){var mid=(lo+hi)>>1;if(V[mid].e<t)lo=mid+1;else if(V[mid].t>t)hi=mid-1;else return V[mid].v;}return null;}
 function fxDraw(ctx,kind,t){
   var n=FXP[kind];if(!has(n))return;var c=center(n);
   ctx.save();
@@ -435,10 +446,11 @@ function draw(ctx,o){
   // 視線：look（左右）と lookY（上下）に、ときどきのチラ見を足す
   var gx=clamp(look*0.9+glance(t,11),-1,1),gy=clamp(lookY+glance(t,5)*0.6+(expr==="thinking"?-0.45:0)+(pose==="phone"?0.6:0),-1,1);
   eyesDraw(ctx,expr,t,gx,gy,fx);
-  var m;
-  if(mouth<0.12)m=pick([REST[expr]||"mouth_closed","mouth_closed"]);
-  else if(mouth<0.45)m=pick(expr==="surprised"?["mouth_o","mouth_half"]:["mouth_half","mouth_open","mouth_closed"]);
-  else m=pick(expr==="happy"||expr==="love"?["mouth_smile","mouth_open"]:expr==="surprised"?["mouth_o","mouth_open"]:["mouth_open","mouth_half","mouth_closed"]);
+  var m,vis=viseme(t);
+  if(vis&&mouth>0.05&&expr!=="surprised")m=pick(vis==="a"&&(expr==="happy"||expr==="love")?["mouth_a","mouth_smile","mouth_open"]:VMAP[vis]||["mouth_half"]);
+  else if(mouth<0.12)m=pick([REST[expr]||"mouth_closed","mouth_closed"]);
+  else if(m===undefined&&mouth<0.45)m=pick(expr==="surprised"?["mouth_o","mouth_half"]:["mouth_half","mouth_open","mouth_closed"]);
+  else if(m===undefined)m=pick(expr==="happy"||expr==="love"?["mouth_smile","mouth_open"]:expr==="surprised"?["mouth_o","mouth_open"]:["mouth_open","mouth_half","mouth_closed"]);
   if(m)part(ctx,m);
   ["blush","tears","sweat","anger","question","sparkle"].forEach(function(k){if(fx[k])fxDraw(ctx,k,t);});
   ctx.restore();

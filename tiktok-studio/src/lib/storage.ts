@@ -1,4 +1,5 @@
 import type { AudioClip } from "./audio";
+import type { Viseme } from "./localTts";
 import type { Idea } from "./ideas";
 import type { ApiSettings, Concept, Script, VoiceSettings } from "./types";
 
@@ -66,11 +67,13 @@ interface StoredClip {
   samples: ArrayBuffer;
   /** どのテキスト・声で作ったか。変わったら作り直しが必要 */
   signature: string;
+  /** 母音ごとの口の形のタイミング（VOICEVOX / AivisSpeech のときだけ） */
+  visemes?: Viseme[];
 }
 
-export async function saveClip(sceneId: string, clip: AudioClip, signature: string): Promise<void> {
+export async function saveClip(sceneId: string, clip: AudioClip, signature: string, visemes?: Viseme[]): Promise<void> {
   const db = await openDb();
-  const value: StoredClip = { sampleRate: clip.sampleRate, samples: clip.samples.slice().buffer, signature };
+  const value: StoredClip = { sampleRate: clip.sampleRate, samples: clip.samples.slice().buffer, signature, ...(visemes ? { visemes } : {}) };
   await new Promise<void>((resolve, reject) => {
     const tx = db.transaction(STORE, "readwrite");
     tx.objectStore(STORE).put(value, sceneId);
@@ -80,9 +83,9 @@ export async function saveClip(sceneId: string, clip: AudioClip, signature: stri
   db.close();
 }
 
-export async function loadClips(sceneIds: string[]): Promise<Record<string, { clip: AudioClip; signature: string }>> {
+export async function loadClips(sceneIds: string[]): Promise<Record<string, { clip: AudioClip; signature: string; visemes?: Viseme[] }>> {
   const db = await openDb();
-  const result: Record<string, { clip: AudioClip; signature: string }> = {};
+  const result: Record<string, { clip: AudioClip; signature: string; visemes?: Viseme[] }> = {};
   await Promise.all(
     sceneIds.map(
       (id) =>
@@ -93,7 +96,8 @@ export async function loadClips(sceneIds: string[]): Promise<Record<string, { cl
             if (value) {
               result[id] = {
                 clip: { sampleRate: value.sampleRate, samples: new Int16Array(value.samples) },
-                signature: value.signature
+                signature: value.signature,
+                ...(value.visemes ? { visemes: value.visemes } : {})
               };
             }
             resolve();

@@ -24,6 +24,15 @@ export const MGK_PROMPT = `# 演出の道具箱 window.MGK（必ず使う）
 - \`K.bg.speedLines(ctx, t, {color, x, y, count, inner, alpha})\` 漫画の集中線（驚き・ツッコミの瞬間）
 - \`K.bg.halftone(ctx, t, {color, size, alpha})\` ／ \`K.bg.stripes(ctx, t, {color, width, angle, speed, alpha})\` ／ \`K.bg.grid(ctx, t, {color, horizon, speed})\`
 
+## 立体っぽい演出（2.5D）
+- \`K.text3d(ctx, t, "文字", x, y, {...K.text と同じ, depth: 18, sideColor, dx, dy})\` 厚みのある立体文字（タイトル・ランキングの数字に）
+- \`K.card3d(ctx, (c) => { カードの中身を 0,0〜w,h に描く }, {x, y, w, h, rotY, rotX, perspective, back: (c) => 裏面})\` カードを立体的に回す・めくる（「答えはこちら」でくるっと裏返す、ランキングのカードが奥から倒れてくる など）
+
+## 素材（登録されていれば下の「使える素材」に名前が出る）
+- \`K.kenBurns(ctx, t, "名前", start, dur, {zoom, panX, panY}, {zoom, panX, panY})\` 背景画像をゆっくり寄せる・流す
+- \`K.image(ctx, "名前", {x, y, w, h, fit:"cover"|"contain", zoom, panX, panY, alpha, radius})\` 画像を置く（小物は fit:"contain"）
+- \`K.lottie(ctx, t, "名前", {x, y, w, start, speed, loop})\` Lottieアニメを時刻に合わせて再生
+
 ## パーティクル・衝撃
 - \`K.particles.burst(ctx, t, start, {x, y, count, colors, shape:"confetti"|"heart"|"star"|"sparkle"|"circle", speed, gravity, size, life, angle, spread})\`
 - \`K.particles.ring(ctx, t, start, {x, y, color, radius, width})\` 衝撃波の輪

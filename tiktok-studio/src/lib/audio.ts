@@ -34,17 +34,22 @@ export function pcm16ToClip(bytes: Uint8Array, sampleRate: number): AudioClip {
  * 残すとテンポが間延びするため。
  */
 export function trimSilence(clip: AudioClip, threshold = 400, padSeconds = 0.03): AudioClip {
+  return trimSilenceWithOffset(clip, threshold, padSeconds).clip;
+}
+
+/** trimSilence と同じだが、頭を何秒削ったかも返す（口の形のタイミングを合わせるため） */
+export function trimSilenceWithOffset(clip: AudioClip, threshold = 400, padSeconds = 0.03): { clip: AudioClip; offset: number } {
   const { samples, sampleRate } = clip;
   let first = 0;
   while (first < samples.length && Math.abs(samples[first] ?? 0) < threshold) first++;
   let last = samples.length - 1;
   while (last > first && Math.abs(samples[last] ?? 0) < threshold) last--;
-  if (first >= samples.length) return { sampleRate, samples: new Int16Array(0) };
+  if (first >= samples.length) return { clip: { sampleRate, samples: new Int16Array(0) }, offset: 0 };
 
   const pad = Math.round(padSeconds * sampleRate);
   const from = Math.max(0, first - pad);
   const to = Math.min(samples.length, last + 1 + pad);
-  return { sampleRate, samples: samples.slice(from, to) };
+  return { clip: { sampleRate, samples: samples.slice(from, to) }, offset: from / sampleRate };
 }
 
 /**

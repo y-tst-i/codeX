@@ -101,9 +101,11 @@ export interface MotionPromptInput {
   timeline: Timeline;
   /** 登場させる看板キャラ（なければ出さない） */
   character?: CharacterSettings;
+  /** 使える素材（背景画像・小物・Lottie）の説明。無ければ空 */
+  assets?: string;
 }
 
-export function buildMotionPrompt({ concept, script, timeline, character }: MotionPromptInput): string {
+export function buildMotionPrompt({ concept, script, timeline, character, assets }: MotionPromptInput): string {
   const style = findOrFirst(STYLES, concept.styleId);
   const palette = findOrFirst(PALETTES, concept.paletteId);
   const font = findOrFirst(FONTS, concept.fontId);
@@ -148,7 +150,7 @@ ${EASING_LIBRARY.map((line) => `- ${line}`).join("\n")}
 
 ${MGK_PROMPT}
 
-${character ? `${characterPromptSection(character)}\n\n${CHARACTER_CHOREO_PROMPT}\n\n` : ""}# タイムライン（音声の実測値。1フレームもずらさないこと）
+${assets ? `${assets}\n\n` : ""}${character ? `${characterPromptSection(character)}\n\n${CHARACTER_CHOREO_PROMPT}\n\n` : ""}# タイムライン（音声の実測値。1フレームもずらさないこと）
 ${formatTimelineForPrompt(timeline)}
 
 # モーションの原則（全部守る）

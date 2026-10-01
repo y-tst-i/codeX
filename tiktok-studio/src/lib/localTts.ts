@@ -3,7 +3,7 @@
  * どちらも同じ形のAPI（audio_query → synthesis）なので、まとめて扱う。
  * ブラウザからは Vite の中継（/tts/voicevox, /tts/aivis）経由で呼ぶ。
  */
-import { trimSilence, type AudioClip } from "./audio";
+import { trimSilenceWithOffset, type AudioClip } from "./audio";
 import type { TtsEngine } from "./types";
 
 export type LocalEngine = Exclude<TtsEngine, "gemini">;
@@ -98,7 +98,38 @@ export interface LocalTtsRequest {
   signal?: AbortSignal;
 }
 
-export async function synthesizeLocal(request: LocalTtsRequest): Promise<AudioClip> {
+/** 口の形のタイミング（秒）。v は a / i / u / e / o / N（ん）/ x（閉じる：っ・無音） */
+export interface Viseme {
+  t: number;
+  e: number;
+  v: string;
+}
+
+interface Mora {
+  consonant_length?: number | null;
+  vowel: string;
+  vowel_length: number;
+}
+
+/** audio_query の結果から、母音ごとの時刻を出す（VOICEVOX / AivisSpeech 共通） */
+export function visemesFromQuery(query: { accent_phrases?: { moras: Mora[]; pause_mora?: Mora | null }[]; prePhonemeLength?: number; speedScale?: number }): Viseme[] {
+  const speed = query.speedScale || 1;
+  let t = query.prePhonemeLength ?? 0.1;
+  const out: Viseme[] = [];
+  for (const phrase of query.accent_phrases ?? []) {
+    for (const mora of phrase.moras) {
+      const consonant = (mora.consonant_length ?? 0) / speed;
+      const vowel = mora.vowel_length / speed;
+      const v = /^[aiueoN]$/.test(mora.vowel) ? mora.vowel : /^[AIUEO]$/.test(mora.vowel) ? mora.vowel.toLowerCase() : "x";
+      out.push({ t: t + consonant, e: t + consonant + vowel, v });
+      t += consonant + vowel;
+    }
+    if (phrase.pause_mora) t += phrase.pause_mora.vowel_length / speed;
+  }
+  return out;
+}
+
+export async function synthesizeLocal(request: LocalTtsRequest): Promise<{ clip: AudioClip; visemes: Viseme[] }> {
   const { engine, speaker, text, signal } = request;
   const query = (await (
     await call(engine, `/audio_query?text=${encodeURIComponent(text)}&speaker=${speaker}`, { method: "POST", signal })
@@ -114,7 +145,11 @@ export async function synthesizeLocal(request: LocalTtsRequest): Promise<AudioCl
     body: JSON.stringify(query),
     signal
   });
-  return trimSilence(wavToClip(await wav.arrayBuffer()));
+  const { clip, offset } = trimSilenceWithOffset(wavToClip(await wav.arrayBuffer()));
+  const visemes = visemesFromQuery(query as Parameters<typeof visemesFromQuery>[0])
+    .map((v) => ({ t: Math.round((v.t - offset) * 1000) / 1000, e: Math.round((v.e - offset) * 1000) / 1000, v: v.v }))
+    .filter((v) => v.e > 0);
+  return { clip, visemes };
 }
 
 /** 概要欄に入れるクレジット表記 */
