@@ -328,11 +328,13 @@ function fxDraw(ctx,kind,t){
   var n=FXP[kind];if(!has(n))return;var c=center(n);
   ctx.save();
   if(kind==="blush")ctx.globalAlpha=0.8+0.2*Math.sin(t*3);
-  if(kind==="sweat")ctx.translate(0,(Math.sin(t*3)*6+4)*K);
-  if(kind==="sparkle"){var s=0.8+0.3*Math.abs(Math.sin(t*4));about(ctx,c,Math.sin(t*2)*0.12,s,s);}
+  // 頭のまわりの記号は、スマホでも読めるように大きめに出す
+  var big=1.7;
+  if(kind==="sweat"){ctx.translate(0,(Math.sin(t*3)*6+4)*K);about(ctx,c,0,big,big);}
+  if(kind==="sparkle"){var s=(0.8+0.3*Math.abs(Math.sin(t*4)))*big;about(ctx,c,Math.sin(t*2)*0.12,s,s);}
   if(kind==="tears")ctx.globalAlpha=0.75+0.25*Math.sin(t*5);
-  if(kind==="anger"){var a=1+0.14*Math.abs(Math.sin(t*7));about(ctx,c,0,a,a);}
-  if(kind==="question"){ctx.translate(0,Math.sin(t*2.5)*10*K);about(ctx,c,Math.sin(t*2.5)*0.08);}
+  if(kind==="anger"){var a=(1+0.14*Math.abs(Math.sin(t*7)))*big;about(ctx,c,0,a,a);}
+  if(kind==="question"){ctx.translate(0,Math.sin(t*2.5)*10*K);about(ctx,c,Math.sin(t*2.5)*0.08,big,big);}
   if(kind==="heart"){var h=1+0.07*Math.sin(t*8);about(ctx,c,0,h,h);}
   part(ctx,n);
   ctx.restore();
@@ -344,7 +346,8 @@ function layeredEyes(ctx,gx,gy){
   var b=EYEBUF.getContext("2d");
   b.globalCompositeOperation="source-over";b.clearRect(0,0,EYEBUF.width,EYEBUF.height);b.drawImage(W,0,0);
   b.globalCompositeOperation="source-atop";
-  var r=PR||[24*K,14*K],dx=gx*r[0],dy=gy*r[1];
+  // 素材側の範囲は控えめなことが多いので、白目で切り抜く前提で少し広げる（はみ出しは白目の形で隠れる）
+  var r=[Math.max(PR?PR[0]:0,18*K),Math.max(PR?PR[1]:0,9*K)],dx=gx*r[0],dy=gy*r[1];
   ["pupil_L","pupil_R"].forEach(function(n){b.drawImage(IMG[n],OFF[n][0]-OFF.eyes_white[0]+dx,OFF[n][1]-OFF.eyes_white[1]+dy);});
   b.globalCompositeOperation="source-over";
   ctx.drawImage(EYEBUF,OFF.eyes_white[0],OFF.eyes_white[1]);
