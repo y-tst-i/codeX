@@ -3,7 +3,8 @@ import { defineConfig } from "vite";
 
 export default defineConfig({
   plugins: [react()],
-  server: { port: 5180, open: true },
-  preview: { port: 5180 },
+  // 作業データはブラウザの「localhost:5180」に保存されるので、番号が勝手に変わらないようにする
+  server: { port: 5180, strictPort: true, open: true },
+  preview: { port: 5180, strictPort: true },
   build: { chunkSizeWarningLimit: 1500 }
 });
