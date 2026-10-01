@@ -93,6 +93,43 @@ export function ExportStep({ extras, html, script, timeline, mixed: voiceMix, se
     };
   }, [voiceMix, bgm, cueKey, duration, audioSettings.sfx, audioSettings.sfxVolume, audioSettings.bgmVolume, audioSettings.duck]);
 
+  // 表紙（カバー）：今のコマに、大きなタイトルを重ねたPNG
+  const [coverText, setCoverText] = useState(script?.coverText ?? script?.title ?? "");
+  const [coverUrl, setCoverUrl] = useState("");
+  const makeCover = async () => {
+    if (!graphic) return;
+    const canvas = document.createElement("canvas");
+    canvas.width = VIDEO.width;
+    canvas.height = VIDEO.height;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    graphic.mg.render(time);
+    ctx.drawImage(graphic.canvas, 0, 0);
+    // 文字が読めるよう、上半分を少し暗く
+    const g = ctx.createLinearGradient(0, 0, 0, VIDEO.height * 0.62);
+    g.addColorStop(0, "rgba(0,0,0,0.55)");
+    g.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, VIDEO.width, VIDEO.height * 0.62);
+    const K = (graphic.frame.contentWindow as (Window & { MGK?: { text: (...args: unknown[]) => unknown } }) | null)?.MGK;
+    K?.text(ctx, 999, coverText, VIDEO.width / 2, VIDEO.safe.top + 300, {
+      size: coverText.length > 14 ? 104 : 128,
+      weight: 900,
+      color: "#ffffff",
+      stroke: "#140a1e",
+      strokeWidth: 30,
+      maxWidth: VIDEO.safe.right - VIDEO.safe.left - 40,
+      anim: "none",
+      accent: script?.scenes.flatMap((scene) => scene.emphasis) ?? [],
+      accentColor: "#ffe14d"
+    });
+    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/png"));
+    if (!blob) return;
+    if (coverUrl) URL.revokeObjectURL(coverUrl);
+    setCoverUrl(URL.createObjectURL(blob));
+    downloadBlob(blob, `cover-${new Date().toISOString().slice(0, 16).replace(/[-:T]/g, "")}.png`);
+  };
+
   const chooseBgm = async (file: File | undefined) => {
     if (!file) return;
     setBgmError("");
@@ -344,6 +381,18 @@ export function ExportStep({ extras, html, script, timeline, mixed: voiceMix, se
             <span className="meta">
               BGMはフリー音源サイト等の規約を守って使ってください。TikTokのアプリでトレンド曲を付けるなら、ここではBGMなしでOK（効果音だけ入れる）。
             </span>
+          </div>
+
+          <div className="card stack">
+            <b>🖼 表紙（カバー画像）</b>
+            <span className="meta">プレビューで一番映えるコマに合わせてから押すと、そのコマに大きなタイトルを重ねたPNGを作ります。TikTokの投稿画面で「カバーを編集」→ 画像をアップロード。</span>
+            <input value={coverText} onChange={(e) => setCoverText(e.target.value)} placeholder="表紙の文字（短く・数字や問いかけが効く）" />
+            <div className="row">
+              <button className="btn" type="button" disabled={!graphic} onClick={() => void makeCover()}>
+                今のコマで表紙を作る（{formatSeconds(time)}）
+              </button>
+              {coverUrl ? <img src={coverUrl} alt="表紙" style={{ height: 120, borderRadius: 8 }} /> : null}
+            </div>
           </div>
 
           <div className="card stack">
