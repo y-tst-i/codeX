@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { encodeWav } from "../lib/audio";
 import { exportVideo } from "../lib/exporter";
 import { VIDEO } from "../lib/knowledge";
@@ -41,10 +41,18 @@ export function ExportStep({ html, script, timeline, mixed, onBack }: Props) {
   const abortRef = useRef<AbortController | null>(null);
 
   const duration = mixed ? timeline.duration : graphic?.mg.duration ?? timeline.duration;
-  const audioUrl = useMemo(() => (mixed ? URL.createObjectURL(encodeWav(mixed.samples, mixed.sampleRate)) : ""), [mixed]);
-  useEffect(() => () => {
-    if (audioUrl) URL.revokeObjectURL(audioUrl);
-  }, [audioUrl]);
+  // 音声のURLは effect の中で作って片付ける（開発モードで effect が2回走っても、使用中のURLを消さないため）
+  const [audioUrl, setAudioUrl] = useState("");
+  const [audioError, setAudioError] = useState("");
+  useEffect(() => {
+    if (!mixed) {
+      setAudioUrl("");
+      return;
+    }
+    const url = URL.createObjectURL(encodeWav(mixed.samples, mixed.sampleRate));
+    setAudioUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [mixed]);
 
   // HTMLを読み込む
   useEffect(() => {
@@ -77,7 +85,16 @@ export function ExportStep({ html, script, timeline, mixed, onBack }: Props) {
     }
   };
 
-  // 再生ループ：音声があれば音声の再生位置を時計にする（ズレない）
+  /** 音声を t 秒から鳴らす。鳴らせなければ false（映像だけ再生する） */
+  const startAudio = (t: number): boolean => {
+    const audio = audioRef.current;
+    if (!audio || !mixed) return false;
+    audio.currentTime = t;
+    audio.play().catch(() => setAudioError("音声を再生できませんでした。映像だけ再生しています（書き出しには音声が入ります）"));
+    return true;
+  };
+
+  // 再生ループ：音声が鳴っていれば音声の再生位置を時計にする（ズレない）。鳴っていなければ内部の時計で進める
   useEffect(() => {
     if (!graphic) return;
     if (!playing) {
@@ -85,18 +102,16 @@ export function ExportStep({ html, script, timeline, mixed, onBack }: Props) {
       return;
     }
     let raf = 0;
-    const startedAt = performance.now() - time * 1000;
+    let clockStart = performance.now() - time * 1000;
     const tick = () => {
       const audio = audioRef.current;
-      let t = audio && mixed ? audio.currentTime : (performance.now() - startedAt) / 1000;
-      if (t >= duration) {
+      const audioRunning = Boolean(audio && mixed && !audio.paused && !audio.ended);
+      let t = audioRunning ? audio!.currentTime : (performance.now() - clockStart) / 1000;
+      if (t >= duration - 1 / 60 || (audio && mixed && audio.ended)) {
+        // 最後まで来たら頭に戻ってループ
         t = 0;
-        if (audio && mixed) audio.currentTime = 0;
-        else {
-          setPlaying(false);
-          setTime(0);
-          return;
-        }
+        clockStart = performance.now();
+        startAudio(0);
       }
       draw(t);
       setTime(t);
@@ -107,17 +122,17 @@ export function ExportStep({ html, script, timeline, mixed, onBack }: Props) {
   }, [graphic, playing]);
 
   const togglePlay = () => {
-    const audio = audioRef.current;
     if (playing) {
-      audio?.pause();
+      audioRef.current?.pause();
       setPlaying(false);
-    } else {
-      if (audio && mixed) {
-        audio.currentTime = time;
-        void audio.play();
-      }
-      setPlaying(true);
+      return;
     }
+    setAudioError("");
+    // 最後の位置で押されたら頭から
+    const from = time >= duration - 0.1 ? 0 : time;
+    setTime(from);
+    startAudio(from);
+    setPlaying(true);
   };
 
   const seek = (t: number) => {
@@ -163,6 +178,7 @@ export function ExportStep({ html, script, timeline, mixed, onBack }: Props) {
       {!html.trim() ? <Notice kind="warn">先に④でHTMLを用意してください。</Notice> : null}
       {loadError ? <Notice kind="error" title="HTMLを読み込めません">{" " + loadError}</Notice> : null}
       {!mixed ? <Notice kind="warn">音声がありません。無音の動画として書き出します。</Notice> : null}
+      {audioError ? <Notice kind="warn">{audioError}</Notice> : null}
 
       <div className="preview-wrap" style={{ marginTop: 14 }}>
         <div className="stack">
