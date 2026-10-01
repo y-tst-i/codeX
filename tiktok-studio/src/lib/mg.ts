@@ -168,6 +168,48 @@ export interface ValidationReport {
   frozen: FrozenReport | null;
 }
 
+/**
+ * 「毎回違う絵」の原因を探す：乱数・時計を呼んでいないか、描画の設定を戻し忘れていないか。
+ * 見つかった手がかりを、修正プロンプトにそのまま渡せる文で返す。
+ */
+function diagnoseNondeterminism(loaded: LoadedGraphic, t: number): string[] {
+  const hints: string[] = [];
+  const win = loaded.frame.contentWindow as (Window & typeof globalThis) | null;
+  if (win) {
+    const counts = { random: 0, date: 0, perf: 0 };
+    const random = win.Math.random;
+    const dateNow = win.Date.now;
+    const perfNow = win.performance.now.bind(win.performance);
+    win.Math.random = () => (counts.random++, random());
+    win.Date.now = () => (counts.date++, dateNow());
+    win.performance.now = () => (counts.perf++, perfNow());
+    try {
+      loaded.mg.render(t);
+    } catch {
+      // エラーは別の検査で報告する
+    } finally {
+      win.Math.random = random;
+      win.Date.now = dateNow;
+      win.performance.now = perfNow;
+    }
+    if (counts.random) hints.push(`render の中で Math.random が${counts.random}回呼ばれています。乱数は「番号から決まる疑似乱数（例: sin(i*12.9898)*43758.5453 の小数部）」に置き換えてください`);
+    if (counts.date || counts.perf) hints.push("render の中で Date.now / performance.now を使っています。時間は引数の t だけを使ってください");
+  }
+  const ctx = loaded.canvas.getContext("2d");
+  if (ctx) {
+    const m = ctx.getTransform();
+    const transformed = !(m.a === 1 && m.b === 0 && m.c === 0 && m.d === 1 && m.e === 0 && m.f === 0);
+    if (transformed || ctx.globalAlpha !== 1 || ctx.globalCompositeOperation !== "source-over" || (ctx.filter && ctx.filter !== "none")) {
+      hints.push("render のあとに描画の設定（変形・globalAlpha・合成モード・filter）が残っています。ctx.save() と ctx.restore() の数をそろえ、render の最初で ctx.setTransform(1,0,0,1,0,0)・globalAlpha=1・globalCompositeOperation='source-over'・filter='none' に戻してください");
+    }
+  }
+  if (hints.length === 0) {
+    hints.push("render の外の変数（パーティクルの配列、前のシーン番号、累積する値など）を render の中で書き換えている可能性があります。すべて t から毎回計算し直してください");
+  }
+  hints.push("window.CHARACTER と window.MG_VOICE_LEVEL はツールが用意する決定的な関数なので、原因はHTML側です");
+  return hints;
+}
+
 /** 書き出し前の動作検証（決定性・サイズ・尺・描画速度・t=0が真っ白/真っ黒でないか） */
 export function validateGraphic(loaded: LoadedGraphic, expectedDuration: number): ValidationReport {
   const { mg, canvas } = loaded;
@@ -191,7 +233,7 @@ export function validateGraphic(loaded: LoadedGraphic, expectedDuration: number)
     mg.render(expectedDuration * 0.8);
     mg.render(probe);
     const b = fingerprint(canvas);
-    if (a !== b) problems.push("同じ時刻を描いても毎回違う絵になります（Math.randomや前フレームの状態に依存しています）");
+    if (a !== b) problems.push(`同じ時刻を描いても毎回違う絵になります（${diagnoseNondeterminism(loaded, probe).join("／")}）`);
 
     mg.render(0);
     if (isBlank(canvas)) warnings.push("t=0 が単色の画面です。冒頭0フレーム目からフックが見えるのが理想です");
