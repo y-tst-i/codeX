@@ -168,12 +168,38 @@ export interface ValidationReport {
   frozen: FrozenReport | null;
 }
 
+/** 描画の設定（render の最初に戻し忘れると、次のフレームに持ち越されるもの） */
+function ctxState(ctx: CanvasRenderingContext2D): Record<string, string> {
+  const m = ctx.getTransform();
+  return {
+    "変形(transform)": [m.a, m.b, m.c, m.d, m.e, m.f].map((v) => v.toFixed(3)).join(","),
+    globalAlpha: String(ctx.globalAlpha),
+    globalCompositeOperation: ctx.globalCompositeOperation,
+    filter: String(ctx.filter ?? "none"),
+    shadowBlur: String(ctx.shadowBlur),
+    shadowColor: String(ctx.shadowColor),
+    shadowOffsetX: String(ctx.shadowOffsetX),
+    shadowOffsetY: String(ctx.shadowOffsetY),
+    fillStyle: String(ctx.fillStyle),
+    strokeStyle: String(ctx.strokeStyle),
+    lineWidth: String(ctx.lineWidth),
+    lineCap: ctx.lineCap,
+    lineJoin: ctx.lineJoin,
+    lineDash: ctx.getLineDash().join(","),
+    font: ctx.font,
+    textAlign: ctx.textAlign,
+    textBaseline: ctx.textBaseline
+  };
+}
+
 /**
  * 「毎回違う絵」の原因を探す：乱数・時計を呼んでいないか、描画の設定を戻し忘れていないか。
  * 見つかった手がかりを、修正プロンプトにそのまま渡せる文で返す。
+ * severe：書き出した動画でもチラつく・ずれる原因（乱数・時計・設定の持ち越し）
  */
-function diagnoseNondeterminism(loaded: LoadedGraphic, t: number): string[] {
+function diagnoseNondeterminism(loaded: LoadedGraphic, t: number, leaked: string[]): { hints: string[]; severe: boolean } {
   const hints: string[] = [];
+  let severe = false;
   const win = loaded.frame.contentWindow as (Window & typeof globalThis) | null;
   if (win) {
     const counts = { random: 0, date: 0, perf: 0 };
@@ -192,22 +218,28 @@ function diagnoseNondeterminism(loaded: LoadedGraphic, t: number): string[] {
       win.Date.now = dateNow;
       win.performance.now = perfNow;
     }
-    if (counts.random) hints.push(`render の中で Math.random が${counts.random}回呼ばれています。乱数は「番号から決まる疑似乱数（例: sin(i*12.9898)*43758.5453 の小数部）」に置き換えてください`);
-    if (counts.date || counts.perf) hints.push("render の中で Date.now / performance.now を使っています。時間は引数の t だけを使ってください");
-  }
-  const ctx = loaded.canvas.getContext("2d");
-  if (ctx) {
-    const m = ctx.getTransform();
-    const transformed = !(m.a === 1 && m.b === 0 && m.c === 0 && m.d === 1 && m.e === 0 && m.f === 0);
-    if (transformed || ctx.globalAlpha !== 1 || ctx.globalCompositeOperation !== "source-over" || (ctx.filter && ctx.filter !== "none")) {
-      hints.push("render のあとに描画の設定（変形・globalAlpha・合成モード・filter）が残っています。ctx.save() と ctx.restore() の数をそろえ、render の最初で ctx.setTransform(1,0,0,1,0,0)・globalAlpha=1・globalCompositeOperation='source-over'・filter='none' に戻してください");
+    if (counts.random) {
+      severe = true;
+      hints.push(`render の中で Math.random が${counts.random}回呼ばれています。乱数は「番号から決まる疑似乱数（例: sin(i*12.9898)*43758.5453 の小数部）」に置き換えてください`);
+    }
+    if (counts.date || counts.perf) {
+      severe = true;
+      hints.push("render の中で Date.now / performance.now を使っています。時間は引数の t だけを使ってください");
     }
   }
-  if (hints.length === 0) {
-    hints.push("render の外の変数（パーティクルの配列、前のシーン番号、累積する値など）を render の中で書き換えている可能性があります。すべて t から毎回計算し直してください");
+  if (leaked.length > 0) {
+    // 変形・透明度・合成・影・フィルタの持ち越しは、ほぼ確実に絵が変わる。色やフォントは描く前に設定し直していれば無害なこともある
+    const strong = ["変形(transform)", "globalAlpha", "globalCompositeOperation", "filter", "shadowBlur", "shadowColor", "shadowOffsetX", "shadowOffsetY"];
+    if (leaked.some((key) => strong.includes(key))) severe = true;
+    hints.push(
+      `render が終わったあとに描画の設定（${leaked.join("・")}）が変わったまま残り、次のフレームに持ち越されています。render の最初で ctx.setTransform(1,0,0,1,0,0) と、これらの設定を毎回決まった値に戻してください（ctx.save() と ctx.restore() の数もそろえる）`
+    );
+  }
+  if (!severe) {
+    hints.push("render の外の変数（パーティクルの配列、前のシーン番号、一度だけ作る画像のキャッシュ、累積する値など）を render の中で書き換えている可能性があります。すべて t から毎回計算し直してください");
   }
   hints.push("window.CHARACTER と window.MG_VOICE_LEVEL はツールが用意する決定的な関数なので、原因はHTML側です");
-  return hints;
+  return { hints, severe };
 }
 
 /** 書き出し前の動作検証（決定性・サイズ・尺・描画速度・t=0が真っ白/真っ黒でないか） */
@@ -228,12 +260,23 @@ export function validateGraphic(loaded: LoadedGraphic, expectedDuration: number)
   let frozen: FrozenReport | null = null;
   try {
     const probe = Math.min(1.234, Math.max(0, expectedDuration / 3));
+    const ctx = canvas.getContext("2d");
+    const before = ctx ? ctxState(ctx) : null;
     mg.render(probe);
     const a = fingerprint(canvas);
     mg.render(expectedDuration * 0.8);
+    const between = ctx ? ctxState(ctx) : null;
     mg.render(probe);
     const b = fingerprint(canvas);
-    if (a !== b) problems.push(`同じ時刻を描いても毎回違う絵になります（${diagnoseNondeterminism(loaded, probe).join("／")}）`);
+    if (a !== b) {
+      const leaked = before && between ? Object.keys(before).filter((key) => before[key] !== between[key]) : [];
+      const { hints, severe } = diagnoseNondeterminism(loaded, probe, leaked);
+      if (severe) problems.push(`同じ時刻を描いても毎回違う絵になります（${hints.join("／")}）`);
+      else
+        warnings.push(
+          `同じ時刻を2回描くと少し違う絵になります（${hints.join("／")}）。書き出しは1フレームずつ順番に描くのでこのままでも出せますが、プレビューで前後に動かすと崩れることがあります。気になる場合は修正プロンプトで直してください`
+        );
+    }
 
     mg.render(0);
     if (isBlank(canvas)) warnings.push("t=0 が単色の画面です。冒頭0フレーム目からフックが見えるのが理想です");
