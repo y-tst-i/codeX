@@ -114,6 +114,24 @@ export function MotionStep({ concept, script, timeline, settings, html, characte
       <div className="card stack">
         <textarea className="code" value={html} onChange={(e) => onHtml(e.target.value)} placeholder="生成されたHTML（claude.aiの返答をそのまま貼ってもOK。```html部分を自動で取り出します）" />
         <div className="row">
+          <button
+            className="btn"
+            type="button"
+            title="コピーしてあるclaude.aiの返答で、HTML欄を丸ごと置き換えます"
+            onClick={async () => {
+              try {
+                const text = await navigator.clipboard.readText();
+                if (!text.trim()) throw new Error("empty");
+                onHtml(text);
+                setReport(null);
+                setError("");
+              } catch {
+                setError("クリップボードを読めませんでした。HTML欄をクリックして Ctrl+A → Ctrl+V で貼ってください");
+              }
+            }}
+          >
+            📋 貼り付けて置き換え
+          </button>
           <button className="btn primary" type="button" disabled={!html.trim() || checking} onClick={() => {
             try {
               const clean = extractHtml(html);
@@ -127,6 +145,18 @@ export function MotionStep({ concept, script, timeline, settings, html, characte
           </button>
           <button className="btn" type="button" disabled={!html.trim()} onClick={() => downloadBlob(new Blob([withExtras(html, extras)], { type: "text/html" }), "motion.html")}>
             HTMLを保存
+          </button>
+          <button
+            className="btn ghost danger"
+            type="button"
+            disabled={!html.trim()}
+            onClick={() => {
+              if (!confirm("HTML欄を空にしますか？（必要なら先に「HTMLを保存」してください）")) return;
+              onHtml("");
+              setReport(null);
+            }}
+          >
+            🗑 空にする
           </button>
           <button className="btn ghost" type="button" onClick={loadDemo}>
             デモHTMLで試す
