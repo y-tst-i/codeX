@@ -1,4 +1,5 @@
-"""(第1話用に流用) 『レベル1なのに世界最強』30秒CM — 場面ごとに音の世界を変える完全合成サウンドトラック。
+"""【注意】ping/bell/sine_sweep など純音系は「AI作の動画の定番の音」。1本に最大2回、実音とレイヤーする(references/sound-palette.md)。
+(第1話用に流用) 『レベル1なのに世界最強』30秒CM — 場面ごとに音の世界を変える完全合成サウンドトラック。
 同梱SFX(impact-bass 等)は一部で重ねて使う。決定的(seed固定)。BPM150 / 1拍=0.4s。
 """
 import numpy as np, wave, subprocess, sys, os
