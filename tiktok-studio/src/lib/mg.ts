@@ -114,6 +114,9 @@ export async function loadGraphic(html: string, extras?: HostExtras, timeoutMs =
     if (!canvas || canvas.tagName !== "CANVAS") throw new Error('<canvas id="stage"> が見つかりません');
 
     const warnings: string[] = [];
+    // 画像キャラなど、差し込んだ素材の読み込みを待つ
+    const assets = (win as HostWindow & { MG_ASSETS_READY?: Promise<unknown> }).MG_ASSETS_READY;
+    if (assets) await Promise.race([assets, new Promise((resolve) => setTimeout(resolve, timeoutMs))]);
     if (mg.ready) {
       try {
         await Promise.race([

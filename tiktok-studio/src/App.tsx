@@ -5,8 +5,9 @@ import { VIDEO } from "./lib/knowledge";
 import type { HostExtras } from "./lib/mg";
 import { brandOf, newProject, restoreSettings } from "./lib/project";
 import { characterFor } from "./lib/prompts";
+import { blobToDataUrl, buildImageCharacterScript } from "./lib/imageCharacter";
 import { speakText } from "./lib/script";
-import { clearClips, loadClips, loadIdeas, loadProject, loadSettings, saveClip, saveIdeas, saveProject, saveSettings, type ProjectState } from "./lib/storage";
+import { clearClips, loadCharacterImages, loadClips, loadIdeas, loadProject, loadSettings, saveClip, saveIdeas, saveProject, saveSettings, type ProjectState } from "./lib/storage";
 import type { Idea } from "./lib/ideas";
 import { buildTimeline } from "./lib/timeline";
 import type { ApiSettings, Concept, VoiceSettings } from "./lib/types";
@@ -66,7 +67,27 @@ export function App() {
   // 看板キャラと口パク用の音量（動画HTMLの読み込み時に差し込む）
   const character = characterFor(project.concept, settings.character);
   const levels = useMemo(() => (mixed ? voiceLevels(mixed.samples, mixed.sampleRate, VIDEO.fps) : undefined), [mixed]);
-  const extras = useMemo<HostExtras>(() => ({ characterScript: character?.script, voiceLevels: levels }), [character?.script, levels]);
+  // 画像キャラは、保存してある画像から描画コードを組み立てる
+  const [imageScript, setImageScript] = useState("");
+  const imageKeysKey = (character?.imageKeys ?? []).join(",");
+  useEffect(() => {
+    if (character?.kind !== "image") {
+      setImageScript("");
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      const blobs = await loadCharacterImages(character.imageKeys ?? []);
+      const urls: Record<string, string> = {};
+      for (const [key, blob] of Object.entries(blobs)) urls[key] = await blobToDataUrl(blob);
+      if (!cancelled) setImageScript(buildImageCharacterScript(character.name, urls));
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [character?.kind, character?.name, character?.updatedAt, imageKeysKey]);
+  const characterScript = character?.kind === "image" ? imageScript || undefined : character?.script;
+  const extras = useMemo<HostExtras>(() => ({ characterScript, voiceLevels: levels }), [characterScript, levels]);
 
   const onClip = (sceneId: string, clip: AudioClip, signature: string) => {
     setClips((current) => ({ ...current, [sceneId]: { clip, signature } }));

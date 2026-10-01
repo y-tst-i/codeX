@@ -29,7 +29,8 @@ export async function checkCharacter(script: string, timeoutMs = 20000): Promise
       frame.srcdoc = `<!doctype html><html><head><meta charset="utf-8"><script>window.__ERR__=[];addEventListener("error",function(e){window.__ERR__.push(String(e.message))});</script></head><body><script>${safe}</script></body></html>`;
     });
 
-    const win = frame.contentWindow as (Window & { CHARACTER?: CharacterDraw; __ERR__?: string[] }) | null;
+    const win = frame.contentWindow as (Window & { CHARACTER?: CharacterDraw; __ERR__?: string[]; MG_ASSETS_READY?: Promise<unknown> }) | null;
+    if (win?.MG_ASSETS_READY) await Promise.race([win.MG_ASSETS_READY, new Promise((resolve) => setTimeout(resolve, timeoutMs))]);
     const character = win?.CHARACTER;
     if (!character || typeof character.draw !== "function") {
       return { ok: false, problems: ["window.CHARACTER.draw が見つかりません", ...(win?.__ERR__ ?? [])], name: "", sheet: null };

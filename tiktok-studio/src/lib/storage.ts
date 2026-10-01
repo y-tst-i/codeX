@@ -42,11 +42,17 @@ export const saveIdeas = (ideas: Idea[]) => saveJson(IDEAS_KEY, ideas);
 
 const DB_NAME = "tms-audio";
 const STORE = "clips";
+/** 画像キャラの画像（キー: "表情:口"） */
+const IMAGE_STORE = "characterImages";
 
 function openDb(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, 1);
-    request.onupgradeneeded = () => request.result.createObjectStore(STORE);
+    const request = indexedDB.open(DB_NAME, 2);
+    request.onupgradeneeded = () => {
+      const db = request.result;
+      if (!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE);
+      if (!db.objectStoreNames.contains(IMAGE_STORE)) db.createObjectStore(IMAGE_STORE);
+    };
     request.onsuccess = () => resolve(request.result);
     request.onerror = () => reject(request.error);
   });
@@ -106,4 +112,46 @@ export async function clearClips(): Promise<void> {
     tx.onerror = () => resolve();
   });
   db.close();
+}
+
+export async function saveCharacterImage(key: string, blob: Blob): Promise<void> {
+  const db = await openDb();
+  await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(IMAGE_STORE, "readwrite");
+    tx.objectStore(IMAGE_STORE).put(blob, key);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+  db.close();
+}
+
+export async function deleteCharacterImage(key: string): Promise<void> {
+  const db = await openDb();
+  await new Promise<void>((resolve) => {
+    const tx = db.transaction(IMAGE_STORE, "readwrite");
+    tx.objectStore(IMAGE_STORE).delete(key);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => resolve();
+  });
+  db.close();
+}
+
+export async function loadCharacterImages(keys: string[]): Promise<Record<string, Blob>> {
+  const db = await openDb();
+  const result: Record<string, Blob> = {};
+  await Promise.all(
+    keys.map(
+      (key) =>
+        new Promise<void>((resolve) => {
+          const request = db.transaction(IMAGE_STORE).objectStore(IMAGE_STORE).get(key);
+          request.onsuccess = () => {
+            if (request.result instanceof Blob) result[key] = request.result;
+            resolve();
+          };
+          request.onerror = () => resolve();
+        })
+    )
+  );
+  db.close();
+  return result;
 }

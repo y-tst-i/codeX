@@ -4,6 +4,7 @@ import { checkCharacter } from "../lib/characterHost";
 import { askClaude, describeClaudeError } from "../lib/claude";
 import { PALETTES, findOrFirst } from "../lib/knowledge";
 import { SAMPLE_CHARACTER } from "../lib/sampleCharacter";
+import { ImageCharacterPanel } from "./ImageCharacterPanel";
 import type { ApiSettings, Concept } from "../lib/types";
 import { Field, Notice, PromptBox } from "./common";
 
@@ -24,6 +25,7 @@ export function CharacterStep({ settings, concept, onChange }: Props) {
   const [checking, setChecking] = useState(false);
   const [running, setRunning] = useState(false);
   const [progress, setProgress] = useState("");
+  const [tab, setTab] = useState<"image" | "code">(saved && saved.kind !== "image" ? "code" : "image");
   const palette = findOrFirst(PALETTES, concept.paletteId);
   const prompt = buildCharacterPrompt(name, idea, palette);
 
@@ -33,7 +35,7 @@ export function CharacterStep({ settings, concept, onChange }: Props) {
 
   // 保存済みのキャラがあれば、開いたときに見本を表示する
   useEffect(() => {
-    if (saved?.script) void preview(saved.script);
+    if (saved?.script && saved.kind !== "image") void preview(saved.script);
   }, []);
 
   const preview = async (script: string) => {
@@ -131,6 +133,25 @@ export function CharacterStep({ settings, concept, onChange }: Props) {
         </div>
       ) : null}
 
+      <div className="row" style={{ margin: "18px 0 6px" }}>
+        <button className={`btn ${tab === "image" ? "primary" : ""}`} type="button" onClick={() => setTab("image")}>
+          🖼 画像で作る（おすすめ・口パクがはっきり）
+        </button>
+        <button className={`btn ${tab === "code" ? "primary" : ""}`} type="button" onClick={() => setTab("code")}>
+          ✏️ コードで描く（ポーズで腕も動く）
+        </button>
+      </div>
+
+      {tab === "image" ? (
+        <ImageCharacterPanel
+          saved={saved}
+          onChange={onChange}
+          onPreview={(sheet) => {
+            if (sheet) setSheetUrl(URL.createObjectURL(sheet));
+          }}
+        />
+      ) : (
+      <>
       <h2>{saved ? "作り直す" : "1. どんなキャラ？"}</h2>
       <div className="card stack">
         <div className="grid-2">
@@ -171,6 +192,8 @@ export function CharacterStep({ settings, concept, onChange }: Props) {
         {problems.length > 0 ? <Notice kind="error" title="このままでは使えません" items={problems} /> : null}
       </div>
       <p className="meta">見た目が気に入らなければ、claude.aiの同じチャットで「目をもっと大きく」「線を太く」のように頼んで、返答を貼り直してください。</p>
+      </>
+      )}
     </>
   );
 }

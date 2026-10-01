@@ -8,8 +8,14 @@ import type { Palette } from "./knowledge";
 export interface CharacterSettings {
   name: string;
   concept: string;
-  /** window.CHARACTER を定義する JavaScript（<script>の中身） */
+  /** code: Canvasで描くキャラ / image: 画像（口違い・表情違い）を切り替えるキャラ */
+  kind?: "code" | "image";
+  /** window.CHARACTER を定義する JavaScript（<script>の中身）。画像キャラでは空で、読み込み時に組み立てる */
   script: string;
+  /** 画像キャラ：登録済みの画像のキー（"表情:口" 例 "normal:open"） */
+  imageKeys?: string[];
+  /** 保存した時刻（画像を差し替えたときに読み直すため） */
+  updatedAt?: number;
 }
 
 export const EXPRESSIONS = ["normal", "happy", "surprised", "thinking", "sad", "wink", "smug"] as const;
@@ -110,20 +116,34 @@ export interface CharacterDraw {
 
 /** モーショングラフィックス側に教える、キャラの使い方 */
 export function characterPromptSection(character: CharacterSettings): string {
+  const isImage = character.kind === "image";
+  const keys = character.imageKeys ?? [];
+  const available = (list: readonly string[]) => list.filter((name) => name === "normal" || name === "idle" || keys.some((k) => k.startsWith(`${name}:`)));
+  const expressions = isImage ? available(EXPRESSIONS) : [...EXPRESSIONS];
+  const poses = isImage ? [...POSES] : [...POSES];
   return `# 看板キャラクター「${character.name}」（必ず登場させる）
 キャラクターの描画関数 \`window.CHARACTER.draw(ctx, opts)\` は、このツールが**HTMLの読み込み前に自動で用意します**。自分でキャラを描いたり、関数を書き直したりしないでください。
-- イメージ: ${character.concept}
+- イメージ: ${character.concept}${isImage ? "\n- 見た目: 1枚絵のイラスト（画像）。口の開きと表情は画像の差し替えで変わる。ポーズの指定は体の傾き・揺れ・跳ねとして表現される" : ""}
 - 呼び出し方: \`window.CHARACTER.draw(ctx, { x, y, size, t, expression, pose, mouth, look, flip })\`
-  - x, y は足元の中心、size は身長(px)
-  - expression: ${EXPRESSIONS.join(" / ")}
-  - pose: ${POSES.join(" / ")}
+  - x, y は足元の中心、size は身長(px)。size を画面の高さより大きくすれば、下がはみ出したバストアップ・顔のアップになる
+  - expression: ${expressions.join(" / ")}
+  - pose: ${poses.join(" / ")}
   - mouth（0〜1）には必ず \`window.MG_VOICE_LEVEL(t)\` を渡す（ナレーションの実際の音量。口が声に合わせて動く）
 - 単体で開いたときにも落ちないよう、使う前に \`if (window.CHARACTER)\` で存在を確認する。\`window.MG_VOICE_LEVEL\` が無いときは 0 を使う
-- 演出のルール:
-  - キャラは「解説している本人」。ほぼ全編に登場させ、セリフの内容に合わせて表情とポーズを切り替える（驚きの事実で surprised、問いかけで thinking、結論で happy や smug、呼びかけで point や wave）
-  - 表情を切り替える瞬間は、軽く跳ねる（squash & stretch）・大きさをポップさせるなどで変化を見せる
-  - 主役の文字や図解の邪魔をしない位置（画面下寄りの左右どちらか、身長は画面高さの25〜35%程度）に置き、文字とは重ねない。決め所ではキャラを大きく見せてもよい
-  - 登場・退場・場所移動は easeOutBack などで気持ちよく。立っているだけの時間も、呼吸の揺れや視線（look）の変化で止めない`;
+
+## キャラの演出（ここが動画の面白さを決める。手を抜かない）
+- 絵コンテ表に「キャラ」の列を足し、シーンごとに **位置・大きさ・表情・ポーズ・動き** を決める
+- **同じ場所に立たせっぱなしにしない**。シーンが変わるたびに、位置か大きさ（できれば両方）を変える。使える見せ方：
+  - 全身（身長が画面高さの35〜45%）→ バストアップ（size を画面高さの1.3〜1.8倍にして下側をはみ出させる）→ 顔のアップ（決めゼリフ・オチ）
+  - 画面の端から飛び込む／横からひょっこり覗き込む／文字や図解の後ろから顔を出す／下からせり上がる
+  - 文字の横へスライドして、その文字を指す（pose: "point"、文字が左にあるなら flip で向きを合わせる）
+- **跳ねる・揺れるだけの単調な動きを繰り返さない**。動きには必ず「反応」の理由をつける：
+  - 驚きの事実 → surprised でのけぞる＋カメラが寄る ／ 問いかけ → thinking で首をかしげて視線(look)を文字へ
+  - 結論・オチ → happy / smug で大きくなる ／ 呼びかけ（フォロー・保存）→ 画面の正面で wave か point
+- **口パクを見せる**：セリフの多い場面はキャラを大きめにし、顔がはっきり見える位置に置く（顔が文字に隠れないように）
+- 表情を切り替える瞬間は、軽い squash & stretch や大きさのポップで変化を見せる
+- 毎シーン、キャラと文字が重ならない配置を決める（文字が上ならキャラは下、文字が左ならキャラは右 など）
+- 登場・退場・場所移動は easeOutBack / easeOutExpo で気持ちよく、移動の前には小さな溜め（easeInBack）を入れる`;
 }
 
 /**

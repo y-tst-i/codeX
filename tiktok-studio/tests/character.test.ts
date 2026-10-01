@@ -56,3 +56,34 @@ describe("看板キャラクター", () => {
     expect(buildScriptPrompt(concept, character)).toContain("ラビ先生");
   });
 });
+
+describe("画像キャラ", () => {
+  it("声の大きさで口の画像を選ぶ", async () => {
+    const { mouthStateFor } = await import("../src/lib/imageCharacter");
+    expect(mouthStateFor(0)).toBe("closed");
+    expect(mouthStateFor(0.3)).toBe("half");
+    expect(mouthStateFor(0.8)).toBe("open");
+  });
+
+  it("端からつながる白い背景だけ透明にし、内側の白は残す", async () => {
+    const { removeBackground } = await import("../src/lib/imageCharacter");
+    // 5x5：外周が白、中央3x3が緑、そのさらに中央が白（白目）
+    const w = 5;
+    const data = new Uint8ClampedArray(w * w * 4).fill(255);
+    for (let y = 1; y < 4; y++) for (let x = 1; x < 4; x++) {
+      const i = (y * w + x) * 4;
+      if (!(x === 2 && y === 2)) { data[i] = 30; data[i + 1] = 200; data[i + 2] = 120; }
+    }
+    removeBackground(data, w, w);
+    expect(data[3]).toBe(0); // 角は透明
+    expect(data[(1 * w + 1) * 4 + 3]).toBe(255); // 緑は残る
+    expect(data[(2 * w + 2) * 4 + 3]).toBe(255); // 中の白も残る
+  });
+
+  it("画像キャラのプロンプトは登録した表情だけを案内し、演出のルールが入る", () => {
+    const section = characterPromptSection({ kind: "image", name: "テスト", concept: "うさぎ", script: "", imageKeys: ["normal:closed", "normal:open", "happy:open"] });
+    expect(section).toContain("expression: normal / happy");
+    expect(section).not.toContain("surprised /");
+    expect(section).toContain("同じ場所に立たせっぱなしにしない");
+  });
+});
