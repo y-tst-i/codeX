@@ -11,3 +11,7 @@
 | s4-dawn | 11.0–15.0 | クレーンアップ / カラーシフト(夜→夕焼け) / 光芒 |
 
 設計書: docs/BIBLE.md, docs/SCENES.md。音: make_audio.py(numpy合成)。
+
+## 音 v2(`showcase-15s-sound2.mp4`)
+無料の本物楽器音源(FluidR3 GM + fluidsynth)で音楽を作り直した版。設計は `SOUND_BIBLE.md`、作り方は `make_audio2.py`。
+旧版(`showcase-15s.mp4`)は数式合成のみ。
