@@ -1,12 +1,16 @@
 import { useEffect, useRef, useState } from "react";
 import type { CharacterDraw, CharacterSettings } from "../lib/character";
-import { EXPRESSIONS, EXPRESSION_LABELS, POSES, POSE_LABELS } from "../lib/character";
+import { EXPRESSION_LABELS } from "../lib/character";
 import { checkCharacter } from "../lib/characterHost";
 import { blobToDataUrl } from "../lib/imageCharacter";
 import {
+  RIG_EXPRESSIONS,
+  RIG_FX_LABELS,
   RIG_PARTS,
   RIG_PART_LABELS,
+  RIG_POSE_LABELS,
   RIG_REQUIRED,
+  rigCapabilities,
   buildRigCharacterScript,
   collectRigFiles,
   fillMissingPivots,
@@ -58,12 +62,15 @@ export function RigCharacterPanel({ saved, onChange, onPreview }: Props) {
   const [expression, setExpression] = useState("normal");
   const [pose, setPose] = useState("idle");
   const [talking, setTalking] = useState(true);
+  const [fx, setFx] = useState<string[]>([]);
+  const [walking, setWalking] = useState(false);
   const [dragging, setDragging] = useState(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const character = useRigPreview(script);
 
   const parts = rig ? Object.keys(rig.offsets) : [];
+  const caps = rigCapabilities(parts);
 
   const rebuild = async (config: RigConfig, displayName: string) => {
     const blobs = await loadCharacterImages(Object.keys(config.offsets).map(rigKey));
@@ -95,12 +102,13 @@ export function RigCharacterPanel({ saved, onChange, onPreview }: Props) {
       // 話しているふうの口の動き（音節っぽく開閉）
       const mouth = talking ? Math.max(0, Math.sin(t * 11) * 0.55 + Math.sin(t * 4.3) * 0.35 + 0.15) : 0;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      character.draw(ctx, { x: canvas.width / 2, y: canvas.height - 12, size: canvas.height - 30, t, expression, pose, mouth, look: Math.sin(t * 0.7) * 0.3 });
+      const x = walking ? canvas.width / 2 + Math.sin(t * 0.8) * canvas.width * 0.18 : canvas.width / 2;
+      character.draw(ctx, { x, y: canvas.height - 12, size: canvas.height - 30, t, expression, pose, mouth, look: Math.sin(t * 0.7) * 0.3, fx, walk: walking, flip: walking && Math.cos(t * 0.8) < 0 });
       frame = requestAnimationFrame(tick);
     };
     tick();
     return () => cancelAnimationFrame(frame);
-  }, [character, expression, pose, talking]);
+  }, [character, expression, pose, talking, fx, walking]);
 
   const importFiles = async (files: File[]) => {
     if (files.length === 0) return;
@@ -110,8 +118,10 @@ export function RigCharacterPanel({ saved, onChange, onPreview }: Props) {
     try {
       const found = await collectRigFiles(files);
       if (!found.rigJson) throw new Error("rig.json が見つかりません。パーツと一緒に rig.json（関節の位置）も入れてください");
-      const { canvas, pivots } = parseRigJson(found.rigJson);
-      const missing = RIG_REQUIRED.filter((part) => !found.parts[part]);
+      const { canvas, pivots, anchors, pupilRange } = parseRigJson(found.rigJson);
+      const missing: string[] = RIG_REQUIRED.filter((part) => !found.parts[part]);
+      const layeredEyes = ["eyes_white", "pupil_L", "pupil_R", "eyes_lids"].every((part) => found.parts[part]);
+      if (!found.parts.eyes_open && !layeredEyes) missing.push("eyes_open");
       if (missing.length > 0) throw new Error(`必須のパーツがありません: ${missing.map((p) => `${p}.png`).join(", ")}`);
       const offsets: Record<string, [number, number]> = {};
       const boxes: Record<string, { x: number; y: number; w: number; h: number }> = {};
@@ -129,11 +139,11 @@ export function RigCharacterPanel({ saved, onChange, onPreview }: Props) {
           errors.push(`${part}.png: ${(e as Error).message}`);
         }
       }
-      const config: RigConfig = { canvas, pivots: fillMissingPivots(pivots, boxes), offsets };
+      const config: RigConfig = { canvas, pivots: fillMissingPivots(pivots, boxes), offsets, anchors, ...(pupilRange ? { pupilRange } : {}) };
       setRig(config);
       await rebuild(config, name);
       const unused = RIG_PARTS.filter((part) => !offsets[part]);
-      setMessage(`${Object.keys(offsets).length}個のパーツを読み込みました。${unused.length ? `（無いパーツ：${unused.map((p) => RIG_PART_LABELS[p]).join("・")} → 近いもので代用します）` : ""}`);
+      setMessage(`${Object.keys(offsets).length}個のパーツを読み込みました。${unused.length ? `（無いパーツ：${unused.map((p) => RIG_PART_LABELS[p]).join("・")} → なくても動きます。その動きや漫符は使わないようにします）` : ""}`);
       if (errors.length > 0) setProblems(errors);
     } catch (e) {
       setProblems([(e as Error).message]);
@@ -211,7 +221,7 @@ export function RigCharacterPanel({ saved, onChange, onPreview }: Props) {
         <details>
           <summary className="meta" style={{ cursor: "pointer" }}>使えるファイル名</summary>
           <div className="meta" style={{ marginTop: 6 }}>
-            必須：{RIG_REQUIRED.map((p) => `${p}.png`).join("、")}、rig.json
+            必須：{RIG_REQUIRED.map((p) => `${p}.png`).join("、")}、eyes_open.png（または eyes_white・pupil_L・pupil_R・eyes_lids）、rig.json
             <br />
             あると良い：{RIG_PARTS.filter((p) => !(RIG_REQUIRED as readonly string[]).includes(p)).map((p) => `${p}.png（${RIG_PART_LABELS[p]}）`).join("、")}
             <br />
@@ -234,27 +244,51 @@ export function RigCharacterPanel({ saved, onChange, onPreview }: Props) {
             <div className="stack" style={{ flex: 1, minWidth: 220 }}>
               <Field label="表情">
                 <select value={expression} onChange={(e) => setExpression(e.target.value)}>
-                  {EXPRESSIONS.map((ex) => (
+                  {RIG_EXPRESSIONS.map((ex) => (
                     <option key={ex} value={ex}>
-                      {EXPRESSION_LABELS[ex]}
+                      {EXPRESSION_LABELS[ex] ?? ex}
                     </option>
                   ))}
                 </select>
               </Field>
               <Field label="ポーズ">
                 <select value={pose} onChange={(e) => setPose(e.target.value)}>
-                  {POSES.map((p) => (
+                  {caps.poses.map((p) => (
                     <option key={p} value={p}>
-                      {POSE_LABELS[p]}
+                      {RIG_POSE_LABELS[p] ?? p}
                     </option>
                   ))}
                 </select>
               </Field>
+              {caps.fx.length > 0 ? (
+                <div className="row meta" style={{ flexWrap: "wrap", gap: 8 }}>
+                  漫符：
+                  {caps.fx.map((f) => (
+                    <label key={f} className="row" style={{ gap: 4 }}>
+                      <input
+                        type="checkbox"
+                        style={{ width: "auto" }}
+                        checked={fx.includes(f)}
+                        onChange={(e) => setFx((current) => (e.target.checked ? [...current, f] : current.filter((x) => x !== f)))}
+                      />
+                      {RIG_FX_LABELS[f]}
+                    </label>
+                  ))}
+                </div>
+              ) : null}
+              {caps.walk ? (
+                <label className="row meta">
+                  <input type="checkbox" style={{ width: "auto" }} checked={walking} onChange={(e) => setWalking(e.target.checked)} />
+                  歩かせる
+                </label>
+              ) : null}
               <label className="row meta">
                 <input type="checkbox" style={{ width: "auto" }} checked={talking} onChange={(e) => setTalking(e.target.checked)} />
                 話しているふうに口を動かす
               </label>
-              <span className="meta">読み込んだパーツ：{parts.length}個</span>
+              <span className="meta">
+                読み込んだパーツ：{parts.length}個{caps.gaze ? "（黒目が動きます）" : ""}
+              </span>
               <button className="btn primary" type="button" disabled={Boolean(busy)} onClick={() => void adopt()}>
                 このキャラで保存して使う
               </button>

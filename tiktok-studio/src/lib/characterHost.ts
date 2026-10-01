@@ -37,7 +37,9 @@ export async function checkCharacter(script: string, timeoutMs = 20000): Promise
     }
 
     const cell = 200;
-    const columns = Math.max(EXPRESSIONS.length, POSES.length);
+    const expressions = character.expressions?.length ? character.expressions : [...EXPRESSIONS];
+    const poses = character.poses?.length ? character.poses : [...POSES];
+    const columns = Math.max(expressions.length, poses.length);
     const sheet = document.createElement("canvas");
     sheet.width = columns * cell;
     sheet.height = cell * 2 + 60;
@@ -61,8 +63,8 @@ export async function checkCharacter(script: string, timeoutMs = 20000): Promise
       ctx.fillStyle = "#333";
       ctx.fillText(label, x, y + 22);
     };
-    EXPRESSIONS.forEach((expression, i) => drawAt(i, 0, { expression, pose: "idle" }, EXPRESSION_LABELS[expression] ?? expression));
-    POSES.forEach((pose, i) => drawAt(i, 1, { expression: "happy", pose }, POSE_LABELS[pose] ?? pose));
+    expressions.forEach((expression, i) => drawAt(i, 0, { expression, pose: "idle" }, EXPRESSION_LABELS[expression] ?? expression));
+    poses.forEach((pose, i) => drawAt(i, 1, { expression: "happy", pose }, POSE_LABELS[pose] ?? pose));
 
     // 同じ引数で2回描いて同じ絵になるか（決定性）
     const probe = document.createElement("canvas");

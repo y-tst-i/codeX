@@ -5,7 +5,7 @@ import type { Palette } from "./knowledge";
  * Canvas 2D で描く関数として1回だけデザインし、毎回の動画に同じコードを差し込む
  * （＝毎回まったく同じ見た目で登場する）。口は実際のナレーションの音量で動く。
  */
-import type { RigConfig } from "./rigCharacter";
+import { RIG_EXPRESSIONS, rigCapabilities, type RigConfig } from "./rigCharacter";
 
 export interface CharacterSettings {
   name: string;
@@ -32,9 +32,21 @@ export const EXPRESSION_LABELS: Record<string, string> = {
   thinking: "考え中",
   sad: "しょんぼり",
   wink: "ウインク",
-  smug: "ドヤ顔"
+  smug: "ドヤ顔",
+  love: "キュン（ハート目）"
 };
-export const POSE_LABELS: Record<string, string> = { idle: "立ち", point: "指さし", wave: "手を振る", cheer: "バンザイ", shrug: "お手上げ" };
+export const POSE_LABELS: Record<string, string> = {
+  idle: "立ち",
+  point: "指さし",
+  wave: "手を振る",
+  cheer: "バンザイ",
+  shrug: "お手上げ",
+  think: "あごに手",
+  phone: "スマホ",
+  heart: "ハート",
+  hip: "腰に手",
+  jump: "ジャンプ"
+};
 
 export const CHARACTER_PRESETS: { label: string; text: string }[] = [
   { label: "スタイリッシュな擬人化うさぎ", text: "長編アニメ映画に出てくるような、4〜5頭身のスラッとした擬人化うさぎの女の子。色のついた大きな瞳にハイライト2つ、頬の毛がふくらみ鼻先が少し前に出た動物らしい顔立ち、口元と胸元が白い2トーンの毛並み、内側がピンクのグラデーションの長い耳。耳としっぽで感情を表現する、まっすぐで行動力のある頑張り屋。毛はあたたかいキャラメルブラウン、瞳はアンバー（琥珀色）。恋愛カウンセラーらしく、ゆるめのカーディガンにハートのピンバッジ。" },
@@ -115,6 +127,9 @@ export function extractCharacterScript(text: string): string {
 
 export interface CharacterDraw {
   name?: string;
+  /** キャラが対応している表情・ポーズ（無ければ EXPRESSIONS / POSES） */
+  expressions?: string[];
+  poses?: string[];
   draw(ctx: CanvasRenderingContext2D, opts: Record<string, unknown>): void;
 }
 
@@ -123,8 +138,20 @@ export function characterPromptSection(character: CharacterSettings): string {
   const isImage = character.kind === "image";
   const keys = character.imageKeys ?? [];
   const available = (list: readonly string[]) => list.filter((name) => name === "normal" || name === "idle" || keys.some((k) => k.startsWith(`${name}:`)));
-  const expressions = isImage ? available(EXPRESSIONS) : [...EXPRESSIONS];
-  const poses = isImage ? [...POSES] : [...POSES];
+  const isRig = character.kind === "rig";
+  const rigCaps = isRig ? rigCapabilities(keys.map((k) => k.replace(/^rig:/, ""))) : null;
+  const expressions = isImage ? available(EXPRESSIONS) : isRig ? [...RIG_EXPRESSIONS] : [...EXPRESSIONS];
+  const poses = rigCaps ? rigCaps.poses : [...POSES];
+  const rigExtras = rigCaps
+    ? [
+        rigCaps.fx.length ? `  - fx（任意）: ${rigCaps.fx.join(" / ")} のどれか、または配列（例 fx: ["blush", "sparkle"]）。照れ・ハート目・汗・キラキラ・涙・怒りマーク・はてなを顔に重ねる。気持ちが動く瞬間に使う（1シーン1〜2個まで）` : "",
+        rigCaps.walk ? "  - walk（任意）: true で足を交互に上げて歩く。画面の端から歩いて登場・退場するときに、x を動かしながら使う" : "",
+        rigCaps.gaze ? "  - lookY（任意, -1〜1）: 視線の上下（-1=上を見る、1=下を見る）。look は首と黒目の左右。注目させたい文字の方向へ視線を向ける" : "",
+        "  - love: ハートの目＋照れ。恋愛ネタの「キュン」の瞬間に"
+      ]
+        .filter(Boolean)
+        .join("\n")
+    : "";
   const mouthCount = (name: string) => keys.filter((k) => k.startsWith(`${name}:`)).length;
   const still = isImage ? expressions.filter((name) => mouthCount(name) === 1 && name !== "normal") : [];
   const stillNote = still.length
@@ -132,11 +159,11 @@ export function characterPromptSection(character: CharacterSettings): string {
     : "";
   return `# 看板キャラクター「${character.name}」（必ず登場させる）
 キャラクターの描画関数 \`window.CHARACTER.draw(ctx, opts)\` は、このツールが**HTMLの読み込み前に自動で用意します**。自分でキャラを描いたり、関数を書き直したりしないでください。
-- イメージ: ${character.concept}${character.kind === "rig" ? "\n- 見た目: パーツ（頭・体・耳・腕・目・口）を関節で動かす立体的なイラスト。まばたき・耳のピクッ・呼吸・話すときのうなずきは自動。expression で目と口と耳の角度が、pose で実際に腕が動く（point=指さし、wave=手を振る、cheer=バンザイ、shrug=お手上げ）。look で首をかしげて視線の向きを変える" : ""}${isImage ? "\n- 見た目: 1枚絵のイラスト（画像）。口の開きと表情は画像の差し替えで変わる。ポーズの指定は体の傾き・揺れ・跳ねとして表現される" + stillNote : ""}
-- 呼び出し方: \`window.CHARACTER.draw(ctx, { x, y, size, t, expression, pose, mouth, look, flip })\`
+- イメージ: ${character.concept}${character.kind === "rig" ? "\n- 見た目: パーツ（頭・体・耳・腕・目・口）を関節で動かす立体的なイラスト。まばたき・耳のピクッ・呼吸・話すときのうなずきは自動。expression で目と口と耳の角度が、pose で実際に腕が動く（point=指さし、wave=手を振る、cheer=バンザイ、shrug=お手上げ、think=あごに手、phone=スマホを見る、heart=両手でハート、hip=腰に手、jump=ジャンプ。使えるものだけ下に挙げる）。look で首をかしげて視線の向きを変える" : ""}${isImage ? "\n- 見た目: 1枚絵のイラスト（画像）。口の開きと表情は画像の差し替えで変わる。ポーズの指定は体の傾き・揺れ・跳ねとして表現される" + stillNote : ""}
+- 呼び出し方: \`window.CHARACTER.draw(ctx, { x, y, size, t, expression, pose, mouth, look, flip${isRig ? ", lookY, fx, walk" : ""} })\`
   - x, y は足元の中心、size は身長(px)。size を画面の高さより大きくすれば、下がはみ出したバストアップ・顔のアップになる
   - expression: ${expressions.join(" / ")}
-  - pose: ${poses.join(" / ")}
+  - pose: ${poses.join(" / ")}${rigExtras ? `\n${rigExtras}` : ""}
   - mouth（0〜1）には必ず \`window.MG_VOICE_LEVEL(t)\` を渡す（ナレーションの実際の音量。口が声に合わせて動く）
 - 単体で開いたときにも落ちないよう、使う前に \`if (window.CHARACTER)\` で存在を確認する。\`window.MG_VOICE_LEVEL\` が無いときは 0 を使う
 
