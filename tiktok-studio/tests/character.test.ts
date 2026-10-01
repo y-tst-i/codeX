@@ -87,3 +87,23 @@ describe("画像キャラ", () => {
     expect(section).toContain("同じ場所に立たせっぱなしにしない");
   });
 });
+
+describe("画像のまとめて登録", () => {
+  it("ファイル名から表情と口を推測する", async () => {
+    const { guessSlot } = await import("../src/lib/imageCharacter");
+    expect(guessSlot("ミルティ_口閉じ.png")).toEqual({ expression: undefined, mouth: "closed" });
+    expect(guessSlot("milty_half.png")).toEqual({ expression: undefined, mouth: "half" });
+    expect(guessSlot("笑顔_半開き.png")).toEqual({ expression: "happy", mouth: "half" });
+    expect(guessSlot("surprised-open.webp")).toEqual({ expression: "surprised", mouth: "open" });
+  });
+
+  it("口がわからない画像は名前順に 閉じ→半開き→全開 へ", async () => {
+    const { assignSlots } = await import("../src/lib/imageCharacter");
+    const { assigned, unassigned } = assignSlots(["img3.png", "img1.png", "img2.png", "笑顔_開き.png", "img4.png"]);
+    expect(assigned["normal:closed"]).toBe("img1.png");
+    expect(assigned["normal:half"]).toBe("img2.png");
+    expect(assigned["normal:open"]).toBe("img3.png");
+    expect(assigned["happy:open"]).toBe("笑顔_開き.png");
+    expect(unassigned).toEqual(["img4.png"]);
+  });
+});

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { CharacterSettings } from "../lib/character";
 import { EXPRESSION_LABELS } from "../lib/character";
 import { checkCharacter } from "../lib/characterHost";
-import { IMAGE_EXPRESSIONS, MOUTHS, MOUTH_LABELS, buildImageCharacterScript, blobToDataUrl, imageKey, prepareCharacterImage, type MouthState } from "../lib/imageCharacter";
+import { IMAGE_EXPRESSIONS, MOUTHS, MOUTH_LABELS, assignSlots, buildImageCharacterScript, collectImages, blobToDataUrl, imageKey, prepareCharacterImage, type MouthState } from "../lib/imageCharacter";
 import { deleteCharacterImage, loadCharacterImages, saveCharacterImage } from "../lib/storage";
 import { CopyButton, Field, Notice } from "./common";
 
@@ -44,6 +44,10 @@ export function ImageCharacterPanel({ saved, onChange, onPreview }: Props) {
   const [message, setMessage] = useState("");
   const inputRef = useRef<HTMLInputElement | null>(null);
   const targetRef = useRef<string>("");
+  const bulkRef = useRef<HTMLInputElement | null>(null);
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkNotes, setBulkNotes] = useState<string[]>([]);
+  const [dragging, setDragging] = useState(false);
 
   // 登録済みの画像を読み込んで表示
   useEffect(() => {
@@ -85,6 +89,53 @@ export function ImageCharacterPanel({ saved, onChange, onPreview }: Props) {
     } finally {
       setBusyKey(null);
       if (inputRef.current) inputRef.current.value = "";
+    }
+  };
+
+  /** 複数の画像・ZIPをまとめて登録（ファイル名から表情と口を推測） */
+  const bulkUpload = async (files: File[]) => {
+    if (files.length === 0) return;
+    setProblems([]);
+    setBulkNotes([]);
+    setMessage("");
+    setBulkBusy(true);
+    try {
+      const images = await collectImages(files);
+      if (images.length === 0) {
+        setProblems(["画像が見つかりませんでした（PNG / JPG / WebP、またはそれらを入れたZIPを選んでください）"]);
+        return;
+      }
+      const byName = new Map(images.map((image) => [image.name, image.blob]));
+      const { assigned, unassigned } = assignSlots(images.map((image) => image.name));
+      const failed: string[] = [];
+      const done: string[] = [];
+      for (const [key, fileName] of Object.entries(assigned)) {
+        setBusyKey(key);
+        try {
+          const blob = await prepareCharacterImage(byName.get(fileName)!, removeBg);
+          await saveCharacterImage(key, blob);
+          setUrls((current) => ({ ...current, [key]: URL.createObjectURL(blob) }));
+          done.push(key);
+        } catch (e) {
+          failed.push(`${fileName}: ${(e as Error).message}`);
+        }
+      }
+      const summary = IMAGE_EXPRESSIONS.map((expression) => {
+        const count = done.filter((key) => key.startsWith(`${expression}:`)).length;
+        return count > 0 ? `${EXPRESSION_LABELS[expression]}${count}枚` : "";
+      }).filter(Boolean);
+      setMessage(`${done.length}枚を登録しました（${summary.join("・")}）。下の表で場所が合っているか確認して、違えばマスをクリックして差し替えてください。`);
+      const notes = [
+        ...failed.map((f) => `読み込めませんでした → ${f}`),
+        ...(unassigned.length > 0 ? [`入る場所がなく使わなかった画像：${unassigned.join("、")}（同じ表情は3枚まで）`] : [])
+      ];
+      setBulkNotes(notes);
+    } catch (e) {
+      setProblems([`まとめて登録できませんでした: ${(e as Error).message}`]);
+    } finally {
+      setBusyKey(null);
+      setBulkBusy(false);
+      if (bulkRef.current) bulkRef.current.value = "";
     }
   };
 
@@ -156,12 +207,44 @@ export function ImageCharacterPanel({ saved, onChange, onPreview }: Props) {
       </div>
 
       <h3>2. 画像を登録する</h3>
-      <div className="card stack">
+      <div
+        className="card stack"
+        style={dragging ? { outline: "2px dashed var(--pink)", outlineOffset: -6 } : undefined}
+        onDragOver={(e) => {
+          e.preventDefault();
+          setDragging(true);
+        }}
+        onDragLeave={() => setDragging(false)}
+        onDrop={(e) => {
+          e.preventDefault();
+          setDragging(false);
+          void bulkUpload(Array.from(e.dataTransfer.files));
+        }}
+      >
         <label className="row meta">
           <input type="checkbox" style={{ width: "auto" }} checked={removeBg} onChange={(e) => setRemoveBg(e.target.checked)} />
           白い背景を自動で透明にする（背景がすでに透明な画像ならオフでもOK）
         </label>
         <input ref={inputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => void upload(e.target.files?.[0])} />
+        <input
+          ref={bulkRef}
+          type="file"
+          multiple
+          accept="image/*,.zip,application/zip"
+          style={{ display: "none" }}
+          onChange={(e) => void bulkUpload(Array.from(e.target.files ?? []))}
+        />
+        <div className="row">
+          <button className="btn primary" type="button" disabled={bulkBusy} onClick={() => bulkRef.current?.click()}>
+            {bulkBusy ? "登録中…" : "📦 まとめて登録（複数画像・ZIP）"}
+          </button>
+          <span className="meta">またはこの枠に画像・ZIPをドラッグ＆ドロップ</span>
+        </div>
+        <span className="meta">
+          ファイル名で自動で振り分けます：「閉じ」「半開き」「開き」（close / half / open）と「笑顔」「驚き」「考え」「悲しい」（happy / surprised / thinking / sad）。
+          名前に何も書いてなければ、ファイル名順（1→2→3）に「ふつう」の閉じ→半開き→全開へ入れます。例：<code>1.png 2.png 3.png</code>、<code>笑顔_閉じ.png</code>
+        </span>
+        {bulkNotes.length > 0 ? <Notice kind="warn" title="一部の画像は登録していません" items={bulkNotes} /> : null}
         <div style={{ overflowX: "auto" }}>
           <table style={{ borderCollapse: "separate", borderSpacing: 8 }}>
             <thead>

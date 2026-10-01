@@ -123,3 +123,68 @@ function draw(ctx,o){
 window.CHARACTER={name:${JSON.stringify(name)},kind:"image",expressions:["normal","happy","surprised","thinking","sad","wink","smug"],poses:["idle","point","wave","cheer","shrug"],draw:draw};
 })();`;
 }
+
+/* ---------------- まとめて登録（複数画像・ZIP） ---------------- */
+
+const EXPRESSION_WORDS: [string, RegExp][] = [
+  ["happy", /happy|smile|joy|笑|えがお|にこ|喜/i],
+  ["surprised", /surpris|shock|wow|驚|びっくり|おどろ/i],
+  ["thinking", /think|hmm|考|かんが|悩/i],
+  ["sad", /sad|cry|悲|かなし|しょんぼり|泣|落ち込/i],
+  ["normal", /normal|base|neutral|default|通常|ふつう|普通|基本|ノーマル/i]
+];
+
+/** ファイル名から「表情」と「口」を推測する（わからなければ undefined） */
+export function guessSlot(fileName: string): { expression?: string; mouth?: MouthState } {
+  const name = fileName.replace(/^.*[\\/]/, "").replace(/\.[^.]+$/, "");
+  const expression = EXPRESSION_WORDS.find(([, re]) => re.test(name))?.[0];
+  let mouth: MouthState | undefined;
+  if (/half|mid|semi|半|中くらい|ちょっと|少し/i.test(name)) mouth = "half";
+  else if (/close|shut|閉|とじ|つぐ/i.test(name)) mouth = "closed";
+  else if (/open|wide|big|開|あけ|大き|全開|「あ」/i.test(name)) mouth = "open";
+  return { expression, mouth };
+}
+
+/**
+ * ファイル名の一覧を枠（"表情:口"）に振り分ける。
+ * 口がわからないものは、同じ表情の中でファイル名順に「閉じ→半開き→全開」の空いている枠へ入れる。
+ */
+export function assignSlots(fileNames: string[]): { assigned: Record<string, string>; unassigned: string[] } {
+  const assigned: Record<string, string> = {};
+  const pending: Record<string, string[]> = {};
+  const unassigned: string[] = [];
+  const sorted = [...fileNames].sort((a, b) => a.localeCompare(b, "ja", { numeric: true }));
+  for (const fileName of sorted) {
+    const { expression = "normal", mouth } = guessSlot(fileName);
+    if (mouth && !assigned[imageKey(expression, mouth)]) assigned[imageKey(expression, mouth)] = fileName;
+    else (pending[expression] ??= []).push(fileName);
+  }
+  for (const [expression, names] of Object.entries(pending)) {
+    for (const fileName of names) {
+      const free = MOUTHS.find((mouth) => !assigned[imageKey(expression, mouth)]);
+      if (free) assigned[imageKey(expression, free)] = fileName;
+      else unassigned.push(fileName);
+    }
+  }
+  return { assigned, unassigned };
+}
+
+const IMAGE_EXT = /\.(png|jpe?g|webp|gif|bmp)$/i;
+
+/** 選ばれたファイル（画像・ZIP混在OK）を、名前つきの画像の一覧にする */
+export async function collectImages(files: File[]): Promise<{ name: string; blob: Blob }[]> {
+  const out: { name: string; blob: Blob }[] = [];
+  for (const file of files) {
+    if (/\.zip$/i.test(file.name) || file.type === "application/zip" || file.type === "application/x-zip-compressed") {
+      const { unzipSync } = await import("fflate");
+      const entries = unzipSync(new Uint8Array(await file.arrayBuffer()));
+      for (const [path, bytes] of Object.entries(entries)) {
+        if (!IMAGE_EXT.test(path) || /(^|\/)(__MACOSX|\.)/.test(path)) continue;
+        out.push({ name: path, blob: new Blob([bytes.slice()]) });
+      }
+    } else if (IMAGE_EXT.test(file.name) || file.type.startsWith("image/")) {
+      out.push({ name: file.name, blob: file });
+    }
+  }
+  return out;
+}
