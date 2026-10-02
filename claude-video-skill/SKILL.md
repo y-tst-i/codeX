@@ -197,11 +197,12 @@ lint が1件でもエラーだと layout/contrast 監査が走らず「0 samples
 
 **起きた問題**: 数式だけで合成した音(サイン波・ノイズ・弦の簡易モデル)だと、何を作っても質感が同じになる。特に**白色雑音の雨・風切り音**が高域に偏り、全場面で「シャー」と同じ音になった(測ると高域が80〜90%)。
 **対策(すべて無料・オープンソース)**:
-1. **楽器は本物の音源を使う**: `apt-get update && apt-get install -y fluidsynth fluid-soundfont-gm` + `pip install pretty_midi mido`。音源 FluidR3_GM(MIT系)で GM の128音色(ピアノ・弦・金管・合唱・ハープ・太鼓・ドラム・鳥など)。道具は `tools/midi_render.py`(MIDI→wav、場面ごとの残響・帯域の加工、GM早見表つき)。**`apt-get update` を先に**(古い索引だと 404 で失敗する)。
+1. **楽器は本物の音源を使う**: `apt-get update && apt-get install -y fluidsynth musescore-general-soundfont-lossless`(既定。MIT・一部CC0。FluidR3 の `fluid-soundfont-gm` でも可。聴き比べでは差は小さかった) + `pip install pretty_midi mido`。音源 FluidR3_GM(MIT系)で GM の128音色(ピアノ・弦・金管・合唱・ハープ・太鼓・ドラム・鳥など)。道具は `tools/midi_render.py`(MIDI→wav、場面ごとの残響・帯域の加工、GM早見表つき)。**`apt-get update` を先に**(古い索引だと 404 で失敗する)。
 2. **音の設計書を書く**(映像の BIBLE と同じ): 場面ごとに「楽器の系統 / 空間(残響の長さと暗さ) / 帯域(lp・hp)」の3つを必ず変える。隣り合う場面で楽器の系統を被らせない。見本: 見本 `anime-ad/showcase/SOUND_BIBLE.md`。
 3. **役割で分ける**: 音楽=MIDI(本物の楽器)、環境音・足音・風切り=合成。雨は白色でなく**ピンクノイズを帯域で絞り + 水滴の粒**にして、場面ごとに明るさ(hi)・粒の粗さを変える(`make_audio2.py` の `rain`)。
 4. **数値で確認**: 場面ごとのスペクトル重心・高域比・RMS を旧版と比べる(全場面が同じ数値なら質感が同じ)。スペクトログラムを `ffmpeg -lavfi showspectrumpic` で出して見比べる。**Claudeは音を聴けない**ので、最終判断は人の耳に任せ、そう報告する。
 5. 実例: `anime-ad/showcase/make_audio2.py`(場面別に GM 楽器+MIDI、スロー区間はドラム抜き、リバースシンバルで場面転換、CCでクレッシェンド)。
+- **効果音は録音済みの素材を使う**: `tools/assets/sfx-cc0/`(Kenney、CC0、282個: 足音・衝撃・ドア・布・本・UI)。検索 `python3 tools/sfx_lib.py find <語>`、読み込み `sfx_lib.load(name)`。音の設計ルール(3層・ほぼ無音・Jカット/Lカット・合図表)は `references/sound-palette.md` 後半。
 - **効果音の定番を避ける**: 純音の単発ピン・サイン波スイープ(ピューン)・白色ノイズの雨は、AI作の動画の定番として見抜かれる。禁止ではないが、1本に最大2回、実音とレイヤー、合成は全体の3割以下。目的別の「代わりの作り方」と音色の種類の目標は `references/sound-palette.md`。
 - 有料サービスは使わない前提。HeyGen/Suno/ElevenLabs 等はログインや課金が絡むので、使うなら利用者の承認を取る。
 
