@@ -1,5 +1,6 @@
 import { hostExtrasScript } from "./character";
-import LOTTIE_SOURCE from "lottie-web/build/player/lottie_canvas.min.js?raw";
+// lottie-web 5.13.0（MIT）をツール内に置いたもの。理由は src/vendor/README.md
+import LOTTIE_SOURCE from "../vendor/lottie_canvas.min.js?raw";
 import { measureFrozen, type FrozenReport } from "./frames";
 import { VIDEO } from "./knowledge";
 import { MGK_SCRIPT } from "./mgKit";
