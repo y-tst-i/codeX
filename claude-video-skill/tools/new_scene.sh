@@ -1,15 +1,17 @@
 #!/bin/bash
 # 1場面ぶんの HyperFrames プロジェクトを一発で作る(毎回のひな形・gsap・部品を書き直さないための節約道具)
-# usage: new_scene.sh <dir> <秒数> [背景色 #rrggbb]
+# usage: new_scene.sh <dir> <秒数> [背景色 #rrggbb] [--puppet]   --puppet: 2.5D キャラ部品(PUPPET)も埋め込む
 #   -> <dir>/index.html の draw(t) だけ書けばよい。部品は SCENE_LIB(乱数/補間/タイムリマップ/雨/ビネット/グロー/透視)
 #   検証: cd <dir> && npx hyperframes check ; 書き出し: npx hyperframes render --output ../out/<id>.mp4
 set -e
-dir=$1; sec=$2; bg=${3:-#0a0a12}; here=$(cd "$(dirname "$0")" && pwd)
+dir=$1; sec=$2; bg=${3:-#0a0a12}; opt=$4; here=$(cd "$(dirname "$0")" && pwd)
 [ -z "$dir" ] || [ -z "$sec" ] && { sed -n 2,6p "$0"; exit 1; }
 mkdir -p "$(dirname "$dir")"
 npx --yes hyperframes init "$dir" --non-interactive --skip-transcribe >/dev/null 2>&1 || npx --yes hyperframes init "$dir" --non-interactive >/dev/null
 mkdir -p "$dir/assets"; cp "$here/assets/gsap.min.js" "$dir/assets/gsap.min.js"
 lib=$(cat "$here/assets/scene-lib.js")
+[ "$opt" = "--puppet" ] && lib="$lib
+$(cat "$here/assets/puppet.js")"
 cat > "$dir/index.html" <<HTML
 <!doctype html>
 <html lang="ja">
