@@ -1,0 +1,14 @@
+{
+ "s2-match": {
+  "A": "Y",
+  "B": "X",
+  "A_model": "sonnet",
+  "B_model": "opus"
+ },
+ "s4-dawn": {
+  "A": "Y",
+  "B": "X",
+  "A_model": "sonnet",
+  "B_model": "opus"
+ }
+}
