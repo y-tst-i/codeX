@@ -1,29 +1,25 @@
 # video-with-claude-code
 
-Claude Code で動画(モーショングラフィックス、PV、解説動画、ポッドキャスト用アニメ)を作る時の横断ノウハウ。
-特定プロジェクト用ではなく、**ユーザーレベルのスキル**として全プロジェクトで効く。
+Claude Code で動画(モーショングラフィックス、CM、アニメ、解説、予告)を作る時の**横断スキル**。特定プロジェクト用ではなく、全プロジェクトで効く。
 
 ## 入れ方
-
 ```bash
-# 自分のPCで
 mkdir -p ~/.claude/skills
 cp -r claude-video-skill ~/.claude/skills/video-with-claude-code
-```
-
-以降、Claude Code が動画関連の依頼を受けると自動で参照する(`/video-with-claude-code` でも呼べる)。
-
-## 前提(HyperFrames)
-
-実際のレンダリングは HyperFrames(HTML→MP4、Node 22+、FFmpeg)を使う。このスキル自体はその上の「頼み方・順序・地雷回避」の知識。
-
-```bash
-claude plugin marketplace add heygen-com/hyperframes
-claude plugin install hyperframes@hyperframes
+claude plugin marketplace add heygen-com/hyperframes && claude plugin install hyperframes@hyperframes   # 書き出しに必要(Node 22+, FFmpeg)
 ```
 
 ## 構成
+| ファイル | 内容 |
+|---|---|
+| `SKILL.md` | 本体。導入、ワークフロー選び、品質要因、プロンプト骨格、音、分業手順(§11)、環境の落とし穴(§12)、長尺の知見(§13)、**映画の技法辞書の使い方(§14)**、**音の設計と無料の楽器音源(§15)**、**トークン節約(§16)** |
+| `references/cinematic/` | **映画の技法424件の辞書**(日本語)。`START_HERE.md`(映画の文法10原則・目的→技法の早見・必修30技法)、`INDEX.md`(全技法の索引)、グループ別11ファイル(カメラ/ショット/構図/光/色・大気/レンズ・時間/編集/効果/ジャンル・バイラル)。各エントリに HyperFrames での作り方(数値・数式・既製部品名) |
+| `references/shot-spec-template.md` | 設計書の「場面カード」テンプレ(サイズ/アングル/動き/光/色/構図/時間/効果/つなぎ) |
+| `references/sound-palette.md` | **音のパレット**(効果音の定番を避ける代替表、音色の種類の目標、場面ごとの設計) |
+| `references/prompt-templates.md` / `case-notes.md` | プロンプト雛形 / 事例メモ(skillry の Opus 5.5 動画) |
+| `tools/` | `sheet.sh`(コンタクトシート)/ `assemble.sh`(連結+音)/ `sync_check.py`(映像と音の同期)/ `audio_instruments.py`(音の合成)/ `midi_render.py`(**本物の楽器音源(無料)でMIDIを鳴らす**)/ `cin.py`(**辞書を1項目だけ引く**)/ `new_scene.sh`+`assets/`(**場面のひな形・部品・gsap**)/ `make_cinematic_index.py`(索引の再生成・網羅検証) |
 
-- `SKILL.md`: 本体(導入、使い分け、品質要因、プロンプト骨格、音、分業、地雷、検証、コスト感)
-- `references/prompt-templates.md`: コピペで使えるプロンプト雛形
-- `references/case-notes.md`: 事例メモとリンク集
+## 実例
+リポジトリの `anime-ad/`: 30秒CM(v2)、第1話ショート版(ep1)。設計書(`docs/BIBLE.md` `SCENES.md`)、音の合成スクリプト、場面別ソース付き。
+
+出典: 映画技法の解説は melies.co/cinematic-techniques を日本語で要約・再構成(原文の転載ではない)。HyperFrames の実装レシピは独自。
