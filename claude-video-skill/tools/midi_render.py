@@ -1,7 +1,8 @@
 """本物の楽器音源(無料の GM サウンドフォント)で MIDI を鳴らす道具。数式合成(audio_instruments.py)では出ない「楽器の質感」を足す。
 
 導入(無料・全部オープンソース):
-    apt-get update && apt-get install -y fluidsynth fluid-soundfont-gm     # 音源は /usr/share/sounds/sf2/FluidR3_GM.sf2 (MITライセンス系)
+    apt-get update && apt-get install -y fluidsynth musescore-general-soundfont-lossless   # 音源 MuseScore General (MIT・一部CC0)
+    (代わりに fluid-soundfont-gm でも可。無ければ自動で FluidR3 にフォールバック)
     pip install pretty_midi mido
 
 使い方(Python):
@@ -27,7 +28,15 @@ import numpy as np
 import scipy.io.wavfile as wavfile
 from scipy.signal import butter, sosfilt, fftconvolve
 
-SF2 = os.environ.get("SF2", "/usr/share/sounds/sf2/FluidR3_GM.sf2")
+def _default_sf2():
+    # 既定は MuseScore General(MIT・一部CC0、約490MB。FluidR3 より新しく、描画も速い)。無ければ FluidR3。
+    for p in ("/usr/share/sounds/sf2/MuseScore_General_Full.sf2", "/usr/share/sounds/sf2/FluidR3_GM.sf2"):
+        if os.path.exists(p):
+            return p
+    return "/usr/share/sounds/sf2/FluidR3_GM.sf2"
+
+
+SF2 = os.environ.get("SF2", _default_sf2())
 SR = 44100
 
 

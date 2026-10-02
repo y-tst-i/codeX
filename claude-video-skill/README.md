@@ -17,7 +17,7 @@ claude plugin marketplace add heygen-com/hyperframes && claude plugin install hy
 | `references/shot-spec-template.md` | 設計書の「場面カード」テンプレ(サイズ/アングル/動き/光/色/構図/時間/効果/つなぎ) |
 | `references/sound-palette.md` | **音のパレット**(効果音の定番を避ける代替表、音色の種類の目標、場面ごとの設計) |
 | `references/prompt-templates.md` / `case-notes.md` | プロンプト雛形 / 事例メモ(skillry の Opus 5.5 動画) |
-| `tools/` | `sheet.sh`(コンタクトシート)/ `assemble.sh`(連結+音)/ `sync_check.py`(映像と音の同期)/ `audio_instruments.py`(音の合成)/ `midi_render.py`(**本物の楽器音源(無料)でMIDIを鳴らす**)/ `cin.py`(**辞書を1項目だけ引く**)/ `new_scene.sh`+`assets/`(**場面のひな形・部品・gsap**)/ `make_cinematic_index.py`(索引の再生成・網羅検証) |
+| `tools/` | `sheet.sh`(コンタクトシート)/ `assemble.sh`(連結+音)/ `sync_check.py`(映像と音の同期)/ `audio_instruments.py`(音の合成)/ `midi_render.py`(**本物の楽器音源(無料)でMIDIを鳴らす**)/ `sfx_lib.py`+`assets/sfx-cc0/`(**録音済みの効果音282個(CC0)の検索・読み込み**)/ `cin.py`(**辞書を1項目だけ引く**)/ `new_scene.sh`+`assets/`(**場面のひな形・部品・gsap**)/ `make_cinematic_index.py`(索引の再生成・網羅検証) |
 
 ## 実例
 リポジトリの `anime-ad/`: 30秒CM(v2)、第1話ショート版(ep1)。設計書(`docs/BIBLE.md` `SCENES.md`)、音の合成スクリプト、場面別ソース付き。
