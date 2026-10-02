@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { assetName, assetsPromptSection, buildImagePrompt } from "../src/lib/assets";
+import { assetName, assetsPromptSection, buildImagePrompt, unusedAssets, useAssetsRequest } from "../src/lib/assets";
 import { visemesFromQuery } from "../src/lib/localTts";
 import { DEFAULT_AUDIO, autoCues, mixAll, sanitizeCues } from "../src/lib/sfx";
 import type { Timeline } from "../src/lib/types";
@@ -72,6 +72,26 @@ describe("素材", () => {
     expect(text).toContain('K.image(ctx, "prop_phone"');
     expect(text).toContain('K.lottie(ctx, t, "confetti"');
     expect(assetsPromptSection([], {})).toBe("");
+  });
+
+  it("背景画像があれば、シーンごとに必ず使うよう割り当て、使っていないHTMLを見分ける", () => {
+    const assets = [
+      { key: "img:bg_01", kind: "img" as const, name: "bg_01", width: 1024, height: 1536, transparent: false },
+      { key: "img:bg_02", kind: "img" as const, name: "bg_02", width: 1024, height: 1536, transparent: false },
+      { key: "img:prop_heart", kind: "img" as const, name: "prop_heart", width: 512, height: 512, transparent: true }
+    ];
+    const text = assetsPromptSection(assets, {}, [
+      { start: 0, end: 2, role: "hook" },
+      { start: 2, end: 4, role: "body" },
+      { start: 4, end: 6, role: "cta" }
+    ]);
+    expect(text).toContain("必ず使う");
+    expect(text).toContain('| 1（hook） | 0.00〜2.00s | "bg_01" |');
+    expect(text).toContain('| 3（cta） | 4.00〜6.00s | "bg_01" |');
+    expect(text).toContain("すべてのシーンで、背景画像を K.kenBurns");
+    expect(unusedAssets("K.bg.mesh(ctx,t,[])", assets).used).toEqual([]);
+    expect(unusedAssets('K.kenBurns(ctx,t,"bg_02",0,2)', assets).used).toEqual(["bg_02"]);
+    expect(useAssetsRequest(assets)).toContain("bg_01 / bg_02");
   });
 
   it("ChatGPT向けの素材の依頼文に、シーンごとのファイル名と禁止事項が入る", () => {

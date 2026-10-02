@@ -128,7 +128,7 @@ export function App() {
       cancelled = true;
     };
   }, [assetsVersion]);
-  const assetsPrompt = assetsPromptSection(assetList, loadNotes());
+  const assetsPrompt = assetsPromptSection(assetList, loadNotes(), timeline.scenes);
   const extras = useMemo<HostExtras>(
     () => ({ characterScript, voiceLevels: levels, captions, images: assetData.images, lotties: assetData.lotties, visemes }),
     [characterScript, levels, captions, assetData, visemes]

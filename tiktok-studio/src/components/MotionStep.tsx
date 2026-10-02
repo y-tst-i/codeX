@@ -7,7 +7,7 @@ import type { ApiSettings, Concept, Script, Timeline } from "../lib/types";
 import { Field, Notice, PromptBox, StepNav, downloadBlob } from "./common";
 import { CriticPanel } from "./CriticPanel";
 import { AssetsPanel } from "./AssetsPanel";
-import type { AssetInfo } from "../lib/assets";
+import { unusedAssets, useAssetsRequest, type AssetInfo } from "../lib/assets";
 import { TimelineBar } from "./VoiceStep";
 
 interface Props {
@@ -177,6 +177,25 @@ export function MotionStep({ concept, script, timeline, settings, html, characte
             デモHTMLで試す
           </button>
         </div>
+        {html.trim() && assets.length > 0 && unusedAssets(html, assets).used.length === 0 ? (
+          <Notice kind="warn" title="このHTMLは、登録した素材を使っていません">
+            <div className="row" style={{ marginTop: 6, flexWrap: "wrap" }}>
+              <span className="meta" style={{ flex: 1 }}>
+                素材を登録する前に作ったHTMLか、Claude が素材を使わずに書いたHTMLです。「1. 生成する」のプロンプトをコピーし直して新しいチャットで作り直すか、下のボタンで「素材を使って」と磨き込みを頼めます。
+              </span>
+              <button
+                className="btn small"
+                type="button"
+                onClick={() => {
+                  setPolishRequest(useAssetsRequest(assets));
+                  document.getElementById("polish")?.scrollIntoView({ behavior: "smooth" });
+                }}
+              >
+                素材を使うように直す依頼を入れる
+              </button>
+            </div>
+          </Notice>
+        ) : null}
         {report ? (
           report.ok ? (
             <Notice kind="ok" title="✓ 書き出しできます" items={report.warnings}>
@@ -211,7 +230,7 @@ export function MotionStep({ concept, script, timeline, settings, html, characte
               <CriticPanel input={input} html={html} extras={extras} settings={settings} frozen={report.frozen} onReport={setPolishRequest} />
             </>
           ) : null}
-          <h2>{report && !report.ok ? "4" : report?.ok ? "4" : "3"}. もっと良くする（磨き込み）</h2>
+          <h2 id="polish">{report && !report.ok ? "4" : report?.ok ? "4" : "3"}. もっと良くする（磨き込み）</h2>
           <div className="card stack">
             <Field label="直したいところ（批評家のレポートを貼るのがおすすめ。空欄ならClaudeがディレクター目線で弱点を見つけて直します）">
               <textarea value={polishRequest} onChange={(e) => setPolishRequest(e.target.value)} placeholder="例：フックをもっと派手に。3シーン目の数字をカウントアップさせて。字幕を少し大きく。" />

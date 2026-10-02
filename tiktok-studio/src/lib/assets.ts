@@ -162,8 +162,8 @@ export async function assetsForVideo(): Promise<{ images: Record<string, string>
   return { images, lotties };
 }
 
-/** 動画プロンプトに入れる素材の一覧 */
-export function assetsPromptSection(assets: AssetInfo[], notes: Record<string, string>): string {
+/** 動画プロンプトに入れる素材の一覧（背景画像があれば、シーンごとに必ず使うよう割り当てる） */
+export function assetsPromptSection(assets: AssetInfo[], notes: Record<string, string>, scenes: { start: number; end: number; role: string }[] = []): string {
   if (assets.length === 0) return "";
   const lines = assets.map((a) => {
     const note = notes[a.name] ? `：${notes[a.name]}` : "";
@@ -171,12 +171,36 @@ export function assetsPromptSection(assets: AssetInfo[], notes: Record<string, s
     const shape = a.width && a.height ? `（${a.width}×${a.height}${a.transparent ? "・背景透明の小物" : ""}）` : "";
     return `- 画像「${a.name}」${shape}${note} → \`${a.transparent ? `K.image(ctx, "${a.name}", {x, y, w, h, fit:"contain"})` : `K.kenBurns(ctx, t, "${a.name}", start, dur, {zoom:1.05}, {zoom:1.2})`}\``;
   });
-  return `# 使える素材（ツールが用意済み。名前で呼ぶだけ）
+  const backgrounds = assets.filter((a) => a.kind === "img" && !a.transparent).map((a) => a.name);
+  const props = assets.filter((a) => a.kind === "img" && a.transparent).map((a) => a.name);
+  const lotties = assets.filter((a) => a.kind === "lottie").map((a) => a.name);
+  const plan =
+    backgrounds.length && scenes.length
+      ? `
+## シーンごとの背景（必須。この割り当てで背景画像を敷く）
+| シーン | 時刻 | 背景画像 |
+|---|---|---|
+${scenes.map((scene, i) => `| ${i + 1}（${scene.role}） | ${scene.start.toFixed(2)}〜${scene.end.toFixed(2)}s | "${backgrounds[i % backgrounds.length]}" |`).join("\n")}
+（説明を見て、もっと内容に合う背景があれば入れ替えてよい。ただし**どのシーンも背景画像を使う**こと）`
+      : "";
+  const must = [
+    backgrounds.length ? "- [ ] すべてのシーンで、背景画像を K.kenBurns で全面に敷いている（K.bg.mesh などの単色・グラデーションだけの背景にしない。MGK の背景効果は、画像の上に薄く重ねる飾りとして使う）" : "",
+    props.length ? `- [ ] 小物（${props.join(" / ")}）を、話の内容に合う場面で${Math.min(2, props.length)}つ以上使っている` : "",
+    lotties.length ? `- [ ] Lottie（${lotties.join(" / ")}）を見せ場で1回以上使っている` : ""
+  ].filter(Boolean);
+  return `# 素材（ツールが用意済み。**必ず使う**。名前で呼ぶだけで描ける）
+この動画のために作った素材です。使わないと、作った意味がなくなります。
 ${lines.join("\n")}
-- 背景画像は、そのシーンの背景として全面に敷き、**K.kenBurns でゆっくり寄る／流す**（止めない）。上に K.bg.bokeh などを薄く重ねて空気感を足す。文字を乗せる部分には半透明の暗幕やグラデーションを敷いて読みやすくする
+${plan}
+
+## 素材の使い方
+- 背景画像は、シーンの一番下の層に全面で敷き、**K.kenBurns でゆっくり寄る／流す**（止めない）。その上に K.bg.bokeh・floaters などを alpha 0.2〜0.4 で薄く重ねて空気感を足す
+- 文字を乗せる部分には、半透明の暗幕やグラデーション（例：上から rgba(0,0,0,0.35)→透明）を敷いて読みやすくする
 - 小物（背景透明）は主役の横で、ポップに登場させ（K.anim の outBackBig）、ふわふわ揺らす。キャラの手元や吹き出しの中に置いてもよい
 - Lottie は見せ場・CTA・強調の瞬間に使う（start をその時刻に）
-- 素材が無いシーンは、これまでどおり K.bg の背景で作る`;
+
+## 素材のセルフチェック（提出前に必ずYesにする）
+${must.join("\n")}`;
 }
 
 /** ChatGPT（画像生成）に、この動画の素材をまとめて作ってもらう依頼文 */
@@ -212,3 +236,25 @@ ${scenes}
 2. 全部できたら、全画像を assets.zip にまとめてダウンロードできるようにする（できなければ1枚ずつでOK）`;
 }
 
+
+/** HTMLが登録済みの素材を使っているか（名前が1つも出てこなければ、使っていない） */
+export function unusedAssets(html: string, assets: AssetInfo[]): { used: string[]; unused: string[] } {
+  const used: string[] = [];
+  const unused: string[] = [];
+  for (const a of assets) (html.includes(`"${a.name}"`) || html.includes(`'${a.name}'`) || html.includes(`\`${a.name}\``) ? used : unused).push(a.name);
+  return { used, unused };
+}
+
+/** 素材を使っていないHTMLを、素材を使うように直してもらう依頼（磨き込みに入れる） */
+export function useAssetsRequest(assets: AssetInfo[]): string {
+  const backgrounds = assets.filter((a) => a.kind === "img" && !a.transparent).map((a) => a.name);
+  const props = assets.filter((a) => a.kind === "img" && a.transparent).map((a) => a.name);
+  return [
+    "登録した素材がまったく使われていません。演出・タイミング・字幕・キャラの動きはそのままに、素材を使うように直してください。",
+    backgrounds.length ? `- すべてのシーンの一番下の層に、背景画像（${backgrounds.join(" / ")}）を「シーンごとの背景」の割り当てどおり K.kenBurns で全面に敷く。今の K.bg の背景効果は、その上に alpha 0.2〜0.4 で薄く重ねる飾りにする` : "",
+    props.length ? `- 小物（${props.join(" / ")}）を、話の内容に合う場面で2つ以上、K.image（fit:"contain"）でポップに登場させる` : "",
+    "- 文字が読みにくくならないよう、文字の下に半透明の暗幕やグラデーションを敷く"
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
