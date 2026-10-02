@@ -1,5 +1,6 @@
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
+import { codexBridge } from "./codexBridge";
 
 // 自分のPCで動く無料の音声合成ソフト（VOICEVOX / AivisSpeech）へ、ブラウザから届くように中継する
 const ttsProxy = {
@@ -8,7 +9,8 @@ const ttsProxy = {
 };
 
 export default defineConfig({
-  plugins: [react()],
+  // codexBridge：自分のPCの Codex CLI で画像素材を作る（/api/codex/*）
+  plugins: [react(), codexBridge()],
   // 作業データはブラウザの「localhost:5180」に保存されるので、番号が勝手に変わらないようにする
   server: { port: 5180, strictPort: true, open: true, proxy: ttsProxy },
   preview: { port: 5180, strictPort: true, proxy: ttsProxy },

@@ -7,6 +7,8 @@ type Kit = {
   punch(t: number, times: number[], dur: number): number;
   hop(t: number, start: number, dur: number, h: number): { y: number; sx: number; sy: number };
   anim(t: number, start: number, dur: number, ease: string): number;
+  envelope(t: number, start: number, a: number, h: number, r: number): number;
+  shake(t: number, start: number, dur: number, amp: number, seed: number): { x: number; y: number; r: number };
 };
 
 function loadKit(): Kit {
@@ -33,6 +35,15 @@ describe("演出の道具箱 MGK", () => {
     expect(K.hop(1.25, 1, 0.5, 100).y).toBeCloseTo(-100);
     expect(K.hop(3, 1, 0.5, 100)).toEqual({ y: 0, sx: 1, sy: 1 });
     expect(K.anim(2, 1, 0.5, "outBack")).toBe(1);
+  });
+
+  it("長さ0の区間でも NaN にならない（レビューで見つかった不具合）", () => {
+    const K = loadKit();
+    expect(K.envelope(1, 0, 0.2, 0.8, 0)).toBe(1);
+    expect(K.envelope(0, 0, 0, 1, 0.2)).toBe(1);
+    expect(K.hop(1, 1, 0, 100)).toEqual({ y: 0, sx: 1, sy: 1 });
+    const s = K.shake(1, 1, 0, 10, 1);
+    expect([s.x, s.y, s.r].every(Number.isFinite)).toBe(true);
   });
 
   it("動画のプロンプトで道具箱の使い方を伝える", () => {

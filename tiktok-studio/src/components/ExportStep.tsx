@@ -126,7 +126,9 @@ export function ExportStep({ extras, html, script, timeline, mixed: voiceMix, se
     const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/png"));
     if (!blob) return;
     if (coverUrl) URL.revokeObjectURL(coverUrl);
-    setCoverUrl(URL.createObjectURL(blob));
+    const nextCover = URL.createObjectURL(blob);
+    urlsRef.current.cover = nextCover;
+    setCoverUrl(nextCover);
     downloadBlob(blob, `cover-${new Date().toISOString().slice(0, 16).replace(/[-:T]/g, "")}.png`);
   };
 
@@ -136,7 +138,8 @@ export function ExportStep({ extras, html, script, timeline, mixed: voiceMix, se
     try {
       await decodeBgm(file, EXPORT_SAMPLE_RATE);
       if (audioSettings.bgmKey) await deleteAsset(audioSettings.bgmKey);
-      const key = `bgm:${file.name}`;
+      // 同じ名前の曲に差し替えても読み直されるよう、キーに時刻を入れる
+      const key = `bgm:${Date.now()}:${file.name}`;
       await saveAsset(key, file);
       setAudio({ bgmKey: key, bgmName: file.name });
     } catch {
@@ -187,10 +190,19 @@ export function ExportStep({ extras, html, script, timeline, mixed: voiceMix, se
     }
   };
 
+  // 再生ループの中から最新の音・尺・時計を見るための参照（古い値を使い続けないように）
+  const mixedRef = useRef(mixed);
+  mixedRef.current = mixed;
+  const durationRef = useRef(duration);
+  durationRef.current = duration;
+  const clockRef = useRef(0);
+  const playingRef = useRef(playing);
+  playingRef.current = playing;
+
   /** 音声を t 秒から鳴らす。鳴らせなければ false（映像だけ再生する） */
   const startAudio = (t: number): boolean => {
     const audio = audioRef.current;
-    if (!audio || !mixed) return false;
+    if (!audio || !mixedRef.current) return false;
     audio.currentTime = t;
     audio.play().catch(() => setAudioError("音声を再生できませんでした。映像だけ再生しています（書き出しには音声が入ります）"));
     return true;
@@ -204,15 +216,16 @@ export function ExportStep({ extras, html, script, timeline, mixed: voiceMix, se
       return;
     }
     let raf = 0;
-    let clockStart = performance.now() - time * 1000;
+    clockRef.current = performance.now() - time * 1000;
     const tick = () => {
       const audio = audioRef.current;
-      const audioRunning = Boolean(audio && mixed && !audio.paused && !audio.ended);
-      let t = audioRunning ? audio!.currentTime : (performance.now() - clockStart) / 1000;
-      if (t >= duration - 1 / 60 || (audio && mixed && audio.ended)) {
+      const hasAudio = Boolean(mixedRef.current);
+      const audioRunning = Boolean(audio && hasAudio && !audio.paused && !audio.ended);
+      let t = audioRunning ? audio!.currentTime : (performance.now() - clockRef.current) / 1000;
+      if (t >= durationRef.current - 1 / 60 || (audio && hasAudio && audio.ended)) {
         // 最後まで来たら頭に戻ってループ
         t = 0;
-        clockStart = performance.now();
+        clockRef.current = performance.now();
         startAudio(0);
       }
       draw(t);
@@ -239,9 +252,32 @@ export function ExportStep({ extras, html, script, timeline, mixed: voiceMix, se
 
   const seek = (t: number) => {
     setTime(t);
+    clockRef.current = performance.now() - t * 1000;
     if (audioRef.current) audioRef.current.currentTime = t;
     if (!playing) draw(t);
   };
+
+  // 再生中に音（BGM・効果音）が変わったら、新しい音で続きから鳴らす
+  useEffect(() => {
+    if (!playingRef.current || !audioUrl) return;
+    const audio = audioRef.current;
+    if (!audio) return;
+    const t = (performance.now() - clockRef.current) / 1000;
+    const resume = () => startAudio(Math.min(t, durationRef.current));
+    audio.addEventListener("loadedmetadata", resume, { once: true });
+    return () => audio.removeEventListener("loadedmetadata", resume);
+  }, [audioUrl]);
+
+  // 画面を離れたら、書き出しを止めて、作った動画・表紙のURLを片付ける
+  const urlsRef = useRef<{ video: string; cover: string }>({ video: "", cover: "" });
+  useEffect(
+    () => () => {
+      abortRef.current?.abort();
+      if (urlsRef.current.video) URL.revokeObjectURL(urlsRef.current.video);
+      if (urlsRef.current.cover) URL.revokeObjectURL(urlsRef.current.cover);
+    },
+    []
+  );
 
   const runExport = async () => {
     if (!graphic) return;
@@ -267,7 +303,9 @@ export function ExportStep({ extras, html, script, timeline, mixed: voiceMix, se
         signal: controller.signal,
         motionBlurSamples: blurOk ? 4 : 1
       });
-      setVideoUrl(URL.createObjectURL(blob));
+      const url = URL.createObjectURL(blob);
+      urlsRef.current.video = url;
+      setVideoUrl(url);
       setVideoExt(extension);
       // 日本語のファイル名は環境によって「download」に化けるので、日時の英数字名にする
       const stamp = new Date().toISOString().slice(0, 16).replace(/[-:T]/g, "");

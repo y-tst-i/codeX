@@ -222,6 +222,24 @@ export async function dumpStore(store: string): Promise<[string, unknown][]> {
   return entries;
 }
 
+/** 複数のストアを、1回のトランザクションでまとめて置き換える（途中で失敗したら、どれも変わらない） */
+export async function replaceStores(contents: Record<string, [string, unknown][]>): Promise<void> {
+  const db = await openDb();
+  const names = Object.keys(contents);
+  await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(names, "readwrite");
+    for (const name of names) {
+      const os = tx.objectStore(name);
+      os.clear();
+      for (const [key, value] of contents[name]!) os.put(value, key);
+    }
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+    tx.onabort = () => reject(tx.error ?? new Error("保存できませんでした（空き容量が足りない可能性があります）"));
+  });
+  db.close();
+}
+
 /** ストアを空にして、渡した中身で置き換える */
 export async function replaceStore(store: string, entries: [string, unknown][]): Promise<void> {
   const db = await openDb();

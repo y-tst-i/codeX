@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { buildImagePrompt, importAssets, loadNotes, removeAsset, saveNote, type AssetInfo } from "../lib/assets";
+import { cancelCodex, checkCodex, cleanupCodex, codexFile, codexImagePrompt, codexJob, startCodexImages } from "../lib/codexClient";
 import { loadAssets } from "../lib/storage";
 import type { Concept, Script } from "../lib/types";
 import { Notice, PromptBox } from "./common";
@@ -20,6 +21,46 @@ export function AssetsPanel({ concept, script, assets, onChanged }: Props) {
   const [dragging, setDragging] = useState(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const imagePrompt = buildImagePrompt(concept, script);
+
+  // Codex（自分のPCの Codex CLI）で自動生成
+  const [codexState, setCodexState] = useState<{ id?: string; status: string; error?: string; setup?: boolean }>({ status: "" });
+  const runCodex = async () => {
+    setCodexState({ status: "Codex を確認しています…" });
+    try {
+      const check = await checkCodex();
+      if (!check.installed || !check.loggedIn) {
+        setCodexState({ status: "", setup: true, error: !check.installed ? "このPCに Codex CLI が入っていません" : "Codex にログインしていません" });
+        return;
+      }
+      const { id } = await startCodexImages(codexImagePrompt(imagePrompt));
+      setCodexState({ id, status: "Codex が素材を作り始めました…" });
+      const imported = new Set<string>();
+      const take = async (names: string[]) => {
+        const fresh = names.filter((name) => !imported.has(name));
+        if (fresh.length === 0) return;
+        fresh.forEach((name) => imported.add(name));
+        await importAssets(await Promise.all(fresh.map((name) => codexFile(id, name))));
+        onChanged();
+      };
+      for (;;) {
+        await new Promise((resolve) => setTimeout(resolve, 3000));
+        const job = await codexJob(id);
+        await take(job.files);
+        const last = job.log.filter((line) => !/^\s*$/.test(line)).slice(-1)[0] ?? "";
+        if (job.state === "running") {
+          setCodexState({ id, status: `生成中… ${imported.size}枚できました（${job.seconds}秒経過）${last ? `｜${last.slice(0, 80)}` : ""}` });
+          continue;
+        }
+        await cleanupCodex(id).catch(() => undefined);
+        if (job.state === "done") setCodexState({ status: `完了：${imported.size}枚の素材を追加しました（${job.seconds}秒）` });
+        else if (job.state === "cancelled") setCodexState({ status: `中止しました（${imported.size}枚は追加済み）` });
+        else setCodexState({ status: "", error: `Codex がエラーで止まりました：${job.log.slice(-3).join(" / ")}` });
+        return;
+      }
+    } catch (e) {
+      setCodexState({ status: "", error: (e as Error).message });
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -55,10 +96,40 @@ export function AssetsPanel({ concept, script, assets, onChanged }: Props) {
 
   return (
     <div className="stack">
+      <div className="card stack">
+        <div className="row" style={{ flexWrap: "wrap" }}>
+          <button className="btn primary" type="button" disabled={Boolean(codexState.id && !codexState.error && codexState.status.startsWith("生成中"))} onClick={() => void runCodex()}>
+            🤖 Codexで素材を自動で作る（ChatGPT Plus の枠を使う）
+          </button>
+          {codexState.id && codexState.status.startsWith("生成中") ? (
+            <button className="btn small" type="button" onClick={() => void cancelCodex(codexState.id!)}>
+              中止
+            </button>
+          ) : null}
+        </div>
+        <span className="meta">
+          台本に合った背景（シーンごと）と小物を、Codex が画像生成して自動で素材に登録します。1枚30秒〜1分ほど。できた順に下に並びます。
+        </span>
+        {codexState.status ? <span className="meta">{codexState.status}</span> : null}
+        {codexState.error ? <Notice kind="error">{" " + codexState.error}</Notice> : null}
+        {codexState.setup ? (
+          <Notice kind="warn" title="最初に1回だけ準備が必要です">
+            <ol className="meta" style={{ margin: "6px 0 0", paddingLeft: 18 }}>
+              <li>
+                PowerShell で <code>npm install -g @openai/codex</code> を実行
+              </li>
+              <li>
+                続けて <code>codex login</code> を実行し、開いたブラウザで ChatGPT（Plus）のアカウントでログイン
+              </li>
+              <li>このツールを 起動.bat で開き直して、もう一度ボタンを押す</li>
+            </ol>
+          </Notice>
+        ) : null}
+      </div>
       <PromptBox
         title="ChatGPTで素材を作る依頼文（背景イラスト・小物）"
         prompt={imagePrompt}
-        progress="コピーして ChatGPT（画像生成）に貼る → できた画像（またはZIP）を下に入れる"
+        progress="Codex を使わない場合：コピーして ChatGPT（画像生成）に貼る → できた画像（またはZIP）を下に入れる"
       />
       <div
         className="card stack"

@@ -70,6 +70,12 @@ export async function exportVideo(options: ExportOptions): Promise<ExportResult>
   stage.height = VIDEO.height;
   const ctx = stage.getContext("2d", { alpha: false });
   if (!ctx) throw new Error("canvasを初期化できません");
+  // モーションブラー用：1回分の絵を黒の上に写しておく作業場所
+  const sample = document.createElement("canvas");
+  sample.width = VIDEO.width;
+  sample.height = VIDEO.height;
+  const sampleCtx = sample.getContext("2d", { alpha: false });
+  if (!sampleCtx) throw new Error("canvasを初期化できません");
 
   const output = new Output({
     format: container.extension === "mp4" ? new Mp4OutputFormat({ fastStart: "in-memory" }) : new WebMOutputFormat(),
@@ -103,13 +109,21 @@ export async function exportVideo(options: ExportOptions): Promise<ExportResult>
       const t = frame / fps;
       if (samples === 1) {
         graphic.mg.render(t);
+        // HTML が透明な部分を残しても前のフレームが透けないよう、黒を敷いてから写す
+        ctx.fillStyle = "#000";
+        ctx.fillRect(0, 0, VIDEO.width, VIDEO.height);
         ctx.drawImage(graphic.canvas, 0, 0, VIDEO.width, VIDEO.height);
       } else {
         // 少しずつ時刻をずらして描いた絵を平均する（速く動くものが自然にブレて、動画らしくなる）
         for (let k = 0; k < samples; k++) {
           graphic.mg.render(Math.max(0, t + (k / (samples - 1) - 0.5) * shutter));
+          sampleCtx.globalCompositeOperation = "copy";
+          sampleCtx.fillStyle = "#000";
+          sampleCtx.fillRect(0, 0, VIDEO.width, VIDEO.height);
+          sampleCtx.globalCompositeOperation = "source-over";
+          sampleCtx.drawImage(graphic.canvas, 0, 0, VIDEO.width, VIDEO.height);
           ctx.globalAlpha = 1 / (k + 1);
-          ctx.drawImage(graphic.canvas, 0, 0, VIDEO.width, VIDEO.height);
+          ctx.drawImage(sample, 0, 0);
         }
         ctx.globalAlpha = 1;
       }

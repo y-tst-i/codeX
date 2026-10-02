@@ -2,7 +2,8 @@
  * 別のPCへの引っ越し用バックアップ。
  * 設定・作業中のプロジェクト・ネタ帳（localStorage）と、音声・キャラ画像（IndexedDB）を1つのZIPにまとめる。
  */
-import { ASSETS_STORE, AUDIO_STORE, CHARACTER_IMAGE_STORE, dumpStore, replaceStore } from "./storage";
+import type { Viseme } from "./localTts";
+import { ASSETS_STORE, AUDIO_STORE, CHARACTER_IMAGE_STORE, dumpStore, replaceStores } from "./storage";
 
 const PREFIX = "tms.";
 const SETTINGS_KEY = "tms.settings.v1";
@@ -14,7 +15,7 @@ interface Manifest {
   createdAt: string;
   includesKeys: boolean;
   local: Record<string, string>;
-  clips: { key: string; file: string; sampleRate: number; signature: string }[];
+  clips: { key: string; file: string; sampleRate: number; signature: string; visemes?: Viseme[] }[];
   images: { key: string; file: string; type: string }[];
   /** BGM・背景画像・Lottie（古いバックアップには無い） */
   assets?: { key: string; file: string; type: string }[];
@@ -55,10 +56,10 @@ export async function exportBackup(includeKeys: boolean): Promise<{ blob: Blob; 
   }
   const clips: Manifest["clips"] = [];
   for (const [i, [key, value]] of (await dumpStore(AUDIO_STORE)).entries()) {
-    const clip = value as { sampleRate: number; samples: ArrayBuffer; signature: string };
+    const clip = value as { sampleRate: number; samples: ArrayBuffer; signature: string; visemes?: Viseme[] };
     const file = `clips/${i}.pcm`;
     files[file] = new Uint8Array(clip.samples);
-    clips.push({ key, file, sampleRate: clip.sampleRate, signature: clip.signature });
+    clips.push({ key, file, sampleRate: clip.sampleRate, signature: clip.signature, ...(clip.visemes ? { visemes: clip.visemes } : {}) });
   }
   const images: Manifest["images"] = [];
   for (const [i, [key, value]] of (await dumpStore(CHARACTER_IMAGE_STORE)).entries()) {
@@ -95,7 +96,7 @@ export async function importBackup(file: File): Promise<string> {
   const clips: [string, unknown][] = manifest.clips.map((c) => {
     const bytes = files[c.file];
     if (!bytes) throw new Error(`バックアップが壊れています（${c.file} がありません）`);
-    return [c.key, { sampleRate: c.sampleRate, samples: bytes.slice().buffer, signature: c.signature }];
+    return [c.key, { sampleRate: c.sampleRate, samples: bytes.slice().buffer, signature: c.signature, ...(c.visemes ? { visemes: c.visemes } : {}) }];
   });
   const images: [string, unknown][] = manifest.images.map((img) => {
     const bytes = files[img.file];
@@ -107,11 +108,20 @@ export async function importBackup(file: File): Promise<string> {
     if (!bytes) throw new Error(`バックアップが壊れています（${a.file} がありません）`);
     return [a.key, new Blob([bytes.slice()], { type: a.type })];
   });
-  await replaceStore(AUDIO_STORE, clips);
-  await replaceStore(CHARACTER_IMAGE_STORE, images);
-  await replaceStore(ASSETS_STORE, assets);
-  for (const [key, value] of Object.entries(manifest.local)) {
-    localStorage.setItem(key, key === SETTINGS_KEY ? mergeKeys(value, localStorage.getItem(key)) : value);
+  // 音声・キャラ画像・素材はまとめて置き換える（途中で失敗しても元のデータは消えない）
+  await replaceStores({ [AUDIO_STORE]: clips, [CHARACTER_IMAGE_STORE]: images, [ASSETS_STORE]: assets });
+  // 設定類は、失敗したら元に戻せるよう先に控えておく
+  const before = Object.keys(manifest.local).map((key) => [key, localStorage.getItem(key)] as const);
+  try {
+    for (const [key, value] of Object.entries(manifest.local)) {
+      localStorage.setItem(key, key === SETTINGS_KEY ? mergeKeys(value, localStorage.getItem(key)) : value);
+    }
+  } catch (e) {
+    for (const [key, value] of before) {
+      if (value === null) localStorage.removeItem(key);
+      else localStorage.setItem(key, value);
+    }
+    throw new Error(`設定を書き込めませんでした（${(e as Error).message}）`);
   }
   return `音声${clips.length}本・キャラ画像${images.length}枚・素材${assets.length}個・設定とプロジェクトを読み込みました`;
 }

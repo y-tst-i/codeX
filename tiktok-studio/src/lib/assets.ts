@@ -2,6 +2,7 @@
  * 動画の素材（背景イラスト・小物の画像・Lottieアニメ）。
  * IndexedDB に保存し、動画HTMLには window.MG_IMAGES / window.MG_LOTTIES として差し込む。
  */
+import { prepareCharacterImage } from "./imageCharacter";
 import { PALETTES, STYLES, findOrFirst } from "./knowledge";
 import { deleteAsset, loadAssets, saveAsset } from "./storage";
 import type { Concept, Script } from "./types";
@@ -94,7 +95,9 @@ export async function importAssets(files: File[]): Promise<{ added: string[]; sk
         await saveAsset(`lottie:${name}`, new Blob([JSON.stringify(data)], { type: "application/json" }));
         added.push(name);
       } else if (/\.(png|jpe?g|webp|gif|bmp|avif)$/i.test(item.name) || item.blob.type.startsWith("image/")) {
-        const img = await prepareImage(item.blob);
+        let img = await prepareImage(item.blob);
+        // 小物なのに背景が透明でなければ、白い背景を抜く
+        if (/^prop_/i.test(name) && !img.transparent) img = await prepareImage(await prepareCharacterImage(item.blob, true));
         await saveAsset(`img:${name}`, img.blob);
         localStorage.setItem(`tms.assetMeta.${name}`, JSON.stringify({ width: img.width, height: img.height, transparent: img.transparent }));
         added.push(name);

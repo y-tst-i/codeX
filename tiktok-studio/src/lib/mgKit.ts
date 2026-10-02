@@ -34,7 +34,7 @@ function anim(t,start,dur,easeName){return E(easeName)(prog(t,start,start+dur));
 function spring(s,freq,damp){if(s<=0)return 0;freq=freq||14;damp=damp||6;return 1-Math.exp(-damp*s)*Math.cos(freq*s);}
 /** times の各時刻で 1 に跳ねて dur 秒で 0 に戻る（強調語の「叩き」用） */
 function punch(t,times,dur){dur=dur||0.35;var v=0;(times||[]).forEach(function(at){var x=(t-at)/dur;if(x>=0&&x<=1)v=Math.max(v,Math.pow(1-x,3));});return v;}
-function envelope(t,start,inDur,hold,outDur){if(t<start||t>start+inDur+hold+outDur)return 0;if(t<start+inDur)return ease.outCubic((t-start)/inDur);if(t<start+inDur+hold)return 1;return 1-ease.inCubic((t-start-inDur-hold)/outDur);}
+function envelope(t,start,inDur,hold,outDur){inDur=Math.max(0,inDur||0);hold=Math.max(0,hold||0);outDur=Math.max(0,outDur||0);if(t<start||t>start+inDur+hold+outDur)return 0;if(t<start+inDur)return ease.outCubic((t-start)/inDur);if(t<=start+inDur+hold||outDur===0)return 1;return 1-ease.inCubic((t-start-inDur-hold)/outDur);}
 /** キーフレーム補間：[{t:0,x:..,y:..},{t:1.2,x:..,ease:"outBack"}] → その時刻の値 */
 function keys(t,frames){
   var out={};if(!frames||!frames.length)return out;
@@ -50,12 +50,13 @@ function keys(t,frames){
 }
 /** ジャンプ：start から dur 秒の放物線。y はマイナス方向の持ち上がり量、sx/sy は踏み切りと着地のつぶれ */
 function hop(t,start,dur,height){
+  if(!(dur>0))return {y:0,sx:1,sy:1};
   var s=t-start;if(s<-0.12||s>dur+0.2)return {y:0,sx:1,sy:1};
   if(s<0){var q=1-(-s)/0.12;return {y:0,sx:1+0.12*q,sy:1-0.12*q};}
   if(s>dur){var r=1-(s-dur)/0.2;return {y:0,sx:1+0.14*r,sy:1-0.14*r};}
   var x=s/dur;return {y:-4*height*x*(1-x),sx:1-0.06*Math.sin(Math.PI*x),sy:1+0.1*Math.sin(Math.PI*x)};
 }
-function shake(t,start,dur,amp,seed){var k=t<start||t>start+dur?0:Math.pow(1-(t-start)/dur,2);return {x:noise(t*38,seed||1)*amp*k,y:noise(t*41,(seed||1)+9)*amp*k,r:noise(t*29,(seed||1)+4)*amp*k*0.0015};}
+function shake(t,start,dur,amp,seed){var k=!(dur>0)||t<start||t>start+dur?0:Math.pow(1-(t-start)/dur,2);return {x:noise(t*38,seed||1)*amp*k,y:noise(t*41,(seed||1)+9)*amp*k,r:noise(t*29,(seed||1)+4)*amp*k*0.0015};}
 function voice(t){return window.MG_VOICE_LEVEL?window.MG_VOICE_LEVEL(t):0;}
 
 /* ---------- 色 ---------- */
@@ -135,7 +136,7 @@ var particles={
 
 /* ---------- 画面全体の質感 ---------- */
 var fx={
-  grain:function(c,t,amount){var tiles=grainTiles(),f=Math.floor(t*24);c.save();c.globalCompositeOperation="overlay";c.globalAlpha=amount===undefined?0.08:amount;var p=c.createPattern(tiles[f%4],"repeat");c.translate(-hash(f)*256,-hash(f+3)*256);c.fillStyle=p;c.fillRect(0,0,W+256,H+256);c.restore();},
+  grain:function(c,t,amount){var tiles=grainTiles(),f=Math.floor(t*24);c.save();c.globalCompositeOperation="overlay";c.globalAlpha=amount===undefined?0.08:amount;var p=c.createPattern(tiles[((f%4)+4)%4],"repeat");c.translate(-hash(f)*256,-hash(f+3)*256);c.fillStyle=p;c.fillRect(0,0,W+256,H+256);c.restore();},
   vignette:function(c,strength){c.save();c.globalAlpha=strength===undefined?0.35:strength;c.drawImage(vignetteSprite(),0,0);c.restore();},
   flash:function(c,t,at,dur,color){var s=t-at;dur=dur||0.18;if(s<0||s>dur)return;c.save();c.globalAlpha=Math.pow(1-s/dur,2)*0.85;c.fillStyle=color||"#ffffff";c.fillRect(0,0,W,H);c.restore();},
   lightLeak:function(c,t,o){o=o||{};var col=o.color||"#ffb36b";c.save();c.globalCompositeOperation="screen";c.globalAlpha=(o.alpha||0.35)*(0.6+0.4*Math.sin(t*0.9));var x=W*(0.15+0.7*(0.5+0.5*noise(t*0.15,3))),y=H*(0.1+0.3*(0.5+0.5*noise(t*0.12,5))),r=W*0.9;c.drawImage(blob(col),x-r,y-r,r*2,r*2);c.restore();},
@@ -166,9 +167,14 @@ function transition(c,t,at,dur,type,drawA,drawB,o){
 }
 
 /* ---------- 文字 ---------- */
+/** 文字を「見た目の1文字」ずつに分ける（絵文字や一部の漢字が2つに割れないように） */
+var SEG=typeof Intl!=="undefined"&&Intl.Segmenter?new Intl.Segmenter("ja",{granularity:"grapheme"}):null;
+function graphemes(str){str=String(str);if(SEG){var out=[];for(var it=SEG.segment(str)[Symbol.iterator](),r=it.next();!r.done;r=it.next())out.push(r.value.segment);return out;}return Array.from(str);}
+/** 強調語にあたる文字の位置（見た目の1文字単位、改行は除く） */
+function accentMap(str,words){var g=graphemes(String(str).replace(/\n/g,"")),map={};(words||[]).forEach(function(word){var wg=graphemes(word);if(!wg.length)return;for(var i=0;i+wg.length<=g.length;i++){var ok=true;for(var k=0;k<wg.length;k++)if(g[i+k]!==wg[k]){ok=false;break;}if(ok)for(var k2=0;k2<wg.length;k2++)map[i+k2]=1;}});return {map:map,count:g.length};}
 var NO_HEAD="、。，．・：；？！」』）〕］｝〉》ゝゞーぁぃぅぇぉっゃゅょゎァィゥェォッャュョヮヵヶ!?),.";
 function charWidth(c,ch){var k=c.font+"|"+ch;CACHE.cw=CACHE.cw||{};return CACHE.cw[k]||(CACHE.cw[k]=c.measureText(ch).width);}
-function layout(c,str,maxWidth){var lines=[],cur=[],w=0;String(str).split("").forEach(function(ch){if(ch==="\n"){lines.push(cur);cur=[];w=0;return;}var cw=charWidth(c,ch);if(maxWidth&&w+cw>maxWidth&&cur.length&&NO_HEAD.indexOf(ch)<0){lines.push(cur);cur=[];w=0;}cur.push({ch:ch,w:cw});w+=cw;});if(cur.length)lines.push(cur);return lines;}
+function layout(c,str,maxWidth){var lines=[],cur=[],w=0;graphemes(str).forEach(function(ch){if(ch==="\n"){lines.push(cur);cur=[];w=0;return;}var cw=charWidth(c,ch);if(maxWidth&&w+cw>maxWidth&&cur.length&&NO_HEAD.indexOf(ch)<0){lines.push(cur);cur=[];w=0;}cur.push({ch:ch,w:cw});w+=cw;});if(cur.length)lines.push(cur);return lines;}
 /**
  * 1文字ずつ動く文字。o = { size, family, weight, color, accentColor, accent:["強調する語"], stroke, strokeWidth, shadow,
  *   align:"center"|"left", maxWidth, lineHeight, start, stagger, dur, anim:"pop"|"slam"|"rise"|"drop"|"wave"|"type"|"none", end（退場の開始時刻） }
@@ -176,8 +182,7 @@ function layout(c,str,maxWidth){var lines=[],cur=[],w=0;String(str).split("").fo
 function text(c,t,str,x,y,o){
   o=o||{};var size=o.size||96,lh=(o.lineHeight||1.25)*size,start=o.start||0,st=o.stagger===undefined?0.035:o.stagger,dur=o.dur||0.42,an=o.anim||"pop";
   c.save();c.font=(o.weight||900)+" "+size+"px "+(o.family?'"'+o.family+'",':"")+"sans-serif";c.textBaseline="middle";c.lineJoin="round";
-  var lines=layout(c,str,o.maxWidth),full=String(str).replace(/\n/g,""),accentAt={};
-  (o.accent||[]).forEach(function(word){var i=full.indexOf(word);while(word&&i>=0){for(var k=0;k<word.length;k++)accentAt[i+k]=1;i=full.indexOf(word,i+word.length);}});
+  var lines=layout(c,str,o.maxWidth),accentAt=accentMap(str,o.accent).map;
   var idx=0,top=y-(lines.length-1)*lh/2;
   var outP=o.end===undefined?0:ease.inBack(prog(t,o.end,o.end+0.25));
   for(var li=0;li<lines.length;li++){
@@ -219,8 +224,7 @@ function caption(c,t,o){
   if(!cur)return false;
   var size=o.size||66,y=o.y||1560,style=o.style||"karaoke",maxW=o.maxWidth||880,lh=size*1.3;
   c.save();c.font=(o.weight||900)+" "+size+"px "+(o.family?'"'+o.family+'",':"")+"sans-serif";c.textBaseline="middle";c.lineJoin="round";
-  var lines=layout(c,cur.text,maxW),total=String(cur.text).replace(/\n/g,"").length,full=String(cur.text).replace(/\n/g,"");
-  var accentAt={};(cur.emphasis||[]).forEach(function(word){var k=full.indexOf(word);while(word&&k>=0){for(var j=0;j<word.length;j++)accentAt[k+j]=1;k=full.indexOf(word,k+word.length);}});
+  var lines=layout(c,cur.text,maxW),am=accentMap(cur.text,cur.emphasis),accentAt=am.map,total=am.count;
   var inP=ease.outBack(prog(t,cur.start-0.04,cur.start+0.1)),outP=prog(t,cur.end-0.02,cur.end+0.06);
   var span=Math.max(0.2,(cur.end-cur.start)*0.92),top=y-(lines.length-1)*lh/2;
   if(o.box!==false){var bw=Math.max.apply(null,lines.map(function(l){return l.reduce(function(s,g){return s+g.w;},0);}))+size*0.9,bh=lines.length*lh+size*0.45;c.save();c.globalAlpha=(1-outP)*Math.min(1,inP*1.5)*(o.boxAlpha===undefined?0.55:o.boxAlpha);c.fillStyle=o.boxColor||"#140a1e";shape.roundRect(c,W/2-bw/2,y-bh/2,bw,bh,size*0.5);c.fill();c.restore();}
@@ -261,14 +265,18 @@ function image(c,name,o){
 function kenBurns(c,t,name,start,dur,from,to,o){var p=ease.inOutCubic(prog(t,start,start+dur));from=from||{zoom:1.05};to=to||{zoom:1.18};
   return image(c,name,Object.assign({},o||{},{zoom:mix(from.zoom||1,to.zoom||1,p),panX:mix(from.panX||0,to.panX||0,p),panY:mix(from.panY||0,to.panY||0,p)}));}
 var LOTS={};
+/* Lottie は描く前に全部準備しておく（中の画像の読み込み待ちも MG_ASSETS_READY に含める。初回と2回目で絵が変わらないように） */
+if(window.lottie){var lotWaits=[];Object.keys(window.MG_LOTTIES||{}).forEach(function(name){var data=window.MG_LOTTIES[name],cv=canvas(data.w||512,data.h||512);
+  var anim=window.lottie.loadAnimation({renderer:"canvas",loop:false,autoplay:false,animationData:JSON.parse(JSON.stringify(data)),rendererSettings:{context:cv.getContext("2d"),clearCanvas:true,preserveAspectRatio:"xMidYMid meet"}});
+  LOTS[name]={canvas:cv,anim:anim};
+  lotWaits.push(new Promise(function(r){var done=false,fin=function(){if(!done){done=true;r();}};anim.addEventListener("loaded_images",fin);anim.addEventListener("DOMLoaded",function(){if(!(data.assets||[]).some(function(a){return a.p;}))fin();});setTimeout(fin,4000);}));});
+  if(lotWaits.length){var prevL=window.MG_ASSETS_READY;window.MG_ASSETS_READY=Promise.all(lotWaits.concat(prevL?[prevL]:[]));}}
 /** Lottieアニメを t に合わせて描く。o = {x, y, w, h（中心と大きさ）, start, speed, loop} */
 function lottie(c,t,name,o){
-  o=o||{};var data=(window.MG_LOTTIES||{})[name];if(!data||!window.lottie)return false;
-  var L=LOTS[name];
-  if(!L){var cv=canvas(data.w||512,data.h||512);L=LOTS[name]={canvas:cv,anim:window.lottie.loadAnimation({renderer:"canvas",loop:false,autoplay:false,animationData:JSON.parse(JSON.stringify(data)),rendererSettings:{context:cv.getContext("2d"),clearCanvas:true,preserveAspectRatio:"xMidYMid meet"}})};}
+  o=o||{};var data=(window.MG_LOTTIES||{})[name],L=LOTS[name];if(!data||!L)return false;
   var fr=data.fr||30,total=Math.max(1,(data.op||60)-(data.ip||0)),s=(t-(o.start||0))*(o.speed||1)*fr;
   if(s<0)return false;var f=o.loop?s%total:Math.min(s,total-1);
-  L.anim.goToAndStop((data.ip||0)+f,true);
+  L.anim.goToAndStop(f,true);
   var w=o.w||400,h=o.h||w*(L.canvas.height/L.canvas.width);c.save();if(o.alpha!==undefined)c.globalAlpha*=o.alpha;c.drawImage(L.canvas,(o.x===undefined?W/2:o.x)-w/2,(o.y===undefined?H/2:o.y)-h/2,w,h);c.restore();return true;
 }
 
@@ -285,8 +293,11 @@ function card3d(c,drawFn,o){
   o=o||{};var w=Math.round(o.w||600),h=Math.round(o.h||800),P=o.perspective||1600,ry=o.rotY||0,rx=o.rotX||0,cx=o.x===undefined?W/2:o.x,cy=o.y===undefined?H/2:o.y;
   var key="card"+w+"x"+h,buf=CACHE[key]||(CACHE[key]=canvas(w,h)),b=buf.getContext("2d");
   var horizontal=Math.abs(rx)>Math.abs(ry),a=horizontal?rx:ry,back=Math.cos(a)<0;
-  b.setTransform(1,0,0,1,0,0);b.clearRect(0,0,w,h);
+  /* 前回の描画設定を持ち越さないよう、毎回まっさらにしてから描く */
+  b.setTransform(1,0,0,1,0,0);b.globalAlpha=1;b.globalCompositeOperation="source-over";b.filter="none";b.shadowBlur=0;b.shadowColor="rgba(0,0,0,0)";b.clearRect(0,0,w,h);
+  b.save();
   if(back&&o.back){o.back(b);}else{if(back){b.translate(horizontal?0:w,horizontal?h:0);b.scale(horizontal?1:-1,horizontal?-1:1);}drawFn(b);}
+  b.restore();
   var n=48,len=horizontal?h:w,cs=Math.cos(a),sn=Math.sin(a);
   for(var i=0;i<n;i++){
     var u0=-len/2+len*i/n,u1=-len/2+len*(i+1)/n,z0=u0*sn,z1=u1*sn,s0=P/(P+z0),s1=P/(P+z1),p0=u0*cs*s0,p1=u1*cs*s1,sm=(s0+s1)/2;
