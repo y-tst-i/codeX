@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <script src="assets/gsap.min.js"></script>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 1920px; height: 1080px; overflow: hidden; background: #0E0D0C; }
+      #root { position: relative; width: 1920px; height: 1080px; background: #0E0D0C; overflow: hidden; }
+      canvas { position: absolute; left: 0; top: 0; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="2.0" data-width="1920" data-height="1080">
+      <canvas id="c" width="1920" height="1080"></canvas>
+    </div>
+    <script>
+// 場面で毎回書き直しがちな部品(再現性あり: 乱数は seed 付き、時刻 t の純関数)。new_scene.sh が index.html に埋め込む。
+const SCENE_LIB = (() => {
+  const mulberry32 = (a) => () => { a |= 0; a = (a + 0x6d2b79f5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+  const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+  const lerp = (a, b, k) => a + (b - a) * k;
+  const smooth = (x) => { x = clamp(x); return x * x * (3 - 2 * x); };
+  const ease = (x) => { x = clamp(x); return x < 0.5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2; };       // inOut
+  // 速度の山谷から、映像時間 t -> 素材時間 s(t) の表を作る(スピードランプ)。segs=[[終了秒, 速度], ...] 区間境界は smooth でつなぐ
+  function timeRemap(segs, fps = 30, blend = 0.2) {
+    const n = Math.ceil(segs[segs.length - 1][0] * fps) + 1, rate = (t) => {
+      let i = 0; while (i < segs.length - 1 && t >= segs[i][0]) i++;
+      const prev = i > 0 ? segs[i - 1][1] : segs[0][1], edge = i > 0 ? segs[i - 1][0] : 0;
+      const k = i > 0 ? smooth((t - edge) / blend) : 1; return lerp(prev, segs[i][1], k);
+    };
+    const tab = new Float64Array(n); for (let f = 1; f < n; f++) tab[f] = tab[f - 1] + rate((f - 0.5) / fps) / fps;
+    return (t) => { const x = clamp(t * fps, 0, n - 1), i = Math.floor(x), j = Math.min(n - 1, i + 1); return lerp(tab[i], tab[j], x - i); };
+  }
+  // 雨(3層ストリーク)。ctx に描く。強さ=intensity、風=wind(px/s)。層ごとに速度・長さ・濃さが違う
+  function rain(ctx, t, { w = 1920, h = 1080, seed = 7, intensity = 1, wind = 0.2, layers = [[400, 14, 0.15, 900], [250, 32, 0.3, 1500], [80, 80, 0.45, 2200]], color = "200,220,255" } = {}) {
+    ctx.save(); ctx.lineCap = "round";
+    layers.forEach(([count, len, alpha, speed], li) => {
+      const r = mulberry32(seed + li * 101); ctx.strokeStyle = `rgba(${color},${alpha})`; ctx.lineWidth = 1 + li * 0.6; ctx.beginPath();
+      for (let i = 0; i < count * intensity; i++) {
+        const x0 = r() * (w + 400) - 200, y0 = r() * h, ph = r(), y = (y0 + (t * speed) + ph * h) % (h + len) - len, x = x0 + wind * (y - y0);
+        ctx.moveTo(x, y); ctx.lineTo(x + wind * len, y + len);
+      }
+      ctx.stroke();
+    }); ctx.restore();
+  }
+  const vignette = (ctx, a = 0.4, w = 1920, h = 1080) => { const g = ctx.createRadialGradient(w / 2, h / 2, h * 0.45, w / 2, h / 2, h * 0.95); g.addColorStop(0, "rgba(0,0,0,0)"); g.addColorStop(1, `rgba(0,0,0,${a})`); ctx.fillStyle = g; ctx.fillRect(0, 0, w, h); };
+  const glow = (ctx, x, y, r, color = "255,120,180", a = 0.5) => { const g = ctx.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, `rgba(${color},${a})`); g.addColorStop(1, `rgba(${color},0)`); ctx.fillStyle = g; ctx.globalCompositeOperation = "lighter"; ctx.fillRect(x - r, y - r, r * 2, r * 2); ctx.globalCompositeOperation = "source-over"; };
+  // 一点透視の投影(消失点 vp, 焦点 F): ワールド (X,Y,Z) -> 画面。カメラの前進は Z から引く
+  const project = (X, Y, Z, vp = [960, 470], F = 1000, eye = 1.7) => [vp[0] + (X * F) / Z, vp[1] + ((eye - Y) * F) / Z];
+  return { mulberry32, clamp, lerp, smooth, ease, timeRemap, rain, vignette, glow, project };
+})();
+      const { clamp, lerp, smooth, ease, mulberry32, rain, vignette, glow, project, timeRemap } = SCENE_LIB;
+      const DUR = 2.0, ctx = document.getElementById("c").getContext("2d");
+      // s1_hatch: 降下艇の後部扉。L=フレーム番号(t*30)。seed 101。
+      const TAU = Math.PI * 2;
+      const FLARE = [255, 217, 160], AMBER = [217, 130, 43], RED = [194, 52, 27], RUST = [122, 46, 18], WARM = "#FFF1DC";
+      const rgba = (c, a) => `rgba(${c[0]},${c[1]},${c[2]},${a})`;
+      const R = mulberry32(101);
+      const PH = Array.from({ length: 9 }, () => R() * TAU);
+      const KN = Array.from({ length: 64 }, () => R() * 2 - 1);
+      const vnoise = (x, o) => { const i = Math.floor(x), f = x - i; return lerp(KN[(i + o) & 63], KN[(i + 1 + o) & 63], smooth(f)); };
+      const LEAK = Array.from({ length: 12 }, () => ({ side: R() < 0.5 ? -1 : 1, y0: 260 + R() * 560, ph: R(), rate: 0.4 + R() * 0.5, range: 25 + R() * 70, drop: 20 + R() * 70, sz: 0.8 + R() * 1.3 }));
+      const BLOW = Array.from({ length: 240 }, () => ({ a: R() * TAU, r0: 10 + R() * 330, spd: 0.6 + R() * 0.7, sz: 0.6 + R() * 1.8, dark: R() < 0.45 }));
+      // 手持ち揺れ: 0.7/1.3/2.9Hz の sin の和 + seed101 のバリューノイズ(ローパス)。t=0 で 0 になるよう原点を引く
+      function shakeRaw(t) {
+        const s = (k) => 0.55 * Math.sin(TAU * 0.7 * t + PH[k]) + 0.3 * Math.sin(TAU * 1.3 * t + PH[k + 1]) + 0.15 * Math.sin(TAU * 2.9 * t + PH[k + 2]);
+        return [s(0) + 0.35 * vnoise(t * 4, 0), s(3) + 0.35 * vnoise(t * 4, 21), s(6) + 0.3 * vnoise(t * 3, 42)];
+      }
+      const SH0 = shakeRaw(0);
+      // 隙間の幅(px)
+      function gapW(L) {
+        if (L < 35) return 2 + 4 * smooth((L - 26) / 8);              // L0-35: 2→6(L30付近)
+        if (L < 41.5) { const u = clamp((L - 35) / 6); return 6 + 114 * (1 - Math.pow(1 - u, 4)); } // L36-41 power4.out
+        const u = clamp((L - 41) / 12); return 120 + 1080 * u * u;      // L42-53 power2.in
+      }
+      function draw(t) {
+        const L = t * 30;
+        ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalCompositeOperation = "source-over"; ctx.globalAlpha = 1;
+        if (L >= 56.5) { ctx.fillStyle = WARM; ctx.fillRect(0, 0, 1920, 1080); return; } // L57-59 純粋な暖白
+        ctx.fillStyle = "#0E0D0C"; ctx.fillRect(0, 0, 1920, 1080);
+        const w = gapW(L), open = clamp((w - 6) / 114), wide = clamp((w - 120) / 1080);
+        const hit = clamp((L - 35) / 2);                                   // L36 の衝撃
+        const redMul = 1 - 0.8 * clamp((L - 35) / 6);                       // 赤→琥珀へ反転
+        const spill = clamp((L - 35) / 6) * 0.6 + wide * 0.4;
+        // カメラ
+        const raw = shakeRaw(t), amp = 1 + hit;
+        const dx = clamp((raw[0] - SH0[0]) * 1.5 * amp, -4, 4), dy0 = clamp((raw[1] - SH0[1]) * 1.5 * amp, -4, 4);
+        const rot = clamp((raw[2] - SH0[2]) * 0.11 * amp, -0.3, 0.3) * Math.PI / 180;
+        const uj = (L - 35) / 4, jolt = L > 35 ? 10 * Math.pow(clamp(1 - (uj - 0.25)), 2) * (uj <= 1.25 ? 1 : 0) : 0; // L36:+10 → L40:0
+        const push = 1 + 0.04 * (0.5 - 0.5 * Math.cos(Math.PI * clamp(L / 35)));
+        ctx.translate(960 + dx, 540 + dy0 + jolt); ctx.rotate(rot); ctx.scale(push, push); ctx.translate(-960, -540);
+        // 背景(縁隠しの余白つき)
+        ctx.fillStyle = "#0E0D0C"; ctx.fillRect(-240, -240, 2400, 1560);
+        // 吊られた装備(右・非対称の黒い塊)
+        ctx.fillStyle = "#1A1714"; ctx.fillRect(1490, 150, 360, 10);
+        ctx.fillStyle = "#13110F";
+        [[1610, 160, 1612, 330], [1745, 160, 1748, 290]].forEach(([x1, y1, x2, y2]) => ctx.fillRect(x1, y1, 4, y2 - y1));
+        ctx.beginPath(); ctx.roundRect(1585, 320, 120, 330, 22); ctx.roundRect(1700, 280, 150, 250, 30); ctx.roundRect(1690, 520, 110, 190, 18); ctx.fill();
+        // 肋材 x=180,420,1560
+        [180, 420, 1560].forEach((x) => { ctx.fillStyle = "#1A1714"; ctx.fillRect(x - 23, -240, 46, 1560); });
+        // 床の境
+        ctx.fillStyle = "#13110F"; ctx.fillRect(-240, 930, 2400, 400);
+        // 扉の向こうの光が壁・床へ回る(L36以降、琥珀が支配)
+        if (spill > 0) {
+          const g = ctx.createRadialGradient(960, 560, 100, 960, 560, 520 + w * 0.8);
+          g.addColorStop(0, rgba(AMBER, 0.42 * spill)); g.addColorStop(0.5, rgba(AMBER, 0.16 * spill)); g.addColorStop(1, rgba(AMBER, 0));
+          ctx.globalCompositeOperation = "lighter"; ctx.fillStyle = g; ctx.fillRect(-240, -240, 2400, 1560); ctx.globalCompositeOperation = "source-over";
+          // 肋材の扉側エッジ
+          [[180 + 20, 3], [420 + 20, 3], [1560 - 23, 3]].forEach(([x, ww]) => { ctx.fillStyle = rgba(AMBER, 0.5 * spill); ctx.fillRect(x, -240, ww, 1560); });
+        }
+        // 床に落ちる隙間の光
+        { const g = ctx.createLinearGradient(0, 880, 0, 1080); g.addColorStop(0, rgba(FLARE, 0.16 + 0.3 * open)); g.addColorStop(1, rgba(FLARE, 0));
+          ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(960 - w / 2, 880); ctx.lineTo(960 + w / 2, 880); ctx.lineTo(960 + w / 2 + 40 + w * 0.6, 1180); ctx.lineTo(960 - w / 2 - 40 - w * 0.6, 1180); ctx.fill(); }
+        // 扉枠
+        ctx.fillStyle = "#1A1714"; ctx.fillRect(452, 172, 1016, 736);
+        ctx.fillStyle = "#0E0D0C"; ctx.fillRect(472, 192, 976, 696);
+        ctx.save(); ctx.beginPath(); ctx.rect(480, 200, 960, 680); ctx.clip();
+        // 外(隙間の中): 琥珀→FLARE
+        ctx.fillStyle = rgba(FLARE, 1); ctx.fillRect(960 - w / 2, 200, w, 680);
+        if (open > 0) {
+          const g = ctx.createLinearGradient(0, 200, 0, 880);
+          g.addColorStop(0, rgba(AMBER, 1)); g.addColorStop(0.55, rgba(FLARE, 1)); g.addColorStop(0.64, rgba(FLARE, 1)); g.addColorStop(0.67, "rgba(197,112,38,1)"); g.addColorStop(1, rgba(AMBER, 1));
+          ctx.globalAlpha = open; ctx.fillStyle = g; ctx.fillRect(960 - w / 2, 200, w, 680);
+          const s = ctx.createRadialGradient(960, 630, 0, 960, 630, 360); s.addColorStop(0, rgba(FLARE, 1)); s.addColorStop(1, rgba(FLARE, 0));
+          ctx.fillStyle = s; ctx.fillRect(960 - w / 2, 200, w, 680);
+          ctx.fillStyle = rgba(RUST, 0.35); ctx.fillRect(960 - w / 2, 652, w, 3);
+          ctx.globalAlpha = 1;
+        }
+        // 扉パネル(逆光で暗いシルエット、左右で違うディテール)
+        const xl = 960 - w / 2, xr = 960 + w / 2;
+        ctx.fillStyle = "#15130F"; ctx.fillRect(xl - 480, 200, 480, 680); ctx.fillRect(xr, 200, 480, 680);
+        ctx.fillStyle = "#0E0D0C";
+        [330, 560, 790].forEach((y) => ctx.fillRect(xl - 480, y, 480, 4));
+        [420, 700].forEach((y) => ctx.fillRect(xr, y, 480, 4));
+        ctx.fillRect(xl - 130, 240, 6, 600); ctx.fillRect(xr + 300, 470, 140, 160);
+        ctx.fillStyle = "#1A1714";
+        [330, 560, 790].forEach((y) => ctx.fillRect(xl - 480, y + 4, 480, 1));
+        [420, 700].forEach((y) => ctx.fillRect(xr, y + 4, 480, 1));
+        for (let i = 0; i < 6; i++) { ctx.fillRect(xl - 60, 250 + i * 110, 6, 6); ctx.fillRect(xr + 52, 300 + i * 96, 6, 6); }
+        ctx.restore();
+        // 回転非常灯 (260,110):2拍ごと(L0,24,48)に左→右へ壁を掃く
+        { const k = Math.floor(L / 24), p = (L - k * 24) / 20;
+          if (p <= 1) { const bx = lerp(-380, 2300, ease(p)), a = Math.sin(Math.PI * p) * redMul;
+            ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.translate(bx, 470); ctx.scale(1, 2.4);
+            const g = ctx.createRadialGradient(0, 0, 0, 0, 0, 300); g.addColorStop(0, rgba(RED, 0.42 * a)); g.addColorStop(0.6, rgba(RED, 0.12 * a)); g.addColorStop(1, rgba(RED, 0));
+            ctx.fillStyle = g; ctx.fillRect(-300, -300, 600, 600); ctx.restore();
+            [180, 420, 1560].forEach((x) => { const e = Math.exp(-Math.pow((x - bx) / 220, 2)) * a; ctx.fillStyle = rgba(RED, 0.6 * e); ctx.fillRect(x - 23, -240, 3, 1560); }); }
+          const face = 0.5 + 0.5 * Math.cos(TAU * (L - 10) / 24);
+          ctx.fillStyle = "#1A1714"; ctx.fillRect(236, 82, 48, 14); ctx.fillRect(240, 124, 40, 8);
+          ctx.fillStyle = rgba(RED, 0.55 + 0.45 * face * redMul); ctx.beginPath(); ctx.ellipse(260, 110, 16, 15, 0, 0, TAU); ctx.fill();
+          ctx.globalCompositeOperation = "lighter";
+          const g2 = ctx.createRadialGradient(260, 110, 0, 260, 110, 110); g2.addColorStop(0, rgba(RED, 0.5 * face * redMul)); g2.addColorStop(1, rgba(RED, 0));
+          ctx.fillStyle = g2; ctx.fillRect(150, 0, 220, 220); ctx.globalCompositeOperation = "source-over"; }
+        // 隙間のグロー(16px)と芯
+        { const gw = 16 + w * 0.12, ga = 0.55;
+          let g = ctx.createLinearGradient(xl - gw, 0, xl, 0); g.addColorStop(0, rgba(FLARE, 0)); g.addColorStop(1, rgba(FLARE, ga));
+          ctx.fillStyle = g; ctx.fillRect(Math.max(480, xl - gw), 200, Math.min(gw, xl - 480), 680);
+          g = ctx.createLinearGradient(xr, 0, xr + gw, 0); g.addColorStop(0, rgba(FLARE, ga)); g.addColorStop(1, rgba(FLARE, 0));
+          ctx.fillStyle = g; ctx.fillRect(xr, 200, Math.min(gw, Math.max(0, 1440 - xr)), 680);
+          if (open <= 0) { ctx.fillStyle = rgba(FLARE, 1); ctx.fillRect(960 - w / 2, 200, w, 680); } }
+        // 隙間から漏れる砂粒(逆光、L0-41)
+        if (L < 42) { const fade = 1 - clamp((L - 36) / 5);
+          LEAK.forEach((g) => { const q = (t * g.rate + g.ph) % 1, x = 960 + g.side * (w / 2 + 3 + q * g.range), y = g.y0 + q * g.drop;
+            ctx.fillStyle = rgba(FLARE, Math.sin(Math.PI * q) * 0.85 * fade); ctx.fillRect(x, y, g.sz, g.sz); }); }
+        // 露出が上がる(L42-53、加算せず暖色へ寄せるので #FFF に届かない)
+        if (L > 41) { const e = Math.pow(clamp((L - 41) / 12), 2);
+          const g = ctx.createRadialGradient(960, 560, 0, 960, 560, 1200);
+          g.addColorStop(0, rgba(FLARE, 0.95 * e)); g.addColorStop(0.45, rgba(FLARE, 0.6 * e)); g.addColorStop(1, rgba(AMBER, 0.5 * e));
+          ctx.fillStyle = g; ctx.fillRect(-240, -240, 2400, 1560);
+          // 吹き込む砂(中心から放射、手前へ拡大)
+          const s = clamp((L - 41) / 12); ctx.lineCap = "round";
+          BLOW.forEach((b) => { const q = s * b.spd; if (q <= 0) return;
+            const rr = (u) => b.r0 * (0.15 + Math.pow(u, 1.7) * 5.5), r1 = rr(q), r0 = rr(Math.max(0, q - 0.06));
+            const cx = Math.cos(b.a), cy = Math.sin(b.a), sz = b.sz * (1 + q * 7);
+            ctx.strokeStyle = b.dark ? `rgba(14,13,12,${0.55 * (1 - e * 0.5)})` : rgba(FLARE, 0.8); ctx.lineWidth = sz;
+            ctx.beginPath(); ctx.moveTo(960 + cx * r0, 560 + cy * r0); ctx.lineTo(960 + cx * r1, 560 + cy * r1); ctx.stroke(); }); }
+        // ライトフラッシュ: L54-56 で #FFF1DC 0→1(linear)
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        if (L > 53.5) { ctx.globalAlpha = clamp((L - 54) / 3); ctx.fillStyle = WARM; ctx.fillRect(0, 0, 1920, 1080); ctx.globalAlpha = 1; }
+      }
+      window.__timelines = window.__timelines || {};
+      const tl = gsap.timeline({ paused: true }), st = { t: 0 };
+      tl.to(st, { t: DUR, duration: DUR, ease: "none", onUpdate: () => draw(st.t) }, 0);
+      draw(0); window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>

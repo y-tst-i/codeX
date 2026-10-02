@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <script src="assets/gsap.min.js"></script>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 1920px; height: 1080px; overflow: hidden; background: #0E0D0C; }
+      #root { position: relative; width: 1920px; height: 1080px; background: #0E0D0C; overflow: hidden; }
+      canvas { position: absolute; left: 0; top: 0; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="2.4" data-width="1920" data-height="1080">
+      <canvas id="c" width="1920" height="1080" data-layout-allow-overflow></canvas>
+    </div>
+    <script>
+// 場面で毎回書き直しがちな部品(再現性あり: 乱数は seed 付き、時刻 t の純関数)。new_scene.sh が index.html に埋め込む。
+const SCENE_LIB = (() => {
+  const mulberry32 = (a) => () => { a |= 0; a = (a + 0x6d2b79f5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+  const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+  const lerp = (a, b, k) => a + (b - a) * k;
+  const smooth = (x) => { x = clamp(x); return x * x * (3 - 2 * x); };
+  const ease = (x) => { x = clamp(x); return x < 0.5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2; };       // inOut
+  // 速度の山谷から、映像時間 t -> 素材時間 s(t) の表を作る(スピードランプ)。segs=[[終了秒, 速度], ...] 区間境界は smooth でつなぐ
+  function timeRemap(segs, fps = 30, blend = 0.2) {
+    const n = Math.ceil(segs[segs.length - 1][0] * fps) + 1, rate = (t) => {
+      let i = 0; while (i < segs.length - 1 && t >= segs[i][0]) i++;
+      const prev = i > 0 ? segs[i - 1][1] : segs[0][1], edge = i > 0 ? segs[i - 1][0] : 0;
+      const k = i > 0 ? smooth((t - edge) / blend) : 1; return lerp(prev, segs[i][1], k);
+    };
+    const tab = new Float64Array(n); for (let f = 1; f < n; f++) tab[f] = tab[f - 1] + rate((f - 0.5) / fps) / fps;
+    return (t) => { const x = clamp(t * fps, 0, n - 1), i = Math.floor(x), j = Math.min(n - 1, i + 1); return lerp(tab[i], tab[j], x - i); };
+  }
+  // 雨(3層ストリーク)。ctx に描く。強さ=intensity、風=wind(px/s)。層ごとに速度・長さ・濃さが違う
+  function rain(ctx, t, { w = 1920, h = 1080, seed = 7, intensity = 1, wind = 0.2, layers = [[400, 14, 0.15, 900], [250, 32, 0.3, 1500], [80, 80, 0.45, 2200]], color = "200,220,255" } = {}) {
+    ctx.save(); ctx.lineCap = "round";
+    layers.forEach(([count, len, alpha, speed], li) => {
+      const r = mulberry32(seed + li * 101); ctx.strokeStyle = `rgba(${color},${alpha})`; ctx.lineWidth = 1 + li * 0.6; ctx.beginPath();
+      for (let i = 0; i < count * intensity; i++) {
+        const x0 = r() * (w + 400) - 200, y0 = r() * h, ph = r(), y = (y0 + (t * speed) + ph * h) % (h + len) - len, x = x0 + wind * (y - y0);
+        ctx.moveTo(x, y); ctx.lineTo(x + wind * len, y + len);
+      }
+      ctx.stroke();
+    }); ctx.restore();
+  }
+  const vignette = (ctx, a = 0.4, w = 1920, h = 1080) => { const g = ctx.createRadialGradient(w / 2, h / 2, h * 0.45, w / 2, h / 2, h * 0.95); g.addColorStop(0, "rgba(0,0,0,0)"); g.addColorStop(1, `rgba(0,0,0,${a})`); ctx.fillStyle = g; ctx.fillRect(0, 0, w, h); };
+  const glow = (ctx, x, y, r, color = "255,120,180", a = 0.5) => { const g = ctx.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, `rgba(${color},${a})`); g.addColorStop(1, `rgba(${color},0)`); ctx.fillStyle = g; ctx.globalCompositeOperation = "lighter"; ctx.fillRect(x - r, y - r, r * 2, r * 2); ctx.globalCompositeOperation = "source-over"; };
+  // 一点透視の投影(消失点 vp, 焦点 F): ワールド (X,Y,Z) -> 画面。カメラの前進は Z から引く
+  const project = (X, Y, Z, vp = [960, 470], F = 1000, eye = 1.7) => [vp[0] + (X * F) / Z, vp[1] + ((eye - Y) * F) / Z];
+  return { mulberry32, clamp, lerp, smooth, ease, timeRemap, rain, vignette, glow, project };
+})();
+      const { clamp, lerp, smooth, ease, mulberry32, rain, vignette, glow, project, timeRemap } = SCENE_LIB;
+      const DUR = 2.4, ctx = document.getElementById("c").getContext("2d");
+      // ★ここだけ書く: 時刻 t(秒) の純関数。Math.random / Date.now を使わない(乱数は mulberry32(seed))。
+      // ===== s2_drop「影へ落ちる」: バードアイの地図 → 落下 → クラッシュズームイン → 着地の揺れ → 砂塵 =====
+      const CX = 960, CY = 500;                       // 着地点=人物=ズーム原点
+      const BONE = "#EDE4D3", SHADOW = "110,90,72", RINGC = "#2A211B", AMBER = "217,130,43", FLARE = "255,217,160", CARBON = "14,13,12";
+      // ---- 一括生成(seed 202): ボロノイ網・塩の隆起・砂塵の塊 ----
+      const R = mulberry32(202);
+      const SP = 110, GX0 = -330, GY0 = -330, NX = 25, NY = 18;     // 格子 110px+揺らぎ=セル80〜140px
+      const seeds = [];
+      for (let j = 0; j < NY; j++) for (let i = 0; i < NX; i++) seeds.push([GX0 + i * SP + (R() - 0.5) * 56, GY0 + j * SP + (R() - 0.5) * 56, R()]);
+      function clipPoly(poly, px, py, nx, ny, c) {      // n·p <= c の側を残す
+        const out = [];
+        for (let k = 0; k < poly.length; k++) {
+          const a = poly[k], b = poly[(k + 1) % poly.length];
+          const da = nx * a[0] + ny * a[1] - c, db = nx * b[0] + ny * b[1] - c;
+          if (da <= 0) out.push(a);
+          if ((da <= 0) !== (db <= 0)) { const s = da / (da - db); out.push([a[0] + (b[0] - a[0]) * s, a[1] + (b[1] - a[1]) * s]); }
+        }
+        return out;
+      }
+      const cells = seeds.map(([sx, sy, tone], idx) => {
+        const i = idx % NX, j = Math.floor(idx / NX);
+        let poly = [[sx - 260, sy - 260], [sx + 260, sy - 260], [sx + 260, sy + 260], [sx - 260, sy + 260]];
+        for (let dj = -2; dj <= 2; dj++) for (let di = -2; di <= 2; di++) {
+          if (!di && !dj) continue; const ii = i + di, jj = j + dj; if (ii < 0 || jj < 0 || ii >= NX || jj >= NY) continue;
+          const [ox, oy] = seeds[jj * NX + ii], nx = ox - sx, ny = oy - sy;
+          poly = clipPoly(poly, 0, 0, nx, ny, (nx * (ox + sx) + ny * (oy + sy)) / 2);
+        }
+        return { poly, tone };
+      });
+      const SUN = Math.atan2(0.42, 0.91);              // 影の向き=右下(太陽は左上の地平線)
+      const ridges = [];
+      for (let k = 0; k < 150; k++) ridges.push([-300 + R() * 2500, -300 + R() * 1700, 200 + R() * 200, 2 + R() * 3.5, R()]);
+      const puffs = [];
+      for (let k = 0; k < 70; k++) puffs.push([R() * Math.PI * 2, 0.55 + R() * 0.5, 50 + R() * 140, R()]);
+      // ---- リング(墜ちた軌道リング): (0,160)→(1920,920) の緩い弧、幅140。影=右下側に幅360の帯 ----
+      const P0 = [0, 160], P1 = [1130, 32], P2 = [1920, 920];
+      const ringPts = [];
+      for (let k = -24; k <= 144; k++) {
+        const u = k / 120, a = (1 - u) * (1 - u), b = 2 * u * (1 - u), c = u * u;
+        const x = a * P0[0] + b * P1[0] + c * P2[0], y = a * P0[1] + b * P1[1] + c * P2[1];
+        const dx = 2 * (1 - u) * (P1[0] - P0[0]) + 2 * u * (P2[0] - P1[0]), dy = 2 * (1 - u) * (P1[1] - P0[1]) + 2 * u * (P2[1] - P1[1]);
+        const l = Math.hypot(dx, dy); ringPts.push([x, y, -dy / l, dx / l]); // 法線は下側(右下側)
+      }
+      function band(o0, o1) {
+        ctx2.beginPath();
+        ringPts.forEach(([x, y, nx, ny], k) => (k ? ctx2.lineTo : ctx2.moveTo).call(ctx2, x + nx * o0, y + ny * o0));
+        for (let k = ringPts.length - 1; k >= 0; k--) { const [x, y, nx, ny] = ringPts[k]; ctx2.lineTo(x + nx * o1, y + ny * o1); }
+        ctx2.closePath();
+      }
+      // ---- 時間設計(L=場面フレーム) ----
+      const p1in = (x) => x * x, p2out = (x) => 1 - (1 - x) * (1 - x), expoOut = (x) => (x >= 1 ? 1 : 1 - Math.pow(2, -10 * x));
+      function camScale(L) {
+        if (L <= 47) return 1 + 0.5 * p1in(clamp(L / 47));                 // 落下で近づく
+        return 1.5 + 2.4 * expoOut(clamp((L - 47) / 10));                  // L48–57 クラッシュズーム ×2.6、以後静止
+      }
+      const off = document.createElement("canvas"); off.width = 1920; off.height = 1080; const ctx2 = off.getContext("2d");
+      // 平面図用のスカイダイバー(頭=円 r9、肩=楕円 rx22 ry10、四肢を開く)。原点=体の中心
+      function diver(g, fill, rim) {
+        g.lineCap = "round"; g.lineJoin = "round";
+        const limbs = [[[-16, -6], [-30, -16], [-28, -32]], [[16, -6], [30, -16], [28, -32]], [[-7, 18], [-20, 30], [-15, 44]], [[7, 18], [20, 30], [15, 44]]];
+        const body = () => {
+          g.beginPath(); limbs.forEach(([a, b, c]) => { g.moveTo(...a); g.lineTo(...b); g.lineTo(...c); });
+          g.stroke();
+          g.beginPath(); g.ellipse(0, -4, 22, 10, 0, 0, Math.PI * 2); g.fill();
+          g.beginPath(); g.ellipse(0, 9, 12, 16, 0, 0, Math.PI * 2); g.fill();
+          g.beginPath(); g.arc(0, -19, 9, 0, Math.PI * 2); g.fill();
+        };
+        if (rim) { g.save(); g.translate(-1.6, -1.6); g.strokeStyle = g.fillStyle = rim; g.lineWidth = 8; body(); g.restore(); }
+        g.strokeStyle = g.fillStyle = fill; g.lineWidth = 7; body();
+      }
+      // 地上(地図)を ctx2 に描く。s=倍率(原点 CX,CY)
+      function drawWorld(s, L) {
+        const g = ctx2;
+        g.setTransform(1, 0, 0, 1, 0, 0); g.fillStyle = BONE; g.fillRect(0, 0, 1920, 1080);
+        g.setTransform(s, 0, 0, s, CX - CX * s, CY - CY * s);
+        // セルの明度の揺らぎ
+        cells.forEach(({ poly, tone }) => {
+          if (poly.length < 3) return; g.beginPath(); poly.forEach((p, k) => (k ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1]))); g.closePath();
+          g.fillStyle = tone < 0.5 ? `rgba(${FLARE},${0.25 * (0.5 - tone)})` : `rgba(${SHADOW},${0.07 * (tone - 0.5)})`; g.fill();
+        });
+        // 塩の隆起の影(右下へ 200〜400px の細い筋)
+        const cx = Math.cos(SUN), sy = Math.sin(SUN);
+        ridges.forEach(([x, y, len, w, a]) => {
+          const gr = g.createLinearGradient(x, y, x + cx * len, y + sy * len);
+          gr.addColorStop(0, `rgba(${SHADOW},${0.38 + 0.2 * a})`); gr.addColorStop(1, `rgba(${SHADOW},0)`);
+          g.fillStyle = gr; g.beginPath(); g.moveTo(x - sy * w, y + cx * w); g.lineTo(x + cx * len, y + sy * len); g.lineTo(x + sy * w, y - cx * w); g.closePath(); g.fill();
+          g.fillStyle = `rgba(${FLARE},0.7)`; g.beginPath(); g.ellipse(x - cx * 2, y - sy * 2, w * 1.4, w * 0.8, SUN, 0, Math.PI * 2); g.fill();
+        });
+        // 亀裂(ボロノイ網)
+        g.beginPath();
+        cells.forEach(({ poly }) => { if (poly.length < 3) return; poly.forEach((p, k) => (k ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1]))); g.closePath(); });
+        g.strokeStyle = `rgba(${SHADOW},0.5)`; g.lineWidth = 1.6; g.stroke();
+        // リングの影の帯(幅360、#6E5A48 0.55)
+        band(70, 430); g.fillStyle = `rgba(${SHADOW},0.55)`; g.fill();
+        band(380, 430); g.fillStyle = `rgba(${SHADOW},0.12)`; g.fill();   // 半影
+        // リング本体(幅140)+ 太陽側のリム + 区画の筋
+        band(-70, 70); g.fillStyle = RINGC; g.fill();
+        band(-70, -62); g.fillStyle = `rgba(${FLARE},0.85)`; g.fill();
+        band(30, 70); g.fillStyle = `rgba(${CARBON},0.45)`; g.fill();
+        g.beginPath(); for (let k = 0; k < ringPts.length; k += 3) { const [x, y, nx, ny] = ringPts[k]; g.moveTo(x - nx * 60, y - ny * 60); g.lineTo(x + nx * 66, y + ny * 66); }
+        g.strokeStyle = `rgba(${CARBON},0.7)`; g.lineWidth = 3; g.stroke();
+        // 太陽側(左上)の琥珀の砂塵のもや=75°の傾き(奥ほど霞む)
+        g.setTransform(1, 0, 0, 1, 0, 0);
+        const hz = g.createLinearGradient(0, 0, 900, 1100); hz.addColorStop(0, `rgba(${AMBER},0.32)`); hz.addColorStop(0.55, `rgba(${AMBER},0.06)`); hz.addColorStop(1, `rgba(${AMBER},0)`);
+        g.fillStyle = hz; g.fillRect(0, 0, 1920, 1080);
+        // 人物の地面の影((960+300,500+140) → L60 で (960,500))と人物
+        const ps = s > 1.5 ? s / 1.5 : 1, k = 1 - Math.pow(clamp(L / 60), 1.3);
+        const sway = 0.06 * Math.sin(L * 0.21 + 0.7) + 0.03 * Math.sin(L * 0.37 + 2.1), rot = -0.35 + sway * (1 - clamp(L / 57));
+        g.save(); g.translate(CX + 300 * k, CY + 140 * k); g.rotate(rot); g.scale(ps * (1 + 0.15 * k), ps * (1 + 0.15 * k));
+        g.filter = `blur(${(1.5 + 4 * k) * ps}px)`; g.globalAlpha = 0.5 - 0.15 * k; diver(g, `rgb(${CARBON})`, null); g.restore();
+        g.filter = "none"; g.globalAlpha = 1;
+        g.save(); g.translate(CX, CY); g.rotate(rot); g.scale(ps, ps);
+        diver(g, `rgb(${CARBON})`, `rgba(${FLARE},0.9)`);
+        g.fillStyle = "#3FE0D0"; [[-6, 6], [6, 6]].forEach(([x, y]) => { g.beginPath(); g.arc(x, y, 2, 0, Math.PI * 2); g.fill(); });
+        g.globalCompositeOperation = "lighter"; [[-6, 6], [6, 6]].forEach(([x, y]) => { const r = g.createRadialGradient(x, y, 0, x, y, 7); r.addColorStop(0, "rgba(63,224,208,0.45)"); r.addColorStop(1, "rgba(63,224,208,0)"); g.fillStyle = r; g.fillRect(x - 7, y - 7, 14, 14); });
+        g.restore(); g.globalCompositeOperation = "source-over";
+      }
+      function finalDust(g, a) {                        // 最終構図: 全面 #C9772E + 中心 r360 に #E8A65A
+        g.globalAlpha = a; g.fillStyle = "#C9772E"; g.fillRect(0, 0, 1920, 1080);
+        const r = g.createRadialGradient(CX, CY, 0, CX, CY, 360); r.addColorStop(0, "rgba(232,166,90,1)"); r.addColorStop(1, "rgba(232,166,90,0)");
+        g.fillStyle = r; g.fillRect(0, 0, 1920, 1080); g.globalAlpha = 1;
+      }
+      function draw(t) {
+        const L = Math.round(t * 30 * 1000) / 1000;
+        ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.globalCompositeOperation = "source-over";
+        if (L >= 70.999) { finalDust(ctx, 1); return; }
+        const s = camScale(L);
+        drawWorld(s, L);
+        // 着地の揺れ(L60–67、±14px→0、低周波の正弦和で減衰)
+        let sx = 0, sy = 0;
+        if (L >= 60) { const u = clamp((L - 60) / 8), env = (1 - u) * (1 - u), tau = (L - 60) / 30;
+          sx = 14 * env * (0.62 * Math.cos(2 * Math.PI * 5.3 * tau + 0.2) + 0.38 * Math.cos(2 * Math.PI * 7.9 * tau + 1.1));
+          sy = 14 * env * (0.6 * Math.cos(2 * Math.PI * 6.1 * tau + 0.9) + 0.4 * Math.sin(2 * Math.PI * 8.7 * tau + 0.4)); }
+        ctx.fillStyle = BONE; ctx.fillRect(0, 0, 1920, 1080);
+        ctx.drawImage(off, sx - 16, sy - 16, 1952, 1112);  // 揺れで端が欠けないよう僅かに大きく
+        // クラッシュズーム中だけの放射状ブラー(ghost 6枚、幅=速度)
+        if (L > 47 && L < 57.5) {
+          const rel = 1 - camScale(L - 1) / s;
+          if (rel > 0.002) for (let i = 1; i <= 6; i++) {
+            const f = 1 - rel * i / 6; ctx.globalAlpha = 1 / (i + 1);
+            ctx.setTransform(f, 0, 0, f, CX - CX * f, CY - CY * f); ctx.drawImage(off, 0, 0);
+          }
+          ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1;
+        }
+        // 砂塵の輪(L60–71、半径 0→1400、power2.out、AMBER)
+        if (L >= 60) {
+          const q = clamp((L - 60) / 11), Rr = 1400 * p2out(q);
+          const fade = 1 - smooth((L - 67) / 4);
+          ctx.save(); ctx.translate(sx * 0.5, sy * 0.5);
+          const g = ctx.createRadialGradient(CX, CY, 0, CX, CY, Math.max(1, Rr));
+          g.addColorStop(0, "rgba(232,166,90,1)"); g.addColorStop(0.55, "rgba(201,119,46,0.97)"); g.addColorStop(0.86, `rgba(${AMBER},0.85)`); g.addColorStop(1, `rgba(${AMBER},0)`);
+          ctx.fillStyle = g; ctx.beginPath(); ctx.arc(CX, CY, Math.max(1, Rr), 0, Math.PI * 2); ctx.fill();
+          puffs.forEach(([ang, rf, pr, a]) => {
+            const rr = Rr * rf, x = CX + Math.cos(ang) * rr, y = CY + Math.sin(ang) * rr * 0.92, r = pr * (0.4 + q);
+            const pg = ctx.createRadialGradient(x, y, 0, x, y, r);
+            const col = a < 0.5 ? AMBER : "201,119,46";
+            pg.addColorStop(0, `rgba(${col},${0.55 * fade})`); pg.addColorStop(1, `rgba(${col},0)`);
+            ctx.fillStyle = pg; ctx.fillRect(x - r, y - r, r * 2, r * 2);
+          });
+          ctx.restore();
+        }
+        if (L >= 66) finalDust(ctx, smooth((L - 66) / 5));          // 出: 砂塵が全面を覆う
+        // 入り: L0–1 全面 #FFF1DC、L2–14 で抜ける(power2.out)
+        if (L < 14) { ctx.globalAlpha = 1 - p2out(clamp((L - 1) / 13)); ctx.fillStyle = "#FFF1DC"; ctx.fillRect(0, 0, 1920, 1080); ctx.globalAlpha = 1; }
+      }
+      window.__timelines = window.__timelines || {};
+      const tl = gsap.timeline({ paused: true }), st = { t: 0 };
+      tl.to(st, { t: DUR, duration: DUR, ease: "none", onUpdate: () => draw(st.t) }, 0);
+      draw(0); window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>
