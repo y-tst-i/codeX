@@ -75,7 +75,17 @@ async function prepareImage(blob: Blob): Promise<{ blob: Blob; width: number; he
 export async function importAssets(files: File[]): Promise<{ added: string[]; skipped: string[] }> {
   const items: { name: string; blob: Blob }[] = [];
   for (const file of files) {
-    if (/\.zip$/i.test(file.name) || /zip/.test(file.type)) {
+    if (/\.lottie$/i.test(file.name)) {
+      // dotLottie（.lottie）は中身が ZIP。animations/ の中の JSON を、ファイル名の名前で取り出す
+      const { unzipSync } = await import("fflate");
+      const entries = unzipSync(new Uint8Array(await file.arrayBuffer()));
+      const animations = Object.entries(entries).filter(([path]) => /^animations\/.+\.json$/i.test(path));
+      const base = assetName(file.name);
+      animations.forEach(([path, bytes], i) =>
+        items.push({ name: animations.length === 1 ? `${base}.json` : `${base}_${assetName(path) || i + 1}.json`, blob: new Blob([bytes.slice()], { type: "application/json" }) })
+      );
+      if (animations.length === 0) items.push({ name: file.name, blob: file });
+    } else if (/\.zip$/i.test(file.name) || /zip/.test(file.type)) {
       const { unzipSync } = await import("fflate");
       const entries = unzipSync(new Uint8Array(await file.arrayBuffer()));
       for (const [path, bytes] of Object.entries(entries)) {

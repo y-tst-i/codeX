@@ -149,7 +149,7 @@ export function AssetsPanel({ concept, script, assets, onChanged }: Props) {
           ref={inputRef}
           type="file"
           multiple
-          accept="image/*,.json,application/json,.zip,application/zip"
+          accept="image/*,.json,application/json,.lottie,.zip,application/zip"
           style={{ display: "none" }}
           onChange={(e) => void add(Array.from(e.target.files ?? []))}
         />
@@ -157,7 +157,7 @@ export function AssetsPanel({ concept, script, assets, onChanged }: Props) {
           <button className="btn primary" type="button" disabled={busy} onClick={() => inputRef.current?.click()}>
             {busy ? "読み込み中…" : "🖼 素材を追加（画像・Lottie・ZIP）"}
           </button>
-          <span className="meta">またはここにドラッグ＆ドロップ。Lottie は LottieFiles などで「Lottie JSON」をダウンロード</span>
+          <span className="meta">またはここにドラッグ＆ドロップ。Lottie（動くアニメ素材）は LottieFiles などで「Lottie JSON」か「dotLottie」をダウンロード（任意）</span>
         </div>
         {message ? <span className="meta">{message}</span> : null}
         {assets.length === 0 ? (
