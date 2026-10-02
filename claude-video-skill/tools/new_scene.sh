@@ -38,8 +38,7 @@ ${lib}
       function draw(t) {
         ctx.clearRect(0, 0, 1920, 1080);
         ctx.fillStyle = "${bg}"; ctx.fillRect(0, 0, 1920, 1080);
-        // TODO: 場面カードの内容を描く
-        vignette(ctx, 0.4);
+        // TODO: 場面カードの内容を描く(ビネットは必要な場面だけ vignette(ctx, 0.35) を呼ぶ)
       }
       window.__timelines = window.__timelines || {};
       const tl = gsap.timeline({ paused: true }), st = { t: 0 };
