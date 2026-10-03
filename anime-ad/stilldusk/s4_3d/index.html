@@ -1,0 +1,532 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <script src="assets/gsap.min.js"></script>
+    <script type="importmap">
+      { "imports": { "three": "./assets/three/three.module.min.js", "three/addons/": "./assets/three/addons/" } }
+    </script>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 1920px; height: 1080px; overflow: hidden; background: #0E0D0C; }
+      #root { position: relative; width: 1920px; height: 1080px; background: #0E0D0C; overflow: hidden; }
+      #gl { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; display: block; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="4.4" data-width="1920" data-height="1080">
+      <canvas id="gl" data-layout-allow-overflow></canvas>
+    </div>
+    <script>
+      // DOM 用の gsap timeline(3D の描画はここでしない)。長さを DUR に固定するだけ。
+      window.__timelines = window.__timelines || {};
+      const tl = gsap.timeline({ paused: true });
+      tl.set({}, {}, 4.4);
+      window.__timelines["main"] = tl;
+    </script>
+    <script type="module">
+      // ===== s4_shot_3d「一発が、砂を割る」three.js 版 =====
+      // 座標: 弾道面 z=0 で 1単位=100px。カメラは z=D・水平・正面(回転なし)で弾と並走(x だけ動く)。画面 (px,py) ↔ 世界 x=camX+(px-960)/100, y=(540-py)/100。
+      import * as THREE from "three";
+      import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
+      import { RectAreaLightUniformsLib } from "three/addons/lights/RectAreaLightUniformsLib.js";
+      import { FullScreenQuad } from "three/addons/postprocessing/Pass.js";
+      import { ShaderPass } from "three/addons/postprocessing/ShaderPass.js";
+      import { makePost } from "./assets/post.js";
+
+      const DUR = 4.4, W = 1920, H = 1080, FPS = 30;
+      const mulberry32 = (a) => () => { a |= 0; a = (a + 0x6d2b79f5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+      const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x)), lerp = (a, b, k) => a + (b - a) * k;
+      const sm = (x) => { x = clamp(x); return x * x * (3 - 2 * x); };
+      const mod = (a, p) => ((a % p) + p) % p;
+      const SEED = 404, VB = 4500, D = 28, TAN30 = Math.tan(Math.PI / 6);
+      const s2l = (c) => (c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4));
+      const LIN = (hex) => { const c = new THREE.Color(hex); return [c.r, c.g, c.b]; }; // three の Color は線形で持つ
+      const C = { carbon: LIN("#0E0D0C"), air: LIN("#120F0C"), bone: LIN("#EDE4D3"), amber: LIN("#D9822B"), flare: LIN("#FFD9A0"), cyan: LIN("#3FE0D0"), hot: LIN("#E6FFFB") };
+      // 2D 版の「炭の上に不透明度 a で重ねた色」を、加算する線形の量に換算(残り火の ≦0.15 を守るため)
+      const alphaLin = (a, hex) => { const c = new THREE.Color(hex), k = new THREE.Color("#0E0D0C"); c.convertLinearToSRGB(); k.convertLinearToSRGB();
+        return [0, 1, 2].map((i) => s2l(lerp([k.r, k.g, k.b][i], [c.r, c.g, c.b][i], a)) - s2l([k.r, k.g, k.b][i])); };
+
+      // ---- 値ノイズ(seed 付き) ----
+      const VN = (() => { const r = mulberry32(SEED + 7), T = new Float32Array(1024); for (let i = 0; i < 1024; i++) T[i] = r() * 2 - 1;
+        return (x) => { const i = Math.floor(x), f = x - i, u = f * f * (3 - 2 * f); return lerp(T[i & 1023], T[(i + 1) & 1023], u); }; })();
+
+      // ---- 時間: 率 r(フレーム)→ 素材時間 s(t)(SCENE_LIB.timeRemap と同じ式: tab[f]=tab[f-1]+r(f-1)/fps)----
+      const RATE = (f) => f <= 5 ? 1 : f <= 17 ? 0.04 + 0.96 * Math.pow(1 - (f - 5) / 12, 2)        // L6–17 power2.out
+        : f <= 77 ? 0.04 : f <= 101 ? 0.04 + 3.96 * Math.pow(2, 10 * ((f - 77) / 24) - 10) : 1;     // L78–101 expo.in
+      const TAB = new Float64Array(134); for (let f = 1; f < 134; f++) TAB[f] = TAB[f - 1] + RATE(f - 1) / FPS;
+      const S = (t) => { const x = clamp(t * FPS, 0, 133), i = Math.floor(x), j = Math.min(133, i + 1); return lerp(TAB[i], TAB[j], x - i); };
+      const rateAt = (t) => RATE(Math.max(0, Math.min(131, Math.floor(t * FPS + 1e-6))));
+
+      // 弾の画面 x(場面カードの表)。カメラ = 弾の世界 x − 画面 x(並走トラック)
+      function bxAt(L) {
+        if (L <= 5) { const u = clamp(L / 5); return 210 + 410 * (1 - (1 - u) * (1 - u)); }
+        if (L <= 17) return 620 + 80 * (L - 5) / 12;
+        if (L <= 77) return 700 + 300 * (L - 17) / 60;
+        const u = clamp((L - 77) / 24); return 1000 + 180 * (0.6 * u + 0.4 * u * u);
+      }
+      const camPx = (t) => { const Lc = Math.min(t * FPS, 101); return VB * S(Lc / FPS) + 210 - bxAt(Lc); };
+      const camXc = (t) => (camPx(t) + 960) / 100;                                    // 揺れなしのカメラ x
+      const bulletX = (t) => camXc(t) + (bxAt(Math.min(t * FPS, 101)) - 960) / 100;  // 弾の先端
+      const worldLight = (L) => (L < 114 ? 1 : 1 - sm((L - 114) / 14));
+      const entry = (L) => (L < 12 ? lerp(0.45, 1, sm(L / 12)) : 1);
+      const IFL = (L) => (L < 5.5 ? [1, 0.82, 0.6, 0.4, 0.22, 0.1][Math.max(0, Math.round(L))] : 0); // 閃光 6f
+      function shake(t) {                                                              // px(画面)。ローパスした sin の和+値ノイズ
+        const L = t * FPS; let A = 9 * Math.exp(-L / 2.5);
+        if (L > 77 && L <= 101.5) A += 4 * Math.pow((L - 77) / 24, 2);
+        if (L >= 104.5) A += 18 * Math.exp(-(L - 104.5) / 5);
+        const x = 0.5 * Math.sin(t * 41.3 + 0.7) + 0.3 * Math.sin(t * 67.9 + 2.1) + 0.6 * VN(t * 14);
+        const y = 0.5 * Math.sin(t * 37.1 + 1.9) + 0.3 * Math.sin(t * 71.3 + 0.4) + 0.6 * VN(t * 13 + 300);
+        return [A * x, A * y];
+      }
+      const CAM_END = camXc(101 / FPS), IMP = new THREE.Vector3(CAM_END + 5.2, 0.2, 0);  // 命中点 (1480,520)
+      const MUZ = 1.8;                                                                    // 銃口 (180,540)
+
+      // ---- レンダラ ----
+      const canvas = document.getElementById("gl");
+      const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: "high-performance", preserveDrawingBuffer: true });
+      renderer.setPixelRatio(1);
+      renderer.toneMapping = THREE.NoToneMapping;   // 暗部を潰す Neutral の代わりに、自前のニー(線形域)で高輝度だけ丸める
+      RectAreaLightUniformsLib.init();
+      const scene = new THREE.Scene();
+      scene.background = new THREE.Color("#0E0D0C");
+      const camera = new THREE.PerspectiveCamera((2 * Math.atan(5.4 / D) * 180) / Math.PI, W / H, 0.5, 400);
+      const pmrem = new THREE.PMREMGenerator(renderer);
+      const envTex = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+      scene.environment = envTex; scene.environmentIntensity = 0.12;
+
+      const post = makePost(renderer, scene, camera, W, H, { quality: "fast" });   // DoF32 + Bloom + 色補正(GTAO なし)
+      renderer.setSize(post.W, post.H, false);
+      post.bloom.strength = 0.32; post.bloom.radius = 0.55; post.bloom.threshold = 1.6;
+      post.vig.uniforms.amt.value = 0;          // ビネットは s5 専売 → 0
+      post.vig.uniforms.contrast.value = 0.1; post.vig.uniforms.sat.value = 1.05; post.vig.uniforms.warm.value = 0;
+      // 自前の線形パス: 閃光の縁だけの色収差(k=0.01、画面端ほど強い)→ 高輝度のニー → 炭より暗くしない(#000 禁止)
+      const finish = new ShaderPass({
+        uniforms: { tDiffuse: { value: null }, ca: { value: 0 }, floorC: { value: new THREE.Vector3(...C.carbon) } },
+        vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.); }`,
+        fragmentShader: `varying vec2 vUv; uniform sampler2D tDiffuse; uniform float ca; uniform vec3 floorC;
+          float lum(vec3 c){ return dot(c, vec3(.2126,.7152,.0722)); }
+          vec3 knee(vec3 c){ const float k = .72; vec3 e = k + (1.-k)*(1.-exp(-(c-k)/(1.-k))); return mix(c, e, step(vec3(k), c)); }
+          void main(){
+            vec3 c = texture2D(tDiffuse, vUv).rgb;
+            if (ca > 0.) { vec2 d = vUv - .5;
+              vec3 cr = texture2D(tDiffuse, .5 + d*(1. + .01*ca)).rgb, cb = texture2D(tDiffuse, .5 + d*(1. - .01*ca)).rgb;
+              float br = smoothstep(.12, .9, max(lum(c), max(lum(cr), lum(cb))));
+              c.r = mix(c.r, cr.r, br); c.b = mix(c.b, cb.b, br); }
+            c = min(max(knee(c), floorC), vec3(.7913, 1., .9647));   // 最も明るい所でも #E6FFFB(白熱)止まり。純白を作らない
+            gl_FragColor = vec4(c, 1.); }`,
+      });
+      post.composer.insertPass(finish, post.composer.passes.indexOf(post.out));
+      // モーションブラー用の蓄積(線形ではなく出力値で平均。加速区間だけ)
+      const accRT = new THREE.WebGLRenderTarget(W, H, { type: THREE.HalfFloatType });
+      const fsV = `varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0., 1.); }`;
+      const accQ = new FullScreenQuad(new THREE.ShaderMaterial({ uniforms: { tex: { value: null }, w: { value: 1 } }, vertexShader: fsV,
+        fragmentShader: `varying vec2 vUv; uniform sampler2D tex; uniform float w; void main(){ gl_FragColor = vec4(texture2D(tex, vUv).rgb * w, 1.); }`,
+        blending: THREE.AdditiveBlending, transparent: true, depthTest: false, depthWrite: false, toneMapped: false }));
+      const cpyQ = new FullScreenQuad(new THREE.ShaderMaterial({ uniforms: { tex: { value: accRT.texture } }, vertexShader: fsV,
+        fragmentShader: `varying vec2 vUv; uniform sampler2D tex; void main(){ gl_FragColor = vec4(texture2D(tex, vUv).rgb, 1.); }`, depthTest: false, depthWrite: false, toneMapped: false }));
+
+      // ---- 共通: 光のにじみ用の板(加算、カメラは回転しないので xy 平面の板が常に正面)----
+      const glowGeo = new THREE.PlaneGeometry(2, 2);
+      function makeGlow(hex, power = 2, order = 10) {
+        const m = new THREE.Mesh(glowGeo, new THREE.ShaderMaterial({
+          uniforms: { col: { value: new THREE.Vector3(...LIN(hex)) }, k: { value: 0 }, p: { value: power } },
+          vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.); }`,
+          fragmentShader: `varying vec2 vUv; uniform vec3 col; uniform float k, p; void main(){ float r = length(vUv - .5) * 2.; float a = pow(max(0., 1. - r), p); gl_FragColor = vec4(col * k * a, 1.); }`,
+          blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, depthTest: false, toneMapped: false }));
+        m.renderOrder = order; m.frustumCulled = false; scene.add(m); return m;
+      }
+      const setGlow = (g, x, y, z, rx, ry, k, rot = 0) => { g.visible = k > 1e-4; g.position.set(x, y, z); g.scale.set(rx, ry, 1); g.rotation.z = rot; g.material.uniforms.k.value = k; };
+
+      // =================== build ===================
+      const Sx = {};
+      const rnd = mulberry32(SEED);
+      // 粒の配列(位置は x0+v·s の閉形式。x はカメラの周りで巻き戻す=見えない所でだけ入れ替わる)
+      const NCORE = 1500, NFIELD = 2600, NNEAR = 40, NRING = 320, NG = NCORE + NFIELD + NNEAR, NALL = NG + NRING;
+      const G = { x0: new Float32Array(NG), y0: new Float32Array(NG), z0: new Float32Array(NG), vx: new Float32Array(NG), vy: new Float32Array(NG), vz: new Float32Array(NG),
+        r: new Float32Array(NG), wa: new Float32Array(NG), ww: new Float32Array(NG), ph: new Float32Array(NG), wd: new Float32Array(NG), side: new Float32Array(NG),
+        ax: new Float32Array(NG * 3), sp: new Float32Array(NG), br: new Float32Array(NG) };
+      const RG = { th: new Float32Array(NRING), j: new Float32Array(NRING), r: new Float32Array(NRING), a: new Float32Array(NRING), zj: new Float32Array(NRING) };
+      const SHARDS = [], EMB = [];
+
+      function build() {
+        // --- 粒 ---
+        for (let i = 0; i < NG; i++) {
+          let z, y;
+          if (i < NCORE) { y = ((rnd() + rnd() + rnd()) / 3 - 0.5) * 4.2; z = ((rnd() + rnd() + rnd()) / 3 - 0.5) * 5.5; }   // 弾道のまわりの帯
+          else if (i < NCORE + NFIELD) { z = -16 + rnd() * 24; y = (rnd() * 2 - 1) * 5.6 * (D - z) / D; }                   // 奥行きのある空間
+          else { z = 11 + rnd() * 6; y = (rnd() * 2 - 1) * 5.6 * (D - z) / D; }                                             // 手前のボケ玉
+          const wd = 2 * (9.6 * (D - z) / D + 1.2);
+          G.x0[i] = rnd() * wd; G.y0[i] = y; G.z0[i] = z; G.wd[i] = wd;
+          G.vx[i] = (rnd() - 0.5) * 0.6; G.vy[i] = (rnd() - 0.5) * 0.36; G.vz[i] = (rnd() - 0.5) * 0.4;
+          const crystal = rnd() < 0.08;
+          G.r[i] = i >= NCORE + NFIELD ? 0.03 + rnd() * 0.035 : crystal ? 0.022 + rnd() * 0.016 : 0.0075 + Math.pow(rnd(), 2) * 0.014;
+          G.wa[i] = 0.02 + rnd() * 0.04; G.ww[i] = 2 + rnd() * 5; G.ph[i] = rnd() * 6.283; G.side[i] = i % 2 ? 1 : -1;
+          const a = new THREE.Vector3(rnd() - 0.5, rnd() - 0.5, rnd() - 0.5).normalize(); G.ax.set([a.x, a.y, a.z], i * 3);
+          G.sp[i] = (rnd() < 0.5 ? -1 : 1) * (6 + rnd() * 22);   // 素材時間あたりの自転(結晶の面がきらめく)
+          G.br[i] = i >= NCORE + NFIELD ? 0.35 + rnd() * 0.3 : 0.55 + rnd() * 0.45;
+        }
+        for (let i = 0; i < NRING; i++) { RG.th[i] = rnd() * 6.283; RG.j[i] = (rnd() - 0.5) * 0.14; RG.r[i] = 0.007 + rnd() * 0.01; RG.a[i] = 0.4 + rnd() * 0.5; RG.zj[i] = (rnd() - 0.5) * 0.6; }
+        const gGeo = new THREE.IcosahedronGeometry(1, 0);
+        const gMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.32, metalness: 0.0, flatShading: true });
+        Sx.grains = new THREE.InstancedMesh(gGeo, gMat, NALL); Sx.grains.frustumCulled = false;
+        Sx.grains.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+        Sx.grains.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(NALL * 3), 3); Sx.grains.instanceColor.setUsage(THREE.DynamicDrawUsage);
+        scene.add(Sx.grains);
+
+        // --- 光: 止まった夕日の残照(後ろ上から)・面光源(地平の霞)・弱い半球光 ---
+        Sx.key = new THREE.DirectionalLight(0xd9822b, 2.4); Sx.key.position.set(-3, 5, -8); scene.add(Sx.key);
+        Sx.fill = new THREE.DirectionalLight(0xffd9a0, 0.35); Sx.fill.position.set(3, 4, 7); scene.add(Sx.fill);
+        Sx.hemi = new THREE.HemisphereLight(0xd9822b, 0x0e0d0c, 0.45); scene.add(Sx.hemi);
+        Sx.area = new THREE.RectAreaLight(0xffd9a0, 5, 320, 10); Sx.area.position.set(30, 4, -120); Sx.area.lookAt(30, -4, 0); scene.add(Sx.area);
+        // 人工の光(CYAN): 弾の曳光(半径200px)・銃口の閃光(330px)・命中の放射(460px)。数は固定(出し入れはシェーダーを作り直すので強さで)
+        Sx.bLight = new THREE.PointLight(0x3fe0d0, 0, 2.0, 2); scene.add(Sx.bLight);
+        Sx.mLight = new THREE.PointLight(0x3fe0d0, 0, 3.4, 2); scene.add(Sx.mLight);
+        Sx.iLight = new THREE.PointLight(0x3fe0d0, 0, 4.8, 2); scene.add(Sx.iLight);
+        scene.fog = new THREE.Fog(0x000000, 22, 210);
+
+        // --- 霞の幕(遠景 z=-170、視差 0.14)。2D 版の「影の空気」+琥珀 25% の帯(y300–700)+横長の霞の塊 ---
+        const ZH = -170, kY = 100 * D / (D - ZH);
+        Sx.haze = new THREE.Mesh(new THREE.PlaneGeometry(260, 110), new THREE.ShaderMaterial({
+          uniforms: { HA: { value: 1 }, Wl: { value: 1 }, kY: { value: kY }, carbon: { value: new THREE.Vector3(14, 13, 12).divideScalar(255) }, air: { value: new THREE.Vector3(18, 15, 12).divideScalar(255) }, amber: { value: new THREE.Vector3(217, 130, 43).divideScalar(255) } },
+          vertexShader: `varying vec3 vW; void main(){ vec4 w = modelMatrix * vec4(position, 1.); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`,
+          fragmentShader: `varying vec3 vW; uniform float HA, Wl, kY; uniform vec3 carbon, air, amber;
+            float h(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+            float vn(vec2 p){ vec2 i = floor(p), f = fract(p); f = f*f*(3.-2.*f); return mix(mix(h(i), h(i+vec2(1,0)), f.x), mix(h(i+vec2(0,1)), h(i+vec2(1,1)), f.x), f.y); }
+            vec3 lin(vec3 c){ return mix(c/12.92, pow((c+.055)/1.055, vec3(2.4)), step(.04045, c)); }
+            void main(){
+              float py = 540. - vW.y * kY;
+              float u = clamp(py / 1080., 0., 1.), aa = u < .5 ? mix(.5, 1., u/.5) : mix(1., .4, (u-.5)/.5);
+              vec3 c = mix(carbon, air, aa * Wl);
+              float t = (py - 300.) / 400., b = t < .55 ? t/.55 : (1.-t)/.45; b = clamp(b, 0., 1.) * step(0., t) * step(t, 1.);
+              float n = vn(vec2(vW.x * .045, vW.y * .16)) * .65 + vn(vec2(vW.x * .11 + 17., vW.y * .38)) * .35;
+              float blob = smoothstep(.5, .85, n) * .085 * smoothstep(360., 470., py) * (1. - smoothstep(600., 680., py));
+              c = mix(c, amber, (.13 * b + blob) * HA);
+              gl_FragColor = vec4(lin(c), 1.); }`,
+          depthWrite: true, fog: false, toneMapped: false }));
+        Sx.haze.position.set(40, 0, ZH); scene.add(Sx.haze);
+
+        // --- 岩の稜線(ローポリの高さ場、flatShading)。遠(z=-70)と中(z=-34)の2枚。霧で空気遠近 ---
+        const ridge = (z0, base, amp, f1, f2, spike, seedOff, step, colHex) => {
+          const d = D - z0, kp = 100 * D / d, x0 = 9.6 - 9.6 * d / D - 4, x1 = CAM_END + 9.6 * d / D + 4;
+          const rows = [-7, -3.5, -1.2, 0, 1.0, 2.6, 5, 9, 15], nx = Math.ceil((x1 - x0) / step);
+          const r = mulberry32(SEED + seedOff), pos = [], idx = [];
+          const crest = (x) => { const py = base - 24 * amp * (VN(x / f1 + seedOff) + 1) - 12 * amp * VN(x / f2 + 31 + seedOff) - Math.pow(Math.max(0, VN(x / (f2 * 0.8) + 90 + seedOff)), 3) * spike; return (540 - py) / kp; };
+          for (let iz = 0; iz < rows.length; iz++) for (let ix = 0; ix <= nx; ix++) {
+            const x = x0 + ix * step + (iz % 2 ? step * 0.5 : 0) + (r() - 0.5) * step * 0.4, zo = rows[iz];
+            let y = crest(x) + (zo < 0 ? -0.55 * Math.pow(-zo, 1.2) : -0.42 * Math.pow(zo, 1.15)) * (d / 60);
+            y += (r() - 0.5) * 0.35 * (d / 60) * (zo === 0 ? 0.3 : 1);
+            pos.push(x, y, z0 + zo + (r() - 0.5) * 0.4);
+          }
+          for (let iz = 0; iz < rows.length - 1; iz++) for (let ix = 0; ix < nx; ix++) {
+            const a = iz * (nx + 1) + ix, b = a + 1, c = a + nx + 1, e = c + 1; idx.push(a, c, b, b, c, e);
+          }
+          const g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx); g.computeVertexNormals();
+          const m = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ color: colHex, roughness: 0.9, metalness: 0, flatShading: true }));
+          scene.add(m); return m;
+        };
+        Sx.ridgeFar = ridge(-70, 660, 1, 8, 2.4, 110, 0, 2.6, 0x2a221b);
+        Sx.ridgeMid = ridge(-34, 850, 1.4, 5.5, 1.7, 90, 57, 1.5, 0x1c1712);
+
+        // --- 銃口(架空の形): 円筒の銃身+スリット付きの先端+下部の箱。閃光の点光源で金属の面が浮かぶ ---
+        const gunMat = new THREE.MeshStandardMaterial({ color: 0x24211e, roughness: 0.38, metalness: 0.75 });
+        Sx.gun = new THREE.Group(); scene.add(Sx.gun);
+        const cyl = (r0, x0, x1, y = 0) => { const m = new THREE.Mesh(new THREE.CylinderGeometry(r0, r0, x1 - x0, 20), gunMat); m.rotation.z = Math.PI / 2; m.position.set((x0 + x1) / 2, y, 0); Sx.gun.add(m); };
+        cyl(0.13, -6.5, 1.32);
+        [[1.32, 1.37], [1.43, 1.50], [1.56, 1.63], [1.69, 1.8]].forEach(([a, b]) => cyl(0.215, a, b));
+        cyl(0.17, 1.32, 1.8);                                              // スリットの奥の芯
+        const body = new THREE.Mesh(new THREE.BoxGeometry(5.2, 0.48, 0.34), gunMat); body.position.set(-3.65, -0.38, 0); Sx.gun.add(body);
+        const chin = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.34, 0.3), gunMat); chin.position.set(-0.95, -0.3, 0); chin.rotation.z = 0.5; Sx.gun.add(chin);
+        Sx.gun.position.x = 0; // 銃口先端 x=1.8
+
+        // --- 弾丸(ローポリの旋盤体。金属+旋条の面で回転が見える)と曳光の尾(加算の円錐、HDR で Bloom)---
+        const prof = [[0, 0], [0.046, 0], [0.046, 0.2], [0.043, 0.26], [0.032, 0.315], [0.014, 0.35], [0, 0.36]].map(([r, y]) => new THREE.Vector2(r, y));
+        const bg = new THREE.LatheGeometry(prof, 10); bg.rotateZ(-Math.PI / 2);
+        Sx.bullet = new THREE.Mesh(bg, new THREE.MeshStandardMaterial({ color: 0x5a524a, roughness: 0.28, metalness: 0.9, flatShading: true })); scene.add(Sx.bullet);
+        const tailMat = (front, inten, dw) => new THREE.ShaderMaterial({
+          uniforms: { k: { value: 0 }, cyan: { value: new THREE.Vector3(...C.cyan) }, hot: { value: new THREE.Vector3(...C.hot) }, inten: { value: inten } },
+          vertexShader: `varying float vU; varying vec3 vN, vV; void main(){ vU = -position.x / 3.; vec4 mv = modelViewMatrix * vec4(position, 1.); vN = normalize(normalMatrix * normal); vV = normalize(-mv.xyz); gl_Position = projectionMatrix * mv; }`,
+          fragmentShader: `varying float vU; varying vec3 vN, vV; uniform float k, inten; uniform vec3 cyan, hot;
+            void main(){ float u = clamp(vU, 0., 1.), f = pow(abs(dot(normalize(vN), normalize(vV))), 2.2);
+              vec3 c = mix(hot, cyan, smoothstep(0., ${front}, u)); float a = u < .4 ? mix(1., .4, u/.4) : mix(.4, 0., (u-.4)/.6);
+              gl_FragColor = vec4(c * a * f * k * inten, 1.); }`,
+          blending: THREE.AdditiveBlending, transparent: true, depthWrite: dw, toneMapped: false });
+        const tg = (r0, r1) => { const g = new THREE.CylinderGeometry(r0, r1, 3, 16, 12, true); g.translate(0, -1.5, 0); g.rotateZ(-Math.PI / 2); return g; };
+        Sx.tail = new THREE.Mesh(tg(0.034, 0.006), tailMat(".12", 7.0, true)); Sx.tail.renderOrder = 5; scene.add(Sx.tail);
+        Sx.tailSoft = new THREE.Mesh(tg(0.12, 0.03), tailMat(".05", 0.9, false)); Sx.tailSoft.renderOrder = 6; scene.add(Sx.tailSoft);
+        // マッハコーン(半角30°の殻。縁だけ見えるフレネル、BONE をごく薄く)
+        const cg = new THREE.ConeGeometry(1.6 * TAN30, 1.6, 48, 1, true); cg.translate(0, -0.8, 0); cg.rotateZ(-Math.PI / 2); // 頂点が +x、開口が −x
+        Sx.cone = new THREE.Mesh(cg, new THREE.ShaderMaterial({
+          uniforms: { k: { value: 0 }, col: { value: new THREE.Vector3(...C.bone) } },
+          vertexShader: `varying vec3 vN, vV; varying float vX; void main(){ vX = position.x; vec4 mv = modelViewMatrix * vec4(position, 1.); vN = normalize(normalMatrix * normal); vV = normalize(-mv.xyz); gl_Position = projectionMatrix * mv; }`,
+          fragmentShader: `varying vec3 vN, vV; varying float vX; uniform float k; uniform vec3 col;
+            void main(){ float fr = pow(1. - abs(dot(normalize(vN), normalize(vV))), 3.); float fade = clamp(1. + vX / 1.6, 0., 1.);
+              gl_FragColor = vec4(col * fr * fade * k, 1.); }`,
+          side: THREE.DoubleSide, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, toneMapped: false }));
+        Sx.cone.renderOrder = 4; scene.add(Sx.cone);
+
+        // --- 閃光の部品(核 #E6FFFB / 外縁 #3FE0D0、半径260)---
+        Sx.fHalo = makeGlow("#3FE0D0", 1.6); Sx.fHalo2 = makeGlow("#3FE0D0", 2.2); Sx.fPlume = makeGlow("#E6FFFB", 1.8); Sx.fPlumeC = makeGlow("#3FE0D0", 1.5);
+        Sx.fCore = makeGlow("#E6FFFB", 1.3, 12); Sx.fJets = Array.from({ length: 6 }, () => makeGlow("#3FE0D0", 1.6));
+        Sx.fRays = Array.from({ length: 7 }, () => makeGlow("#E6FFFB", 1.0));
+        Sx.bBase = makeGlow("#E6FFFB", 1.5, 11); Sx.bHalo = makeGlow("#3FE0D0", 2.0); Sx.bHalo2 = makeGlow("#3FE0D0", 2.6);
+
+        // --- 敵(横顔のシルエット。暗いヘルメット+曲面のバイザー、CYAN の縁)---
+        Sx.enemy = new THREE.Group(); scene.add(Sx.enemy);
+        Sx.helm = new THREE.Group(); Sx.enemy.add(Sx.helm);
+        const dark = new THREE.MeshStandardMaterial({ color: 0x171412, roughness: 0.45, metalness: 0.5 });
+        const head = new THREE.Mesh(new THREE.SphereGeometry(1, 40, 28), dark); head.scale.set(1.04, 0.96, 0.95); head.position.set(0.78, 0.18, 0); Sx.helm.add(head);
+        const guard = new THREE.Mesh(new THREE.SphereGeometry(1, 24, 16), dark); guard.scale.set(0.5, 0.55, 0.62); guard.position.set(0.28, -0.32, 0); Sx.helm.add(guard);
+        const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.55, 1.2, 20), dark); neck.position.set(0.9, -0.95, 0); Sx.helm.add(neck);
+        const sh = new THREE.Mesh(new THREE.SphereGeometry(1, 32, 24), dark); sh.scale.set(2.4, 1.5, 1.5); sh.position.set(1.6, -2.75, 0); Sx.helm.add(sh);
+        const VR = 1.06, P0 = -0.8, PL = 1.6, T0 = Math.PI / 2 - 0.62, TL = 1.25;
+        const vis = new THREE.Mesh(new THREE.SphereGeometry(VR, 48, 32, P0, PL, T0, TL), new THREE.MeshStandardMaterial({ color: 0x0b2e2a, emissive: 0x3fe0d0, emissiveIntensity: 0.22, roughness: 0.08, metalness: 0.55, side: THREE.DoubleSide }));
+        vis.scale.set(1.04, 0.96, 0.95); vis.position.copy(head.position); Sx.helm.add(vis); Sx.visor = vis;
+        const sp = (phi, th) => new THREE.Vector3(-VR * Math.cos(phi) * Math.sin(th) * 1.04, VR * Math.cos(th) * 0.96, VR * Math.sin(phi) * Math.sin(th) * 0.95).add(head.position);
+        const pts = []; const N = 40;
+        for (let i = 0; i < N; i++) pts.push(sp(P0 + PL * i / N, T0));
+        for (let i = 0; i < N; i++) pts.push(sp(P0 + PL, T0 + TL * i / N));
+        for (let i = 0; i < N; i++) pts.push(sp(P0 + PL * (1 - i / N), T0 + TL));
+        for (let i = 0; i < N; i++) pts.push(sp(P0, T0 + TL * (1 - i / N)));
+        const rimM = new THREE.MeshBasicMaterial({ color: new THREE.Color(0x3fe0d0).multiplyScalar(3.2), toneMapped: false, fog: false });
+        Sx.rim = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts, true), 240, 0.014, 6, true), rimM); Sx.helm.add(Sx.rim);
+        Sx.helm.rotation.y = 0.38;
+
+        // --- 炸裂: 防護ガラス片 40(3D の弾道+線形抵抗、回転して面が光る)・衝撃の放射・残り火 ---
+        const shp = new THREE.Shape([[0, 0.62], [0.55, -0.15], [0.12, -0.6], [-0.5, -0.12]].map(([x, y]) => new THREE.Vector2(x, y)));
+        const sg = new THREE.ExtrudeGeometry(shp, { depth: 0.1, bevelEnabled: false }); sg.translate(0, 0, -0.05);
+        Sx.shards = new THREE.InstancedMesh(sg, new THREE.MeshStandardMaterial({ color: 0x103f3a, emissive: 0x3fe0d0, emissiveIntensity: 0.6, roughness: 0.06, metalness: 0.35, transparent: true, flatShading: true }), 40);
+        Sx.shards.frustumCulled = false; scene.add(Sx.shards);
+        for (let i = 0; i < 40; i++) {
+          const back = rnd() < 0.55, th = (back ? Math.PI : 0) + (rnd() + rnd() - 1) * 1.5, v = 3.5 + rnd() * 12.5;
+          SHARDS.push({ vx: Math.cos(th) * v, vy: -(Math.sin(th) * v - 2), vz: (rnd() - 0.5) * v * 0.9, k: 2 + rnd() * 1.5, sz: 0.05 + rnd() * 0.14,
+            ax: new THREE.Vector3(rnd() - 0.5, rnd() - 0.5, rnd() - 0.5).normalize(), w: (rnd() - 0.5) * 30, ph: rnd() * 6.28, sx: 0.6 + rnd() * 0.8 });
+        }
+        Sx.iHalo = makeGlow("#3FE0D0", 1.7); Sx.iHalo2 = makeGlow("#3FE0D0", 2.2); Sx.iCore = makeGlow("#E6FFFB", 1.6, 12);
+        for (let i = 0; i < 7; i++) EMB.push({ r: 0.1 + rnd() * 0.7, th: rnd() * 6.283, sz: 0.016 + rnd() * 0.014, f: 5 + rnd() * 9, ph: rnd() * 6.28, z: (rnd() - 0.5) * 0.4, g1: makeGlow("#3FE0D0", 1.4, 13), g2: makeGlow("#3FE0D0", 3, 13) });
+
+        buildInsert();
+      }
+
+      // =================== フラッシュカット(L102–104): バイザーの超接写。曲面ガラス+面光源の反射帯+ひび(3段階)===================
+      const ins = {};
+      function crackCanvas(p) {
+        const c = document.createElement("canvas"); c.width = c.height = 2048; const x = c.getContext("2d");
+        const r = mulberry32(SEED + 900), P = [1024, 1024], sc = 1.35;
+        const rays = [];
+        for (let i = 0; i < 15; i++) { const th0 = (i / 15) * 6.283 + (r() - 0.5) * 0.35, len = (500 + r() * 1100) * sc, pts = [[0, 0]]; let th = th0, d = 0;
+          while (d < len) { d += (30 + r() * 60) * sc; th += (r() - 0.5) * 0.35; pts.push([Math.cos(th) * d, Math.sin(th) * d]); }
+          const br = r() < 0.6 ? { at: 0.3 + r() * 0.4, th: th0 + (r() < 0.5 ? -1 : 1) * (0.4 + r() * 0.5), len: (120 + r() * 300) * sc } : null;
+          rays.push({ pts, len, w: (3 + r() * 4) * 1.15, br }); }
+        const rings = [70, 150, 270, 430].map((rad) => Array.from({ length: 15 }, () => [rad * sc * (0.85 + r() * 0.3), r() < 0.8]));
+        // 地: 均一に近い CYAN(陰影は 3D の光に任せる)
+        const g = x.createRadialGradient(1300, 700, 0, 1300, 700, 1700); g.addColorStop(0, "rgb(92,232,220)"); g.addColorStop(0.45, "#3FE0D0"); g.addColorStop(1, "rgb(26,104,97)");
+        x.fillStyle = g; x.fillRect(0, 0, 2048, 2048);
+        x.lineCap = "round"; x.lineJoin = "round";
+        const ray = (pts, maxD, w) => { x.beginPath(); x.moveTo(P[0], P[1]); let d = 0;
+          for (let i = 1; i < pts.length; i++) { const seg = Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
+            if (d + seg > maxD) { const f = (maxD - d) / seg; x.lineTo(P[0] + lerp(pts[i - 1][0], pts[i][0], f), P[1] + lerp(pts[i - 1][1], pts[i][1], f)); break; }
+            d += seg; x.lineTo(P[0] + pts[i][0], P[1] + pts[i][1]); } x.lineWidth = w; x.stroke(); };
+        for (const pass of [0, 1]) {
+          x.save(); if (!pass) x.translate(3, 3);
+          x.strokeStyle = pass ? "#0E0D0C" : "rgba(230,255,251,0.75)";
+          for (const q of rays) {
+            ray(q.pts, q.len * p, pass ? q.w : 2);
+            if (q.br && p > q.br.at) { const b0 = q.pts[Math.floor(q.pts.length * q.br.at)], bl = q.br.len * clamp((p - q.br.at) / 0.4);
+              x.beginPath(); x.moveTo(P[0] + b0[0], P[1] + b0[1]); x.lineTo(P[0] + b0[0] + Math.cos(q.br.th) * bl, P[1] + b0[1] + Math.sin(q.br.th) * bl); x.lineWidth = pass ? q.w * 0.6 : 1.4; x.stroke(); }
+          }
+          rings.forEach((ring, ri) => { if (p < 0.3 + ri * 0.2) return; x.lineWidth = pass ? 3 : 1.4;
+            for (let i = 0; i < 15; i++) { if (!ring[i][1]) continue; const a0 = rays[i], a1 = rays[(i + 1) % 15];
+              const an0 = Math.atan2(a0.pts[1][1], a0.pts[1][0]), an1 = Math.atan2(a1.pts[1][1], a1.pts[1][0]);
+              x.beginPath(); x.moveTo(P[0] + Math.cos(an0) * ring[i][0], P[1] + Math.sin(an0) * ring[i][0]); x.lineTo(P[0] + Math.cos(an1) * ring[(i + 1) % 15][0], P[1] + Math.sin(an1) * ring[(i + 1) % 15][0]); x.stroke(); } });
+          x.restore();
+        }
+        const h = x.createRadialGradient(P[0], P[1], 0, P[0], P[1], 64);   // 着弾点(黒い穴+熱い縁)
+        h.addColorStop(0, "#0E0D0C"); h.addColorStop(0.32, "#0E0D0C"); h.addColorStop(0.48, "rgba(230,255,251,0.95)"); h.addColorStop(1, "rgba(63,224,208,0)");
+        x.fillStyle = h; x.beginPath(); x.arc(P[0], P[1], 64, 0, 6.283); x.fill();
+        // バイザーの縁(右下): 炭の枠+CYAN の線
+        x.fillStyle = "#0E0D0C"; x.beginPath(); x.ellipse(2150, 1900, 900, 560, -0.35, 0, 6.283); x.fill();
+        x.strokeStyle = "#3FE0D0"; x.lineWidth = 6; x.stroke();
+        const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t;
+      }
+      function buildInsert() {
+        ins.scene = new THREE.Scene(); ins.scene.background = new THREE.Color("#0E0D0C");
+        ins.scene.environment = envTex; ins.scene.environmentIntensity = 0.5;
+        ins.cam = new THREE.PerspectiveCamera(34, W / H, 0.05, 40);
+        ins.tex = [0.32, 0.68, 1].map(crackCanvas);
+        const R = 6, half = 0.46;
+        const g = new THREE.SphereGeometry(R, 160, 120, Math.PI / 2 - half, 2 * half, Math.PI / 2 - half, 2 * half);
+        ins.mat = new THREE.MeshStandardMaterial({ color: 0x0a2422, emissive: 0xffffff, emissiveMap: ins.tex[0], emissiveIntensity: 1.0, roughness: 0.14, metalness: 0.3 });
+        ins.glass = new THREE.Mesh(g, ins.mat); ins.scene.add(ins.glass);
+        // 曲面に沿った反射帯を作る細長い面光源(右上)
+        ins.area = new THREE.RectAreaLight(0xe6fffb, 26, 9, 0.5); ins.area.position.set(2.6, 3.4, 9.5); ins.area.lookAt(0, 0, R); ins.area.rotateZ(0.5); ins.scene.add(ins.area);
+        ins.scene.add(new THREE.HemisphereLight(0x3fe0d0, 0x0e0d0c, 0.25));
+        ins.P = new THREE.Vector3(0, 0, R);   // 着弾点 = 板の中心(uv 0.5,0.5)
+      }
+
+      // =================== update(t): 時刻の純関数 ===================
+      const M4 = new THREE.Matrix4(), Mt = new THREE.Matrix4(), Ms = new THREE.Matrix4(), Q1 = new THREE.Quaternion(), Q2 = new THREE.Quaternion(), V1 = new THREE.Vector3(), V2 = new THREE.Vector3(), XA = new THREE.Vector3(1, 0, 0);
+      const P0v = new THREE.Vector3(), P1v = new THREE.Vector3();
+      // 粒 i の世界座標(時刻 t)。マッハコーン(半角30°、弾から 0〜120px の粒を円錐の外へ、y-z の放射方向)と命中の衝撃で押す
+      function grainAt(i, t, cx, s, bx, L, tau, out) {
+        const wd = G.wd[i];
+        let x = cx + mod(G.x0[i] + G.vx[i] * s - cx + wd / 2, wd) - wd / 2;
+        let y = G.y0[i] + G.vy[i] * s + G.wa[i] * Math.sin(G.ww[i] * s + G.ph[i]);
+        let z = G.z0[i] + G.vz[i] * s;
+        if (i < NCORE + NFIELD) {
+          if (L <= 101.5) {
+            const ax = x - bx;
+            if (ax < 0.04 && ax > -2.0) {
+              const rho = Math.hypot(y, z), dist = Math.hypot(ax, rho), w = 1 - sm((dist - 0.95) / 0.75);
+              if (w > 0) {
+                const d = Math.max(0, -ax), c = d * TAN30 + 0.01, A = rho;
+                const nA = A < c ? c + A * 0.35 : A + 0.35 * c * Math.exp(-(A - c) / (0.6 * c + 0.08));
+                const ny = rho > 1e-4 ? y / rho : G.side[i], nz = rho > 1e-4 ? z / rho : 0;
+                y += ny * (nA - A) * w; z += nz * (nA - A) * w; x -= (nA - A) * 0.25 * w;
+              }
+            }
+          }
+          if (tau > 0) {
+            const dx = x - IMP.x, dy = y - IMP.y, dz = z - IMP.z, d = Math.hypot(dx, dy, dz) + 1e-3, p = 1.1 * (1 - Math.exp(-tau / 0.08)) * Math.exp(-d / 3.2);
+            x += dx / d * p; y += dy / d * p; z += dz / d * p;
+          }
+        }
+        out.set(x, y, z);
+      }
+      // 素材時間・カメラ・弾の状態(時刻 t)
+      const stateAt = (t) => { const L = t * FPS, [sx, sy] = shake(t); return { t, L, s: S(t), cx: camXc(t), cam: new THREE.Vector3(camXc(t) + sx / 100, -sy / 100, D), bx: bulletX(t), tau: L >= 104.5 ? t - 104 / FPS : 0 }; };
+
+      function setStreak(mesh, idx, p0, p1, r, spinQ, colK, col) {
+        V1.subVectors(p1, p0); const len = V1.length();
+        if (len > r * 0.6) { Q1.setFromUnitVectors(XA, V1.multiplyScalar(1 / len)); Ms.makeScale(r + len / 2, r, r); }
+        else { Q1.identity(); Ms.makeScale(r, r, r); }
+        V2.addVectors(p0, p1).multiplyScalar(0.5);
+        M4.makeRotationFromQuaternion(Q1); M4.setPosition(V2); M4.multiply(Ms); Mt.makeRotationFromQuaternion(spinQ); M4.multiply(Mt);
+        mesh.setMatrixAt(idx, M4);
+        const k = len > r * 0.6 ? clamp(2.2 * 2 * r / (len + 2 * r), 0.12, 1) : 1;
+        mesh.setColorAt(idx, col.setRGB(C.bone[0] * colK * k, C.bone[1] * colK * k, C.bone[2] * colK * k));
+      }
+      const TMPC = new THREE.Color();
+
+      function update(t, dlt) {
+        const A = stateAt(t), L = A.L, B = dlt > 0 ? stateAt(t - dlt) : A;
+        const Wl = worldLight(L), If = IFL(L), E = entry(L), E2 = L < 12 ? lerp(0.12, 1, sm(L / 12)) : 1; // E2: スマッシュカット直後は世界の光を落とす(黒地に閃光)
+        camera.position.copy(A.cam); camera.lookAt(A.cam.x, A.cam.y, 0);
+        // 光
+        Sx.key.intensity = 2.4 * Wl * E2; Sx.fill.intensity = 0.2 * Wl * E2; Sx.hemi.intensity = 0.28 * Wl * E2; Sx.area.intensity = 5 * Wl * E2; post.bloom.strength = 0.32 - 0.17 * If;
+        scene.environmentIntensity = 0.12 * Wl * E2;
+        const fogK = Wl * E; scene.fog.color.setRGB(0.020 * fogK, 0.0105 * fogK, 0.0042 * fogK);
+        Sx.haze.material.uniforms.HA.value = Wl * E; Sx.haze.material.uniforms.Wl.value = Wl;
+        // 弾
+        const live = L <= 101.5, bx = A.bx;
+        const fk = (0.9 + 0.1 * Math.sin(A.s * 160) + 0.05 * VN(A.s * 60)) * (L < 5.5 ? 0.35 + 0.65 * sm(L / 5) : 1);
+        Sx.bullet.visible = Sx.tail.visible = Sx.tailSoft.visible = live;
+        Sx.bullet.position.set(bx - 0.36, 0, 0); Sx.bullet.rotation.x = A.s * 60;
+        Sx.tail.position.set(bx - 0.36, 0, 0); Sx.tailSoft.position.copy(Sx.tail.position);
+        Sx.tail.material.uniforms.k.value = fk; Sx.tailSoft.material.uniforms.k.value = fk;
+        Sx.bLight.position.set(bx - 0.4, 0, 0.05); Sx.bLight.intensity = live ? 2.6 * fk : 0;
+        setGlow(Sx.bBase, bx - 0.36, 0, 0.06, 0.03, 0.06, live ? 6 * fk : 0);
+        setGlow(Sx.bHalo, bx - 0.32, 0, 0.02, 0.9, 0.9, live ? 0.11 * fk : 0);
+        setGlow(Sx.bHalo2, bx - 0.32, 0, 0.02, 2.0, 2.0, live ? 0.025 * fk : 0);
+        const slow = clamp((0.5 - rateAt(t)) / 0.46);
+        Sx.cone.visible = live && slow > 0; Sx.cone.position.set(bx, 0, 0); Sx.cone.material.uniforms.k.value = 0.16 * slow;
+        // 銃口と閃光
+        Sx.gun.visible = L < 40;
+        Sx.mLight.position.set(MUZ + 0.35, 0, 0.4); Sx.mLight.intensity = 30 * If;
+        const R = mulberry32(SEED + 50 + Math.round(L)), fx = MUZ + 0.1;
+        setGlow(Sx.fHalo, fx, 0, 0.3, 2.6, 2.6, 0.4 * If); setGlow(Sx.fHalo2, fx, 0, 0.3, 1.2, 1.2, 0.9 * If);
+        setGlow(Sx.fPlume, fx + 0.95, 0, 0.3, 1.05 * (2.4 + R() * 0.6), 1.05 * 0.5, 3.2 * If); setGlow(Sx.fPlumeC, fx + 0.4, 0, 0.3, 0.8 * 1.4, 0.8 * 0.8, 2.0 * If);
+        setGlow(Sx.fCore, MUZ + 0.08, 0, 0.35, 0.6, 0.6, 7 * If);
+        Sx.fJets.forEach((g, k) => { const j = k % 3, up = k < 3 ? 1 : -1; setGlow(g, MUZ - 0.36 + j * 0.13 - 0.04, up * (0.4 + R() * 0.2), 0.3, 0.42 * 0.45, 0.42 * 1.9, (up > 0 ? 2.2 : 1.6) * If); });
+        Sx.fRays.forEach((g, k) => { const th = (k / 7) * 6.283 + R() * 0.5, len = (1.2 + R() * 1.6) * If * (Math.cos(th) > 0 ? 1.5 : 1);
+          setGlow(g, fx + Math.cos(th) * (0.4 + len / 2), Math.sin(th) * (0.32 + len / 2) * 0.8, 0.3, len / 2, 0.02 + R() * 0.02, 1.6 * If, th); });
+        post.vig && (finish.uniforms.ca.value = If);
+        // 敵
+        let hx = null, hy = 520, tilt = 0, intact = true;
+        if (L >= 95.5 && L <= 101.6) { const u = clamp((L - 96) / 5); hx = 1480 + 660 * Math.pow(1 - u, 2.4); }
+        else if (L >= 104.5) { const k = sm((L - 105) / 12); hx = 1480 + 50 * k; hy = 520 - 8 * k; tilt = 0.14 * k; intact = false; }
+        Sx.enemy.visible = hx !== null;
+        if (hx !== null) { Sx.enemy.position.set(A.cx + (hx - 960) / 100, (540 - hy) / 100, 0); Sx.enemy.rotation.z = -tilt; Sx.visor.visible = Sx.rim.visible = intact; }
+        // 炸裂
+        const tau = A.tau, Ex = tau > 0 ? Math.exp(-(tau - 0.033) / 0.11) : 0;
+        Sx.iLight.position.set(IMP.x - 0.3, IMP.y, 0.6); Sx.iLight.intensity = 70 * Ex;
+        setGlow(Sx.iHalo, IMP.x, IMP.y, 0.5, 5.2, 5.2, 0.32 * Ex); setGlow(Sx.iHalo2, IMP.x, IMP.y, 0.5, 2.1, 2.1, 1.1 * Ex); setGlow(Sx.iCore, IMP.x, IMP.y, 0.6, 0.7, 0.7, 5 * Ex * Ex);
+        const sa = tau > 0 ? 1 - sm((L - 111) / 12) : 0;
+        Sx.shards.visible = sa > 0.002;
+        if (Sx.shards.visible) {
+          Sx.shards.material.opacity = sa; Sx.shards.material.emissiveIntensity = 0.25 + 1.6 * Ex;
+          SHARDS.forEach((h, i) => { const e = (1 - Math.exp(-h.k * tau)) / h.k, gk = 15 / h.k;
+            V1.set(IMP.x + h.vx * e, IMP.y + (h.vy + gk) * e - gk * tau, IMP.z + h.vz * e);
+            Q1.setFromAxisAngle(h.ax, h.ph + h.w * tau); M4.compose(V1, Q1, V2.set(h.sz * h.sx, h.sz, h.sz)); Sx.shards.setMatrixAt(i, M4); });
+          Sx.shards.instanceMatrix.needsUpdate = true;
+        }
+        EMB.forEach((e) => { const a = tau > 0 ? (0.13 + 0.55 * (1 - sm((L - 108) / 23))) * (0.88 + 0.12 * Math.sin(e.f * tau + e.ph)) : 0;
+          const rr = e.r + 0.12 * tau, x = IMP.x + Math.cos(e.th) * rr, y = IMP.y + Math.sin(e.th) * rr + 0.1 * tau;
+          const kh = alphaLin(a * 0.25, "#3FE0D0")[1] / C.cyan[1], kc = alphaLin(Math.min(0.1, a * 0.8), "#3FE0D0")[1] / C.cyan[1];
+          setGlow(e.g1, x, y, e.z, e.sz * 2.4, e.sz * 2.4, kh * 1.7); setGlow(e.g2, x, y, e.z, e.sz * 1.3, e.sz * 1.3, kc * 2.2); });
+        // 粒(t と t−dlt の位置を結んで伸ばす=シャッター中の流れ。カメラの移動分も相対で足す)
+        const spinS = A.s;
+        for (let i = 0; i < NG; i++) {
+          grainAt(i, t, A.cx, A.s, A.bx, L, A.tau, P1v);
+          if (dlt > 0) { grainAt(i, t - dlt, B.cx, B.s, B.bx, B.L, B.tau, P0v); P0v.add(V1.subVectors(A.cam, B.cam)); if (Math.abs(P1v.x - P0v.x) > G.wd[i] / 2) P0v.copy(P1v); }
+          else P0v.copy(P1v);
+          Q2.setFromAxisAngle(V2.set(G.ax[i * 3], G.ax[i * 3 + 1], G.ax[i * 3 + 2]), G.sp[i] * spinS + G.ph[i]);
+          setStreak(Sx.grains, i, P0v, P1v, G.r[i], Q2, G.br[i], TMPC);
+        }
+        // 砂の衝撃輪(命中点から放射、傾いた円。前後の位置で流れを描く)
+        const Rr = (q) => 8.2 * (1 - Math.exp(-Math.max(0, q) / 0.16)), ra = tau > 0 ? (1 - sm(tau / 0.6)) * Wl : 0;
+        for (let i = 0; i < NRING; i++) {
+          const idx = NG + i;
+          if (ra <= 0.002) { M4.makeScale(0, 0, 0); Sx.grains.setMatrixAt(idx, M4); continue; }
+          const c = Math.cos(RG.th[i]), s = Math.sin(RG.th[i]);
+          const dir = V2.set(c, s * 0.92, RG.zj[i] + 0.35 * c).normalize();
+          const r1 = Rr(tau) * (1 + RG.j[i]), r0 = Rr(tau - 1 / 60) * (1 + RG.j[i]);
+          P1v.copy(IMP).addScaledVector(dir, r1); P0v.copy(IMP).addScaledVector(dir, r0);
+          setStreak(Sx.grains, idx, P0v, P1v, RG.r[i], Q2.identity(), RG.a[i] * ra * 1.6, TMPC);
+        }
+        Sx.grains.instanceMatrix.needsUpdate = true; Sx.grains.instanceColor.needsUpdate = true;
+        // ピント: 弾道面(z=0)に合わせる。奥の稜線と手前の粒がボケる(望遠の圧縮)
+        post.dof.focus = D - 0; post.dof.aper = 600; post.dof.maxCoc = 16;
+      }
+
+      function setupInsert(F) {
+        const k = F - 102; ins.mat.emissiveMap = ins.tex[k]; ins.mat.needsUpdate = true;
+        const P = ins.P, dist = 1.9 - 0.06 * k, a = -0.55;
+        ins.cam.position.set(P.x + Math.sin(a) * dist, P.y + 0.18 * dist, P.z + Math.cos(a) * dist);
+        ins.cam.lookAt(P.x + 0.12, P.y - 0.05, P.z);
+        post.dof.focus = ins.cam.position.distanceTo(P); post.dof.aper = 90; post.dof.maxCoc = 16;
+        finish.uniforms.ca.value = 0;
+      }
+
+      function renderAt(tq) {
+        const t = clamp(tq, 0, DUR - 1 / FPS / 2), F = Math.round(t * FPS);
+        if (F >= 102 && F <= 104) {
+          post.dof.scene = ins.scene; post.dof.camera = ins.cam; setupInsert(F);
+          post.composer.renderToScreen = true; post.render(); return;
+        }
+        post.dof.scene = scene; post.dof.camera = camera;
+        const L = t * FPS, blurWin = L >= 77.5 && L <= 101.5, SH = 0.6 / FPS;
+        const K = blurWin ? clamp(Math.ceil(rateAt(t) * 2), 1, 8) : 1;
+        if (K === 1) { update(t, blurWin ? SH : 0); post.composer.renderToScreen = true; post.render(); return; }
+        // 加速区間: 露光 216° を K 回に分けて描き平均(粒は各区間の中で流れとして伸ばす)
+        post.composer.renderToScreen = false;
+        renderer.setRenderTarget(accRT); renderer.setClearColor(0x000000, 1); renderer.clear();
+        for (let k = 0; k < K; k++) {
+          const tk = t - SH * k / (K - 1);
+          update(tk, SH / K);
+          post.render();
+          accQ.material.uniforms.tex.value = post.composer.readBuffer.texture; accQ.material.uniforms.w.value = 1 / K;
+          renderer.setRenderTarget(accRT); renderer.autoClear = false; accQ.render(renderer); renderer.autoClear = true;
+        }
+        renderer.setRenderTarget(null); cpyQ.render(renderer);
+        post.composer.renderToScreen = true;
+      }
+
+      build();
+      window.addEventListener("hf-seek", (e) => renderAt(e.detail.time));
+      window.__hf = window.__hf || {}; window.__hf.buildReady = window.__hf.buildReady || {};
+      window.__hf.buildReady["three-scene"] = Promise.resolve().then(() => renderAt(window.__hfThreeTime || 0));
+    </script>
+  </body>
+</html>

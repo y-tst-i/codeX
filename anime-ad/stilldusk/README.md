@@ -5,3 +5,6 @@
 - `make_audio.py` / `audio_check.md` / `cues.json`: 音の生成と数値検証
 - `source/`: 場面ごとの index.html
 トークン(担当ごと): 設計11.2万 / s1 8.0万 / s2 7.7万 / s3 11.0万 / s4 13.1万 / s5 8.4万 / 音 14.0万(合計約73万。進行役の会話分は含まない)
+
+## 見せ場 s4 の 3D 版(three.js)比較
+`s4_3d/`: 3D版(mp4、index.html)、名前伏せ比較(compare-s4.mp4、A=3D・B=2D)、鍵(S4_BLIND_KEY.json)。利用者は3D版(A)を選んだ。トークン: 3D版 約19.8万 / 2D版 約13.1万。描画: 3D版 4分46秒(約2.0秒/フレーム)。

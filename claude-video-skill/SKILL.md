@@ -243,7 +243,10 @@ lint が1件でもエラーだと layout/contrast 監査が走らず「0 samples
    - **seek の落とし穴**: `composer.render(0)` と差分を明示 / FilmPass は time を直接代入 / GlitchPass・TAA・AfterimagePass は使わない / 乱数は seed 付き(GTAO のノイズも)。決定性は実測で一致を確認済み。
    - **速度(この環境、ソフトウェアGL、1920×1080、450フレーム換算)**: ポストなし 約4.4分 / Bloom 約7.7分 / GTAO+Bloom+DoF(ssaa1・32タップ) 約21分 / std(2倍描画・MSAA4・96タップ) 約2時間(実用外)。workers を増やしても速くならない(CPUを使い切る)。→ **基本は fast、GTAO は決め所のカットだけ**。長い動画の全場面を3Dにしない。
 3. **素材**: Poly Haven(HDRI・モデル・テクスチャ、CC0、API は固有の User-Agent が必要)、ambientCG(CC0)、Kenney(CC0)。Quaternius は2026-08-28から再配布禁止 → 公開リポジトリに入れない。CC BY は動画に帰属表示。一覧と注意は `NOTICES.md`。
-**まだ未検証**: three.js 場面を実際の動画の見せ場に使った時の品質比較(2D版との名前伏せ比較)。ボケの数値(aper 60)が場面に合うか。
+**検証結果(STILLDUSK の見せ場 s4、132フレーム、同じ場面カードで 2D版と3D版を名前を伏せて比較)**: 利用者は**3D版(three.js)を選んだ**。3D版は Opus 担当で約19.8万トークン・描画4分46秒(約2.0秒/フレーム、ボケ32タップ+ブルーム、GTAOなし)。2D版は約13.1万トークン。→ **見せ場・タイトルなど決め所の1〜2場面は3Dにする価値がある**(トークンは約1.5倍)。他の場面は2D+質感部品(`--depth`)+仕上げ(`look_pass.sh`)で足りる。
+- 3D版の弱点(担当の自己申告、再描画で直せる): 弾の空気の円錐(マッハコーン)が見えにくい(粒が数pxで、2Dの輪郭のほうが読みやすい)/ 人物が球の組み合わせで「雪だるま」に見える/ 稜線に斜めの帯が出る/ 命中の中心に白っぽい円が数フレーム出る(BIBLEの白禁止に厳密には微妙)。**人物や読ませたい形は、3Dでも輪郭を意識して作る**。
+- 雛形の既定トーンマッピングが暗部を黒に潰した → 担当が自前のパスに置き換えた。暗い場面は雛形のトーンマッピングを確認する。
+- 未検証: 人物の入る3D場面、HDRI/Poly Haven素材を使った場面、ボケの強さの最適値。
 
 ## 21. スタイル辞書(見た目の型 43種)
 映像の「絵柄」を、場面ごとに型から選ぶための辞書。lemo-opuscar の `styles/*/STYLE.md` 43件を原文のまま同梱(MIT、`references/styles/lemo/`)し、日本語の索引 `references/styles/INDEX.md`(一言・質感の出し方・向く用途・難易度)を付けた。質感でのっぺり感を避けやすい上位10: glass-product, brick-toy, paper-lantern, stained-glass, shadow-puppet, impasto, paper-popup, hd-2d, crayon-book, risograph。
