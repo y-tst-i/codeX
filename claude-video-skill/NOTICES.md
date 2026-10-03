@@ -3,6 +3,7 @@
 | 物 | 場所 | ライセンス | 備考 |
 |---|---|---|---|
 | lemo-opuscar `core/three/post.js`(改変あり) | `tools/assets/three/post.js` | MIT(Copyright (c) 2026 LemoLab) | `tools/assets/three/LICENSE-lemo-opuscar.txt`。署名・商標は入れていない |
+| lemo-opuscar `styles/*/STYLE.md`(43件、原文のまま) | `references/styles/lemo/` | MIT(Copyright (c) 2026 LemoLab) | `references/styles/lemo/LICENSE-lemo-opuscar.txt`。LemoLab の署名・商標は作品に入れない |
 | Kenney 効果音(Impact / RPG / Interface) | `tools/assets/sfx-cc0/` | CC0 | 帰属表示は不要。各 `License.txt` |
 | GSAP(gsap.min.js) | `tools/assets/gsap.min.js` | GreenSock 標準ライセンス | npm の gsap@3.14.2 |
 | MuseScore General(音源) | 同梱しない(apt で導入) | MIT・一部CC0 | |
