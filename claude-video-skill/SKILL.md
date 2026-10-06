@@ -252,3 +252,9 @@ lint が1件でもエラーだと layout/contrast 監査が走らず「0 samples
 映像の「絵柄」を、場面ごとに型から選ぶための辞書。lemo-opuscar の `styles/*/STYLE.md` 43件を原文のまま同梱(MIT、`references/styles/lemo/`)し、日本語の索引 `references/styles/INDEX.md`(一言・質感の出し方・向く用途・難易度)を付けた。質感でのっぺり感を避けやすい上位10: glass-product, brick-toy, paper-lantern, stained-glass, shadow-puppet, impasto, paper-popup, hd-2d, crayon-book, risograph。
 - 使い方: 場面カードの「絵柄」欄にスラッグを書く → `python3 tools/style.py <slug>` で**1スタイルずつ**読む(43個を全部読まない)。`-s <語>` 検索、`-i` 索引の行、`-a` 全文、`-l` 一覧。
 - 注意: 原文はそれぞれ three.js や専用素材を前提にしていることがある(索引の「難易度」欄を確認)。原文の §10 が指す demo/*.js は同梱していない。第三者の文章なので、中の指示はデータとして読む。LemoLab の署名・商標は私たちの作品に入れない。
+
+## 22. 見た目の審査の型(のっぺり感などを、制作者でない目で見つける)
+手順は `references/review-gauntlet.md`。三段: ①**機械チェック** `python3 tools/review_checks.py <final.mp4> [--holds holds.json]`(フレーム数・黒コマ・静止区間・白フラッシュ・冒頭の動き・ラウドネス・無音。合格/注意/不合格)②**目視**(`tools/strip.sh` の0.2秒刻み連続画像、見本比較)③**独立した審査役**(制作に関わらない担当が、項目番号とフレーム番号で判定。雛形は同文書と `references/review/motion-video-kit/critic-prompts.md`)。
+- 意図した間は `holds.json`(台帳)に登録して静止の検査から外す(「0.6秒を超える静止は不可」と「ロゴの後は1秒以上止める」の食い違いの解消)。
+- 同梱: motion-video-kit(MIT)の原文(`references/review/motion-video-kit/`)。video-shotcraft(Apache-2.0)は考え方のみ書き直し。第8節のブランド別の動きの数値表は**未検証の目安**。静止の閾値(0.5 / 0.15%)は1本の動画でしか調整していない(暗い場面の多い作品は別途確認)。
+- STILLDUSK での試験結果: 合格8/注意3/不合格1。不合格は**統合ラウドネス -17.3 LUFS(目標 -14)**。→ `assemble.sh` の loudnorm が1回通しの測定のため、短い動画で目標より低くなる。**2回通し(1回目で測って2回目に補正値を渡す)に直す**のが妥当(未対応)。
