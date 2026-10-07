@@ -19,6 +19,7 @@ claude plugin marketplace add heygen-com/hyperframes && claude plugin install hy
 | `references/three-3d.md` | **three.js の3D**: 手順、仕上げ処理の順と数値、seekの落とし穴、速度の実測、素材とライセンス |
 | `references/styles/` | **スタイル辞書(見た目の型43種)**: `INDEX.md`(日本語索引)、`lemo/`(原文、MIT)。`tools/style.py` で1つだけ引く |
 | `references/review-gauntlet.md` + `references/review/` | **見た目の審査の型**(機械チェック→目視→独立した審査役)、motion-video-kit(MIT)の原文。道具 `tools/review_checks.py` `tools/strip.sh` |
+| `agents/video-opus.md` + `tools/install_agent.sh` | 動画制作の担当の定義(Opus・エフォート中)と、`~/.claude/agents/` への設置道具(リポジトリ非依存) |
 | SKILL.md §23 | 検討中の道具の記録(ArtCraft)。取り込み前の試験結果のみ |
 | `NOTICES.md` | 第三者の素材・コードのライセンス表示 |
 | `references/character-acting.md` | **キャラの演技**(予備動作・余韻・タイミング・表情・手描きらしさ)と、2.5D人型部品 `puppet.js` の使い方 |
