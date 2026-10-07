@@ -1,0 +1,414 @@
+{
+  "version": "1.0.0",
+  "target_ai": "Claude Code",
+  "purpose": "Code-based Motion Graphics Master Reference & System Instruction Set",
+  "overview": "Claude CodeがHTML/CSS/JS (Canvas, WebGL, Three.js, GSAP, SVG, Remotion) を用いてプログラマブルに高品質なモーショングラフィックスを実装・出力するための100種超の映像手法・仕様データベース。",
+  "system_instructions_for_claude_code": {
+    "core_rules": [
+      "モーショングラフィックス生成時、イージング（Easing）の指定なし（Linear）は原則禁止とする。cubic-bezier(0.25, 1, 0.5, 1)等の緩急を必須適用する。",
+      "アニメーションは時間軸 (time/delta) に依存させた計算を行い、フレームレートに依存しない物理・運動を実装する。",
+      "Stagger（時間差遅延）を活用し、複数要素の同期運動を避けリズム感（Stagger delay: 0.03s - 0.1s）を生み出す。",
+      "カラーパレットは3色（ベース、メイン、アクセント）を徹底し、発光効果（Glow / Drop-shadow / Canvas globalCompositeOperation='screen'）で被写体と背景のコントラストを確保する。",
+      "レスポンシブなビューポートサイズ計算 (ResizeObserver / window.innerWidth/Height) を常に含める。"
+    ],
+    "tech_stack_selection_guide": {
+      "2D_UI_Text_Shape": "GSAP + SVG / CSS Animation / HTML5 Canvas",
+      "Complex_Particles_Physics": "HTML5 Canvas (2D Context) or WebGL Shader",
+      "3D_Graphics_Camera": "Three.js / WebGL / GLSL Shaders",
+      "Video_Export_React": "Remotion (React-based video rendering)"
+    }
+  },
+  "easing_and_physics_library": [
+    {
+      "id": "EAS-01",
+      "name": "Ease Out Expo (急速減速)",
+      "cubic_bezier": "cubic-bezier(0.16, 1, 0.3, 1)",
+      "gsap_ease": "expo.out",
+      "formula": "1 - Math.pow(2, -10 * t)",
+      "best_for": "画面外からのオブジェクト急参入・UI要素出現"
+    },
+    {
+      "id": "EAS-02",
+      "name": "Ease Out Back (オーバーシュート・バウンド)",
+      "cubic_bezier": "cubic-bezier(0.34, 1.56, 0.64, 1)",
+      "gsap_ease": "back.out(1.7)",
+      "formula": "c3 = c1 + 1; 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2)",
+      "best_for": "ポップなバウンドポップアップ、アイコニックな強調"
+    },
+    {
+      "id": "EAS-03",
+      "name": "Spring Physics (バネ運動シミュレーション)",
+      "type": "Physics-based",
+      "parameters": {
+        "stiffness": 100,
+        "damping": 10,
+        "mass": 1
+      },
+      "formula": "F = -k * x - c * v; a = F / m",
+      "best_for": "自然で有機的な追従モーション、ドラッグ後の反動"
+    },
+    {
+      "id": "EAS-04",
+      "name": "Anticipation / Ease In Back (助走・事前動作)",
+      "cubic_bezier": "cubic-bezier(0.36, 0, 0.66, -0.56)",
+      "gsap_ease": "back.in(1.7)",
+      "best_for": "大技アクション前の溜め動作・ジャンプ前屈"
+    }
+  ],
+  "categories": [
+    {
+      "category_id": "CAT-01",
+      "category_name": "基本運動・トランスフォーム (Transforms & Basic Dynamics)",
+      "description": "位置、回転、拡大縮小、不透明度の時間変化による基本動的表現",
+      "techniques": [
+        {
+          "id": "TECH-001",
+          "name": "Squash & Stretch (潰れと伸び)",
+          "concept": "移動方向や衝撃に応じて体積を一定に保ちながら縦横比を変形（例: Y軸短縮時にX軸拡大）。",
+          "parameters": {
+            "scaleX": "1 / scaleY",
+            "max_deformation": "0.3"
+          },
+          "code_snippet": {
+            "gsap": "gsap.to(elem, { scaleY: 0.7, scaleX: 1.3, duration: 0.1, yoyo: true, repeat: 1, ease: 'power2.out' });"
+          },
+          "use_case": "キャラクターの跳躍、着地インパルス、弾力ボタン"
+        },
+        {
+          "id": "TECH-002",
+          "name": "Stagger Cascade (タイムラグ連続波及)",
+          "concept": "配列要素にわずかな遅延（delay）を与えて連続的に動かす。",
+          "parameters": {
+            "each_delay": "0.05s",
+            "direction": "start / center / edges"
+          },
+          "code_snippet": {
+            "gsap": "gsap.to('.grid-item', { y: 0, opacity: 1, stagger: { amount: 0.8, grid: 'auto', from: 'center' }, ease: 'power3.out' });"
+          },
+          "use_case": "リスト表示、グリッドレイアウト展開、文字出現"
+        },
+        {
+          "id": "TECH-003",
+          "name": "Inertia Follow / Drag (慣性追従・遅延ドラッグ)",
+          "concept": "先行オブジェクトの位置にターゲットが補間（Lerp）を用いて遅れて追従する。",
+          "formula": "current += (target - current) * lerpFactor (lerpFactor = 0.1)",
+          "code_snippet": {
+            "canvas": "pos.x += (mouse.x - pos.x) * 0.1; pos.y += (mouse.y - pos.y) * 0.1;"
+          },
+          "use_case": "カスタムカーソル、カメラ視点追従、流動感のあるUI"
+        },
+        {
+          "id": "TECH-004",
+          "name": "Continuous Rotation & Momentum (定常回転と慣性アクセル)",
+          "concept": "基準回転速度に対しアクセルインパルスが加算され一定減速する運動。",
+          "code_snippet": {
+            "three_js": "mesh.rotation.y += speed; speed *= 0.98;"
+          },
+          "use_case": "3Dアイコン演出、ローディングインジケータ"
+        },
+        {
+          "id": "TECH-005",
+          "name": "Parallax Multi-Layer Motion (多層視差スクロール/移動)",
+          "concept": "手前・中景・背景で移動速度の比率（Depth Factor）を変えて立体感を創出。",
+          "parameters": {
+            "layer_bg": 0.2,
+            "layer_mid": 0.5,
+            "layer_fg": 1.2
+          },
+          "use_case": "奥行きのある背景グラフィック、空間スクロール表現"
+        }
+      ]
+    },
+    {
+      "category_id": "CAT-02",
+      "category_name": "シェイプモーフィング & パスアニメーション (Shape Morphing & Paths)",
+      "description": "ベクターパス変形、ストロークアニメーション、流体モーフ表現",
+      "techniques": [
+        {
+          "id": "TECH-006",
+          "name": "Trim Path / Stroke DashOffset (線描描画アニメーション)",
+          "concept": "SVGの stroke-dasharray と stroke-dashoffset を操作し、線をなぞるように描画。",
+          "code_snippet": {
+            "css": "path { stroke-dasharray: 1000; stroke-dashoffset: 1000; animation: draw 2s ease-out forwards; }\n@keyframes draw { to { stroke-dashoffset: 0; } }"
+          },
+          "use_case": "ロゴのアウトライン表示、回路図・線画イラストアニメーション"
+        },
+        {
+          "id": "TECH-007",
+          "name": "SVG Path Morphing (ベクトルパス変形)",
+          "concept": "同等頂点数のSVG d属性パラメータ間を時間補間して、ある形状から別の形状へ連続変形。",
+          "code_snippet": {
+            "gsap": "gsap.to('#circlePath', { duration: 1.5, morphSVG: '#starPath', ease: 'power2.inOut' });"
+          },
+          "use_case": "アイコン状態変化（再生→停止、検索→閉じる）、幾何学模様変化"
+        },
+        {
+          "id": "TECH-008",
+          "name": "Metaball / Gooey Effect (粘性融合モーフ)",
+          "concept": "SVGの feGaussianBlur と feColorMatrix (Alpha contrast Threshold) を適用し、重なる円同士がドロリと繋がる水滴アニメーション。",
+          "code_snippet": {
+            "svg_filter": "<filter id='goo'><feGaussianBlur in='SourceGraphic' stdDeviation='10' result='blur' /><feColorMatrix in='blur' mode='matrix' values='1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 19 -9' result='goo' /></filter>"
+          },
+          "use_case": "液体分離・合体、バイオメカニカルモーション、ローダー"
+        },
+        {
+          "id": "TECH-009",
+          "name": "Wave Motion / Sinusoidal Deform (正弦波パルスパス)",
+          "concept": "頂点座標に sin(x * freq + time) の高さを付加し、揺らめく波や紐を構築。",
+          "use_case": "オーディオビジュアル波形、旗のたなびき、揺れる髪・リボン"
+        },
+        {
+          "id": "TECH-010",
+          "name": "Radial Expansion & Polygon Explosion (多角形輪郭爆発)",
+          "concept": "中心点から放射状に複数の幾何学線分・多角形が拡大しながら消滅（Fade Out）。",
+          "use_case": "クリックエフェクト、ヒットエフェクト、集中線アクセント"
+        }
+      ]
+    },
+    {
+      "category_id": "CAT-03",
+      "category_name": "タイポグラフィ & キネティックテキスト (Typography & Kinetic Text)",
+      "description": "文字単位・単語単位の動きでメッセージ性を強調するモーションテキスト手法",
+      "techniques": [
+        {
+          "id": "TECH-011",
+          "name": "Split Text Character Stagger Slide (1文字スライド出現)",
+          "concept": "テキストを文字ごとに <span> で分解し、overflow:hiddenの親要素からY軸スライドイン。",
+          "code_snippet": {
+            "js": "text.split('').map(char => `<span class='char'><span class='inner'>${char}</span></span>`).join('')",
+            "gsap": "gsap.from('.inner', { y: '100%', duration: 0.8, stagger: 0.03, ease: 'power4.out' });"
+          },
+          "use_case": "タイトル表示、キャッチコピー強調、洗練されたWebタイポグラフィ"
+        },
+        {
+          "id": "TECH-012",
+          "name": "Kinetic Text Wave / Sine Wave Bounce (波動文字)",
+          "concept": "各文字のY座標・回転角度にサイン波オフセットを乗せ、連続する波立ちを表現。",
+          "use_case": "ポップなタイトル、感情表現（声の揺れ・興奮）"
+        },
+        {
+          "id": "TECH-013",
+          "name": "Typewriter with Glitch Cursor (タイピング & 点滅カーソル)",
+          "concept": "文字列を一文字ずつタイマーで追加表示し、ランダム文字ノイズ（Glitch）を数フレーム挟む。",
+          "use_case": "サイバーパンク演出、ターミナルログ表示、AI思考テキスト"
+        },
+        {
+          "id": "TECH-014",
+          "name": "3D Text Flip / Perspective Roll (3D回転テキストロール)",
+          "concept": "perspective を設定した親要素内で、X軸回転 (rotateX: -90deg -> 0deg) で次の単語へと翻転。",
+          "use_case": "単語切り替えアニメーション、スローガンローテーション"
+        },
+        {
+          "id": "TECH-015",
+          "name": "Text Path Follower (曲線パス沿いスクロール)",
+          "concept": "SVG <textPath> の startOffset をアニメーションさせ、蛇行するパス上を文字が走る。",
+          "use_case": "ループテキストリング、アーティスティックな表現"
+        },
+        {
+          "id": "TECH-016",
+          "name": "Variable Font Weight/Width Morph (可変フォントウェイトモーフィング)",
+          "concept": "Variable Font の font-weight / font-stretch / font-style アクスをCSSでシームレス補間。",
+          "code_snippet": {
+            "css": "@keyframes fontMorph { 0% { font-variation-settings: 'wght' 100, 'wdth' 85; } 100% { font-variation-settings: 'wght' 900, 'wdth' 125; } }"
+          },
+          "use_case": "可変タイポグラフィ、ホバーエフェクト、ダイナミックブランディング"
+        }
+      ]
+    },
+    {
+      "category_id": "CAT-04",
+      "category_name": "パーティクル & 物理シミュレーション (Particles & Physics)",
+      "description": "大量の点・粒子・流体による幻想的・自然法則的グラフィックス",
+      "techniques": [
+        {
+          "id": "TECH-017",
+          "name": "Particle Burst / Confetti Emitter (粒子爆発・花火)",
+          "concept": "発生点からランダムな初速(vx, vy)と極座標角度で粒子を射出し、重力(gravity)と空気抵抗(friction)で減速衰退。",
+          "parameters": {
+            "count": 200,
+            "gravity": 0.15,
+            "friction": 0.96
+          },
+          "code_snippet": {
+            "canvas_update": "p.vx *= p.friction; p.vy *= p.friction; p.vy += p.gravity; p.x += p.vx; p.y += p.vy; p.alpha -= 0.01;"
+          },
+          "use_case": "祝福演出、爆発エフェクト、キラキラ感の演出"
+        },
+        {
+          "id": "TECH-018",
+          "name": "Perlin/Simplex Noise Flow Field (パーリンノイズ流体場)",
+          "concept": "2D/3D Perlin Noise の出力値を角度(angle = noise(x*scale, y*scale, time) * Math.PI * 4)に変換し、粒子群を流体状に誘導。",
+          "use_case": "風の流れ、オーロラ、烟流、有機的な波紋表現"
+        },
+        {
+          "id": "TECH-019",
+          "name": "Boids Flocking Algorithm (群れ移動シミュレーション)",
+          "concept": "結合(Cohesion)、分離(Separation)、整列(Alignment)の3法則に基づく自律移動粒子の群れ表現。",
+          "use_case": "魚の群れ、鳥の群れ、ドローンショー演出"
+        },
+        {
+          "id": "TECH-020",
+          "name": "Attractor / Repulsor Magnetic Field (引力場・斥力場)",
+          "concept": "マウスや固定座標を中心とする万有引力 F = G * m1 * m2 / (r^2) により粒子を引き寄せ・弾き返す。",
+          "use_case": "インタラクティブ背景、ブラックホール演出、ネビュラグラフィック"
+        },
+        {
+          "id": "TECH-021",
+          "name": "Constellation Node Network (星座状ノード結合)",
+          "concept": "一定距離内に近接した粒子同士の間に自動的に半透明の線を接続描画。",
+          "code_snippet": {
+            "canvas": "const dist = Math.hypot(p1.x - p2.x, p1.y - p2.y); if(dist < maxDist) { ctx.strokeStyle = `rgba(255,255,255,${1 - dist/maxDist})`; ctx.stroke(); }"
+          },
+          "use_case": "テクノロジー系背景、AI/データネットワーク可視化"
+        }
+      ]
+    },
+    {
+      "category_id": "CAT-05",
+      "category_name": "3Dグラフィックス & カメラワーク (3D Motion & Camera)",
+      "description": "Three.jsやWebGLを用いた3D空間表現と動的カメラ演出",
+      "techniques": [
+        {
+          "id": "TECH-022",
+          "name": "Dolly Zoom / Vertigo Effect (めまい効果ズーム)",
+          "concept": "カメラの視野角(FOV)を広げつつ同時にカメラ位置を前に詰めることで、被写体サイズを固定したまま背景の奥行き感を激変させる。",
+          "code_snippet": {
+            "three_js": "camera.fov = baseFov * factor; camera.position.z = baseZ * factor; camera.updateProjectionMatrix();"
+          },
+          "use_case": "心理的インパクト、空間歪み強調、映画的カットアウト"
+        },
+        {
+          "id": "TECH-023",
+          "name": "3D Wireframe Plane Deformation (ワイヤーフレーム地形波動)",
+          "concept": "PlaneGeometry の vertex 座標 (z値) をSin波やPerlin Noiseで動的に変形し、ワイヤーフレーム描画。",
+          "use_case": "レトロサイバーウェイブ、80s Synthwave背景、デジタル地形"
+        },
+        {
+          "id": "TECH-024",
+          "name": "3D Card Card-Flip Matrix (多層3Dパネル回転)",
+          "concept": "複数の3D要素がグリッド状に並び、ウェーブ状に180度裏返る。",
+          "use_case": "ギャラリー切り替え、データ表示トランジション"
+        },
+        {
+          "id": "TECH-025",
+          "name": "Orbiting Satellite Ring (周回衛星リング)",
+          "concept": "中心天体の周りを傾斜した極座標軌道(x = r*cos(t), z = r*sin(t), y = r*sin(t)*tilt)で小物体群が周回。",
+          "use_case": "プロダクトアピール、未来的なコアグラフィック"
+        },
+        {
+          "id": "TECH-026",
+          "name": "Instanced Mesh Matrix Expansion (大量3Dキューブ群の動的伸縮)",
+          "concept": "Three.js InstancedMesh を使い、数万個の3D立方体のスケール・位置をシェーダーまたはJSで一斉制御。",
+          "use_case": "イマーシブデータビジュアライゼーション、都市群ビル建設モーション"
+        }
+      ]
+    },
+    {
+      "category_id": "CAT-06",
+      "category_name": "シェーダー & ポストエフェクト (Shaders & Post-Processing)",
+      "description": "GLSL / Fragment Shader や Canvas Composite を活用した光学的質感・ノイズ効果",
+      "techniques": [
+        {
+          "id": "TECH-027",
+          "name": "RGB Split / Chromatic Aberration (色収差・RGBズレ)",
+          "concept": "R, G, Bのカラーチャンネルのサンプル座標をわずかにオフセットさせて合成し、レンズ歪みやノイズ感を創出。",
+          "code_snippet": {
+            "glsl": "vec4 r = texture2D(tDiffuse, uv + vec2(amount, 0.0)); vec4 g = texture2D(tDiffuse, uv); vec4 b = texture2D(tDiffuse, uv - vec2(amount, 0.0)); gl_FragColor = vec4(r.r, g.g, b.b, 1.0);"
+          },
+          "use_case": "グリッチエフェクト、インパクトの瞬間、サイバーパンク演出"
+        },
+        {
+          "id": "TECH-028",
+          "name": "Bloom & Selective Glow (高輝度ブルーム発光)",
+          "concept": "輝度が閾値を超えた領域を抽出し、ガウスぼかしを加算合成 (Unreal / Additive blending) してネオンのように発光させる。",
+          "use_case": "エネルギーライン、サイバーUI、レーザー光輝"
+        },
+        {
+          "id": "TECH-029",
+          "name": "Displacement Map Wave Distortion (画像置換ディストーション)",
+          "concept": "ノーマルマップ画像やノイズ画像のグレー値に基づいて画面のUV座標を歪める。",
+          "use_case": "水滴越し・ガラス越しの透過視覚効果、画面切り替え"
+        },
+        {
+          "id": "TECH-030",
+          "name": "CRT Scanlines & Film Grain (ブラウン管走査線 & フィルムノイズ)",
+          "concept": "周期的な横線(sin(uv.y * numLines))とフレームごとの擬似ランダムノイズを加算。",
+          "use_case": "レトロコンソール風映像、監視カメラ視点演出"
+        },
+        {
+          "id": "TECH-031",
+          "name": "Signed Distance Fields (SDF) Raymarching (SDF幾何学シェーダー)",
+          "concept": "フラグメントシェーダー内で距離関数(SDF)を解き、幾何学立体同士のSmooth Min（滑らかなモーフィング合体）をレンダリング。",
+          "use_case": "超高速有機的3Dモーフィング、リアルタイムジェネラティブアート"
+        }
+      ]
+    },
+    {
+      "category_id": "CAT-07",
+      "category_name": "シーン切り替え & トランジション (Transitions & Scene Reveals)",
+      "description": "カット間をつなぐスタイリッシュな場面展開手法",
+      "techniques": [
+        {
+          "id": "TECH-032",
+          "name": "Iris Circular Wipe (円形アイリスワイプ)",
+          "concept": "画面中心からの円形マスク半径が0%から200%へと拡大して次シーンを露わにする。",
+          "code_snippet": {
+            "css": "clip-path: circle(0% at 50% 50%); -> clip-path: circle(150% at 50% 50%);"
+          },
+          "use_case": "クラシックアニメ風ワイプ、焦点切り替え"
+        },
+        {
+          "id": "TECH-033",
+          "name": "Multi-Band Slash Wipe (多段斜めスラッシュワイプ)",
+          "concept": "画面を斜めの帯(Stripe)に分割し、時間差で左右にスライドアウトして画面を切り替える。",
+          "use_case": "スタイリッシュスポーツ番組風切り替え、 dynamic intro"
+        },
+        {
+          "id": "TECH-034",
+          "name": "Pixelate / Mosaic Morph (ピクセル解像度モザイク推移)",
+          "concept": "モザイク粒度を1px -> 64px -> 1pxへと変化させつつ中間に別シーンを挿入。",
+          "use_case": "レトロゲーム風切り替え、デジタルデータ変化"
+        },
+        {
+          "id": "TECH-035",
+          "name": "Luma Matte Reveal (ルミナンスマット透過出現)",
+          "concept": "白黒グラデーション画像の輝度値を閾値処理し、黒から白へ波及するように次画像を出現させる。",
+          "use_case": "インクの染み出しトランジション、液体浸食カットOut"
+        }
+      ]
+    },
+    {
+      "category_id": "CAT-08",
+      "category_name": "光・余韻・残像効果 (Light, Echo & Motion Aesthetics)",
+      "description": "残像、軌跡、光線、空気感で質感を極限まで高める技法",
+      "techniques": [
+        {
+          "id": "TECH-036",
+          "name": "Motion Blur Trail / Canvas Echo (キャンバス残像残し)",
+          "concept": "毎フレームの全消去を行わず、ctx.fillStyle = 'rgba(0,0,0,0.1)' で半透明矩形を上書きすることで自然な移動軌跡（残像）を生成。",
+          "code_snippet": {
+            "canvas": "ctx.fillStyle = 'rgba(10, 10, 15, 0.15)'; ctx.fillRect(0, 0, width, height);"
+          },
+          "use_case": "超高速移動の演出、光の流星群、光線描画"
+        },
+        {
+          "id": "TECH-037",
+          "name": "God Rays / Volumetric Light Shafts (輪郭光線・ゴッドレイ)",
+          "concept": "オブジェクトのシルエット外周から放射状に光線状のグラデーションを拡大照射。",
+          "use_case": "神聖な登場シーン、ロゴのバックライト演出"
+        },
+        {
+          "id": "TECH-038",
+          "name": "Caustics Light Ripple (水底焦熱・カスティクス光彩)",
+          "concept": "複数のサイン波ノイズの重なり合わせにより、水底に映る揺らめく網目状の光輪を描画。",
+          "use_case": "水中シーン、神秘的背景、ラグジュアリー感"
+        }
+      ]
+    }
+  ],
+  "claude_code_implementation_templates": {
+    "html5_canvas_starter": "const canvas = document.createElement('canvas'); const ctx = canvas.getContext('2d'); document.body.appendChild(canvas); function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; } window.addEventListener('resize', resize); resize(); let animationId; function render(time) { ctx.fillStyle = '#0a0a0f'; ctx.fillRect(0, 0, canvas.width, canvas.height); /* Motion Math Here */ animationId = requestAnimationFrame(render); } requestAnimationFrame(render);",
+    "gsap_svg_starter": "<svg viewBox='0 0 1920 1080' width='100%' height='100%'><defs><linearGradient id='grad' x1='0%' y1='0%' x2='100%' y2='100%'><stop offset='0%' stop-color='#ff007a'/><stop offset='100%' stop-color='#7b00ff'/></linearGradient></defs><g id='motionGroup'></g></svg><script src='https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js'></script>",
+    "threejs_starter": "import * as THREE from 'three'; const scene = new THREE.Scene(); const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000); const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true }); renderer.setSize(window.innerWidth, window.innerHeight); document.body.appendChild(renderer.domElement); camera.position.z = 5; function animate(t) { requestAnimationFrame(animate); renderer.render(scene, camera); } animate(0);"
+  }
+}

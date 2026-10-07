@@ -1,0 +1,82 @@
+<!doctype html><html><head><meta charset="utf-8"><style>html,body{margin:0;background:#000}canvas{height:100vh;display:block;margin:auto}</style></head><body><canvas id="stage" width="1080" height="1920"></canvas><script>
+(function(){
+const K=window.MGK,W=1080,H=1920,c=document.getElementById("stage"),ctx=c.getContext("2d");
+const PINK="#ff4f8b",MINT="#3fe0c5",YEL="#ffd84d",NAVY="#1b1f4a",INK="#2b1a3a";
+const CUTS=[2.6,5.4,8.4],DUR=10.5;
+const SUBS=[[0.3,2.4,"脈ありサイン、ランキングで発表！"],[2.8,5.2,"第3位は、返信がとにかく早い"],[5.6,8.2,"そして第1位は…目が合う回数！"],[8.6,10.3,"保存して見返してね"]];
+const T={font:"sans-serif"};
+function char(t,o){if(window.CHARACTER)window.CHARACTER.draw(ctx,Object.assign({t:t,mouth:K.voice(t)},o));}
+function sub(t){for(const s of SUBS){if(t>=s[0]-0.05&&t<s[1]){const p=K.anim(t,s[0],0.12,"outBack");ctx.save();ctx.globalAlpha=Math.min(1,p*2);ctx.fillStyle="rgba(20,10,30,.55)";K.shape.roundRect(ctx,90,1500,900,120,40);ctx.fill();ctx.restore();K.text(ctx,t,s[2],540,1560,{size:56,weight:800,color:"#fff",anim:"none",maxWidth:860});}}}
+// ---- シーン1：フック ----
+function s1(t){
+  K.bg.mesh(ctx,t,["#ffd6e6",PINK,"#b98cff","#ffe3f0"],{speed:0.25});
+  K.bg.floaters(ctx,t,{shape:"heart",colors:["#ffffff",PINK],count:18,alpha:0.55});
+  const cam=K.drift(t,1.2);cam.zoom+=0.08*K.punch(t,[0.15,1.2],0.4);const sh=K.shake(t,1.2,0.3,16,2);cam.x+=sh.x;cam.y+=sh.y;
+  ctx.save();K.camera(ctx,cam);
+  K.marker(ctx,t,150,440,780,150,0.55,"#fff36b");
+  K.text(ctx,t,"脈ありサイン",540,370,{size:150,color:INK,stroke:"#fff",strokeWidth:26,anim:"slam",start:0,stagger:0.05});
+  K.text(ctx,t,"ランキング TOP3",540,520,{size:96,color:"#fff",stroke:PINK,strokeWidth:20,anim:"pop",start:0.5,stagger:0.04});
+  K.particles.burst(ctx,t,1.2,{x:540,y:480,count:40,colors:["#fff",PINK,YEL],shape:"heart",speed:1100,size:34});
+  const k=K.keys(t,[{t:0,x:1350,size:880},{t:1.0,x:640,ease:"outCubic"}]);
+  char(t,{x:k.x,y:1560,size:k.size,expression:t<1.2?"happy":"surprised",pose:t<1.2?"wave":"cheer",walk:t<1.0,react:"jump",reactAt:1.2,flip:true,look:-0.5});
+  ctx.restore();
+}
+// ---- シーン2：第3位 ----
+function s2(t){
+  K.bg.mesh(ctx,t,["#d4fff5",MINT,"#7fd1ff","#eafffb"],{speed:0.3});
+  K.bg.stripes(ctx,t,{color:"#ffffff",alpha:0.18,speed:120});
+  const cam=K.drift(t,1);const z=K.anim(t,2.6,2.8,"inOutCubic");cam.zoom+=0.06*z+0.07*K.punch(t,[3.3,4.2],0.35);
+  ctx.save();K.camera(ctx,cam);
+  ctx.save();ctx.globalAlpha=K.anim(t,2.9,0.4);K.bg.rays(ctx,t,{color:"#ffffff",x:760,y:560,alpha:0.35,count:14});ctx.restore();
+  const n=K.anim(t,2.9,0.6,"outBounce");
+  ctx.save();ctx.translate(760,560);ctx.scale(n,n);K.text(ctx,t,"3",0,0,{size:420,color:"#fff",stroke:INK,strokeWidth:40,anim:"none"});ctx.restore();
+  K.text(ctx,t,"位",900,700,{size:120,color:INK,anim:"pop",start:3.1});
+  K.marker(ctx,t,110,750,860,140,4.1,YEL);
+  K.text(ctx,t,"返信がとにかく早い",540,820,{size:110,color:INK,accent:["早い"],accentColor:PINK,anim:"rise",start:3.3,stagger:0.04,maxWidth:900});
+  K.particles.ring(ctx,t,3.3,{x:760,y:560,color:"#fff",radius:520});
+  const k=K.keys(t,[{t:2.6,x:-300,size:1000},{t:3.2,x:290,ease:"outBack"},{t:5.4,x:330}]);
+  char(t,{x:k.x,y:1960,size:k.size,expression:"thinking",pose:t<4.2?"think":"phone",fx:t<4.2?"question":[],lookY:t<4.2?-0.6:0.7,react:"nod",reactAt:4.25,energy:1.6});
+  ctx.restore();
+}
+// ---- シーン3：第1位 ----
+function s3(t){
+  K.bg.mesh(ctx,t,[NAVY,"#5b2cff",PINK,"#1b1f4a"],{speed:0.35});
+  K.bg.bokeh(ctx,t,{colors:[YEL,"#ffffff",PINK],count:24,alpha:0.4});
+  if(t>6.0){ctx.save();ctx.globalAlpha=K.envelope(t,6.0,0.05,0.5,0.3);K.bg.speedLines(ctx,t,{color:"#ffffff",x:540,y:700,alpha:0.7});ctx.restore();}
+  ctx.save();ctx.globalAlpha=K.anim(t,6.6,0.6);K.bg.rays(ctx,t,{color:YEL,x:540,y:640,alpha:0.22,count:18,speed:0.4});ctx.restore();
+  const cam=K.drift(t,1.3);const close=K.anim(t,6.8,1.2,"inOutCubic");cam.zoom+=0.18*close+0.1*K.punch(t,[6.0],0.45);const sh=K.shake(t,6.0,0.4,22,5);cam.x+=sh.x;cam.y+=sh.y+120*close;
+  ctx.save();K.camera(ctx,cam);
+  K.text(ctx,t,"第1位",540,330,{size:110,color:YEL,anim:"drop",start:5.6,stagger:0.06});
+  K.text(ctx,t,"目が合う回数",540,500,{size:150,color:"#fff",stroke:PINK,strokeWidth:24,anim:"slam",start:6.0,stagger:0.05,accent:["目"],accentColor:YEL});
+  K.particles.burst(ctx,t,6.6,{x:540,y:560,count:60,colors:[YEL,PINK,"#fff",MINT],shape:"confetti",speed:1300,size:30,life:1.5});
+  const hop=K.hop(t,7.4,0.5,120);
+  char(t,{x:540,y:1900+hop.y,size:1250,expression:t<6.6?"surprised":"love",pose:t<6.6?"idle":"heart",react:"shock",reactAt:6.0,squash:(hop.sy-1)*4,energy:1.7,fx:t>6.6?["sparkle"]:[]});
+  ctx.restore();
+  K.fx.flash(ctx,t,6.0,0.2,"#ffffff");
+}
+// ---- シーン4：CTA ----
+function s4(t){
+  K.bg.mesh(ctx,t,["#fff4c2",YEL,"#ffb36b","#fff9e0"],{speed:0.3});
+  K.bg.halftone(ctx,t,{color:"#ffffff",alpha:0.4,size:48});
+  const cam=K.drift(t,1);cam.zoom+=0.06*K.punch(t,[8.7,9.4],0.35);
+  ctx.save();K.camera(ctx,cam);
+  const b=K.bubble(ctx,t,140,280,800,300,{start:8.6,color:"#fff",stroke:INK,tailX:600,tailY:700});
+  if(b>0)K.text(ctx,t,"保存して\n見返してね！",540,430,{size:96,color:INK,accent:["保存"],accentColor:PINK,anim:"wave",start:8.7,stagger:0.04});
+  const hop=K.hop(t,9.4,0.45,140);
+  char(t,{x:560,y:1640+hop.y,size:900,expression:"happy",pose:"wave",squash:(hop.sy-1)*4,energy:1.8,react:"bounce",reactAt:9.85});
+  K.particles.burst(ctx,t,9.4,{x:560,y:900,count:30,colors:[PINK,"#fff"],shape:"star",speed:900,size:30});
+  ctx.restore();
+}
+function render(t){
+  ctx.setTransform(1,0,0,1,0,0);ctx.globalAlpha=1;ctx.globalCompositeOperation="source-over";
+  const scenes=[s1,s2,s3,s4];
+  const i=t<CUTS[0]?0:t<CUTS[1]?1:t<CUTS[2]?2:3;
+  const types=["whip","circle","shapes"];let done=false;
+  for(let k=0;k<CUTS.length;k++){if(Math.abs(t-CUTS[k])<0.22){K.transition(ctx,t,CUTS[k],0.44,types[k],(c)=>scenes[k](t),(c)=>scenes[k+1](t),{color:"#fff",colors:[PINK,"#fff",YEL],x:300,y:1200});done=true;break;}}
+  if(!done)scenes[i](t);
+  sub(t);
+  K.fx.lightLeak(ctx,t,{color:"#ffc6a0",alpha:0.25});K.fx.vignette(ctx,0.28);K.fx.grain(ctx,t,0.07);
+}
+window.MG={width:W,height:H,fps:30,duration:DUR,ready:Promise.resolve(),render:render};
+})();
+</script></body></html>
