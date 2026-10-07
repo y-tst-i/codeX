@@ -258,3 +258,13 @@ lint が1件でもエラーだと layout/contrast 監査が走らず「0 samples
 - 意図した間は `holds.json`(台帳)に登録して静止の検査から外す(「0.6秒を超える静止は不可」と「ロゴの後は1秒以上止める」の食い違いの解消)。
 - 同梱: motion-video-kit(MIT)の原文(`references/review/motion-video-kit/`)。video-shotcraft(Apache-2.0)は考え方のみ書き直し。第8節のブランド別の動きの数値表は**未検証の目安**。静止の閾値(0.5 / 0.15%)は1本の動画でしか調整していない(暗い場面の多い作品は別途確認)。
 - STILLDUSK での試験結果: 合格8/注意3/不合格1。不合格は**統合ラウドネス -17.3 LUFS(目標 -14)**。→ `assemble.sh` の loudnorm が1回通しの測定のため、短い動画で目標より低くなる。**2回通し(1回目で測って2回目に補正値を渡す)に直す**のが妥当(未対応)。
+
+## 23. 検討中の道具(記録のみ・まだ取り込んでいない)
+### ArtCraft「Crafting Apps」(EffectCraft / FilmCraft) — 2026-10-06 に実機試験、結論は**様子見**
+- 正規の入手先は `github.com/storytold/{effectcraft,filmcraft,…}` のみ(MIT OR Apache-2.0。「ArtCraft」の名前とロゴは商標)。名前の紛らわしい別リポジトリ(例: `nuIIpointerexception/photocraft`)は使わない。無料。課金があるのは別製品の ArtCraft 本体だけ。
+- 分かったこと: CLI だけをビルドでき(EffectCraft 約13分 / FilmCraft 約6分)、画面なし・GPUなし・ネットなしで動く。同じ入力なら出力が完全一致(sha256 一致)。音のずれ 0 サンプル、カットのずれ 1コマもなし。
+- 今の道具に勝てない点(15秒 1080p): 仕上げの質感付けは ffmpeg `look_pass.sh` 109秒・10MB に対し EffectCraft 約280秒・29MB(見た目はやや劣る)。場面の結合は `assemble.sh` 38秒・12MB に対し FilmCraft 約58秒・32MB。
+- つまずき: `render --comp 2`(数字指定)と `--comp -` は失敗(名前指定か省略なら動く)。`export --list-presets h264` は空。ビネットの量は100で頭打ち。音声は AAC 320k 固定。
+- 未検証: 他のCPUでの一致、PC画面での人の操作との併用、MCP、`--gpu`、テキスト/トラッキング。
+- **再評価の条件(目安: 2027年初頭)**: ①Linux 用の CLI バイナリが配布される ②AE との比較が公開される ③本体のビルドが約1か月安定 ④他のCPUでも出力一致を確認。AE風のエフェクト(トラッキング・テキスト)が要る動画が出たら、その時に補助として試す。
+- 結論が変わるまで、**既定の流れ(ffmpeg + look_pass + assemble)を使う**。
