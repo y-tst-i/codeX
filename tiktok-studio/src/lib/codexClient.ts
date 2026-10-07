@@ -22,7 +22,9 @@ async function call<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const checkCodex = () => call<CodexCheck>("/api/codex/check");
-export const startCodexImages = (prompt: string) => call<{ id: string }>("/api/codex/images", { method: "POST", body: JSON.stringify({ prompt }) });
+/** refs：参考画像（登場人物の設定画など）。Codex に一緒に渡して、同じ見た目で描かせる */
+export const startCodexImages = (prompt: string, refs: { name: string; dataUrl: string }[] = []) =>
+  call<{ id: string }>("/api/codex/images", { method: "POST", body: JSON.stringify({ prompt, refs }) });
 export const codexJob = (id: string) => call<CodexJob>(`/api/codex/job?id=${encodeURIComponent(id)}`);
 export const cancelCodex = (id: string) => call<{ ok: boolean }>(`/api/codex/cancel?id=${encodeURIComponent(id)}`, { method: "POST" });
 export const cleanupCodex = (id: string) => call<{ ok: boolean }>(`/api/codex/cleanup?id=${encodeURIComponent(id)}`, { method: "POST" });

@@ -8,7 +8,7 @@
  */
 import { spawn, type ChildProcess } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import { mkdtempSync, readdirSync, readFileSync, rmSync, statSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -59,7 +59,7 @@ function readBody(req: IncomingMessage): Promise<string> {
     let body = "";
     req.on("data", (chunk) => {
       body += chunk;
-      if (body.length > 2_000_000) reject(new Error("too large"));
+      if (body.length > 60_000_000) reject(new Error("too large"));
     });
     req.on("end", () => resolve(body));
     req.on("error", reject);
@@ -101,11 +101,22 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
   }
 
   if (url.pathname === "/api/codex/images" && req.method === "POST") {
-    const { prompt } = JSON.parse(await readBody(req)) as { prompt?: string };
+    const { prompt, refs } = JSON.parse(await readBody(req)) as { prompt?: string; refs?: { name?: string; dataUrl?: string }[] };
     if (!prompt) return send(res, 400, { error: "prompt がありません" });
     const id = randomUUID();
     const dir = mkdtempSync(join(tmpdir(), "tms-codex-"));
-    const child = run(["exec", "--skip-git-repo-check", "--sandbox", "workspace-write", "-"], prompt, dir);
+    // 参考画像（登場人物の設定画など）は refs/ に置いて -i で渡す。作業フォルダ直下ではないので、取り込み対象には入らない
+    const refArgs: string[] = [];
+    for (const ref of (refs ?? []).slice(0, 8)) {
+      const match = /^data:image\/(png|jpeg|webp);base64,(.+)$/.exec(ref.dataUrl ?? "");
+      const base = (ref.name ?? "").replace(/[^\w-]/g, "");
+      if (!match || !base) continue;
+      mkdirSync(join(dir, "refs"), { recursive: true });
+      const file = join(dir, "refs", `${base}.${match[1] === "jpeg" ? "jpg" : match[1]}`);
+      writeFileSync(file, Buffer.from(match[2]!, "base64"));
+      refArgs.push("-i", file);
+    }
+    const child = run(["exec", "--skip-git-repo-check", "--sandbox", "workspace-write", ...refArgs, "-"], prompt, dir);
     const job: Job = { dir, child, log: [], state: "running", startedAt: Date.now() };
     const push = (chunk: Buffer) => {
       for (const line of chunk.toString().split(/\r?\n/)) if (line.trim()) job.log.push(line.slice(0, 300));

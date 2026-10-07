@@ -41,6 +41,7 @@ h3 { font-size: 14px; margin: 16px 0 8px; }
 .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; margin-bottom: 16px; }
 .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.cast-row { display: grid; grid-template-columns: 90px 1fr 2fr auto; gap: 8px; align-items: center; }
 .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 .spacer { flex: 1; }
 .stack { display: flex; flex-direction: column; gap: 10px; }
@@ -116,5 +117,5 @@ button { font: inherit; cursor: pointer; }
   .sidebar { position: static; height: auto; flex-direction: row; flex-wrap: wrap; }
   .sidebar-foot, .nav-sep { display: none; }
   .main { padding: 18px 16px 60px; }
-  .grid-2, .grid-3, .preview-wrap { grid-template-columns: 1fr; }
+  .grid-2, .grid-3, .cast-row, .preview-wrap { grid-template-columns: 1fr; }
 }

@@ -28,6 +28,13 @@ export const MGK_PROMPT = `# 演出の道具箱 window.MGK（必ず使う）
 - \`K.text3d(ctx, t, "文字", x, y, {...K.text と同じ, depth: 18, sideColor, dx, dy})\` 厚みのある立体文字（タイトル・ランキングの数字に）
 - \`K.card3d(ctx, (c) => { カードの中身を 0,0〜w,h に描く }, {x, y, w, h, rotY, rotX, perspective, back: (c) => 裏面})\` カードを立体的に回す・めくる（「答えはこちら」でくるっと裏返す、ランキングのカードが奥から倒れてくる など）
 
+## 漫画のコマ（漫画ドラマのシーンで使う）
+- \`const rects = K.manga.layout("2v")\` コマ割り。"1" / "2v"（上下2段）/ "2d"（斜め2分割）/ "3"（上1・下2）/ "4"（縦4段）。第2引数 {x, y, w, h, gap} でページの範囲を変えられる
+- \`K.manga.panel(ctx, t, rects[0], {image: "panel_02_1", start, from: "left"|"right"|"top"|"bottom"|"zoom", zoomFrom: 1, zoomTo: 1.12, end, draw: (c, rect, t) => {...}})\` コマが枠ごとスライドして入り、中の絵はゆっくり寄る。絵が無いときは draw で描く
+- \`K.manga.bubble(ctx, t, "セリフ", x, y, {start, end, kind: "speech"|"shout"|"thought", tailX, tailY, size})\` 漫画の吹き出し（ふつう・叫び・心の声）。x, y は中心、tailX/tailY は話す人の口元
+- \`K.manga.sfx(ctx, t, "ドキッ", x, y, {start, end, size: 150, color, rot})\` 描き文字。1文字ずつ叩きつけるように出て震える
+- \`K.manga.lines(ctx, t, rect, {x, y})\` 集中線（そのコマの中だけ）／ \`K.manga.tone(ctx, rect, {fade: "down"})\` スクリーントーン
+
 ## 素材（登録されていれば下の「使える素材」に名前が出る）
 - \`K.kenBurns(ctx, t, "名前", start, dur, {zoom, panX, panY}, {zoom, panX, panY})\` 背景画像をゆっくり寄せる・流す
 - \`K.image(ctx, "名前", {x, y, w, h, fit:"cover"|"contain", zoom, panX, panY, alpha, radius})\` 画像を置く（小物は fit:"contain"）

@@ -1,7 +1,32 @@
 import type { AudioSettings } from "./sfx";
 import type { CharacterSettings } from "./character";
 
-export type SceneRole = "hook" | "body" | "twist" | "cta" | "loop";
+export type SceneRole = "hook" | "body" | "twist" | "cta" | "loop" | "drama";
+
+/** 動画の型。manga＝漫画ドラマで共感させてから、キャラが心理学で解説する */
+export type VideoFormat = "standard" | "manga";
+
+/** 漫画ドラマの1コマ（絵は Codex に描かせ、吹き出し・効果音の文字は動画側で重ねる） */
+export interface Panel {
+  /** 登場人物のID（CastMember.id） */
+  cast: string[];
+  /** 何をどう描くか（場所・構図・表情・しぐさ） */
+  shot: string;
+  /** 吹き出しのセリフ（12文字以内。無ければ空） */
+  line: string;
+  /** 話している人のID */
+  speaker: string;
+  /** 描き文字の効果音（ドキッ・ガーン など。無ければ空） */
+  sfx: string;
+}
+
+/** 漫画ドラマの登場人物（アカウントで固定。毎回同じ見た目で出る） */
+export interface CastMember {
+  id: string;
+  name: string;
+  /** 見た目・性格（画像生成とセリフづくりに使う） */
+  description: string;
+}
 
 export interface Concept {
   /** アカウントのジャンル（例：お金の雑学） */
@@ -22,6 +47,8 @@ export interface Concept {
   goal: "follow" | "save" | "share" | "comment";
   /** 語り口（例：テンポよく親しみやすい） */
   tone: string;
+  /** 動画の型（無ければ standard） */
+  format?: VideoFormat;
   /** 使う演出テクニック（TECH-xxx）。空ならスタイルのおまかせ */
   techniqueIds?: string[];
   /** 看板キャラクターを登場させるか（キャラ設定がある場合。未指定なら登場させる） */
@@ -41,6 +68,8 @@ export interface Scene {
   visual: string;
   /** 強調したい語句 */
   emphasis: string[];
+  /** 漫画ドラマのコマ（role が drama のシーンだけ） */
+  panels?: Panel[];
 }
 
 export interface Script {
@@ -117,7 +146,9 @@ export interface ApiSettings {
   character?: CharacterSettings;
   /** 効果音・BGM の設定 */
   audio?: AudioSettings;
+  /** 漫画ドラマの登場人物 */
+  cast?: CastMember[];
 }
 
 /** 動画ごとに変えず、アカウントで固定する企画項目（フックの型やテーマは毎回変える） */
-export type AccountBrand = Pick<Concept, "niche" | "target" | "styleId" | "paletteId" | "fontId" | "tone">;
+export type AccountBrand = Pick<Concept, "niche" | "target" | "styleId" | "paletteId" | "fontId" | "tone" | "format">;

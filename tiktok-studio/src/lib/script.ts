@@ -1,13 +1,22 @@
 import { z } from "zod";
 import type { Scene, Script } from "./types";
 
+const panelSchema = z.object({
+  cast: z.array(z.string()).default([]),
+  shot: z.string().default(""),
+  line: z.string().default(""),
+  speaker: z.string().default(""),
+  sfx: z.string().default("")
+});
+
 const sceneSchema = z.object({
-  role: z.enum(["hook", "body", "twist", "cta", "loop"]),
+  role: z.enum(["hook", "body", "twist", "cta", "loop", "drama"]),
   narration: z.string().min(1),
   reading: z.string().default(""),
   onScreenText: z.string().default(""),
   visual: z.string().default(""),
-  emphasis: z.array(z.string()).default([])
+  emphasis: z.array(z.string()).default([]),
+  panels: z.array(panelSchema).default([])
 });
 
 const scriptSchema = z.object({
@@ -33,14 +42,30 @@ export const SCRIPT_JSON_SCHEMA = {
       items: {
         type: "object",
         additionalProperties: false,
-        required: ["role", "narration", "reading", "onScreenText", "visual", "emphasis"],
+        required: ["role", "narration", "reading", "onScreenText", "visual", "emphasis", "panels"],
         properties: {
-          role: { type: "string", enum: ["hook", "body", "twist", "cta", "loop"] },
+          role: { type: "string", enum: ["hook", "body", "twist", "cta", "loop", "drama"] },
           narration: { type: "string", description: "セリフ（字幕表記）" },
           reading: { type: "string", description: "読み上げ用。読み間違えやすい語をひらがなに開く" },
           onScreenText: { type: "string", description: "画面に大きく出す12文字以内のテキスト" },
           visual: { type: "string", description: "このシーンの映像演出" },
-          emphasis: { type: "array", items: { type: "string" }, description: "強調する語句" }
+          emphasis: { type: "array", items: { type: "string" }, description: "強調する語句" },
+          panels: {
+            type: "array",
+            description: "漫画ドラマのコマ（role が drama のシーンだけ。それ以外は空の配列）",
+            items: {
+              type: "object",
+              additionalProperties: false,
+              required: ["cast", "shot", "line", "speaker", "sfx"],
+              properties: {
+                cast: { type: "array", items: { type: "string" }, description: "このコマに出る登場人物のID" },
+                shot: { type: "string", description: "何をどう描くか（場所・構図・表情・しぐさ）" },
+                line: { type: "string", description: "吹き出しのセリフ（12文字以内。無ければ空）" },
+                speaker: { type: "string", description: "セリフを話す人のID（無ければ空）" },
+                sfx: { type: "string", description: "描き文字の効果音（ドキッ等。無ければ空）" }
+              }
+            }
+          }
         }
       }
     }

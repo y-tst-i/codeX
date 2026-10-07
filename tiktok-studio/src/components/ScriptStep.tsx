@@ -3,7 +3,8 @@ import { askClaude, describeClaudeError } from "../lib/claude";
 import { buildScriptPrompt, characterFor, scriptSystemPrompt } from "../lib/prompts";
 import { SCRIPT_JSON_SCHEMA, emptyScene, parseScript } from "../lib/script";
 import { estimateSpeechSeconds, spokenLength } from "../lib/timeline";
-import type { ApiSettings, Concept, Scene, SceneRole, Script } from "../lib/types";
+import { castOf } from "../lib/manga";
+import type { ApiSettings, Concept, Panel, Scene, SceneRole, Script } from "../lib/types";
 import { Field, Notice, PromptBox, StepNav, formatSeconds } from "./common";
 
 interface Props {
@@ -17,6 +18,7 @@ interface Props {
 
 const ROLES: { id: SceneRole; label: string }[] = [
   { id: "hook", label: "フック" },
+  { id: "drama", label: "漫画ドラマ" },
   { id: "body", label: "本題" },
   { id: "twist", label: "意外な展開" },
   { id: "cta", label: "行動の呼びかけ" },
@@ -28,7 +30,7 @@ export function ScriptStep({ concept, script, settings, onChange, onBack, onNext
   const [error, setError] = useState("");
   const [running, setRunning] = useState(false);
   const [progress, setProgress] = useState("");
-  const prompt = buildScriptPrompt(concept, characterFor(concept, settings.character));
+  const prompt = buildScriptPrompt(concept, characterFor(concept, settings.character), settings.cast);
 
   const generate = async () => {
     setRunning(true);
@@ -73,6 +75,17 @@ export function ScriptStep({ concept, script, settings, onChange, onBack, onNext
     [scenes[index], scenes[target]] = [scenes[target]!, scenes[index]!];
     onChange({ ...script, scenes });
   };
+  const cast = castOf(settings.cast);
+  const updatePanel = (index: number, panelIndex: number, patch: Partial<Panel>) => {
+    const panels = script?.scenes[index]?.panels ?? [];
+    updateScene(index, { panels: panels.map((panel, j) => (j === panelIndex ? { ...panel, ...patch } : panel)) });
+  };
+  const addPanel = (index: number) => {
+    const panels = script?.scenes[index]?.panels ?? [];
+    updateScene(index, { panels: [...panels, { cast: [], shot: "", line: "", speaker: "", sfx: "" }] });
+  };
+  const removePanel = (index: number, panelIndex: number) => updateScene(index, { panels: (script?.scenes[index]?.panels ?? []).filter((_, j) => j !== panelIndex) });
+
   const removeScene = (index: number) => script && onChange({ ...script, scenes: script.scenes.filter((_, i) => i !== index) });
   const addScene = () => script && onChange({ ...script, scenes: [...script.scenes, emptyScene()] });
 
@@ -186,6 +199,60 @@ export function ScriptStep({ concept, script, settings, onChange, onBack, onNext
                   <Field label="映像演出メモ">
                     <input value={scene.visual} onChange={(e) => updateScene(index, { visual: e.target.value })} />
                   </Field>
+                  {scene.role === "drama" || (scene.panels?.length ?? 0) > 0 ? (
+                    <div className="stack" style={{ marginTop: 8 }}>
+                      {(scene.panels ?? []).map((panel, j) => (
+                        <div className="card stack" key={j}>
+                          <div className="row">
+                            <b>🎞 コマ {j + 1}</b>
+                            {cast.map((member) => (
+                              <label key={member.id} className="row" style={{ gap: 4 }}>
+                                <input
+                                  type="checkbox"
+                                  style={{ width: "auto" }}
+                                  checked={panel.cast.includes(member.id)}
+                                  onChange={(e) =>
+                                    updatePanel(index, j, { cast: e.target.checked ? [...panel.cast, member.id] : panel.cast.filter((id) => id !== member.id) })
+                                  }
+                                />
+                                {member.name}
+                              </label>
+                            ))}
+                            <span className="spacer" />
+                            <button className="btn small ghost danger" type="button" onClick={() => removePanel(index, j)}>
+                              コマを削除
+                            </button>
+                          </div>
+                          <Field label="コマの絵（場所・距離・表情・しぐさ）">
+                            <input value={panel.shot} onChange={(e) => updatePanel(index, j, { shot: e.target.value })} />
+                          </Field>
+                          <div className="grid-3">
+                            <Field label="吹き出しのセリフ（12文字以内）">
+                              <input value={panel.line} onChange={(e) => updatePanel(index, j, { line: e.target.value })} />
+                            </Field>
+                            <Field label="話す人">
+                              <select value={panel.speaker} onChange={(e) => updatePanel(index, j, { speaker: e.target.value })}>
+                                <option value="">（なし）</option>
+                                {cast.map((member) => (
+                                  <option key={member.id} value={member.id}>
+                                    {member.name}
+                                  </option>
+                                ))}
+                              </select>
+                            </Field>
+                            <Field label="描き文字（ドキッ など）">
+                              <input value={panel.sfx} onChange={(e) => updatePanel(index, j, { sfx: e.target.value })} />
+                            </Field>
+                          </div>
+                        </div>
+                      ))}
+                      <div className="row">
+                        <button className="btn small" type="button" onClick={() => addPanel(index)}>
+                          ＋ コマを追加
+                        </button>
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
               );
             })}

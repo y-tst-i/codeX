@@ -18,8 +18,8 @@ export function defaultVoice(settings: ApiSettings): VoiceSettings {
 }
 
 export function brandOf(concept: Concept): AccountBrand {
-  const { niche, target, styleId, paletteId, fontId, tone } = concept;
-  return { niche, target, styleId, paletteId, fontId, tone };
+  const { niche, target, styleId, paletteId, fontId, tone, format } = concept;
+  return { niche, target, styleId, paletteId, fontId, tone, format };
 }
 
 /** 新しい動画を始める。声とジャンル・見た目はアカウントの設定（なければ初期値）を引き継ぐ */

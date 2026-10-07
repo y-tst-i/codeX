@@ -7,6 +7,7 @@ import type { ApiSettings, Concept, Script, Timeline } from "../lib/types";
 import { Field, Notice, PromptBox, StepNav, downloadBlob } from "./common";
 import { CriticPanel } from "./CriticPanel";
 import { AssetsPanel } from "./AssetsPanel";
+import { castOf } from "../lib/manga";
 import { unusedAssets, useAssetsRequest, type AssetInfo } from "../lib/assets";
 import { TimelineBar } from "./VoiceStep";
 
@@ -109,7 +110,7 @@ export function MotionStep({ concept, script, timeline, settings, html, characte
           🖼 素材を使う（任意・{assets.length}個登録済み）— 入れると背景の情報量が一気に増えます
         </summary>
         <div style={{ marginTop: 10 }}>
-          <AssetsPanel concept={concept} script={script} assets={assets} onChanged={onAssetsChanged} />
+          <AssetsPanel concept={concept} script={script} assets={assets} cast={castOf(settings.cast)} onChanged={onAssetsChanged} />
         </div>
       </details>
 

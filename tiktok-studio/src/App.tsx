@@ -18,7 +18,8 @@ import { ExportStep } from "./components/ExportStep";
 import { GuideStep } from "./components/GuideStep";
 import { MotionStep } from "./components/MotionStep";
 import type { Viseme } from "./lib/localTts";
-import { assetsForVideo, assetsPromptSection, listAssets, loadNotes, type AssetInfo } from "./lib/assets";
+import { assetsForVideo, assetsPromptSection, isPanelAsset, listAssets, loadNotes, type AssetInfo } from "./lib/assets";
+import { castOf, mangaMotionSection } from "./lib/manga";
 import { ScriptStep } from "./components/ScriptStep";
 import { SettingsStep } from "./components/SettingsStep";
 import { VoiceStep, clipSignature, type ClipMap } from "./components/VoiceStep";
@@ -128,7 +129,14 @@ export function App() {
       cancelled = true;
     };
   }, [assetsVersion]);
-  const assetsPrompt = assetsPromptSection(assetList, loadNotes(), timeline.scenes);
+  const assetsPrompt = [
+    assetsPromptSection(assetList, loadNotes(), timeline.scenes),
+    project.concept.format === "manga" && project.script
+      ? mangaMotionSection(project.script, castOf(settings.cast), assetList.filter((a) => isPanelAsset(a.name)).map((a) => a.name))
+      : ""
+  ]
+    .filter(Boolean)
+    .join("\n\n");
   const extras = useMemo<HostExtras>(
     () => ({ characterScript, voiceLevels: levels, captions, images: assetData.images, lotties: assetData.lotties, visemes }),
     [characterScript, levels, captions, assetData, visemes]
@@ -210,7 +218,7 @@ export function App() {
         ) : null}
         {step === "settings" ? <SettingsStep settings={settings} onChange={setSettings} onReset={reset} /> : null}
         {step === "concept" ? (
-          <ConceptStep concept={project.concept} settings={settings} ideas={ideas} onIdeas={setIdeas} onChange={changeConcept} onNext={() => setStep("script")} />
+          <ConceptStep concept={project.concept} settings={settings} ideas={ideas} onIdeas={setIdeas} onChange={changeConcept} onSettingsChange={setSettings} onNext={() => setStep("script")} />
         ) : null}
         {step === "script" ? (
           <ScriptStep

@@ -1,9 +1,10 @@
 import { FONTS, GOALS, HOOKS, PALETTES, STYLES, VIDEO, findOrFirst } from "./knowledge";
 import { characterPromptSection, type CharacterSettings } from "./character";
+import { castOf, mangaScriptSection } from "./manga";
 import { CHARACTER_CHOREO_PROMPT, MGK_PROMPT } from "./mgKitDocs";
 import { EASING_LIBRARY, resolveTechniques } from "./techniques";
 import { formatTimelineForPrompt } from "./timeline";
-import type { Concept, Script, Timeline } from "./types";
+import type { CastMember, Concept, Script, Timeline } from "./types";
 
 /* ------------------------------------------------------------------ */
 /* 台本プロンプト                                                        */
@@ -22,7 +23,8 @@ export function characterFor(concept: Concept, character: CharacterSettings | un
   return character && concept.useCharacter !== false ? character : undefined;
 }
 
-export function buildScriptPrompt(concept: Concept, character?: CharacterSettings): string {
+export function buildScriptPrompt(concept: Concept, character?: CharacterSettings, cast?: CastMember[]): string {
+  const manga = concept.format === "manga";
   const hook = findOrFirst(HOOKS, concept.hookId);
   const style = findOrFirst(STYLES, concept.styleId);
   const goal = GOALS[concept.goal] ?? GOALS.follow!;
@@ -43,14 +45,14 @@ ${concept.notes.trim() ? `- 参考情報（事実はここを優先）:\n${inden
 - 映像スタイル: ${style.name}（${style.summary}）
 - 動画のゴール: 視聴者に「${goal.label}」してもらう → ${goal.cta}${character ? `\n- 語り手: 看板キャラ「${character.name}」（${character.concept}）が視聴者に話しかけている体で書く。キャラらしい口調・決めゼリフがあると覚えてもらいやすい` : ""}
 
-# フック（最重要）
+${manga ? `${mangaScriptSection(castOf(cast), character ? character.name : "解説役")}\n\n` : ""}# フック（最重要）
 - 型: 「${hook.name}」= ${hook.formula}
 - 例: ${hook.example}
 - 1文目は声に出して1.5秒以内（11文字前後）で言い切る。挨拶・自己紹介・「今回は」「皆さん」は禁止
 - 1文目で「答えを知りたい」という疑問（情報の空白）を作り、答えは後半まで引っ張る
 
 # 構成ルール
-1. hook → body（2〜3秒ごとに新しい情報）→ twist（「でも実は」の意外な展開）→ cta → loop の流れ
+1. ${manga ? "上の「動画の型」の構成どおりにする（hook → drama → body → twist → cta → loop）" : "hook → body（2〜3秒ごとに新しい情報）→ twist（「でも実は」の意外な展開）→ cta → loop の流れ"}
 2. 話し言葉・短文。1文20文字以内。体言止めや問いかけでリズムを作る
 3. 具体的な数字・固有名詞で信頼感を出す。ただし不確かな情報は「〜と言われています」とする
 4. ctaは押しつけがましくなく一言で。「${goal.label}」につながる理由を添える
@@ -72,12 +74,13 @@ ${concept.notes.trim() ? `- 参考情報（事実はここを優先）:\n${inden
   "coverText": "カバー用の一言",
   "scenes": [
     {
-      "role": "hook | body | twist | cta | loop",
+      "role": "hook | ${manga ? "drama | " : ""}body | twist | cta | loop",
       "narration": "セリフ（字幕表記）",
       "reading": "読み上げ用のセリフ",
       "onScreenText": "画面の大きな文字",
       "visual": "映像演出",
-      "emphasis": ["強調語"]
+      "emphasis": ["強調語"],
+      "panels": ${manga ? `[{ "cast": ["登場人物のID"], "shot": "描く内容", "line": "吹き出しのセリフ", "speaker": "話す人のID", "sfx": "描き文字" }]（drama のシーンだけ。それ以外は []）` : "[]"}
     }
   ]
 }`;

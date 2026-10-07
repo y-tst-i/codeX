@@ -2,18 +2,30 @@ import { useEffect, useRef, useState } from "react";
 import { buildImagePrompt, importAssets, loadNotes, removeAsset, saveNote, type AssetInfo } from "../lib/assets";
 import { cancelCodex, checkCodex, cleanupCodex, codexFile, codexImagePrompt, codexJob, startCodexImages } from "../lib/codexClient";
 import { loadAssets } from "../lib/storage";
-import type { Concept, Script } from "../lib/types";
+import { buildCastSheetPrompt, buildPanelPrompt, castRefName } from "../lib/manga";
+import type { CastMember, Concept, Script } from "../lib/types";
 import { Notice, PromptBox } from "./common";
 
 interface Props {
   concept: Concept;
   script: Script;
   assets: AssetInfo[];
+  /** 漫画ドラマの登場人物（format が manga のときだけ使う） */
+  cast: CastMember[];
   onChanged: () => void;
 }
 
+function toDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(blob);
+  });
+}
+
 /** 背景イラスト・小物・Lottieアニメを登録する */
-export function AssetsPanel({ concept, script, assets, onChanged }: Props) {
+export function AssetsPanel({ concept, script, assets, cast, onChanged }: Props) {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [notes, setNotes] = useState(loadNotes);
@@ -24,7 +36,10 @@ export function AssetsPanel({ concept, script, assets, onChanged }: Props) {
 
   // Codex（自分のPCの Codex CLI）で自動生成
   const [codexState, setCodexState] = useState<{ id?: string; status: string; error?: string; setup?: boolean }>({ status: "" });
-  const runCodex = async () => {
+  const manga = concept.format === "manga";
+  const panelPrompt = manga ? buildPanelPrompt(script, cast, concept) : { prompt: "", count: 0 };
+  const missingRefs = cast.filter((m) => !assets.some((a) => a.name === castRefName(m)));
+  const runCodex = async (prompt: string, refs: { name: string; dataUrl: string }[] = []) => {
     setCodexState({ status: "Codex を確認しています…" });
     try {
       const check = await checkCodex();
@@ -32,7 +47,7 @@ export function AssetsPanel({ concept, script, assets, onChanged }: Props) {
         setCodexState({ status: "", setup: true, error: !check.installed ? "このPCに Codex CLI が入っていません" : "Codex にログインしていません" });
         return;
       }
-      const { id } = await startCodexImages(codexImagePrompt(imagePrompt));
+      const { id } = await startCodexImages(codexImagePrompt(prompt), refs);
       setCodexState({ id, status: "Codex が素材を作り始めました…" });
       const imported = new Set<string>();
       const take = async (names: string[]) => {
@@ -61,6 +76,16 @@ export function AssetsPanel({ concept, script, assets, onChanged }: Props) {
       setCodexState({ status: "", error: (e as Error).message });
     }
   };
+
+  /** コマ絵：登場人物の設定画を参考画像として一緒に渡す */
+  const runPanels = async () => {
+    const blobs = await loadAssets("img:ref_cast_");
+    const refs = await Promise.all(
+      cast.filter((m) => blobs[`img:${castRefName(m)}`]).map(async (m) => ({ name: castRefName(m), dataUrl: await toDataUrl(blobs[`img:${castRefName(m)}`]!) }))
+    );
+    await runCodex(panelPrompt.prompt, refs);
+  };
+  const codexRunning = Boolean(codexState.id && !codexState.error && codexState.status.startsWith("生成中"));
 
   useEffect(() => {
     let cancelled = false;
@@ -98,7 +123,7 @@ export function AssetsPanel({ concept, script, assets, onChanged }: Props) {
     <div className="stack">
       <div className="card stack">
         <div className="row" style={{ flexWrap: "wrap" }}>
-          <button className="btn primary" type="button" disabled={Boolean(codexState.id && !codexState.error && codexState.status.startsWith("生成中"))} onClick={() => void runCodex()}>
+          <button className="btn primary" type="button" disabled={codexRunning} onClick={() => void runCodex(imagePrompt)}>
             🤖 Codexで素材を自動で作る（ChatGPT Plus の枠を使う）
           </button>
           {codexState.id && codexState.status.startsWith("生成中") ? (
@@ -110,6 +135,26 @@ export function AssetsPanel({ concept, script, assets, onChanged }: Props) {
         <span className="meta">
           台本に合った背景（シーンごと）と小物を、Codex が画像生成して自動で素材に登録します。1枚30秒〜1分ほど。できた順に下に並びます。
         </span>
+        {manga ? (
+          <div className="stack" style={{ borderTop: "1px solid var(--line)", paddingTop: 10 }}>
+            <b>📖 漫画ドラマの絵</b>
+            <div className="row" style={{ flexWrap: "wrap" }}>
+              <button className="btn" type="button" disabled={codexRunning} onClick={() => void runCodex(buildCastSheetPrompt(cast, concept))}>
+                🎭 ① 登場人物の設定画を作る（{cast.length}人）
+              </button>
+              <button className="btn" type="button" disabled={codexRunning || panelPrompt.count === 0} onClick={() => void runPanels()}>
+                🎞 ② コマ絵を作る（{panelPrompt.count}コマ）
+              </button>
+            </div>
+            <span className="meta">
+              ① で作った設定画（ref_cast_〜）を、② のときに参考画像として Codex に渡すので、どのコマでも同じ見た目の人物になります。設定画は動画には入りません。気に入らない設定画は削除して作り直せます（次の動画にも残るので、一度決めたら使い回し）。
+            </span>
+            {panelPrompt.count === 0 ? <span className="meta">台本に「漫画ドラマ」のシーンとコマがまだありません（② 台本で作れます）</span> : null}
+            {panelPrompt.count > 0 && missingRefs.length > 0 ? (
+              <span className="meta">⚠ まだ設定画がない人：{missingRefs.map((m) => m.name).join("、")}（先に ① を押すと見た目がそろいます）</span>
+            ) : null}
+          </div>
+        ) : null}
         {codexState.status ? <span className="meta">{codexState.status}</span> : null}
         {codexState.error ? <Notice kind="error">{" " + codexState.error}</Notice> : null}
         {codexState.setup ? (

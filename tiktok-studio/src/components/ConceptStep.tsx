@@ -1,7 +1,8 @@
 import { FONTS, GOALS, HOOKS, NICHE_IDEAS, PALETTES, STYLES } from "../lib/knowledge";
 import { applyIdea, type Idea } from "../lib/ideas";
 import { MAX_TECHNIQUES, STYLE_TECHNIQUES, TECHNIQUES } from "../lib/techniques";
-import type { ApiSettings, Concept } from "../lib/types";
+import { DEFAULT_CAST, castOf } from "../lib/manga";
+import type { ApiSettings, CastMember, Concept } from "../lib/types";
 import { Field, StepNav } from "./common";
 import { IdeasPanel } from "./IdeasPanel";
 
@@ -11,11 +12,20 @@ interface Props {
   ideas: Idea[];
   onIdeas: (ideas: Idea[]) => void;
   onChange: (concept: Concept) => void;
+  onSettingsChange: (settings: ApiSettings) => void;
   onNext: () => void;
 }
 
-export function ConceptStep({ concept, settings, ideas, onIdeas, onChange, onNext }: Props) {
+export function ConceptStep({ concept, settings, ideas, onIdeas, onChange, onSettingsChange, onNext }: Props) {
   const set = <K extends keyof Concept>(key: K, value: Concept[K]) => onChange({ ...concept, [key]: value });
+  const cast = castOf(settings.cast);
+  const setCast = (next: CastMember[]) => onSettingsChange({ ...settings, cast: next });
+  const updateMember = (index: number, patch: Partial<CastMember>) => setCast(cast.map((m, i) => (i === index ? { ...m, ...patch } : m)));
+  const addMember = () => {
+    let n = cast.length + 1;
+    while (cast.some((m) => m.id === `p${n}`)) n++;
+    setCast([...cast, { id: `p${n}`, name: "", description: "" }]);
+  };
 
   return (
     <>
@@ -70,6 +80,42 @@ export function ConceptStep({ concept, settings, ideas, onIdeas, onChange, onNex
           <input type="checkbox" style={{ width: "auto" }} checked={concept.useCharacter !== false} onChange={(e) => set("useCharacter", e.target.checked)} />
           🧸 看板キャラ「{settings.character.name}」を登場させる
         </label>
+      ) : null}
+
+      <h2>動画の型</h2>
+      <div className="grid-2">
+        <button type="button" className={`option ${concept.format !== "manga" ? "selected" : ""}`} onClick={() => set("format", "standard")}>
+          <b>いつもの解説</b>
+          <small>フック→本題→意外な展開→呼びかけ。キャラとテキストで見せる</small>
+        </button>
+        <button type="button" className={`option ${concept.format === "manga" ? "selected" : ""}`} onClick={() => set("format", "manga")}>
+          <b>📖 漫画ドラマ＋解説</b>
+          <small>あるあるの恋愛ドラマを漫画のコマで見せて共感 → 看板キャラが心理学で解説</small>
+        </button>
+      </div>
+      {concept.format === "manga" ? (
+        <div className="card stack" style={{ marginTop: 10 }}>
+          <b>🎭 ドラマの登場人物</b>
+          <p className="meta">毎回同じ人たちが出ると「この2人の話」としてファンがつきます。見た目（髪型・髪色・服）をはっきり書くほど、コマの絵がそろいます。IDは英数字で（設定画のファイル名 ref_cast_ID.png になります）。</p>
+          {cast.map((member, index) => (
+            <div className="cast-row" key={index}>
+              <input value={member.id} placeholder="ID" onChange={(e) => updateMember(index, { id: e.target.value.replace(/[^a-z0-9_]/gi, "").toLowerCase() })} />
+              <input value={member.name} placeholder="名前（例：ユウト（彼））" onChange={(e) => updateMember(index, { name: e.target.value })} />
+              <input value={member.description} placeholder="年齢・見た目・服・性格" onChange={(e) => updateMember(index, { description: e.target.value })} />
+              <button className="btn small ghost danger" type="button" disabled={cast.length <= 1} onClick={() => setCast(cast.filter((_, i) => i !== index))}>
+                削除
+              </button>
+            </div>
+          ))}
+          <div className="row">
+            <button className="btn small" type="button" onClick={addMember}>
+              ＋ 人物を追加
+            </button>
+            <button className="btn small ghost" type="button" onClick={() => setCast(DEFAULT_CAST)}>
+              最初の2人に戻す
+            </button>
+          </div>
+        </div>
       ) : null}
 
       <h2>フックの型（最初の1秒）</h2>

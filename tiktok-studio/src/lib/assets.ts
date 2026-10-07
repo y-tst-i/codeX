@@ -138,6 +138,16 @@ export async function removeAsset(info: AssetInfo): Promise<void> {
   saveNote(info.name, "");
 }
 
+/** 参考用の素材（登場人物の設定画 ref_*）。コマ絵を描かせるときの参考にするだけで、動画には入れない */
+export function isRefAsset(name: string): boolean {
+  return /^ref_/i.test(name);
+}
+
+/** 漫画のコマ絵（panel_*）。漫画ドラマのシーンで K.manga.panel に使う（背景としては割り当てない） */
+export function isPanelAsset(name: string): boolean {
+  return /^panel_/i.test(name);
+}
+
 /** 動画HTMLに差し込む形にする */
 export async function assetsForVideo(): Promise<{ images: Record<string, string>; lotties: Record<string, unknown> }> {
   const all = await loadAssets();
@@ -145,6 +155,7 @@ export async function assetsForVideo(): Promise<{ images: Record<string, string>
   const lotties: Record<string, unknown> = {};
   for (const [key, blob] of Object.entries(all)) {
     if (key.startsWith("img:")) {
+      if (isRefAsset(key.slice(4))) continue;
       images[key.slice(4)] = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = () => resolve(String(reader.result));
@@ -163,7 +174,9 @@ export async function assetsForVideo(): Promise<{ images: Record<string, string>
 }
 
 /** 動画プロンプトに入れる素材の一覧（背景画像があれば、シーンごとに必ず使うよう割り当てる） */
-export function assetsPromptSection(assets: AssetInfo[], notes: Record<string, string>, scenes: { start: number; end: number; role: string }[] = []): string {
+export function assetsPromptSection(all: AssetInfo[], notes: Record<string, string>, scenes: { start: number; end: number; role: string }[] = []): string {
+  // 設定画は動画に入れない。コマ絵は漫画ドラマの指示（mangaMotionSection）で別に割り当てる
+  const assets = all.filter((a) => !isRefAsset(a.name) && !isPanelAsset(a.name));
   if (assets.length === 0) return "";
   const lines = assets.map((a) => {
     const note = notes[a.name] ? `：${notes[a.name]}` : "";
@@ -241,18 +254,21 @@ ${scenes}
 export function unusedAssets(html: string, assets: AssetInfo[]): { used: string[]; unused: string[] } {
   const used: string[] = [];
   const unused: string[] = [];
-  for (const a of assets) (html.includes(`"${a.name}"`) || html.includes(`'${a.name}'`) || html.includes(`\`${a.name}\``) ? used : unused).push(a.name);
+  for (const a of assets.filter((x) => !isRefAsset(x.name))) (html.includes(`"${a.name}"`) || html.includes(`'${a.name}'`) || html.includes(`\`${a.name}\``) ? used : unused).push(a.name);
   return { used, unused };
 }
 
 /** 素材を使っていないHTMLを、素材を使うように直してもらう依頼（磨き込みに入れる） */
-export function useAssetsRequest(assets: AssetInfo[]): string {
-  const backgrounds = assets.filter((a) => a.kind === "img" && !a.transparent).map((a) => a.name);
+export function useAssetsRequest(all: AssetInfo[]): string {
+  const assets = all.filter((a) => !isRefAsset(a.name));
+  const panels = assets.filter((a) => isPanelAsset(a.name)).map((a) => a.name);
+  const backgrounds = assets.filter((a) => a.kind === "img" && !a.transparent && !isPanelAsset(a.name)).map((a) => a.name);
   const props = assets.filter((a) => a.kind === "img" && a.transparent).map((a) => a.name);
   return [
     "登録した素材がまったく使われていません。演出・タイミング・字幕・キャラの動きはそのままに、素材を使うように直してください。",
     backgrounds.length ? `- すべてのシーンの一番下の層に、背景画像（${backgrounds.join(" / ")}）を「シーンごとの背景」の割り当てどおり K.kenBurns で全面に敷く。今の K.bg の背景効果は、その上に alpha 0.2〜0.4 で薄く重ねる飾りにする` : "",
     props.length ? `- 小物（${props.join(" / ")}）を、話の内容に合う場面で2つ以上、K.image（fit:"contain"）でポップに登場させる` : "",
+    panels.length ? `- 漫画のコマ絵（${panels.join(" / ")}）を、漫画ドラマのシーンで K.manga.panel を使ってコマとして見せる` : "",
     "- 文字が読みにくくならないよう、文字の下に半透明の暗幕やグラデーションを敷く"
   ]
     .filter(Boolean)

@@ -210,10 +210,12 @@ export function autoCues(timeline: Timeline): SfxCue[] {
   timeline.scenes.forEach((scene, i) => {
     // シーンの切り替わりに「シュッ」
     if (i > 0) cues.push({ t: Math.max(0, scene.start - 0.18), type: i % 3 === 2 ? "swipe" : "whoosh", volume: 0.8 });
-    // 大きな文字の登場に「ポン」、オチ・CTAは「チーン」
+    // 大きな文字の登場に「ポン」、オチは「ドン」、CTAは「チーン」
     const at = Math.max(0, scene.speechStart - 0.03);
     if (scene.role === "twist") cues.push({ t: at, type: "impact" });
     else if (scene.role === "cta") cues.push({ t: at, type: "ding", volume: 0.8 });
+    // 漫画ドラマは吹き出しが出る「ポコッ」
+    else if (scene.role === "drama") cues.push({ t: at + 0.2, type: "bubble", volume: 0.9 });
     else cues.push({ t: at, type: "pop", volume: 0.8 });
     // 強調語が出る字幕に「キラキラ」（1シーン1回まで）
     const chunk = scene.captions.find((c) => scene.emphasis.some((word) => word && c.text.includes(word)));

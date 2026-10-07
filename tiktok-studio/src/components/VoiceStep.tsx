@@ -414,7 +414,7 @@ export function VoiceStep({ script, voice, settings, clips, timeline, mixed, onV
   );
 }
 
-const ROLE_COLORS: Record<string, string> = { hook: "#ff3d7f", body: "#c6ff3d", twist: "#ffd400", cta: "#5ec8ff", loop: "#b79cff" };
+const ROLE_COLORS: Record<string, string> = { hook: "#ff3d7f", drama: "#ff9a3d", body: "#c6ff3d", twist: "#ffd400", cta: "#5ec8ff", loop: "#b79cff" };
 
 export function TimelineBar({ timeline, time }: { timeline: Timeline; time?: number }) {
   if (timeline.duration <= 0) return null;
