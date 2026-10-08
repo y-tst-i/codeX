@@ -220,7 +220,7 @@ ${(() => {
   const must = [
     backgrounds.length ? "- [ ] 割り当て表で背景画像があるシーンはすべて、背景画像を K.kenBurns で全面に敷いている（K.bg.mesh などの単色・グラデーションだけの背景にしない。MGK の背景効果は、画像の上に薄く重ねる飾りとして使う）" : "",
     props.length ? `- [ ] 小物（${props.join(" / ")}）を、話の内容に合う場面で${Math.min(2, props.length)}つ以上使っている` : "",
-    lotties.length ? `- [ ] Lottie（${lotties.join(" / ")}）を見せ場で1回以上使っている` : ""
+    lotties.length ? `- [ ] Lottie（${lotties.join(" / ")}）を**全部**使っている。説明に「シーンNで使う」とあるものは、そのシーンの見せ場（セリフの強調語が出る瞬間）で出している` : ""
   ].filter(Boolean);
   return `# 素材（ツールが用意済み。**必ず使う**。名前で呼ぶだけで描ける）
 この動画のために作った素材です。使わないと、作った意味がなくなります。

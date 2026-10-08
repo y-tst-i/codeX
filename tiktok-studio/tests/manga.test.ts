@@ -145,3 +145,34 @@ describe("登場人物の声・背景のまとめ方・Lottie", () => {
     expect(lottieAssetName("heart", ["lottie_heart", "lottie_heart_2"])).toBe("lottie_heart_3");
   });
 });
+
+describe("Lottie のおまかせ", () => {
+  it("台本の言葉から、シーンがばらけるように選び、呼びかけには必ずフォローを入れる", async () => {
+    const { planLotties } = await import("../src/lib/lottieClient");
+    const picks = planLotties(
+      [
+        { role: "hook", narration: "LINEの返信が早い男、実は…" },
+        { role: "drama", narration: "もう返信きた！" },
+        { role: "body", narration: "これは心理学で返報性っていうの" },
+        { role: "twist", narration: "でも実は、早すぎるのは逆効果" },
+        { role: "cta", narration: "フォローしてね" }
+      ],
+      "恋愛心理"
+    );
+    expect(picks).toHaveLength(4);
+    expect(picks[0]).toMatchObject({ query: "follow button", scene: 4 });
+    expect(new Set(picks.map((p) => p.query)).size).toBe(4);
+    expect(picks.map((p) => p.query)).toContain("message notification");
+    expect(picks.map((p) => p.query)).toContain("brain");
+  });
+
+  it("文字・写真入りや重い・長いアニメは外す", async () => {
+    const { lottieProblem } = await import("../src/lib/lottieClient");
+    const ok = { fr: 30, ip: 0, op: 60, w: 512, h: 512, layers: [{ ty: 4 }], assets: [] };
+    expect(lottieProblem(ok, 20_000)).toBeNull();
+    expect(lottieProblem({ ...ok, layers: [{ ty: 5 }] }, 20_000)).toBe("文字入り");
+    expect(lottieProblem({ ...ok, assets: [{ p: "img.png" }] }, 20_000)).toBe("写真入り");
+    expect(lottieProblem(ok, 900_000)).toBe("重すぎる");
+    expect(lottieProblem({ ...ok, op: 600 }, 20_000)).toBe("長さが合わない");
+  });
+});
