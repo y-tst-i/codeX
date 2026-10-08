@@ -1,0 +1,257 @@
+{
+ "source": "C/engine/src/timeline.js (90 BPM) + contact sheet",
+ "seed": 1234,
+ "cues": {
+  "s1": 0,
+  "signsOn": 0.167,
+  "eyes": 1.333,
+  "crouch": 2.467,
+  "go": 3.0,
+  "bolt1": 3.067,
+  "s2": 3.333,
+  "s2b": 5.333,
+  "weave": 6.0,
+  "s3": 7.333,
+  "jump": 7.9,
+  "slowIn": 8.4,
+  "slowOut": 9.2,
+  "bolt2": 9.333,
+  "whiteIn": 9.933,
+  "s4": 10.0,
+  "land": 10.267,
+  "titleOn": 10.5,
+  "sub": 12.0,
+  "blink": 12.533,
+  "freeze": 13.2,
+  "end": 15.0
+ },
+ "sound_bible": {
+  "S1 BOOT 0-3.333": "e.piano(4)+glock(9)+timpani roll(47)+kick/crash; room rev0.7 dark(2.5k) lp4.5k; amb: room tone+60Hz neon buzz stutter",
+  "S2 DASH 3.333-7.333": "drum kit+synth bass(38)+muted guitar(28); dry rev0.35 bright; amb: moving wind band 0.5-4k",
+  "S3 LEAP 7.333-10.0": "brass(61)+taiko(116)+choir(52)+orch hit(55)+timpani; hall rev1.8 warm lp7k; slow-mo filtered; reverse cymbal(119) J-cut",
+  "S4 TITLE 10.0-15.0": "harp gliss(46)+vibraphone(11) per letter+voice oohs(53)+flute(73)+kalimba(108); big bright hall rev3.0 hp140",
+  "bed 0-15": "strings(48)+contrabass(43) chords Am-F-G-Dm-Asus2-A, ducked -14dB in quiet windows"
+ },
+ "events": [
+  {
+   "t": 0.167,
+   "name": "switch_002"
+  },
+  {
+   "t": 0.267,
+   "name": "glitch_002"
+  },
+  {
+   "t": 0.387,
+   "name": "switch_005"
+  },
+  {
+   "t": 0.487,
+   "name": "glitch_003"
+  },
+  {
+   "t": 1.333,
+   "name": "maximize_004"
+  },
+  {
+   "t": 2.467,
+   "name": "cloth2"
+  },
+  {
+   "t": 2.567,
+   "name": "creak3"
+  },
+  {
+   "t": 3.0,
+   "name": "impactMetal_heavy_002"
+  },
+  {
+   "t": 3.067,
+   "name": "impactPlate_heavy_003"
+  },
+  {
+   "t": 3.383,
+   "name": "footstep_concrete_000"
+  },
+  {
+   "t": 4.037,
+   "name": "footstep_concrete_001"
+  },
+  {
+   "t": 4.69,
+   "name": "footstep_concrete_002"
+  },
+  {
+   "t": 5.343,
+   "name": "footstep_concrete_003"
+  },
+  {
+   "t": 5.997,
+   "name": "footstep_concrete_004"
+  },
+  {
+   "t": 6.65,
+   "name": "footstep_concrete_000"
+  },
+  {
+   "t": 5.333,
+   "name": "impactMetal_light_001"
+  },
+  {
+   "t": 6.0,
+   "name": "impactTin_medium_002"
+  },
+  {
+   "t": 6.33,
+   "name": "impactMetal_light_003"
+  },
+  {
+   "t": 7.82,
+   "name": "impactPlank_medium_001"
+  },
+  {
+   "t": 7.9,
+   "name": "impactWood_heavy_002"
+  },
+  {
+   "t": 8.65,
+   "name": "impactSoft_medium_001"
+  },
+  {
+   "t": 9.05,
+   "name": "impactSoft_medium_003"
+  },
+  {
+   "t": 9.333,
+   "name": "impactMining_001"
+  },
+  {
+   "t": 9.343,
+   "name": "impactGlass_heavy_002"
+  },
+  {
+   "t": 10.267,
+   "name": "impactSoft_heavy_002"
+  },
+  {
+   "t": 10.287,
+   "name": "impactMetal_medium_001"
+  },
+  {
+   "t": 10.5,
+   "name": "switch_001"
+  },
+  {
+   "t": 10.63,
+   "name": "glitch_001"
+  },
+  {
+   "t": 10.76,
+   "name": "switch_003"
+  },
+  {
+   "t": 10.89,
+   "name": "glitch_004"
+  },
+  {
+   "t": 11.02,
+   "name": "switch_006"
+  },
+  {
+   "t": 11.15,
+   "name": "switch_004"
+  },
+  {
+   "t": 11.28,
+   "name": "glitch_002"
+  },
+  {
+   "t": 11.41,
+   "name": "switch_007"
+  },
+  {
+   "t": 11.54,
+   "name": "toggle_002"
+  },
+  {
+   "t": 12.0,
+   "name": "select_003"
+  },
+  {
+   "t": 12.533,
+   "name": "toggle_003"
+  }
+ ],
+ "synth": [
+  "ping1 1760Hz@1.333",
+  "ping2 2093Hz@12.533",
+  "thunder@3.067 (L-cut)",
+  "thunder@9.333",
+  "noise whooshes x4",
+  "ambience beds"
+ ],
+ "quiet_windows": [
+  [
+   8.4,
+   9.2
+  ],
+  [
+   13.35,
+   14.1
+  ]
+ ],
+ "j_l_cuts": [
+  "reverse cymbal 8.98->10.0 (J)",
+  "thunder1 rumble over S2 cut 3.333 (L)",
+  "choir from 8.3 over bolt2 (L)",
+  "S3 whoosh starts 7.03 before cut (J)"
+ ],
+ "stats": {
+  "synth_energy_ratio": 0.06,
+  "scenes": {
+   "S1 BOOT": {
+    "rms_db": -22.5,
+    "centroid_hz": 1408,
+    "hi_ratio_gt4k": 0.095
+   },
+   "S2 DASH": {
+    "rms_db": -22.6,
+    "centroid_hz": 537,
+    "hi_ratio_gt4k": 0.034
+   },
+   "S3 LEAP": {
+    "rms_db": -21.8,
+    "centroid_hz": 475,
+    "hi_ratio_gt4k": 0.014
+   },
+   "S4 TITLE": {
+    "rms_db": -24.3,
+    "centroid_hz": 614,
+    "hi_ratio_gt4k": 0.025
+   }
+  },
+  "quiet_windows": [
+   {
+    "t": [
+     8.4,
+     9.2
+    ],
+    "rms_db": -31.9
+   },
+   {
+    "t": [
+     13.35,
+     14.1
+    ],
+    "rms_db": -37.9
+   }
+  ],
+  "bed_min_rms_db_per_100ms": -50.1,
+  "mix_rms_db": -22.7,
+  "bed_min_at_s": 0.0,
+  "bed_rms_db_per_100ms_quiet2": -44.4,
+  "bed_mean_rms_db": -29.4,
+  "pings": 2,
+  "sine_sweeps": 0
+ }
+}
