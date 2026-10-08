@@ -184,7 +184,7 @@ describe("描画エラーへの強さ", () => {
     new Function("window", kit)(win);
     const calls: string[] = [];
     const ctx = new Proxy({} as Record<string, unknown>, {
-      get: (target, key) => (key in target ? target[key as string] : (...args: unknown[]) => (calls.push(String(key)), key === "createPattern" ? {} : undefined)),
+      get: (target, key) => (key in target ? target[key as string] : () => (calls.push(String(key)), key === "createPattern" ? {} : undefined)),
       set: (target, key, value) => ((target[key as string] = value), true)
     });
     const K = win.MGK!;
