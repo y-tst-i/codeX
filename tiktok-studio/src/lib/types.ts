@@ -26,6 +26,15 @@ export interface CastMember {
   name: string;
   /** 見た目・性格（画像生成とセリフづくりに使う） */
   description: string;
+  /** この人のセリフを読む声（エンジンごと）。無ければナレーションの声で読む */
+  voice?: CastVoice;
+}
+
+export interface CastVoice {
+  /** Gemini TTS の声の名前 */
+  gemini?: string;
+  voicevox?: { speaker: number; name: string };
+  aivis?: { speaker: number; name: string };
 }
 
 export interface Concept {
@@ -70,6 +79,8 @@ export interface Scene {
   emphasis: string[];
   /** 漫画ドラマのコマ（role が drama のシーンだけ） */
   panels?: Panel[];
+  /** このシーンのセリフを話す登場人物のID（漫画ドラマ）。空ならナレーション */
+  speaker?: string;
 }
 
 export interface Script {

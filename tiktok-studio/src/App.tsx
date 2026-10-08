@@ -19,7 +19,7 @@ import { GuideStep } from "./components/GuideStep";
 import { MotionStep } from "./components/MotionStep";
 import type { Viseme } from "./lib/localTts";
 import { assetsForVideo, assetsPromptSection, isPanelAsset, listAssets, loadNotes, type AssetInfo } from "./lib/assets";
-import { castOf, mangaMotionSection } from "./lib/manga";
+import { castOf, mangaMotionSection, sceneVoice } from "./lib/manga";
 import { ScriptStep } from "./components/ScriptStep";
 import { SettingsStep } from "./components/SettingsStep";
 import { VoiceStep, clipSignature, type ClipMap } from "./components/VoiceStep";
@@ -51,7 +51,7 @@ export function App() {
   const scenes = project.script?.scenes ?? [];
   const freshClips = scenes.map((scene) => {
     const entry = clips[scene.id];
-    return entry && entry.signature === clipSignature(project.voice, speakText(scene)) ? entry.clip : undefined;
+    return entry && entry.signature === clipSignature(sceneVoice(project.voice, scene, settings.cast), speakText(scene)) ? entry.clip : undefined;
   });
   const durationsKey = freshClips.map((clip) => (clip ? clipDuration(clip).toFixed(4) : "-")).join(",");
 
@@ -70,7 +70,16 @@ export function App() {
 
   // 看板キャラと口パク用の音量（動画HTMLの読み込み時に差し込む）
   const character = characterFor(project.concept, settings.character);
-  const levels = useMemo(() => (mixed ? voiceLevels(mixed.samples, mixed.sampleRate, VIDEO.fps) : undefined), [mixed]);
+  const levels = useMemo(() => {
+    if (!mixed) return undefined;
+    const out = voiceLevels(mixed.samples, mixed.sampleRate, VIDEO.fps);
+    // 漫画ドラマの登場人物が話している間は、看板キャラの口を動かさない
+    for (const scene of timeline.scenes) {
+      if (!scene.speaker) continue;
+      for (let f = Math.floor(scene.start * VIDEO.fps); f < Math.min(out.length, Math.ceil(scene.end * VIDEO.fps)); f++) out[f] = 0;
+    }
+    return out;
+  }, [mixed, timeline]);
   // 画像キャラは、保存してある画像から描画コードを組み立てる
   const [imageScript, setImageScript] = useState("");
   const imageKeysKey = (character?.imageKeys ?? []).join(",");
@@ -105,7 +114,7 @@ export function App() {
     const out: Viseme[] = [];
     timeline.scenes.forEach((scene, i) => {
       const entry = clips[scene.id];
-      if (!freshClips[i] || !entry?.visemes) return;
+      if (!freshClips[i] || !entry?.visemes || scene.speaker) return;
       for (const v of entry.visemes) out.push({ t: +(v.t + scene.speechStart).toFixed(3), e: +(v.e + scene.speechStart).toFixed(3), v: v.v });
     });
     return out;

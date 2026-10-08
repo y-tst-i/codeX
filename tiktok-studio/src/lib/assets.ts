@@ -173,6 +173,18 @@ export async function assetsForVideo(): Promise<{ images: Record<string, string>
   return { images, lotties };
 }
 
+/**
+ * 背景の割り当て。背景はシーンごとではなく「場所ごと」に2〜4枚にまとめ、続くシーンで使い回す（作る枚数を減らし、世界観もそろう）。
+ * 漫画ドラマのシーンはコマ絵を使うので、背景画像は割り当てない（null）。
+ */
+export function backgroundPlan(roles: string[]): (number | null)[] {
+  const eligible = roles.map((role, i) => (role === "drama" ? -1 : i)).filter((i) => i >= 0);
+  const count = Math.max(1, Math.min(4, Math.ceil(eligible.length / 3)));
+  const plan: (number | null)[] = roles.map(() => null);
+  eligible.forEach((sceneIndex, k) => (plan[sceneIndex] = Math.floor((k * count) / eligible.length)));
+  return plan;
+}
+
 /** 動画プロンプトに入れる素材の一覧（背景画像があれば、シーンごとに必ず使うよう割り当てる） */
 export function assetsPromptSection(all: AssetInfo[], notes: Record<string, string>, scenes: { start: number; end: number; role: string }[] = []): string {
   // 設定画は動画に入れない。コマ絵は漫画ドラマの指示（mangaMotionSection）で別に割り当てる
@@ -193,11 +205,20 @@ export function assetsPromptSection(all: AssetInfo[], notes: Record<string, stri
 ## シーンごとの背景（必須。この割り当てで背景画像を敷く）
 | シーン | 時刻 | 背景画像 |
 |---|---|---|
-${scenes.map((scene, i) => `| ${i + 1}（${scene.role}） | ${scene.start.toFixed(2)}〜${scene.end.toFixed(2)}s | "${backgrounds[i % backgrounds.length]}" |`).join("\n")}
-（説明を見て、もっと内容に合う背景があれば入れ替えてよい。ただし**どのシーンも背景画像を使う**こと）`
+${(() => {
+  const plan = backgroundPlan(scenes.map((scene) => scene.role));
+  return scenes
+    .map((scene, i) => {
+      const slot = plan[i];
+      const bg = slot === null || slot === undefined ? "（漫画のページ：背景画像なし）" : `"${backgrounds[slot % backgrounds.length]}"`;
+      return `| ${i + 1}（${scene.role}） | ${scene.start.toFixed(2)}〜${scene.end.toFixed(2)}s | ${bg} |`;
+    })
+    .join("\n");
+})()}
+（説明を見て、もっと内容に合う背景があれば入れ替えてよい。ただし**背景画像の欄があるシーンは必ず背景画像を使う**こと）`
       : "";
   const must = [
-    backgrounds.length ? "- [ ] すべてのシーンで、背景画像を K.kenBurns で全面に敷いている（K.bg.mesh などの単色・グラデーションだけの背景にしない。MGK の背景効果は、画像の上に薄く重ねる飾りとして使う）" : "",
+    backgrounds.length ? "- [ ] 割り当て表で背景画像があるシーンはすべて、背景画像を K.kenBurns で全面に敷いている（K.bg.mesh などの単色・グラデーションだけの背景にしない。MGK の背景効果は、画像の上に薄く重ねる飾りとして使う）" : "",
     props.length ? `- [ ] 小物（${props.join(" / ")}）を、話の内容に合う場面で${Math.min(2, props.length)}つ以上使っている` : "",
     lotties.length ? `- [ ] Lottie（${lotties.join(" / ")}）を見せ場で1回以上使っている` : ""
   ].filter(Boolean);
@@ -220,35 +241,42 @@ ${must.join("\n")}`;
 export function buildImagePrompt(concept: Concept, script: Script): string {
   const palette = findOrFirst(PALETTES, concept.paletteId);
   const style = findOrFirst(STYLES, concept.styleId);
-  const scenes = script.scenes
-    .map((scene, i) => `| bg_${String(i + 1).padStart(2, "0")}.png | ${scene.role} | 「${scene.narration}」 | ${scene.visual || "（おまかせ）"} |`)
-    .join("\n");
-  return `# 依頼：TikTok動画の背景イラストと小物の素材づくり
+  const plan = backgroundPlan(script.scenes.map((scene) => scene.role));
+  const count = Math.max(0, ...plan.map((slot) => (slot ?? -1) + 1));
+  const backgrounds = Array.from({ length: count }, (_, b) => {
+    const scenes = script.scenes.filter((_, i) => plan[i] === b);
+    const lines = scenes.map((scene) => `「${scene.narration.slice(0, 40)}」${scene.visual ? `（${scene.visual.slice(0, 40)}）` : ""}`).join(" ／ ");
+    const numbers = script.scenes.map((_, i) => i).filter((i) => plan[i] === b).map((i) => i + 1);
+    return `| bg_${String(b + 1).padStart(2, "0")}.png | ${numbers[0]}〜${numbers[numbers.length - 1]} | ${lines.replace(/\|/g, "／")} |`;
+  });
+  return `# 依頼：TikTok動画の小物と背景イラストの素材づくり（全部で ${count + 4}〜${count + 5} 枚）
 縦型ショート動画「${script.title}」（ジャンル：${concept.niche}）で使う画像素材を作ってください。
 動画の上には、プログラムで文字・字幕・キャラクターを重ねて動かします。**画像には文字・人物・キャラクターを入れないでください。**
+**作る順番は「小物 → 背景」**。小物は必ず作ってください（背景だけで終わらない）。枚数は下の指定どおり、それ以上は作らない。
 
 ## 全体のテイスト（全枚数で統一）
 - 映像スタイル：${style.name}（${style.summary}）
 - 配色：地の色 ${palette.colors.bg}、メイン ${palette.colors.accent}、サブ ${palette.colors.accent2}、面 ${palette.colors.surface}
-- 画風：やわらかいアニメ調の背景美術。ほどよく描き込み、ボケ感・光・奥行きがある。同じ世界観・同じ光の向きでそろえる
-- 構図：**縦長 1024×1536**。画面の上 1/3 は空や壁などシンプルに（大きな文字が乗る）。中央〜下は床や机など、キャラクターが立てる空間を空けておく
 - 禁止：文字・ロゴ・透かし・人物・動物・キャラクター
 
-## 背景（シーンごとに1枚。ファイル名の順に作る）
-| ファイル名 | シーンの役割 | セリフ | 演出メモ |
-|---|---|---|---|
-${scenes}
-- 各シーンのセリフの内容に合う「場所・時間帯・雰囲気」を考えて描く（例：恋愛の話 → 夕暮れのカフェ、夜の部屋でスマホの光 など）
+## ① 小物（先に作る。背景透明のPNG。4〜5個）
+この動画の話題に出てくる物を、ステッカー風（太めの白フチ・正方形 1024×1024・物は中央に大きく）で1つずつ。ファイル名は prop_内容.png（英数字）
+例：prop_phone.png（スマホ）、prop_heart.png（ハート）、prop_letter.png（手紙）、prop_coffee.png（コーヒー）、prop_ring.png（指輪）
+- 台本のセリフに出てくる物・気持ちを表す物を優先する（画面で「これ！」と指させる物）
 
-## 小物（背景透明のPNG。3〜5個）
-この動画の話題に出てくる物を、ステッカー風（太めの白フチ）で1つずつ。ファイル名は prop_内容.png（英数字）
-例：prop_phone.png（スマホ）、prop_heart.png（ハート）、prop_letter.png（手紙）、prop_coffee.png（コーヒー）
+## ② 背景（${count}枚だけ。場所ごとにまとめて、続くシーンで使い回す）
+- 画風：やわらかいアニメ調の背景美術。ほどよく描き込み、ボケ感・光・奥行きがある。同じ世界観・同じ光の向きでそろえる
+- 構図：**縦長 1024×1536**。画面の上 1/3 は空や壁などシンプルに（大きな文字が乗る）。中央〜下は床や机など、キャラクターが立てる空間を空けておく
+- **背景どうしは、場所・時間帯・色味をはっきり変える**（似た部屋ばかりにしない。例：夜の部屋／昼のカフェ／夕方の帰り道）
+
+| ファイル名 | 使うシーン | そのシーンのセリフ（場所・雰囲気を決める手がかり） |
+|---|---|---|
+${backgrounds.join("\n")}
 
 ## 出し方
 1. 1枚ずつ生成し、各画像の前にファイル名を書く
 2. 全部できたら、全画像を assets.zip にまとめてダウンロードできるようにする（できなければ1枚ずつでOK）`;
 }
-
 
 /** HTMLが登録済みの素材を使っているか（名前が1つも出てこなければ、使っていない） */
 export function unusedAssets(html: string, assets: AssetInfo[]): { used: string[]; unused: string[] } {

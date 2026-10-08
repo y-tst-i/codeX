@@ -16,7 +16,8 @@ const sceneSchema = z.object({
   onScreenText: z.string().default(""),
   visual: z.string().default(""),
   emphasis: z.array(z.string()).default([]),
-  panels: z.array(panelSchema).default([])
+  panels: z.array(panelSchema).default([]),
+  speaker: z.string().default("")
 });
 
 const scriptSchema = z.object({
@@ -42,7 +43,7 @@ export const SCRIPT_JSON_SCHEMA = {
       items: {
         type: "object",
         additionalProperties: false,
-        required: ["role", "narration", "reading", "onScreenText", "visual", "emphasis", "panels"],
+        required: ["role", "narration", "reading", "onScreenText", "visual", "emphasis", "panels", "speaker"],
         properties: {
           role: { type: "string", enum: ["hook", "body", "twist", "cta", "loop", "drama"] },
           narration: { type: "string", description: "セリフ（字幕表記）" },
@@ -50,6 +51,7 @@ export const SCRIPT_JSON_SCHEMA = {
           onScreenText: { type: "string", description: "画面に大きく出す12文字以内のテキスト" },
           visual: { type: "string", description: "このシーンの映像演出" },
           emphasis: { type: "array", items: { type: "string" }, description: "強調する語句" },
+          speaker: { type: "string", description: "このシーンのセリフを話す登場人物のID（漫画ドラマで登場人物が話すときだけ。ナレーションなら空）" },
           panels: {
             type: "array",
             description: "漫画ドラマのコマ（role が drama のシーンだけ。それ以外は空の配列）",

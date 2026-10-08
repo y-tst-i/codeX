@@ -201,6 +201,16 @@ export function ScriptStep({ concept, script, settings, onChange, onBack, onNext
                   </Field>
                   {scene.role === "drama" || (scene.panels?.length ?? 0) > 0 ? (
                     <div className="stack" style={{ marginTop: 8 }}>
+                      <Field label="このシーンの声（登場人物を選ぶと、セリフをその人の声で読みます）">
+                        <select value={scene.speaker ?? ""} onChange={(e) => updateScene(index, { speaker: e.target.value })}>
+                          <option value="">ナレーション</option>
+                          {cast.map((member) => (
+                            <option key={member.id} value={member.id}>
+                              {member.name} のセリフ
+                            </option>
+                          ))}
+                        </select>
+                      </Field>
                       {(scene.panels ?? []).map((panel, j) => (
                         <div className="card stack" key={j}>
                           <div className="row">
