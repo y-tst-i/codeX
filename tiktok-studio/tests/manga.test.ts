@@ -176,3 +176,38 @@ describe("Lottie のおまかせ", () => {
     expect(lottieProblem({ ...ok, op: 600 }, 20_000)).toBe("長さが合わない");
   });
 });
+
+describe("描画エラーへの強さ", () => {
+  it("色やコマ枠が足りなくても、道具箱は落ちずに描く", async () => {
+    const { MGK_SCRIPT: kit } = await import("../src/lib/mgKit");
+    const win: { MGK?: Record<string, any> } = {};
+    new Function("window", kit)(win);
+    const calls: string[] = [];
+    const ctx = new Proxy({} as Record<string, unknown>, {
+      get: (target, key) => (key in target ? target[key as string] : (...args: unknown[]) => (calls.push(String(key)), key === "createPattern" ? {} : undefined)),
+      set: (target, key, value) => ((target[key as string] = value), true)
+    });
+    const K = win.MGK!;
+    expect(() => K.manga.panel(ctx, 1, { x: 0, y: 0, w: 500, h: 500 }, {})).not.toThrow();
+    expect(() => K.manga.panel(ctx, 1, undefined, {})).not.toThrow();
+    expect(() => K.manga.tone(ctx, { x: 0, y: 0, w: 100, h: 100 })).not.toThrow();
+  });
+
+  it("どの時刻・どの関数で落ちたかを伝える", async () => {
+    const { describeRenderError } = await import("../src/lib/mg");
+    function drawDrama() {
+      const rects: number[][] | undefined = undefined;
+      return rects![0];
+    }
+    let error: unknown;
+    try {
+      drawDrama();
+    } catch (e) {
+      error = e;
+    }
+    const text = describeRenderError(error, 3.2);
+    expect(text).toContain("t=3.20秒");
+    expect(text).toContain("drawDrama");
+    expect(text).toContain("undefined のまま");
+  });
+});

@@ -282,6 +282,24 @@ export function isDeterministic(loaded: LoadedGraphic, duration: number): boolea
 }
 
 /** 書き出し前の動作検証（決定性・サイズ・尺・描画速度・t=0が真っ白/真っ黒でないか） */
+/** 描画中のエラーを、直すときの手がかり（何秒目・どの関数の中か）つきの文にする */
+export function describeRenderError(error: unknown, t: number): string {
+  const message = error instanceof Error ? error.message : String(error);
+  const stack = error instanceof Error ? error.stack ?? "" : "";
+  const names: string[] = [];
+  for (const line of stack.split("\n").slice(1)) {
+    const match = /at (?:Object\.|window\.|MG\.)?([\w$.]+) \(/.exec(line) ?? /^([\w$.]+)@/.exec(line.trim());
+    const name = match?.[1];
+    if (name && !names.includes(name) && !/^(eval|Array\.|<anonymous>)/.test(name)) names.push(name);
+    if (names.length >= 3) break;
+  }
+  const where = names.length ? `（場所：${names.join(" ← ")} の中）` : "";
+  const hint = /reading '(\d+|length)'/.test(message)
+    ? "。配列や色・コマ枠の変数が undefined のまま使われています（存在しない番号の要素、名前の間違い、まだ作っていない変数など）"
+    : "";
+  return `t=${t.toFixed(2)}秒の render(t) でエラー: ${message}${where}${hint}`;
+}
+
 export function validateGraphic(loaded: LoadedGraphic, expectedDuration: number): ValidationReport {
   const { mg, canvas } = loaded;
   const problems: string[] = [];
@@ -297,15 +315,21 @@ export function validateGraphic(loaded: LoadedGraphic, expectedDuration: number)
 
   let msPerFrame = 0;
   let frozen: FrozenReport | null = null;
+  // どの時刻で落ちたかを伝えられるように、描いた時刻を覚えておく
+  let lastT = 0;
+  const render = (t: number) => {
+    lastT = t;
+    mg.render(t);
+  };
   try {
     const probe = Math.min(1.234, Math.max(0, expectedDuration / 3));
     const ctx = canvas.getContext("2d");
     const before = ctx ? ctxState(ctx) : null;
-    mg.render(probe);
+    render(probe);
     const a = fingerprint(canvas);
-    mg.render(expectedDuration * 0.8);
+    render(expectedDuration * 0.8);
     const between = ctx ? ctxState(ctx) : null;
-    mg.render(probe);
+    render(probe);
     const b = fingerprint(canvas);
     if (a !== b) {
       const leaked = before && between ? Object.keys(before).filter((key) => before[key] !== between[key]) : [];
@@ -317,17 +341,17 @@ export function validateGraphic(loaded: LoadedGraphic, expectedDuration: number)
         );
     }
 
-    mg.render(0);
+    render(0);
     if (isBlank(canvas)) warnings.push("t=0 が単色の画面です。冒頭0フレーム目からフックが見えるのが理想です");
 
     const samples = 12;
     const started = performance.now();
-    for (let i = 0; i < samples; i++) mg.render((expectedDuration * i) / samples);
+    for (let i = 0; i < samples; i++) render((expectedDuration * i) / samples);
     msPerFrame = (performance.now() - started) / samples;
     if (msPerFrame > 33) warnings.push(`1フレームの描画に${msPerFrame.toFixed(0)}msかかります。プレビューがカクつく可能性があります（書き出しは問題なし）`);
 
     // 画が止まっている時間を測る（目安：30秒あたり合計1秒以内、1回0.6秒まで）
-    frozen = measureFrozen((t) => mg.render(t), canvas, expectedDuration);
+    frozen = measureFrozen((t) => render(t), canvas, expectedDuration);
     const allowance = expectedDuration / 30;
     if (frozen.longStretches.length > 0 || frozen.frozenSeconds > allowance) {
       const where = frozen.longStretches.map((s) => `${s.start.toFixed(1)}〜${s.end.toFixed(1)}s`).join("、");
@@ -336,7 +360,7 @@ export function validateGraphic(loaded: LoadedGraphic, expectedDuration: number)
       );
     }
   } catch (error) {
-    problems.push(`render(t) でエラー: ${(error as Error).message}`);
+    problems.push(describeRenderError(error, lastT));
   }
 
   problems.push(...loaded.errors().map((message) => `実行時エラー: ${message}`));

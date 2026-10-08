@@ -88,7 +88,7 @@ var shape={
 /* ---------- 背景（どれも全面を描く。重ねて使ってよい） ---------- */
 var bg={
   /** 色の雲がゆっくり流れるグラデーション（メッシュグラデーション風）。colors[0]が地の色 */
-  mesh:function(c,t,colors,o){o=o||{};var n=o.count||5,sp=o.speed||0.12;c.save();c.fillStyle=colors[0];c.fillRect(0,0,W,H);c.globalAlpha=o.alpha||0.85;if(o.blend)c.globalCompositeOperation=o.blend;
+  mesh:function(c,t,colors,o){o=o||{};if(!colors||!colors.length)colors=["#1a1030","#ff5c8a","#7a5cff"];var n=o.count||5,sp=o.speed||0.12;c.save();c.fillStyle=colors[0];c.fillRect(0,0,W,H);c.globalAlpha=o.alpha||0.85;if(o.blend)c.globalCompositeOperation=o.blend;
     for(var i=0;i<n;i++){var col=colors[1+i%(colors.length-1)]||colors[0];var x=W*(0.5+0.55*noise(t*sp+i*3.7,i+1)),y=H*(0.5+0.5*noise(t*sp*0.8+i*5.1,i+11)),r=W*(0.7+0.3*noise(t*sp*0.5+i,i+21));c.drawImage(blob(col),x-r,y-r,r*2,r*2);}
     c.restore();},
   /** ふわふわ漂う光の玉（奥行きつき） */
@@ -310,6 +310,8 @@ function card3d(c,drawFn,o){
 
 /* ---------- 漫画（コマ割り・吹き出し・描き文字・集中線・トーン） ---------- */
 function polyPath(c,pts){c.beginPath();c.moveTo(pts[0][0],pts[0][1]);for(var i=1;i<pts.length;i++)c.lineTo(pts[i][0],pts[i][1]);c.closePath();}
+/* 自分で作った {x, y, w, h} だけのコマ枠でも使えるように、足りない値を補う（無ければ null） */
+function normRect(r){if(!r||typeof r!=="object")return null;if(r.pts&&r.pts.length>2&&r.cx!==undefined)return r;var x=+r.x||0,y=+r.y||0,w=+(r.w||r.width)||W,h=+(r.h||r.height)||H;return rectOf(x,y,w,h,r.pts&&r.pts.length>2?r.pts:undefined);}
 function rectOf(x,y,w,h,pts){return {x:x,y:y,w:w,h:h,cx:x+w/2,cy:y+h/2,pts:pts||[[x,y],[x+w,y],[x+w,y+h],[x,y+h]]};}
 var manga={
   /** コマ割り。kind: "1" / "2v"（上下2段）/ "2d"（斜めに2分割）/ "3"（上1・下2）/ "4"（縦に4段）。o = {x, y, w, h（ページの範囲）, gap} */
@@ -324,7 +326,7 @@ var manga={
    *   zoomFrom, zoomTo, zoomDur, panX, panY, draw(ctx, rect, t)（絵が無いときや絵に重ねたいとき）, paper（地の色）, border, end（退場の開始時刻）}
    * 出た割合（0〜1）を返す
    */
-  panel:function(c,t,rect,o){o=o||{};var start=o.start||0,p=ease.outExpo(prog(t,start,start+0.45));if(p<=0)return 0;
+  panel:function(c,t,rect,o){o=o||{};rect=normRect(rect);if(!rect)return 0;var start=o.start||0,p=ease.outExpo(prog(t,start,start+0.45));if(p<=0)return 0;
     var out=o.end===undefined?0:ease.inCubic(prog(t,o.end,o.end+0.3));if(out>=1)return 0;
     var from=o.from||"left",dx=0,dy=0,sc=1;
     if(from==="left")dx=-(1-p)*(rect.x+rect.w+40);else if(from==="right")dx=(1-p)*(W-rect.x+40);else if(from==="top")dy=-(1-p)*(rect.y+rect.h+40);else if(from==="bottom")dy=(1-p)*(H-rect.y+40);else if(from==="zoom")sc=mix(0.6,1,ease.outBackBig(prog(t,start,start+0.45)));
@@ -376,13 +378,13 @@ var manga={
       c.fillStyle=o.color||"#ff3d7f";c.fillText(g[i],0,0);c.restore();}
     c.restore();},
   /** 集中線（コマの中だけ）。o = {x, y（中心。省略でコマの中心）, count, color, alpha, inner（線が届かない真ん中の大きさ 0〜1）} */
-  lines:function(c,t,rect,o){o=o||{};var cx=o.x===undefined?rect.cx:o.x,cy=o.y===undefined?rect.cy:o.y,n=o.count||80,f=Math.floor(t*12),R=Math.hypot(rect.w,rect.h),inner=Math.min(rect.w,rect.h)*(o.inner===undefined?0.36:o.inner);
+  lines:function(c,t,rect,o){o=o||{};rect=normRect(rect);if(!rect)return;var cx=o.x===undefined?rect.cx:o.x,cy=o.y===undefined?rect.cy:o.y,n=o.count||80,f=Math.floor(t*12),R=Math.hypot(rect.w,rect.h),inner=Math.min(rect.w,rect.h)*(o.inner===undefined?0.36:o.inner);
     c.save();polyPath(c,rect.pts);c.clip();c.fillStyle=o.color||"#141018";c.globalAlpha*=o.alpha===undefined?0.8:o.alpha;
     for(var i=0;i<n;i++){var a=(i+rand(i+f*n,2)*0.8)*TAU/n,r0=inner*(0.85+rand(i+f*n,3)*0.5),wd=0.006+rand(i+f*n,4)*0.016;
       c.beginPath();c.moveTo(cx+Math.cos(a)*r0,cy+Math.sin(a)*r0);c.lineTo(cx+Math.cos(a-wd)*R,cy+Math.sin(a-wd)*R);c.lineTo(cx+Math.cos(a+wd)*R,cy+Math.sin(a+wd)*R);c.closePath();c.fill();}
     c.restore();},
   /** スクリーントーン（網点）。o = {color, alpha, size（点の間隔）, fade:"down"|"up"|"none"（下ほど濃く など）} */
-  tone:function(c,rect,o){o=o||{};var gsz=o.size||16,fade=o.fade||"down";
+  tone:function(c,rect,o){o=o||{};rect=normRect(rect);if(!rect)return;var gsz=o.size||16,fade=o.fade||"down";
     c.save();polyPath(c,rect.pts);c.clip();c.fillStyle=o.color||"#141018";c.globalAlpha*=o.alpha===undefined?0.28:o.alpha;
     for(var yy=rect.y,row=0;yy<rect.y+rect.h+gsz;yy+=gsz*0.87,row++){var k=fade==="none"?1:fade==="up"?1-(yy-rect.y)/rect.h:(yy-rect.y)/rect.h;k=clamp(k,0.05,1);var r=gsz*0.42*k;if(r<0.6)continue;
       c.beginPath();for(var xx=rect.x+(row%2?gsz/2:0);xx<rect.x+rect.w+gsz;xx+=gsz){c.moveTo(xx+r,yy);c.arc(xx,yy,r,0,TAU);}c.fill();}
