@@ -3,8 +3,9 @@
 # usage: assemble.sh <scenes_dir> "<scene1 scene2 ...>" <soundtrack_raw.wav> <out.mp4>
 set -e
 dir=$1; order=$2; wav=$3; out=$4
+abs=$(cd "$dir" && pwd)   # 絶対パス・相対パスどちらで渡してもよい
 : > "$dir/list.txt"
-for s in $order; do echo "file '$PWD/$dir/$s.mp4'" >> "$dir/list.txt"; done
+for s in $order; do echo "file '$abs/$s.mp4'" >> "$dir/list.txt"; done
 ffmpeg -y -loglevel error -f concat -safe 0 -i "$dir/list.txt" -c:v libx264 -preset slow -crf 14 -pix_fmt yuv420p -r 30 -an "$dir/video_only.mp4"
 # loudnorm は1回通しだと短い動画(15秒など)で目標に届かない(STILLDUSK: -16.8 LUFS)。→ 2回通し: 1回目で測り、2回目で測定値を渡して直線補正。
 # それでもピーク(TP -2)が先に当たって届かない音(山と谷の差が大きい: ピーク-ラウドネス差 > 18 dB)は、軽い圧縮(ratio 2.5)を先にかけてから通す。
