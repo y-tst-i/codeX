@@ -80,6 +80,7 @@ ${manga ? `${mangaScriptSection(castOf(cast), character ? character.name : "解�
       "onScreenText": "画面の大きな文字",
       "visual": "映像演出",
       "emphasis": ["強調語"],
+      "speaker": ${manga ? `"登場人物のID（drama で登場人物が話すシーンだけ。ナレーションは空）"` : `""`},
       "panels": ${manga ? `[{ "cast": ["登場人物のID"], "shot": "描く内容", "line": "吹き出しのセリフ", "speaker": "話す人のID", "sfx": "描き文字" }]（drama のシーンだけ。それ以外は []）` : "[]"}
     }
   ]

@@ -108,3 +108,40 @@ describe("漫画ドラマ", () => {
     }
   });
 });
+
+describe("登場人物の声・背景のまとめ方・Lottie", () => {
+  it("登場人物のセリフのシーンだけ、その人の声に差し替える", async () => {
+    const { sceneVoice } = await import("../src/lib/manga");
+    const base = { voiceName: "Kore", direction: "", model: "m", engine: "aivis" as const, localSpeaker: 1, localSpeakerName: "まお" };
+    const cast = [{ ...DEFAULT_CAST[0]!, voice: { aivis: { speaker: 9, name: "阿井田 茂" }, gemini: "Puck" } }, DEFAULT_CAST[1]!];
+    expect(sceneVoice(base, { speaker: "" }, cast)).toBe(base);
+    expect(sceneVoice(base, { speaker: "kare" }, cast).localSpeaker).toBe(9);
+    expect(sceneVoice(base, { speaker: "kanojo" }, cast)).toBe(base);
+    expect(sceneVoice({ ...base, engine: "voicevox" }, { speaker: "kare" }, cast).localSpeaker).toBe(1);
+    expect(sceneVoice({ ...base, engine: "gemini" }, { speaker: "kare" }, cast).voiceName).toBe("Puck");
+  });
+
+  it("背景は場所ごとに2〜4枚にまとめ、漫画ドラマのシーンには割り当てない", async () => {
+    const { backgroundPlan, buildImagePrompt } = await import("../src/lib/assets");
+    const roles = ["hook", "drama", "drama", "drama", "body", "body", "body", "twist", "cta", "loop"];
+    const plan = backgroundPlan(roles);
+    expect(plan.slice(1, 4)).toEqual([null, null, null]);
+    expect(Math.max(...plan.map((p) => p ?? 0)) + 1).toBe(3);
+    expect(backgroundPlan(Array(17).fill("body")).filter((p, i, a) => a.indexOf(p) === i)).toHaveLength(4);
+    const prompt = buildImagePrompt(concept, { ...script, scenes: roles.map((role, i) => ({ id: String(i), role, narration: `セリフ${i}`, reading: "", onScreenText: "", visual: "", emphasis: [] })) } as Script);
+    expect(prompt).toContain("bg_03.png");
+    expect(prompt).not.toContain("bg_04.png");
+    expect(prompt.indexOf("① 小物")).toBeLessThan(prompt.indexOf("② 背景"));
+  });
+
+  it("Lottie は LottieFiles の素材置き場だけから、かぶらない名前で取り込む", async () => {
+    const { isLottieAssetUrl } = await import("../lottieBridge");
+    const { lottieAssetName } = await import("../src/lib/lottieClient");
+    expect(isLottieAssetUrl("https://assets-v2.lottiefiles.com/a/x/y.json")).toBe(true);
+    expect(isLottieAssetUrl("http://assets-v2.lottiefiles.com/a/x/y.json")).toBe(false);
+    expect(isLottieAssetUrl("https://lottiefiles.com.evil.com/y.json")).toBe(false);
+    expect(isLottieAssetUrl("https://assets-v2.lottiefiles.com/a/x/y.png")).toBe(false);
+    expect(lottieAssetName("question mark", [])).toBe("lottie_question_mark");
+    expect(lottieAssetName("heart", ["lottie_heart", "lottie_heart_2"])).toBe("lottie_heart_3");
+  });
+});

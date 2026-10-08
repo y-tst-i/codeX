@@ -124,6 +124,19 @@ export function MotionStep({ concept, script, timeline, settings, html, characte
         runLabel="Claudeで映像を生成"
         progress={running === "create" ? progress : settings.anthropicKey ? "" : "APIキー未設定：コピーしてclaude.aiに貼り、返ってきたHTMLを下に貼り付けてください"}
       />
+      {!settings.anthropicKey ? (
+        <Notice title="claude.ai で使うときのコツ">
+          <ul className="meta" style={{ margin: "6px 0 0", paddingLeft: 18 }}>
+            <li>
+              モデルは一番賢いもの（Opus）を選び、<b>「拡張思考（Extended thinking）」をオン</b>にしてから貼る。映像の出来はここで一番変わります
+            </li>
+            <li>
+              返事の中に<b>動くページ（アーティファクト）が出てきたら、それで正解</b>です。ページの右上の「コピー」（または「コード」タブを開いて全選択→コピー）で中身のコードをコピーして、下の欄に貼ってください。そのページ自体は、声や字幕がまだ入っていない試し再生です
+            </li>
+            <li>途中で止まったら「続けて」と送り、最後まで出してからコピーする</li>
+          </ul>
+        </Notice>
+      ) : null}
       {error ? <Notice kind="error" title="エラー">{" " + error}</Notice> : null}
 
       <h2>2. HTML</h2>

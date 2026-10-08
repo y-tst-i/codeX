@@ -5,6 +5,7 @@ import { loadAssets } from "../lib/storage";
 import { buildCastSheetPrompt, buildPanelPrompt, castRefName } from "../lib/manga";
 import type { CastMember, Concept, Script } from "../lib/types";
 import { Notice, PromptBox } from "./common";
+import { LottieSearch } from "./LottieSearch";
 
 interface Props {
   concept: Concept;
@@ -171,6 +172,7 @@ export function AssetsPanel({ concept, script, assets, cast, onChanged }: Props)
           </Notice>
         ) : null}
       </div>
+      <LottieSearch taken={assets.map((a) => a.name)} onAdded={onChanged} />
       <PromptBox
         title="ChatGPTで素材を作る依頼文（背景イラスト・小物）"
         prompt={imagePrompt}

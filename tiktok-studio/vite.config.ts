@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 import react from "@vitejs/plugin-react";
 import { defineConfig, type Plugin } from "vite";
 import { codexBridge } from "./codexBridge";
+import { lottieBridge } from "./lottieBridge";
 
 // 自分のPCで動く無料の音声合成ソフト（VOICEVOX / AivisSpeech）へ、ブラウザから届くように中継する
 const ttsProxy = {
@@ -41,7 +42,8 @@ function restartAfterInstall(): Plugin {
 
 export default defineConfig({
   // codexBridge：自分のPCの Codex CLI で画像素材を作る（/api/codex/*）
-  plugins: [react(), codexBridge(), restartAfterInstall()],
+  // lottieBridge：LottieFiles の無料アニメを探して取り込む（/api/lottie/*）
+  plugins: [react(), codexBridge(), lottieBridge(), restartAfterInstall()],
   // 作業データはブラウザの「localhost:5180」に保存されるので、番号が勝手に変わらないようにする
   server: { port: 5180, strictPort: true, open: true, proxy: ttsProxy },
   preview: { port: 5180, strictPort: true, proxy: ttsProxy },

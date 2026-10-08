@@ -88,7 +88,7 @@ describe("素材", () => {
     expect(text).toContain("必ず使う");
     expect(text).toContain('| 1（hook） | 0.00〜2.00s | "bg_01" |');
     expect(text).toContain('| 3（cta） | 4.00〜6.00s | "bg_01" |');
-    expect(text).toContain("すべてのシーンで、背景画像を K.kenBurns");
+    expect(text).toContain("背景画像があるシーンはすべて、背景画像を K.kenBurns");
     expect(unusedAssets("K.bg.mesh(ctx,t,[])", assets).used).toEqual([]);
     expect(unusedAssets('K.kenBurns(ctx,t,"bg_02",0,2)', assets).used).toEqual(["bg_02"]);
     expect(useAssetsRequest(assets)).toContain("bg_01 / bg_02");

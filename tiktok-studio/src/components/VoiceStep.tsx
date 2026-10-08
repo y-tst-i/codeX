@@ -6,7 +6,8 @@ import { todayTtsCalls } from "../lib/usage";
 import { VOICES, VOICE_DIRECTIONS } from "../lib/knowledge";
 import { speakText } from "../lib/script";
 import { estimateSpeechSeconds } from "../lib/timeline";
-import type { ApiSettings, Script, Timeline, VoiceSettings } from "../lib/types";
+import { castOf, sceneVoice } from "../lib/manga";
+import type { ApiSettings, CastMember, Scene, Script, Timeline, VoiceSettings } from "../lib/types";
 import { CopyButton, Field, Notice, StepNav, downloadBlob, formatSeconds } from "./common";
 
 export type ClipMap = Record<string, { clip: AudioClip; signature: string; visemes?: Viseme[] }>;
@@ -75,8 +76,14 @@ export function VoiceStep({ script, voice, settings, clips, timeline, mixed, onV
   const rpm = settings.ttsRpm ?? 3;
   const dailyLimit = settings.ttsDailyLimit ?? 10;
 
-  const isFresh = (sceneId: string, text: string) => clips[sceneId]?.signature === clipSignature(voice, text);
-  const readyCount = script.scenes.filter((scene) => isFresh(scene.id, speakText(scene))).length;
+  // 漫画ドラマ：登場人物のセリフのシーンは、その人の声で読む
+  const cast = castOf(settings.cast);
+  const speakingCast = cast.filter((m) => script.scenes.some((scene) => scene.speaker === m.id));
+  const voiceOf = (scene: Scene) => sceneVoice(voice, scene, settings.cast);
+  const setCastVoice = (member: CastMember, patch: NonNullable<CastMember["voice"]>) =>
+    onSettingsChange({ ...settings, cast: cast.map((m) => (m.id === member.id ? { ...m, voice: { ...m.voice, ...patch } } : m)) });
+  const isFresh = (scene: Scene) => clips[scene.id]?.signature === clipSignature(voiceOf(scene), speakText(scene));
+  const readyCount = script.scenes.filter((scene) => isFresh(scene)).length;
   const allReady = readyCount === script.scenes.length;
 
   const play = (blob: Blob) => {
@@ -125,26 +132,27 @@ export function VoiceStep({ script, voice, settings, clips, timeline, mixed, onV
         const scene = script.scenes.find((s) => s.id === id);
         if (!scene) continue;
         const text = speakText(scene);
+        const sv = voiceOf(scene);
         setBusy(id);
         setStatus(`音声を生成中… ${n + 1}/${sceneIds.length}`);
         if (local) {
           const { clip, visemes } = await synthesizeLocal({
             engine: local,
-            speaker: voice.localSpeaker!,
+            speaker: sv.localSpeaker!,
             text,
             speed: voice.speed,
             pitch: voice.pitch,
             intonation: voice.intonation,
             signal: controller.signal
           });
-          onClip(id, clip, clipSignature(voice, text), visemes);
+          onClip(id, clip, clipSignature(sv, text), visemes);
           continue;
         }
         const { clip, directionDropped } = await synthesize(
           {
             apiKey: settings.geminiKey,
             model: voice.model,
-            voiceName: voice.voiceName,
+            voiceName: sv.voiceName,
             direction: voice.direction,
             rpm,
             text,
@@ -154,7 +162,7 @@ export function VoiceStep({ script, voice, settings, clips, timeline, mixed, onV
           setStatus
         );
         if (directionDropped) dropped += 1;
-        onClip(id, clip, clipSignature(voice, text));
+        onClip(id, clip, clipSignature(sv, text));
       }
       finish(dropped);
     } catch (e) {
@@ -167,10 +175,15 @@ export function VoiceStep({ script, voice, settings, clips, timeline, mixed, onV
 
   /** 全シーンをまとめて1回で作り、無音で切り分ける */
   const generateAll = async () => {
+    // 登場人物の声のシーンは、まとめ作りに混ぜられない（声が違う）ので、あとで1つずつ作る
+    const batch = script.scenes.filter((scene) => voiceOf(scene).voiceName === voice.voiceName);
+    const others = script.scenes.filter((scene) => voiceOf(scene).voiceName !== voice.voiceName).map((scene) => scene.id);
+    if (batch.length === 0) return generate(others);
     const controller = begin();
     if (!controller) return;
-    const texts = script.scenes.map(speakText);
+    const texts = batch.map(speakText);
     setBusy("all");
+    let ok = false;
     try {
       const { clips: parts, directionDropped } = await synthesizeScript(
         {
@@ -185,20 +198,22 @@ export function VoiceStep({ script, voice, settings, clips, timeline, mixed, onV
         },
         setStatus
       );
-      script.scenes.forEach((scene, i) => {
+      batch.forEach((scene, i) => {
         const part = parts[i];
         if (part) onClip(scene.id, part, clipSignature(voice, texts[i]!));
       });
       finish(directionDropped ? 1 : 0);
+      ok = true;
     } catch (e) {
       fail(e);
     } finally {
       setBusy(null);
       abortRef.current = null;
     }
+    if (ok && others.length > 0) await generate(others);
   };
 
-  const missing = script.scenes.filter((scene) => !isFresh(scene.id, speakText(scene))).map((scene) => scene.id);
+  const missing = script.scenes.filter((scene) => !isFresh(scene)).map((scene) => scene.id);
 
   return (
     <>
@@ -305,6 +320,51 @@ export function VoiceStep({ script, voice, settings, clips, timeline, mixed, onV
       </div>
       ) : null}
 
+      {speakingCast.length > 0 ? (
+        <div className="card stack" style={{ marginTop: 12 }}>
+          <b>🎭 漫画ドラマの登場人物の声</b>
+          <span className="meta">台本で「〇〇のセリフ」にしたシーンは、ここで選んだ声で読みます（選ばなければナレーションと同じ声）。</span>
+          {speakingCast.map((member) => (
+            <div className="row" key={member.id} style={{ flexWrap: "wrap" }}>
+              <b style={{ minWidth: 140 }}>{member.name}</b>
+              {local ? (
+                <select
+                  value={member.voice?.[local]?.speaker ?? ""}
+                  onChange={(e) => {
+                    const sp = speakers.find((x) => x.id === Number(e.target.value));
+                    setCastVoice(member, { [local]: sp ? { speaker: sp.id, name: `${sp.name}（${sp.style}）` } : undefined });
+                  }}
+                >
+                  <option value="">ナレーションと同じ声</option>
+                  {speakers.length === 0 && member.voice?.[local] ? <option value={member.voice[local]!.speaker}>{member.voice[local]!.name}</option> : null}
+                  {speakers.map((sp) => (
+                    <option key={sp.id} value={sp.id}>
+                      {sp.name}（{sp.style}）
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <select value={member.voice?.gemini ?? ""} onChange={(e) => setCastVoice(member, { gemini: e.target.value || undefined })}>
+                  <option value="">ナレーションと同じ声</option>
+                  {VOICES.map((v) => (
+                    <option key={v.name} value={v.name}>
+                      {v.name} — {v.trait}
+                    </option>
+                  ))}
+                </select>
+              )}
+              {local && member.voice?.[local] ? (
+                <>
+                  <span className="meta">クレジット：{creditText(local, member.voice[local]!.name)}</span>
+                  <CopyButton text={creditText(local, member.voice[local]!.name)} />
+                </>
+              ) : null}
+            </div>
+          ))}
+          <span className="meta">💡 男女で声をはっきり分けると、ドラマに一気に引き込まれます。声を変えたシーンは自動で「作り直しが必要」になります。</span>
+        </div>
+      ) : null}
+
       {!local && !settings.geminiKey ? (
         <Notice kind="warn" title="Gemini APIキーが未設定です">
           {" "}音声なしでも先へ進めます（尺は文字数から推定）。ただし声と映像をぴったり合わせるには音声生成がおすすめです。
@@ -388,12 +448,16 @@ export function VoiceStep({ script, voice, settings, clips, timeline, mixed, onV
       <div className="stack" style={{ marginTop: 14 }}>
         {timeline.scenes.map((scene) => {
           const entry = clips[scene.id];
-          const fresh = isFresh(scene.id, speakText(scene));
+          const fresh = isFresh(scene);
+          const who = scene.speaker ? cast.find((m) => m.id === scene.speaker)?.name : undefined;
           return (
             <div className="scene row" key={scene.id}>
               <span className={`badge ${fresh ? "ok" : entry ? "warn" : ""}`}>#{scene.index + 1}</span>
               <div style={{ flex: 1, minWidth: 240 }}>
-                <div>{scene.narration}</div>
+                <div>
+                  {who ? <span className="badge" style={{ marginRight: 6 }}>🎭 {who}</span> : null}
+                  {scene.narration}
+                </div>
                 <div className="meta">
                   {scene.speechStart.toFixed(2)}s〜{scene.speechEnd.toFixed(2)}s（{fresh && entry ? `実測 ${formatSeconds(clipDuration(entry.clip))}` : entry ? "テキストか声が変わりました：再生成してください" : "推定"}）
                 </div>
