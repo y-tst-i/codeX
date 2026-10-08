@@ -78,7 +78,10 @@ export function VoiceStep({ script, voice, settings, clips, timeline, mixed, onV
 
   // 漫画ドラマ：登場人物のセリフのシーンは、その人の声で読む
   const cast = castOf(settings.cast);
-  const speakingCast = cast.filter((m) => script.scenes.some((scene) => scene.speaker === m.id));
+  // 漫画ドラマのシーンがあれば、登場人物の声の欄を出す（台本で話す人をまだ選んでいなくても先に決められる）
+  const hasDrama = script.scenes.some((scene) => scene.role === "drama" || scene.speaker);
+  const speakingCast = hasDrama ? cast : [];
+  const noSpeaker = hasDrama && !script.scenes.some((scene) => scene.speaker);
   const voiceOf = (scene: Scene) => sceneVoice(voice, scene, settings.cast);
   const setCastVoice = (member: CastMember, patch: NonNullable<CastMember["voice"]>) =>
     onSettingsChange({ ...settings, cast: cast.map((m) => (m.id === member.id ? { ...m, voice: { ...m.voice, ...patch } } : m)) });
@@ -323,7 +326,12 @@ export function VoiceStep({ script, voice, settings, clips, timeline, mixed, onV
       {speakingCast.length > 0 ? (
         <div className="card stack" style={{ marginTop: 12 }}>
           <b>🎭 漫画ドラマの登場人物の声</b>
-          <span className="meta">台本で「〇〇のセリフ」にしたシーンは、ここで選んだ声で読みます（選ばなければナレーションと同じ声）。</span>
+          <span className="meta">台本で「〇〇のセリフ」にしたシーンは、ここで選んだ声で読みます（選ばなければナレーションと同じ声）。登場人物は ① 企画 で増やせます（男女2人ずつ、など）。</span>
+          {noSpeaker ? (
+            <Notice kind="warn">
+              {" "}まだ「〇〇のセリフ」のシーンがありません。② 台本の漫画ドラマのシーンで「このシーンの声」を選ぶか、台本を作り直すと、セリフとナレーションが混ざった会話になります。
+            </Notice>
+          ) : null}
           {speakingCast.map((member) => (
             <div className="row" key={member.id} style={{ flexWrap: "wrap" }}>
               <b style={{ minWidth: 140 }}>{member.name}</b>

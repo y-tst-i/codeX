@@ -172,7 +172,7 @@ export function AssetsPanel({ concept, script, assets, cast, onChanged }: Props)
           </Notice>
         ) : null}
       </div>
-      <LottieSearch taken={assets.map((a) => a.name)} onAdded={onChanged} />
+      <LottieSearch taken={assets.map((a) => a.name)} script={script} niche={concept.niche} onAdded={onChanged} />
       <PromptBox
         title="ChatGPTで素材を作る依頼文（背景イラスト・小物）"
         prompt={imagePrompt}
