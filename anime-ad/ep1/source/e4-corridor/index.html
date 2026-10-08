@@ -1,0 +1,578 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <script src="assets/gsap.min.js"></script>
+    <style>
+      @font-face { font-family: "Noto Sans JP"; src: url("assets/fonts/NotoSansJP700-sub.ttf") format("truetype"); font-weight: 700; }
+      @font-face { font-family: "Yuji Boku"; src: url("assets/fonts/YujiBoku-sub.ttf") format("truetype"); font-weight: 400; }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: #05040d; }
+      #root { position: relative; width: 100%; height: 100%; overflow: hidden; background: #05040d; }
+
+      #frame { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; transform-origin: 960px 560px; }
+      #stage { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; perspective: 800px; perspective-origin: 960px 560px; background: #0b0918; }
+      #cam { position: absolute; left: 960px; top: 560px; width: 0; height: 0; transform-style: preserve-3d; }
+      #bob, #world { position: absolute; left: 0; top: 0; width: 0; height: 0; transform-style: preserve-3d; }
+      #world div { backface-visibility: visible; }
+
+      /* 世界の素材 */
+      .wall { background-color: #262148; }
+      .sc { position: absolute; }
+      .torch-halo { background: radial-gradient(closest-side, rgba(255,175,75,.80) 0%, rgba(255,125,35,.36) 40%, rgba(255,100,20,0) 100%); }
+      .glow-wall { background: radial-gradient(closest-side, rgba(255,150,60,.60) 0%, rgba(255,110,30,.22) 45%, rgba(255,90,20,0) 100%); }
+      .glow-floor { background: radial-gradient(closest-side, rgba(255,150,60,.40) 0%, rgba(255,110,30,.14) 50%, rgba(255,90,20,0) 100%); }
+      .rib { border: 78px solid #403a70; border-bottom: 0; border-radius: 300px 300px 0 0 / 240px 240px 0 0; box-shadow: inset 0 0 60px 20px rgba(5,4,16,.75); background: transparent; }
+      .sign { font-family: "Yuji Boku", "Noto Sans JP", serif; display: flex; align-items: center; justify-content: center; text-align: center; white-space: nowrap; }
+
+      /* アキラ */
+      #akira { position: absolute; left: 810px; top: 388px; width: 300px; height: 541px; --rimc: #ffd34d; --rimw: 2.5; filter: drop-shadow(0 0 7px rgba(255,160,60,.35)); }
+      #akira svg { display: block; width: 300px; height: 541px; overflow: visible; }
+      #akira .rim { stroke: var(--rimc); stroke-width: var(--rimw); stroke-linejoin: round; }
+
+      /* 画面の重ね */
+      #fog { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; background: radial-gradient(ellipse 620px 560px at 960px 540px, rgba(10,8,26,.96) 0%, rgba(10,8,26,.7) 34%, rgba(10,8,26,0) 100%); }
+      #vig { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; background: radial-gradient(ellipse 1250px 860px at 960px 540px, rgba(5,4,13,0) 52%, rgba(5,4,13,.78) 100%); }
+      #flash { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; background: #fff; opacity: 0; }
+      #black { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; background: #05040d; opacity: 1; }
+      #spill { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; opacity: 0; background: radial-gradient(ellipse 760px 700px at 960px 600px, rgba(255,240,200,.95) 0%, rgba(255,214,130,.55) 35%, rgba(255,190,90,0) 75%); }
+
+      .sub { position: absolute; left: 0; width: 1920px; top: 930px; height: 80px; display: flex; align-items: center; justify-content: center; opacity: 0; }
+      .sub span {
+        display: block; max-width: 1500px; text-align: center; white-space: nowrap;
+        font-family: "Noto Sans JP", sans-serif; font-weight: 700; font-size: 48px; line-height: 64px; color: #fffdf5;
+        text-shadow: 6px 0 #0a0a12, -6px 0 #0a0a12, 0 6px #0a0a12, 0 -6px #0a0a12, 4.2px 4.2px #0a0a12, -4.2px 4.2px #0a0a12, 4.2px -4.2px #0a0a12, -4.2px -4.2px #0a0a12, 5.5px 2.3px #0a0a12, -5.5px 2.3px #0a0a12, 5.5px -2.3px #0a0a12, -5.5px -2.3px #0a0a12, 2.3px 5.5px #0a0a12, -2.3px 5.5px #0a0a12, 2.3px -5.5px #0a0a12, -2.3px -5.5px #0a0a12;
+      }
+      .preload { position: absolute; left: 0; top: 0; opacity: 0.01; font-size: 8px; pointer-events: none; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="9" data-width="1920" data-height="1080">
+      <div id="frame">
+        <div id="stage">
+          <div id="cam">
+            <div id="bob"><div id="world" data-layout-allow-occlusion data-layout-allow-overlap data-layout-allow-overflow></div></div>
+          </div>
+        </div>
+        <div id="glows" data-layout-ignore data-layout-allow-occlusion style="position:absolute;left:0;top:0;width:1920px;height:1080px;pointer-events:none"></div>
+        <div id="fog" data-layout-ignore data-layout-allow-occlusion></div>
+        <div id="spill" data-layout-ignore data-layout-allow-occlusion></div>
+        <div id="akira"></div>
+        <div id="vig" data-layout-ignore data-layout-allow-occlusion></div>
+      </div>
+      <div class="sub" id="sub1"><span>薬草は…こっちかな？</span></div>
+      <div class="sub" id="sub2"><span>あ、ここかも。</span></div>
+      <div class="preload" style="font-family:'Noto Sans JP';font-weight:700">薬草は…こっちかな？あ、ここかも。Z</div>
+      <div class="preload" style="font-family:'Yuji Boku'">宝物庫牢獄魔王の間</div>
+      <div id="black"></div>
+      <div id="flash"></div>
+    </div>
+
+    <script>
+      /* ---------- 決定性のための乱数 ---------- */
+      function mulberry32(a) { return function () { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+      const rnd = mulberry32(35044);
+
+      /* ---------- カメラ(前進)の関数: tween と同じ式 ---------- */
+      function camZ(t) {
+        if (t <= 0) return 0;
+        if (t <= 0.4) { const p = t / 0.4; return 144 * p * p; }
+        if (t <= 5) return 144 + 720 * (t - 0.4);
+        if (t <= 6.5) { const p = (t - 5) / 1.5; return 3456 + 540 * (1 - (1 - p) * (1 - p)); }
+        return 3996;
+      }
+      function smooth(a, b, x) { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); }
+      function tAt(zc) { for (let i = 0; i <= 9000; i++) { const t = i / 1000; if (camZ(t) >= zc) return t; } return 99; }
+
+      /* ---------- 構築ヘルパ ---------- */
+      const world = document.getElementById("world");
+      function mk(parent, cls, css, html) { const d = document.createElement("div"); if (cls) d.className = cls; if (css) d.style.cssText = css; if (html) d.innerHTML = html; parent.appendChild(d); return d; }
+      function plane(parent, o) {
+        return mk(parent, o.cls || "", "position:absolute;left:" + (-o.w / 2) + "px;top:" + (-o.h / 2) + "px;width:" + o.w + "px;height:" + o.h + "px;transform:translate3d(" + o.x + "px," + o.y + "px," + (-o.Z) + "px) rotateY(" + (o.ry || 0) + "deg) rotateX(" + (o.rx || 0) + "deg);" + (o.css || ""), o.html || "");
+      }
+      const HW = 500, FY = 420, CY = -560, ZEND = 5146, DA = 1000;
+      const fadeItems = [];   // 奥行きに応じて霞む部品
+      function addFade(el, zc, opt) { fadeItems.push({ el, Z: zc, max: (opt && opt.max) || 1, far: (opt && opt.far) || 4300, near: (opt && opt.near) || 2300 }); }
+
+      /* ---------- 石の模様(SVG data URI) ---------- */
+      const brickSvg = "data:image/svg+xml;utf8," + encodeURIComponent(
+        '<svg xmlns="http://www.w3.org/2000/svg" width="140" height="140"><rect width="140" height="140" fill="#2a2550"/>' +
+        '<rect x="3" y="3" width="134" height="64" fill="#322c5c" fill-opacity=".7"/><rect x="73" y="73" width="64" height="64" fill="#1f1b40" fill-opacity=".55"/><rect x="3" y="73" width="64" height="64" fill="#2f2a58" fill-opacity=".6"/>' +
+        '<g stroke="#100d24" stroke-width="5"><line x1="0" y1="0" x2="140" y2="0"/><line x1="0" y1="70" x2="140" y2="70"/><line x1="0" y1="0" x2="0" y2="70"/><line x1="70" y1="70" x2="70" y2="140"/></g>' +
+        '<g stroke="#3d3770" stroke-width="2" stroke-opacity=".6"><line x1="6" y1="6" x2="134" y2="6"/><line x1="6" y1="76" x2="64" y2="76"/><line x1="76" y1="76" x2="134" y2="76"/></g></svg>');
+      const carpetSvg = "data:image/svg+xml;utf8," + encodeURIComponent(
+        '<svg xmlns="http://www.w3.org/2000/svg" width="300" height="175"><rect width="300" height="175" fill="#5e1122"/>' +
+        '<rect x="0" y="0" width="16" height="175" fill="#b98a2c"/><rect x="284" y="0" width="16" height="175" fill="#b98a2c"/>' +
+        '<rect x="24" y="0" width="5" height="175" fill="#d9ad4a"/><rect x="271" y="0" width="5" height="175" fill="#d9ad4a"/>' +
+        '<path d="M150 22 L204 88 L150 154 L96 88 Z" fill="none" stroke="#c9972a" stroke-width="6"/><path d="M150 52 L178 88 L150 124 L122 88 Z" fill="#3f0b17"/>' +
+        '<circle cx="150" cy="88" r="7" fill="#d9ad4a"/></svg>');
+
+      /* ---------- 床・壁・天井 ---------- */
+      const SEG = 700;
+      for (let z0 = -300; z0 < ZEND + 350; z0 += SEG) {
+        const zc = z0 + SEG / 2;
+        const wallBg = "background-image:linear-gradient(180deg,rgba(6,5,18,.62) 0%,rgba(6,5,18,.05) 38%,rgba(6,5,18,.0) 62%,rgba(6,5,18,.5) 100%),url('" + brickSvg + "');background-size:100% 100%,140px 140px;";
+        plane(world, { x: -HW, y: (FY + CY) / 2, Z: zc, w: SEG, h: FY - CY, ry: 90, css: wallBg });
+        plane(world, { x: HW, y: (FY + CY) / 2, Z: zc, w: SEG, h: FY - CY, ry: -90, css: wallBg });
+        plane(world, { x: 0, y: FY, Z: zc, w: 2 * HW, h: SEG, rx: 90,
+          css: "background-color:#171430;background-image:linear-gradient(#0a0818 0 6px,transparent 6px),linear-gradient(90deg,#0a0818 0 6px,transparent 6px),linear-gradient(180deg,rgba(255,255,255,.05),rgba(0,0,0,.14));background-size:100% 350px,250px 100%,100% 350px;" });
+        plane(world, { x: 0, y: FY - 1, Z: zc, w: 300, h: SEG, rx: 90, css: "background-image:url('" + carpetSvg + "');background-size:300px 175px;" });
+        plane(world, { x: 0, y: CY, Z: zc, w: 2 * HW, h: SEG, rx: -90,
+          css: "background-color:#0c0a1c;background-image:linear-gradient(#05040d 0 14px,transparent 14px),linear-gradient(90deg,#05040d 0 10px,transparent 10px);background-size:100% 350px,250px 100%;" });
+      }
+
+      /* ---------- アーチ状のリブ(奥行きの主役) ---------- */
+      for (let Z = 450; Z < ZEND - 300; Z += 800) {
+        const r = plane(world, { x: 0, y: (FY + CY) / 2 + 2, Z: Z, w: 2 * HW - 10, h: FY - CY - 6, cls: "rib" });
+        addFade(r, Z);
+      }
+
+      /* ---------- 松明 ---------- */
+      const flameSvg =
+        '<svg viewBox="0 0 120 240" width="120" height="240" style="overflow:visible">' +
+        '<path d="M60 200 L60 238 M22 160 L98 160 L86 204 L34 204 Z" stroke="#1a1626" stroke-width="10" fill="#2a2536" stroke-linejoin="round"/>' +
+        '<path d="M26 160 L94 160" stroke="#b98a3a" stroke-width="4"/>' +
+        '<g class="fl"><path d="M60 14 C82 58 100 84 92 124 C88 148 74 160 60 160 C46 160 32 148 28 124 C22 86 50 66 60 14 Z" fill="#ff7a18"/>' +
+        '<path d="M60 56 C74 84 82 100 77 128 C74 144 68 156 60 156 C52 156 46 144 43 128 C38 100 54 84 60 56 Z" fill="#ffc400"/>' +
+        '<path d="M60 100 C68 116 70 130 66 146 C64 152 62 156 60 156 C58 156 56 152 54 146 C50 130 54 116 60 100 Z" fill="#fff6c8"/></g></svg>';
+      const torches = [];
+      const glowSrc = [];
+      function addTorch(side, Z) {
+        const sx = side === "L" ? -1 : 1;
+        const wx = sx * (HW - 30);
+        const g = mk(world, "", "position:absolute;left:0;top:0;width:0;height:0;transform-style:preserve-3d;");
+        const body = plane(g, { x: wx, y: -110, Z: Z, w: 120, h: 240, html: flameSvg });
+        addFade(body, Z, { far: 4300, near: 2300 });
+        glowSrc.push({ sx: sx * (HW - 60), y: -130, Z: Z, R: 400, a: 0.9 });
+        torches.push({ side, Z, fl: body.querySelector(".fl"), glows: [] });
+      }
+      [500, 1200, 1900, 2600, 3300, 4000, 4570, 4950].forEach(function (z) { addTorch("L", z); });
+      [850, 1550, 2250, 2830, 3200, 3900, 4450, 4820].forEach(function (z) { addTorch("R", z); });
+
+      /* ---------- 壁のバナー ---------- */
+      const bannerHtml = '<svg viewBox="0 0 150 380" width="150" height="380"><path d="M10 0 L140 0 L140 340 L75 380 L10 340 Z" fill="#6e1426" stroke="#b98a2c" stroke-width="6"/><path d="M75 90 C50 90 40 120 44 150 C56 130 66 126 75 140 C84 126 94 130 106 150 C110 120 100 90 75 90 Z" fill="#d9ad4a"/><circle cx="75" cy="170" r="18" fill="#ff2a4d"/><path d="M50 250 L75 220 L100 250 L75 290 Z" fill="none" stroke="#d9ad4a" stroke-width="5"/></svg>';
+      [[ "L", 850 ], [ "L", 1550 ], [ "L", 2250 ], [ "L", 2930 ], [ "L", 3650 ], [ "L", 4250 ], [ "R", 500 ], [ "R", 1200 ], [ "R", 1900 ], [ "R", 2600 ], [ "R", 3550 ], [ "R", 4150 ]].forEach(function (b) {
+        const sx = b[0] === "L" ? -1 : 1;
+        const e = plane(world, { x: sx * (HW - 3), y: -230, Z: b[1], w: 150, h: 380, ry: b[0] === "L" ? 90 : -90, html: bannerHtml });
+        addFade(e, b[1]);
+      });
+
+      /* ---------- 扉(側壁) ---------- */
+      function sideDoor(side, Z, kind) {
+        const sx = side === "L" ? -1 : 1, ry = side === "L" ? 90 : -90;
+        const g = mk(world, "", "position:absolute;left:0;top:0;width:0;height:0;transform-style:preserve-3d;");
+        // 石の枠
+        const frame = plane(g, { x: sx * (HW - 4), y: FY - 215, Z: Z, w: 320, h: 430, ry: ry, css: "background:#403a70;border-radius:160px 160px 0 0;box-shadow:inset 0 0 40px rgba(5,4,16,.8);" });
+        const inner = mk(frame, "", "position:absolute;left:30px;top:30px;width:260px;height:400px;");
+        let body, plaque;
+        if (kind === "treasure") {
+          body = mk(inner, "", "position:absolute;left:0;top:0;width:260px;height:400px;border-radius:130px 130px 0 0;overflow:hidden;background:linear-gradient(90deg,#3a2414,#5a3a20 50%,#3a2414),#4a2e18;box-shadow:0 0 0 6px #b98a2c;", "");
+          body.innerHTML = '<div style="position:absolute;inset:0;background:repeating-linear-gradient(90deg,rgba(0,0,0,.28) 0 4px,transparent 4px 52px)"></div>' +
+            '<div style="position:absolute;left:0;right:0;top:120px;height:26px;background:#c9972a;box-shadow:0 0 14px rgba(255,200,80,.5)"></div><div style="position:absolute;left:0;right:0;top:290px;height:26px;background:#c9972a;box-shadow:0 0 14px rgba(255,200,80,.5)"></div>' +
+            '<div style="position:absolute;left:94px;top:196px;width:72px;height:84px;border-radius:12px;background:linear-gradient(180deg,#ffe38a,#c9972a);border:5px solid #6a4a10"></div>' +
+            '<div style="position:absolute;left:122px;top:222px;width:16px;height:30px;border-radius:8px;background:#2a1a08"></div>' +
+            '<div style="position:absolute;left:0;right:0;bottom:0;height:10px;background:linear-gradient(90deg,transparent,rgba(255,220,120,.95),transparent);box-shadow:0 0 22px 8px rgba(255,200,80,.5)"></div>';
+          plaque = plane(g, { x: sx * (HW - 6), y: FY - 485, Z: Z, w: 360, h: 100, ry: ry, cls: "sign", css: "background:linear-gradient(180deg,#5a3a20,#3a2414);border:6px solid #c9972a;border-radius:10px;color:#ffe08a;font-size:78px;text-shadow:0 0 14px rgba(255,200,80,.7);", html: "宝物庫" });
+          // きらり
+          const gl = mk(inner, "", "position:absolute;left:100px;top:196px;width:60px;height:60px;opacity:0;");
+          gl.innerHTML = '<svg viewBox="-30 -30 60 60" width="60" height="60"><path d="M0 -28 L5 -5 L28 0 L5 5 L0 28 L-5 5 L-28 0 L-5 -5 Z" fill="#fff6c8"/></svg>';
+          window.__glint = gl;
+        } else {
+          body = mk(inner, "", "position:absolute;left:0;top:0;width:260px;height:400px;border-radius:130px 130px 0 0;overflow:hidden;background:linear-gradient(90deg,#14121c,#26222f 50%,#14121c);box-shadow:0 0 0 6px #5a5566;", "");
+          body.innerHTML = '<div style="position:absolute;inset:0;background:repeating-linear-gradient(90deg,rgba(0,0,0,.4) 0 6px,transparent 6px 64px)"></div>' +
+            '<div style="position:absolute;left:0;right:0;top:230px;height:22px;background:#4a4658"></div><div style="position:absolute;left:0;right:0;top:340px;height:22px;background:#4a4658"></div>' +
+            '<div style="position:absolute;left:78px;top:70px;width:104px;height:84px;border-radius:10px;background:#050409;border:8px solid #5a5566"></div>' +
+            '<div id="eyes" style="position:absolute;left:94px;top:92px;width:72px;height:34px;opacity:0"><div style="position:absolute;left:6px;top:8px;width:20px;height:12px;border-radius:50%;background:#ffc030;box-shadow:0 0 10px #ffa010"></div><div style="position:absolute;left:44px;top:8px;width:20px;height:12px;border-radius:50%;background:#ffc030;box-shadow:0 0 10px #ffa010"></div></div>' +
+            '<div style="position:absolute;left:78px;top:70px;width:104px;height:84px;background:repeating-linear-gradient(90deg,#6a6578 0 6px,transparent 6px 26px);"></div>' +
+            '<div style="position:absolute;left:196px;top:260px;width:34px;height:34px;border-radius:50%;border:7px solid #8a8598"></div>';
+          plaque = plane(g, { x: sx * (HW - 6), y: FY - 485, Z: Z, w: 300, h: 100, ry: ry, cls: "sign", css: "background:linear-gradient(180deg,#26222f,#14121c);border:6px solid #5a5566;border-radius:10px;color:#ff7a5a;font-size:78px;text-shadow:0 0 12px rgba(255,60,40,.55);", html: "牢獄" });
+        }
+        [frame, plaque].forEach(function (e) { addFade(e, Z, { far: 4300, near: 2300 }); });
+        return { body, inner, frame };
+      }
+      const doorT = sideDoor("R", 3016, "treasure");
+      const doorP = sideDoor("L", 4756, "prison");
+
+      /* ---------- ゴブリン兵(居眠り) ---------- */
+      function goblinSvg(o) {
+        const sk = o.skin, sd = o.skinDark;
+        return '<svg viewBox="0 0 240 280" width="220" height="257" style="overflow:visible;display:block">' +
+          '<g stroke="#0a0a12" stroke-width="4" stroke-linejoin="round">' +
+          // 槍
+          '<path d="M206 276 L192 20" stroke="#6a4a2a" stroke-width="7" fill="none"/><path d="M192 20 L182 -6 L204 6 Z" fill="#aab0bc"/>' +
+          // 脚(投げ出し)
+          '<ellipse cx="82" cy="236" rx="34" ry="26" fill="' + o.pants + '"/><ellipse cx="158" cy="236" rx="34" ry="26" fill="' + o.pants + '"/>' +
+          '<path d="M54 252 L108 252 L112 274 L48 274 Z" fill="#2e2418"/><path d="M132 252 L186 252 L192 274 L128 274 Z" fill="#2e2418"/>' +
+          // 胴
+          '<path d="M66 120 L174 120 L188 238 L52 238 Z" fill="' + o.armor + '"/><path d="M80 126 L160 126 L168 188 L72 188 Z" fill="' + o.plate + '"/>' +
+          '<path d="M52 210 L188 210 L188 226 L52 226 Z" fill="#2e2418"/><rect x="108" y="206" width="24" height="24" fill="#c9972a"/>' +
+          // 腕(だらり)
+          '<path d="M62 126 L38 214 L58 226 L84 140 Z" fill="' + sk + '"/><path d="M178 126 L202 214 L182 226 L156 140 Z" fill="' + sk + '"/>' +
+          '<circle cx="48" cy="226" r="14" fill="' + sk + '"/><circle cx="192" cy="226" r="14" fill="' + sk + '"/>' +
+          '</g>' +
+          // 頭(うなだれ)
+          '<g class="gh" stroke="#0a0a12" stroke-width="4" stroke-linejoin="round">' +
+          '<path d="M86 84 L28 60 L74 108 Z" fill="' + sk + '"/><path d="M154 84 L212 60 L166 108 Z" fill="' + sk + '"/>' +
+          '<ellipse cx="120" cy="92" rx="52" ry="44" fill="' + sk + '"/>' +
+          '<path d="M96 100 Q106 106 116 100 M128 100 Q138 106 148 100" stroke="#0a0a12" stroke-width="4.5" fill="none" stroke-linecap="round"/>' +
+          '<path d="M118 104 L110 120 L124 120 Z" fill="' + sd + '"/>' +
+          '<path d="M100 126 Q120 136 140 126" stroke="#0a0a12" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M104 128 L108 138 L113 130 M127 130 L132 138 L136 128" fill="#fffdf5" stroke="#0a0a12" stroke-width="2.5"/>' +
+          o.hat +
+          '<circle class="bub" cx="132" cy="112" r="14" fill="rgba(200,240,255,.55)" stroke="#e8fbff" stroke-width="3"/>' +
+          '</g></svg>';
+      }
+      const hats = [
+        '<path d="M66 82 C66 40 174 40 174 82 L166 76 C140 62 100 62 74 76 Z" fill="#7c8190"/><path d="M118 46 C112 20 130 10 146 14 C138 20 134 34 130 48 Z" fill="#ff2a4d"/><path d="M66 82 L174 82" stroke="#0a0a12" stroke-width="5"/>',
+        '<path d="M70 78 C72 44 168 44 170 78 C150 66 90 66 70 78 Z" fill="#6a4a2a"/><path d="M96 56 L112 78 M140 56 L128 78" stroke="#0a0a12" stroke-width="4"/>',
+        '<path d="M68 82 C66 42 174 42 172 82 L166 76 C140 64 100 64 74 76 Z" fill="#8a8f9e"/><path d="M104 50 L120 14 L136 50 Z" fill="#aab0bc"/>'
+      ];
+      const gobDefs = [
+        { side: "R", Z: 3500, skin: "#69a043", skinDark: "#46742c", pants: "#3a3250", armor: "#5a3a28", plate: "#7b8090", hat: hats[0], flip: 1, tilt: -14 },
+        { side: "L", Z: 3640, skin: "#7ba048", skinDark: "#527a2e", pants: "#42304a", armor: "#4a3a30", plate: "#6a6f80", hat: hats[1], flip: -1, tilt: 12 },
+        { side: "R", Z: 3790, skin: "#5c9a52", skinDark: "#3e6e38", pants: "#32304a", armor: "#52402a", plate: "#7b8090", hat: hats[2], flip: 1, tilt: 16 },
+        { side: "L", Z: 3930, skin: "#6fa04a", skinDark: "#4a742e", pants: "#3a2c46", armor: "#5a3a28", plate: "#808596", hat: hats[0], flip: -1, tilt: -10 },
+        { side: "R", Z: 4090, skin: "#74a24c", skinDark: "#4d7a30", pants: "#3a3250", armor: "#4a3a30", plate: "#6a6f80", hat: hats[1], flip: 1, tilt: -18 }
+      ];
+      const gobs = [];
+      gobDefs.forEach(function (g, i) {
+        const sx = g.side === "L" ? -1 : 1;
+        const holder = plane(world, { x: sx * (HW - 120 + (i % 2) * 24), y: FY - 128, Z: g.Z, w: 220, h: 257, css: "transform-style:flat;" });
+        // 影
+        mk(holder, "", "position:absolute;left:-10px;right:-10px;bottom:-14px;height:34px;border-radius:50%;background:radial-gradient(ellipse,rgba(0,0,0,.7),rgba(0,0,0,0) 70%)");
+        const inner = mk(holder, "", "position:absolute;left:0;top:0;width:220px;height:257px;" + (g.flip < 0 ? "transform:scaleX(-1);" : ""), goblinSvg(g));
+        const zwrap = mk(holder, "", "position:absolute;left:" + (g.flip < 0 ? 20 : 140) + "px;top:20px;width:80px;height:80px;");
+        const zs = [];
+        for (let k = 0; k < 3; k++) {
+          zs.push(mk(zwrap, "", "position:absolute;left:" + (k * 14) + "px;top:" + (20 - k * 8) + "px;font-family:'Noto Sans JP';font-weight:700;font-size:" + (30 + k * 10) + "px;color:#e8fbff;opacity:0;text-shadow:0 0 6px #19d3ff, 3px 3px #0a0a12;", "Z"));
+        }
+        addFade(holder, g.Z, { far: 4300, near: 2300 });
+        gobs.push({ head: inner.querySelector(".gh"), bub: inner.querySelector(".bub"), zs, tilt: g.tilt, body: inner });
+      });
+
+      /* ---------- 突き当たりの大扉 ---------- */
+      const endG = mk(world, "", "position:absolute;left:0;top:0;width:0;height:0;transform-style:preserve-3d;");
+      // 壁(扉の背面。いちばん奥)
+      const wallCss = "background-image:linear-gradient(180deg,rgba(6,5,18,.5),rgba(6,5,18,0) 60%),url('" + brickSvg + "');background-size:100% 100%,140px 140px;";
+      plane(endG, { x: 0, y: (FY + CY) / 2, Z: ZEND + 40, w: 2 * HW + 40, h: FY - CY, css: wallCss });
+      // 扉の向こうの光(扉が開くと見える)
+      plane(endG, { x: 0, y: -10, Z: ZEND + 30, w: 900, h: 860, css: "background:radial-gradient(ellipse at 50% 60%,#ffffff 0%,#fff6d6 45%,#ffe08a 100%);border-radius:450px 450px 0 0 / 280px 280px 0 0;" });
+      // 扉の金縁
+      plane(endG, { x: 0, y: -10, Z: ZEND + 10, w: 936, h: 880, css: "border:18px solid #b98a2c;border-bottom:0;border-radius:468px 468px 0 0 / 298px 298px 0 0;box-shadow:0 0 30px rgba(255,190,60,.25);" });
+      const emblem = '<svg viewBox="-220 -300 440 600" width="440" height="600" style="position:absolute;top:0;left:0"><g fill="none" stroke="#c9972a" stroke-width="12"><circle cx="0" cy="0" r="170"/><circle cx="0" cy="0" r="130" stroke-width="6"/></g>' +
+        '<path d="M-120 -120 C-190 -170 -200 -250 -150 -290 C-170 -230 -140 -190 -100 -170 Z M120 -120 C190 -170 200 -250 150 -290 C170 -230 140 -190 100 -170 Z" fill="#c9972a"/>' +
+        '<path d="M-50 -30 L0 -70 L50 -30 L30 40 L-30 40 Z" fill="#ff2a4d"/><path d="M-30 -22 L-8 -12 L-30 -2 Z M30 -22 L8 -12 L30 -2 Z" fill="#0a0a12"/><path d="M-34 70 L34 70 L0 120 Z" fill="#c9972a"/></svg>';
+      const leafHtml = function (isL) {
+        return '<div style="position:absolute;inset:0;background:repeating-linear-gradient(90deg,rgba(255,255,255,.035) 0 3px,transparent 3px 56px),linear-gradient(90deg,#1c1530,#120d22);"></div>' +
+          '<div style="position:absolute;left:0;right:0;top:140px;height:34px;background:#2a2238;border-top:5px solid #b98a2c;border-bottom:5px solid #b98a2c"></div>' +
+          '<div style="position:absolute;left:0;right:0;top:420px;height:34px;background:#2a2238;border-top:5px solid #b98a2c;border-bottom:5px solid #b98a2c"></div>' +
+          '<div style="position:absolute;left:0;right:0;top:700px;height:34px;background:#2a2238;border-top:5px solid #b98a2c;border-bottom:5px solid #b98a2c"></div>' +
+          '<div style="position:absolute;top:150px;' + (isL ? 'left:230px' : 'left:-220px') + ';width:440px;height:600px;">' + emblem + '</div>' +
+          '<div style="position:absolute;top:470px;' + (isL ? 'right:34px' : 'left:34px') + ';width:60px;height:60px;border-radius:50%;border:12px solid #c9972a"></div>';
+      };
+      // 扉は壁面(ZEND+6)に置き、左右へ奥に向かって開く
+      const leafWrapL = mk(endG, "", "position:absolute;left:0;top:0;width:0;height:0;transform-style:preserve-3d;transform:translate3d(0,0," + (-(ZEND + 6)) + "px);");
+      const leafWrapR = mk(endG, "", "position:absolute;left:0;top:0;width:0;height:0;transform-style:preserve-3d;transform:translate3d(0,0," + (-(ZEND + 6)) + "px);");
+      const leafL = mk(leafWrapL, "", "position:absolute;left:-450px;top:-440px;width:450px;height:860px;overflow:hidden;border-radius:450px 0 0 0 / 280px 0 0 0;box-shadow:inset -10px 0 30px rgba(0,0,0,.6);", leafHtml(true));
+      const leafR = mk(leafWrapR, "", "position:absolute;left:0;top:-440px;width:450px;height:860px;overflow:hidden;border-radius:0 450px 0 0 / 0 280px 0 0;box-shadow:inset 10px 0 30px rgba(0,0,0,.6);", leafHtml(false));
+      // 扉の隙間からこぼれる光
+      const crack = plane(endG, { x: 0, y: -10, Z: ZEND + 2, w: 10, h: 860, css: "background:#fff;box-shadow:0 0 36px 16px rgba(255,236,170,.85);opacity:0;" });
+      // 看板『魔王の間』
+      const bigSign = plane(endG, { x: 0, y: -470, Z: ZEND - 30, w: 640, h: 140, cls: "sign",
+        css: "background:linear-gradient(180deg,#14101f,#07050e);border:8px solid #b98a2c;border-radius:12px;box-shadow:0 0 40px rgba(255,40,70,.35);font-size:104px;letter-spacing:6px;color:#ff2a4d;",
+        html: '<span class="ch" style="text-shadow:0 0 16px rgba(255,40,70,.8)">魔</span><span class="ch" style="text-shadow:0 0 16px rgba(255,40,70,.8)">王</span><span class="ch" style="text-shadow:0 0 16px rgba(255,40,70,.8)">の</span><span class="ch" style="text-shadow:0 0 16px rgba(255,40,70,.8)">間</span>' });
+      // 床の光だまり(扉が開くと広がる)
+      const spillFloor = plane(endG, { x: 0, y: FY - 4, Z: ZEND - 450, w: 900, h: 900, rx: 90, css: "background:radial-gradient(ellipse at 50% 0%,rgba(255,244,205,.95) 0%,rgba(255,214,130,.4) 45%,rgba(255,190,90,0) 80%);opacity:0;" });
+      // 左右の大きな篝火
+      const braz = [];
+      [-1, 1].forEach(function (sx) {
+        const b = plane(endG, { x: sx * 440, y: 150, Z: ZEND - 120, w: 150, h: 560, html:
+          '<svg viewBox="0 0 150 560" width="150" height="560" style="overflow:visible"><path d="M55 560 L70 330 L80 330 L95 560 Z" fill="#1a1626" stroke="#b98a2c" stroke-width="5"/><path d="M20 300 L130 300 L112 350 L38 350 Z" fill="#2a2236" stroke="#b98a2c" stroke-width="5"/>' +
+          '<g class="fl"><path d="M75 60 C108 130 134 170 124 232 C118 276 98 300 75 300 C52 300 32 276 26 232 C16 170 56 140 75 60 Z" fill="#ff7a18"/><path d="M75 140 C94 184 104 212 98 248 C94 274 84 296 75 296 C66 296 56 274 52 248 C46 212 66 184 75 140 Z" fill="#ffc400"/><path d="M75 210 C84 232 86 252 80 276 C78 286 76 292 75 292 C74 292 72 286 70 276 C64 252 66 232 75 210 Z" fill="#fff6c8"/></g></svg>' });
+        glowSrc.push({ sx: sx * 400, y: -10, Z: ZEND - 150, R: 520, a: 1 });
+        braz.push({ fl: b.querySelector(".fl") });
+      });
+
+      /* ---------- 浮遊する火の粉(奥行きの手がかり) ---------- */
+      const embers = [];
+      for (let i = 0; i < 44; i++) {
+        const Z = 400 + rnd() * 4500, x = (rnd() * 2 - 1) * (HW - 40), y = -520 + rnd() * 900, s = 4 + rnd() * 5;
+        const w = plane(world, { x: x, y: y, Z: Z, w: s, h: s, css: "opacity:0;" });
+        const e = mk(w, "", "position:absolute;left:0;top:0;width:" + s + "px;height:" + s + "px;border-radius:50%;background:#ffb04a;box-shadow:0 0 8px 2px rgba(255,150,40,.7);");
+        addFade(w, Z, { max: 0.75, far: 3600, near: 1800 });
+        embers.push({ el: e, dy: -(40 + rnd() * 90) });
+      }
+
+      /* ---------- アキラ(後ろ姿) ---------- */
+      const mapSvg =
+        '<g class="mapg"><g transform="rotate(184)"><path d="M-54 -66 L54 -62 L58 66 L-52 70 Z" fill="#e8d9a6" stroke="#0a0a12" stroke-width="3.5" stroke-linejoin="round"/>' +
+        '<path d="M-2 -64 L2 68 M-54 2 L58 4" stroke="#b9a66a" stroke-width="2"/>' +
+        '<path d="M-36 40 C-20 20 -10 36 4 14 C16 -2 30 12 40 -24" stroke="#c8402a" stroke-width="3.5" fill="none" stroke-dasharray="7 6"/>' +
+        '<path d="M34 -36 L46 -20 M46 -36 L34 -20" stroke="#c8402a" stroke-width="5" stroke-linecap="round"/>' +
+        '<path d="M-44 -52 L-32 -34 L-20 -52 Z M-24 -48 L-12 -30 L0 -48 Z" fill="#8a7a4a"/>' +
+        '<path d="M-40 52 L-40 36 L-34 36 L-34 42 L-28 42 L-28 36 L-22 36 L-22 52 Z" fill="#6a5a3a"/>' +
+        '<path d="M26 40 L26 60 M20 54 L26 62 L32 54" stroke="#0a0a12" stroke-width="3.5" fill="none" stroke-linecap="round"/></g></g>';
+      const akiraSvg =
+        '<svg viewBox="0 0 420 760">' +
+        '<ellipse id="ak-shadow" cx="210" cy="728" rx="112" ry="16" fill="#000" fill-opacity=".55"/>' +
+        '<g id="ak-bob">' +
+        // 脚
+        '<g id="ak-legL"><path class="rim" d="M148 470 L208 470 L204 640 L216 700 L232 726 L130 726 L142 696 L150 600 Z" fill="#0a0a12"/><path d="M134 710 L230 710" stroke="#1a1a26" stroke-width="6"/></g>' +
+        '<g id="ak-legR"><path class="rim" d="M212 470 L272 470 L270 600 L278 696 L290 726 L188 726 L204 700 L208 640 Z" fill="#0a0a12"/><path d="M192 710 L288 710" stroke="#1a1a26" stroke-width="6"/></g>' +
+        '<g id="ak-upper">' +
+        // 右腕(だらり→指さし)
+        '<g id="ak-armR" data-layout-ignore><path class="rim" d="M282 236 L324 360 L334 452 L302 460 L276 372 L246 262 Z" fill="#0a0a12"/><circle class="rim" cx="318" cy="470" r="25" fill="#0a0a12"/><path id="ak-finger" class="rim" d="M311 490 C311 484 325 484 325 490 L324 526 C324 532 312 532 312 526 Z" fill="#0a0a12" opacity="0"/></g>' +
+        // マント
+        '<g id="ak-cape"><path class="rim" d="M150 216 C128 320 106 430 90 520 L112 500 L130 552 L162 506 L190 560 L214 508 L246 560 L276 506 L304 548 L322 498 C312 420 290 320 270 216 Z" fill="#0a0a12"/><path d="M206 230 L210 500" stroke="#1a1a26" stroke-width="5" fill="none"/><path d="M168 300 C184 330 188 380 184 430 M252 300 C236 330 232 380 236 430" stroke="#1a1a26" stroke-width="4" fill="none"/></g>' +
+        // ベルト
+        '<path d="M126 452 L294 452 L296 478 L124 478 Z" fill="#1a1a26" stroke="#ffd34d" stroke-width="2"/>' +
+        // 左腕(地図を持つ)
+        '<g id="ak-armL"><path class="rim" d="M130 230 L160 264 L116 354 L78 338 Z" fill="#0a0a12"/><path class="rim" d="M70 342 L114 354 L100 270 L64 264 Z" fill="#0a0a12"/><circle class="rim" cx="80" cy="250" r="23" fill="#0a0a12"/>' +
+        '<g id="ak-map"><g transform="translate(66 164)">' + mapSvg + '</g></g></g>' +
+        // マフラー
+        '<g id="ak-scarftail"><path d="M252 232 C304 226 346 246 398 304 C346 292 304 306 254 272 Z" fill="#ff2a4d"/></g>' +
+        '<path d="M160 226 C190 244 232 244 262 226 L266 262 C232 280 190 280 156 262 Z" fill="#ff2a4d"/>' +
+        // 頭
+        '<g id="ak-head" data-layout-ignore>' +
+        '<path d="M194 188 L226 188 L228 226 L192 226 Z" fill="#0a0a12"/>' +
+        '<ellipse class="rim" cx="210" cy="150" rx="44" ry="49" fill="#0a0a12"/>' +
+        '<g transform="translate(-44 -20)"><path class="rim" d="M208 150 L168 100 L216 122 L204 56 L244 110 L264 34 L284 106 L322 64 L308 128 L336 146 L314 156 L212 156 Z" fill="#0a0a12"/></g>' +
+        '<path d="M166 152 C190 168 232 168 254 152 L256 174 C232 190 188 190 164 174 Z" fill="#ff2a4d"/>' +
+        '<g id="ak-bandtails"><path d="M250 130 C294 118 346 150 388 212 C336 170 292 172 246 150 Z M242 136 C274 150 304 186 314 230 C288 194 264 176 238 162 Z" fill="#ff2a4d"/></g>' +
+        '</g>' +
+        '</g></g></svg>';
+      const akiraEl = document.getElementById("akira");
+      window.__akiraPivotNote = "arm pivots at shoulder on purpose";
+      akiraEl.innerHTML = akiraSvg;
+
+      // 3D空間の看板・ZZZは装飾(霞や暗がりを重ねるため、文字の可読性監査から除外)
+      document.querySelectorAll("#world .sign, #world .sign *, #world .ch, #world [style*=\"Noto Sans JP\"]").forEach(function (e) { e.setAttribute("data-layout-ignore", ""); });
+
+      /* ---------- タイムライン ---------- */
+      const tl = gsap.timeline({ paused: true });
+      const $q = function (s) { return document.querySelector(s); };
+
+      // 初期値
+      gsap.set("#world", { z: 800 });   // 視点は perspective(800) 分だけ手前: world.z = 800 + camZ
+      gsap.set("#ak-legL", { svgOrigin: "178 470" });
+      gsap.set("#ak-legR", { svgOrigin: "242 470" });
+      gsap.set("#ak-upper", { svgOrigin: "210 470" });
+      gsap.set("#ak-cape", { svgOrigin: "210 216" });
+      gsap.set("#ak-head", { svgOrigin: "210 200" });
+      gsap.set("#ak-scarftail", { svgOrigin: "252 232" });
+      gsap.set("#ak-bandtails", { svgOrigin: "250 134" });
+      gsap.set("#ak-armL", { svgOrigin: "130 236" });
+      gsap.set("#ak-armR", { svgOrigin: "276 238" });
+      gsap.set("#ak-map", { svgOrigin: "80 250" });
+      gsap.set(leafL, { transformOrigin: "0% 50%" });
+      gsap.set(leafR, { transformOrigin: "100% 50%" });
+      torches.forEach(function (T) { gsap.set(T.fl, { transformOrigin: "50% 100%" }); });
+      braz.forEach(function (B) { gsap.set(B.fl, { transformOrigin: "50% 100%" }); });
+      gobs.forEach(function (G) { gsap.set(G.head, { svgOrigin: "120 130" }); gsap.set(G.bub, { svgOrigin: "132 112" }); });
+
+      // カメラの前進(摺り足は無い: 加速→等速→減速して扉の前で停止)
+      tl.to("#world", { z: 800 + 144, duration: 0.4, ease: "power1.in" }, 0);
+      tl.to("#world", { z: 800 + 3456, duration: 4.6, ease: "none" }, 0.4);
+      tl.to("#world", { z: 800 + 3996, duration: 1.5, ease: "power1.out" }, 5.0);
+
+      // 暗転から入る
+      tl.to("#black", { opacity: 0, duration: 1.0, ease: "power1.out" }, 0);
+
+      // 歩行リズム(0.5秒=1歩 / 13歩で停止)。各部位は1本のキーフレーム列にまとめる
+      const kBob = [], kAk = [], kCape = [], kScarf = [], kBand = [], kArm = [], kLegL = [], kLegR = [];
+      let xPrev = 0;
+      for (let i = 0; i < 13; i++) {
+        const amp = i < 10 ? 1 : [0.75, 0.5, 0.25][i - 10], dir = i % 2 === 0 ? 1 : -1;
+        kBob.push({ y: 7 * amp, x: 2.5 * amp * dir, rotation: 0.2 * amp * dir, duration: 0.25, ease: "sine.out" });
+        kBob.push({ y: 0, x: 5 * amp * dir, rotation: 0.35 * amp * dir, duration: 0.25, ease: "sine.in" });
+        const xi = 4 * amp * dir;
+        kAk.push({ y: -9 * amp, x: (xPrev + xi) / 2, duration: 0.25, ease: "sine.out" });
+        kAk.push({ y: 0, x: xi, duration: 0.25, ease: "sine.in" });
+        xPrev = xi;
+        kCape.push({ rotation: -2.6 * amp * dir, skewX: 3 * amp * dir, duration: 0.5, ease: "sine.inOut" });
+        kScarf.push({ rotation: 7 * amp * dir, duration: 0.5, ease: "sine.inOut" });
+        kBand.push({ rotation: -8 * amp * dir, duration: 0.5, ease: "sine.inOut" });
+        kArm.push({ rotation: 7 * amp * dir, duration: 0.5, ease: "sine.inOut" });
+        const liftL = i % 2 === 0;
+        (liftL ? kLegL : kLegR).push({ y: -26 * amp, duration: 0.2, ease: "power1.out" }, { y: 0, duration: 0.3, ease: "power1.in" });
+        (liftL ? kLegR : kLegL).push({ y: 3 * amp, duration: 0.5, ease: "sine.inOut" });
+      }
+      tl.to("#bob", { keyframes: kBob }, 0);
+      tl.to("#ak-bob", { keyframes: kAk }, 0);
+      tl.to("#ak-cape", { keyframes: kCape }, 0);
+      tl.to("#ak-scarftail", { keyframes: kScarf }, 0);
+      tl.to("#ak-bandtails", { keyframes: kBand }, 0);
+      tl.to("#ak-armR", { keyframes: kArm }, 0);
+      tl.to("#ak-legL", { keyframes: kLegL }, 0);
+      tl.to("#ak-legR", { keyframes: kLegR }, 0);
+      
+
+      // 地図を逆さに持って首をかしげる(1.0-2.5)
+      tl.to("#ak-head", { rotation: -14, y: 2, duration: 0.5, ease: "sine.inOut" }, 0.9);
+      tl.to("#ak-head", { rotation: 11, duration: 0.55, ease: "sine.inOut" }, 1.5);
+      tl.to("#ak-head", { rotation: -6, duration: 0.5, ease: "sine.inOut" }, 2.15);
+      tl.to("#ak-armL", { y: -10, rotation: 3, duration: 0.5, ease: "sine.inOut" }, 0.9);
+      tl.to("#ak-armL", { y: 14, rotation: -2, duration: 0.8, ease: "sine.inOut" }, 2.4);
+      tl.to("#ak-map", { rotation: -6, duration: 0.6, ease: "sine.inOut" }, 1.2);
+      tl.to("#ak-map", { rotation: 4, duration: 0.6, ease: "sine.inOut" }, 2.0);
+
+      // 宝物庫(CUE-A 3.0): ドアの金のきらり
+      tl.to(window.__glint, { opacity: 1, scale: 1.2, duration: 0.1, ease: "power1.out" }, 2.9);
+      tl.to(window.__glint, { opacity: 0, scale: 0.6, duration: 0.2, ease: "power1.in" }, 3.0);
+
+      // お辞儀(CUE-B 4.0): 前かがみのピークが4.0
+      tl.to("#ak-upper", { y: 30, scaleY: 0.92, duration: 0.3, ease: "power2.out" }, 3.7);
+      tl.to("#ak-head", { y: 16, rotation: 4, duration: 0.3, ease: "power2.out" }, 3.7);
+      tl.to("#ak-upper", { y: 0, scaleY: 1, duration: 0.5, ease: "power2.inOut" }, 4.15);
+      tl.to("#ak-head", { y: 0, rotation: 0, duration: 0.5, ease: "power2.inOut" }, 4.15);
+
+      // 牢獄(CUE-C 5.5): 目が光り、扉がガタガタ。アキラは「ん?」と首を傾けるだけ
+      tl.set("#eyes", { opacity: 1 }, 5.5);
+      tl.set("#eyes", { opacity: 0 }, 5.97);
+      tl.set("#eyes", { opacity: 1 }, 6.07);
+      tl.set("#eyes", { opacity: 0 }, 6.9);
+      const shakeKF = [], shakeRot = [];
+      for (let i = 0; i < 26; i++) {
+        const a = Math.max(0, 1 - i / 26) * (i % 2 === 0 ? 1 : -1) * (0.6 + rnd() * 0.5);
+        shakeKF.push({ x: a * 7, duration: 0.066, ease: "none" });
+        shakeRot.push({ rotation: a * 1.1, skewY: a * 0.9, duration: 0.066, ease: "none" });
+      }
+      tl.to(doorP.inner, { keyframes: shakeKF }, 5.5);
+      tl.to(doorP.inner, { keyframes: shakeRot }, 5.5);
+      tl.to("#ak-head", { rotation: 7, duration: 0.25, ease: "sine.out" }, 5.7);
+      tl.to("#ak-head", { rotation: 0, duration: 0.35, ease: "sine.inOut" }, 6.1);
+
+      // 正面の『魔王の間』(CUE-D 6.5): 指でなぞる
+      tl.to("#ak-armR", { rotation: -148, scaleY: 1.18, duration: 0.3, ease: "power2.out" }, 6.5);
+      tl.to("#ak-head", { y: -4, rotation: 0, duration: 0.3, ease: "sine.inOut" }, 6.5);
+      tl.set("#ak-finger", { opacity: 1 }, 6.5);
+      tl.set("#ak-finger", { opacity: 0 }, 8.05);
+      const chs = Array.prototype.slice.call(document.querySelectorAll(".ch"));
+      chs.forEach(function (c, i) { c.id = "ch" + i; });
+      const chT = [6.8, 7.0, 7.2, 7.4];
+      for (let i = 0; i < 4; i++) {
+        tl.to("#ak-armR", { rotation: -158 + i * 5, duration: 0.2, ease: "sine.inOut" }, 6.8 + i * 0.2);
+        tl.to("#ch" + i, { color: "#ffe9a8", scale: 1.1, duration: 0.1, ease: "power1.out" }, chT[i]);
+        tl.to("#ch" + i, { color: "#ff2a4d", scale: 1, duration: 0.5, ease: "power1.inOut" }, chT[i] + 0.1);
+      }
+      // 「あ、ここかも。」: 手を下ろして得意げに
+      tl.to("#ak-armR", { rotation: 0, scaleY: 1, duration: 0.45, ease: "power2.inOut" }, 7.62);
+      tl.to("#ak-head", { rotation: -6, y: 0, duration: 0.3, ease: "sine.inOut" }, 7.55);
+      tl.to("#ak-head", { rotation: 0, duration: 0.5, ease: "sine.inOut" }, 8.0);
+
+      // アキラの縁の光(松明が横を通るたびに金が強く)
+      torches.forEach(function (T) {
+        const tp = tAt(T.Z - DA);
+        if (tp > 0.2 && tp < 6.6) {
+          tl.to("#akira", { "--rimw": 5, "--rimc": "#ffe6a0", duration: 0.18, ease: "power1.out" }, Math.max(0, tp - 0.18));
+          tl.to("#akira", { "--rimw": 2.5, "--rimc": "#ffd34d", duration: 0.4, ease: "power1.in" }, tp);
+        }
+      });
+
+      // 扉が開き、光が溢れる(CUE-E 8.2)
+      tl.set(crack, { opacity: 1 }, 8.2);
+      tl.to(crack, { opacity: 0, duration: 0.3, ease: "none" }, 8.45);
+      tl.to(leafL, { rotationY: 3, duration: 0.15, ease: "power1.out" }, 8.2);
+      tl.to(leafR, { rotationY: -3, duration: 0.15, ease: "power1.out" }, 8.2);
+      tl.to(leafL, { rotationY: 78, duration: 0.7, ease: "power2.in" }, 8.2);
+      tl.to(leafR, { rotationY: -78, duration: 0.7, ease: "power2.in" }, 8.2);
+      tl.to("#spill", { opacity: 1, duration: 0.7, ease: "power2.in" }, 8.2);
+      tl.to(spillFloor, { opacity: 1, duration: 0.5, ease: "power1.in" }, 8.2);
+      tl.to("#akira", { "--rimw": 6, "--rimc": "#ffffff", duration: 0.7, ease: "power1.in" }, 8.2);
+      tl.to("#flash", { opacity: 1, duration: 0.4, ease: "power2.in" }, 8.5);
+      tl.set("#flash", { opacity: 1 }, 8.9);
+
+      // 霧(奥が暗い)は扉に近づくほど薄れる
+      tl.fromTo("#fog", { opacity: 1 }, { opacity: 0.35, duration: 6.5, ease: "power1.inOut" }, 0);
+      tl.to("#fog", { opacity: 0.1, duration: 1.5, ease: "none" }, 6.5);
+
+      // 画面全体のわずかな前進感(押し込み)と、揺れ
+      tl.fromTo("#frame", { scale: 1 }, { scale: 1.02, duration: 6.5, ease: "none" }, 0);
+      tl.to("#frame", { scale: 1.09, duration: 2.5, ease: "power1.inOut" }, 6.5);
+      const trem = [];
+      for (let i = 0; i < 18; i++) { const a = (i % 2 === 0 ? 1 : -1) * (1 - i / 18) * 3; trem.push({ x: a, y: -a * 0.6, duration: 0.066, ease: "none" }); }
+      tl.to("#frame", { keyframes: trem }, 5.5);
+      const trem2 = [];
+      for (let i = 0; i < 11; i++) { const a = (i % 2 === 0 ? 1 : -1) * (1 + i * 0.5) * (0.7 + rnd() * 0.6); trem2.push({ x: a, y: a * 0.5, duration: 0.066, ease: "none" }); }
+      tl.to("#frame", { keyframes: trem2 }, 8.2);
+
+      // 字幕
+      tl.fromTo("#sub1", { opacity: 0 }, { opacity: 1, duration: 0.1, ease: "none" }, 1.0);
+      tl.to("#sub1", { opacity: 0, duration: 0.1, ease: "none" }, 2.4);
+      tl.set("#sub1", { opacity: 0 }, 2.5);
+      tl.fromTo("#sub2", { opacity: 0 }, { opacity: 1, duration: 0.1, ease: "none" }, 7.5);
+      tl.to("#sub2", { opacity: 0, duration: 0.1, ease: "none" }, 8.1);
+      tl.set("#sub2", { opacity: 0 }, 8.2);
+
+      // 炎のゆらぎ(seed付き)
+      function flicker(fl, glows, seedOff, tEnd) {
+        const kf = [], gk = [];
+        let t = 0;
+        while (t < tEnd) {
+          const d = 0.1 + rnd() * 0.08;
+          kf.push({ scaleY: 0.86 + rnd() * 0.3, scaleX: 0.9 + rnd() * 0.2, skewX: (rnd() - 0.5) * 9, duration: d, ease: "sine.inOut" });
+          gk.push({ opacity: 0.78 + rnd() * 0.22, duration: d, ease: "sine.inOut" });
+          t += d;
+        }
+        tl.to(fl, { keyframes: kf }, 0);
+        return gk;
+      }
+      torches.forEach(function (T) {
+        flicker(T.fl, T.glows, 0, 9.2);
+      });
+      braz.forEach(function (B) { flicker(B.fl, [], 0, 9.2); });
+
+      // ZZZ・鼻ちょうちん(ゴブリン)
+      gobs.forEach(function (G, gi) {
+        tl.fromTo(G.head, { rotation: G.tilt }, { rotation: G.tilt + 3, duration: 1.1, ease: "sine.inOut" }, 0);
+        for (let c = 0; c * 2.2 < 9.4; c++) {
+          const t0 = c * 2.2 + gi * 0.37;
+          tl.to(G.head, { rotation: G.tilt + 3 + (c % 2 ? 2 : -2), duration: 1.1, ease: "sine.inOut" }, t0 + 1.1);
+          tl.fromTo(G.bub, { scale: 0.35 }, { scale: 1.25, duration: 0.95, ease: "sine.inOut" }, t0);
+          tl.to(G.bub, { scale: 0.35, duration: 0.7, ease: "sine.inOut" }, t0 + 1.0);
+          G.zs.forEach(function (zEl, k) {
+            tl.fromTo(zEl, { opacity: 0, y: 8, x: 0 }, { opacity: 0.95, y: -18, x: 6, duration: 0.35, ease: "power1.out" }, t0 + 0.35 + k * 0.25);
+            tl.to(zEl, { opacity: 0, y: -48, x: 14, duration: 0.5, ease: "power1.in" }, t0 + 0.7 + k * 0.25);
+          });
+        }
+      });
+
+      // 火の粉: ゆっくり上へ
+      embers.forEach(function (E) { tl.to(E.el, { y: "+=" + E.dy, duration: 9, ease: "none" }, 0); });
+
+      // 部品の霞み(奥行きに応じた不透明度)
+      fadeItems.forEach(function (it) {
+        const kf = [];
+        let prev = null;
+        for (let k = 0; k <= 90; k++) {
+          const t = k / 10, d = it.Z - camZ(t);
+          const v = it.max * (1 - smooth(it.near, it.far, d)) * smooth(60, 220, d);
+          kf.push(v);
+        }
+        gsap.set(it.el, { opacity: kf[0] });
+        const arr = [];
+        for (let k = 1; k <= 90; k++) arr.push({ opacity: kf[k], duration: 0.1, ease: "none" });
+        tl.to(it.el, { keyframes: arr }, 0);
+      });
+
+      // 松明の光(画面空間のにじみ。毎フレームの位置・大きさ・明るさをキーフレーム化 = 3D面の端が出ない)
+      const glowLayer = document.getElementById("glows");
+      glowSrc.forEach(function (G, gi) {
+        const el = mk(glowLayer, "torch-halo", "position:absolute;left:-400px;top:-400px;width:800px;height:800px;opacity:0;");
+        const kf = [];
+        for (let f = 1; f <= 270; f++) {
+          const t = f / 30, d = G.Z - camZ(t);
+          const sc = 800 / Math.max(60, d);
+          const fadeFar = 1 - smooth(2600, 4600, d), fadeNear = smooth(120, 420, d);
+          const fl = 0.82 + 0.18 * Math.sin(t * (9 + (gi % 5)) + gi * 1.7) * Math.sin(t * 3.1 + gi);
+          kf.push({ x: 960 + G.sx * sc, y: 560 + G.y * sc, scale: (G.R * 2 / 800) * sc, opacity: G.a * fadeFar * fadeNear * fl, duration: 1 / 30, ease: "none" });
+        }
+        gsap.set(el, { x: kf[0].x, y: kf[0].y, scale: kf[0].scale, opacity: 0 });
+        tl.to(el, { keyframes: kf }, 0);
+      });
+
+      window.__timelines["main"] = tl;
+      tl.seek(0);
+    </script>
+  </body>
+</html>

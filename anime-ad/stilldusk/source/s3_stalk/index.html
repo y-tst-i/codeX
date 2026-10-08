@@ -1,0 +1,360 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <script src="assets/gsap.min.js"></script>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 1920px; height: 1080px; overflow: hidden; background: #0E0D0C; }
+      #root { position: relative; width: 1920px; height: 1080px; background: #0E0D0C; overflow: hidden; }
+      canvas { position: absolute; left: 0; top: 0; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="3.2" data-width="1920" data-height="1080">
+      <canvas id="c" width="1920" height="1080"></canvas>
+    </div>
+    <script>
+// 場面で毎回書き直しがちな部品(再現性あり: 乱数は seed 付き、時刻 t の純関数)。new_scene.sh が index.html に埋め込む。
+const SCENE_LIB = (() => {
+  const mulberry32 = (a) => () => { a |= 0; a = (a + 0x6d2b79f5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+  const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+  const lerp = (a, b, k) => a + (b - a) * k;
+  const smooth = (x) => { x = clamp(x); return x * x * (3 - 2 * x); };
+  const ease = (x) => { x = clamp(x); return x < 0.5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2; };       // inOut
+  // 速度の山谷から、映像時間 t -> 素材時間 s(t) の表を作る(スピードランプ)。segs=[[終了秒, 速度], ...] 区間境界は smooth でつなぐ
+  function timeRemap(segs, fps = 30, blend = 0.2) {
+    const n = Math.ceil(segs[segs.length - 1][0] * fps) + 1, rate = (t) => {
+      let i = 0; while (i < segs.length - 1 && t >= segs[i][0]) i++;
+      const prev = i > 0 ? segs[i - 1][1] : segs[0][1], edge = i > 0 ? segs[i - 1][0] : 0;
+      const k = i > 0 ? smooth((t - edge) / blend) : 1; return lerp(prev, segs[i][1], k);
+    };
+    const tab = new Float64Array(n); for (let f = 1; f < n; f++) tab[f] = tab[f - 1] + rate((f - 0.5) / fps) / fps;
+    return (t) => { const x = clamp(t * fps, 0, n - 1), i = Math.floor(x), j = Math.min(n - 1, i + 1); return lerp(tab[i], tab[j], x - i); };
+  }
+  // 雨(3層ストリーク)。ctx に描く。強さ=intensity、風=wind(px/s)。層ごとに速度・長さ・濃さが違う
+  function rain(ctx, t, { w = 1920, h = 1080, seed = 7, intensity = 1, wind = 0.2, layers = [[400, 14, 0.15, 900], [250, 32, 0.3, 1500], [80, 80, 0.45, 2200]], color = "200,220,255" } = {}) {
+    ctx.save(); ctx.lineCap = "round";
+    layers.forEach(([count, len, alpha, speed], li) => {
+      const r = mulberry32(seed + li * 101); ctx.strokeStyle = `rgba(${color},${alpha})`; ctx.lineWidth = 1 + li * 0.6; ctx.beginPath();
+      for (let i = 0; i < count * intensity; i++) {
+        const x0 = r() * (w + 400) - 200, y0 = r() * h, ph = r(), y = (y0 + (t * speed) + ph * h) % (h + len) - len, x = x0 + wind * (y - y0);
+        ctx.moveTo(x, y); ctx.lineTo(x + wind * len, y + len);
+      }
+      ctx.stroke();
+    }); ctx.restore();
+  }
+  const vignette = (ctx, a = 0.4, w = 1920, h = 1080) => { const g = ctx.createRadialGradient(w / 2, h / 2, h * 0.45, w / 2, h / 2, h * 0.95); g.addColorStop(0, "rgba(0,0,0,0)"); g.addColorStop(1, `rgba(0,0,0,${a})`); ctx.fillStyle = g; ctx.fillRect(0, 0, w, h); };
+  const glow = (ctx, x, y, r, color = "255,120,180", a = 0.5) => { const g = ctx.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, `rgba(${color},${a})`); g.addColorStop(1, `rgba(${color},0)`); ctx.fillStyle = g; ctx.globalCompositeOperation = "lighter"; ctx.fillRect(x - r, y - r, r * 2, r * 2); ctx.globalCompositeOperation = "source-over"; };
+  // 一点透視の投影(消失点 vp, 焦点 F): ワールド (X,Y,Z) -> 画面。カメラの前進は Z から引く
+  const project = (X, Y, Z, vp = [960, 470], F = 1000, eye = 1.7) => [vp[0] + (X * F) / Z, vp[1] + ((eye - Y) * F) / Z];
+  return { mulberry32, clamp, lerp, smooth, ease, timeRemap, rain, vignette, glow, project };
+})();
+// 2.5D パペット(横向きの人型キャラ)。関節で動かし、ポーズをブレンドする。scene-lib.js の後に埋め込む(new_scene.sh <dir> <秒> <背景> --puppet)。
+// 角度はラジアン。腕・脚は「真下=0、向いている方向へ振り上げる=+」。facing=-1 で左右反転。
+// 使い方:
+//   const P = PUPPET.make({ skin:"#f2c9a0", cloth:"#3a5fbf", hair:"#2b2118", ink:"#1b1520" });
+//   const pose = PUPPET.poseAt(keys, t, 1);          // keys=[{t:0, x:300, y:800, ...}, {t:1, armR:[1.2,0.4], ease:"back"}]
+//   P.draw(ctx, pose, t);                             // 描く(足元が y に来るように y=足元)
+//   PUPPET.walk(phase) / PUPPET.run(phase)            // 歩き・走りの脚/腕/上下動のポーズ(phase=歩数×2π)
+// 演技の原則(予備動作→動作→余韻、オーバーラップ)は references/character-acting.md。
+const PUPPET = (() => {
+  const { lerp, clamp, smooth } = SCENE_LIB;
+  const hash = (n) => { n = Math.sin(n * 127.1 + 311.7) * 43758.5453; return n - Math.floor(n); };
+  const jit = (key, t, amp) => (hash(key * 13.7 + Math.floor(t * 12) * 7.31) - 0.5) * 2 * amp;          // 12fps で揺らぐ線(ボイリング)
+  const DEF = { x: 960, y: 900, s: 1, facing: 1, lean: 0, squash: 0, torso: 0, head: 0, bob: 0,
+    armN: [0.15, 0.25], armF: [-0.15, 0.25], legN: [0.08, 0.1], legF: [-0.08, 0.1],
+    eye: "normal", mouth: "smile", brow: 0, look: [0.3, 0], blink: 0, lift: 0 };
+  const EASE = { inout: (u) => smooth(u), out: (u) => 1 - Math.pow(1 - u, 3), in: (u) => u * u * u,
+    back: (u) => { const c1 = 1.9, c3 = c1 + 1; return 1 + c3 * Math.pow(u - 1, 3) + c1 * Math.pow(u - 1, 2); },   // 行き過ぎて戻る(余韻)
+    lin: (u) => u, hold: (u) => (u < 1 ? 0 : 1) };
+  // part ごとの遅れ(秒)。overlap=1 で体の各部が少しずつ遅れて動く(全部同時に動かさない)
+  const DELAY = { torso: 0, lean: 0, squash: 0, x: 0, y: 0, s: 0, lift: 0, bob: 0, legN: 0, legF: 0.01, armN: 0.04, armF: 0.06, head: 0.05, look: -0.04, brow: 0.03, eye: 0, mouth: 0.02, blink: 0, facing: 0 };
+  const mixv = (a, b, k) => (Array.isArray(a) ? a.map((v, i) => lerp(v, b[i], k)) : typeof a === "number" ? lerp(a, b, k) : (k < 0.5 ? a : b));
+  function poseAt(keys, t, overlap = 1) {
+    const out = {};
+    for (const p of Object.keys(DEF)) {
+      const tt = t - (DELAY[p] || 0) * overlap;
+      let prev = null, next = null, val = DEF[p], ease = "inout";
+      for (const k of keys) { if (k[p] === undefined) continue; if (k.t <= tt) { prev = k; } else if (!next) { next = k; } }
+      if (prev) val = prev[p];
+      if (prev && next) { const u = clamp((tt - prev.t) / (next.t - prev.t)); const e = EASE[next.ease || "inout"] || EASE.inout; val = mixv(prev[p], next[p], e(u)); }
+      else if (!prev && next) val = next[p];
+      out[p] = val;
+    }
+    return out;
+  }
+  const walk = (ph) => ({ legN: [Math.sin(ph) * 0.65, Math.max(0, Math.sin(ph + 1.2)) * 0.9], legF: [-Math.sin(ph) * 0.65, Math.max(0, -Math.sin(ph + 1.2)) * 0.9],
+    armN: [-Math.sin(ph) * 0.5, 0.3], armF: [Math.sin(ph) * 0.5, 0.3], bob: Math.abs(Math.cos(ph)) * 10, lean: 0.04 });
+  const run = (ph) => ({ legN: [Math.sin(ph) * 1.0, Math.max(0, Math.sin(ph + 1.0)) * 1.5], legF: [-Math.sin(ph) * 1.0, Math.max(0, -Math.sin(ph + 1.0)) * 1.5],
+    armN: [-Math.sin(ph) * 0.9, 1.1], armF: [Math.sin(ph) * 0.9, 1.1], bob: Math.abs(Math.cos(ph)) * 22, lean: 0.22 });
+
+  function make(c = {}) {
+    const C = Object.assign({ skin: "#f2c9a0", cloth: "#3a5fbf", pants: "#2a2f4a", hair: "#2b2118", ink: "#1b1520", rim: "rgba(255,200,150,0.55)", u: 1, boil: 1.2, outline: 4, shadow: "rgba(0,0,0,0.28)" }, c);
+    const L = { thigh: 86, shin: 84, torso: 130, neck: 12, head: 52, upper: 64, fore: 62, w: 22 };
+    const seg = (ctx, pts, w, col, ink, t, key) => {
+      ctx.lineCap = "round"; ctx.lineJoin = "round";
+      const P = pts.map((p, i) => [p[0] + jit(key + i, t, C.boil), p[1] + jit(key + i + 50, t, C.boil)]);
+      ctx.strokeStyle = ink; ctx.lineWidth = w + C.outline * 2; ctx.beginPath(); P.forEach((p, i) => (i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]))); ctx.stroke();
+      ctx.strokeStyle = col; ctx.lineWidth = w; ctx.beginPath(); P.forEach((p, i) => (i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]))); ctx.stroke();
+    };
+    function draw(ctx, pose, t = 0) {
+      const p = Object.assign({}, DEF, pose), f = p.facing, S = C.u * p.s, sq = clamp(p.squash, -0.4, 0.4);
+      const dir = (a) => [Math.sin(a) * f, Math.cos(a)];                       // 角度→方向(真下=0, 前=+)
+      const sx = 1 + sq, sy = 1 - sq;
+      ctx.save(); ctx.translate(p.x, p.y - p.lift); ctx.scale(sx, sy); ctx.scale(S, S);
+      // 足元が (0,0) になるよう、骨盤の高さ = 脚の長さ(膝を曲げたら下がる)
+      const legH = (leg) => L.thigh * Math.cos(leg[0]) + L.shin * Math.cos(leg[0] - leg[1]);
+      const pelvisH = Math.max(legH(p.legN), legH(p.legF)) + (p.bob || 0);
+      const hip = [0, -pelvisH];
+      // 影
+      ctx.fillStyle = C.shadow; ctx.beginPath(); ctx.ellipse(0, 2, 70 * (1 + p.lift / 400), 14, 0, 0, 7); ctx.fill();
+      const limb = (root, a0, a1, l1, l2, w, col, key, sleeve) => {
+        const d1 = dir(a0), e = [root[0] + d1[0] * l1, root[1] + d1[1] * l1], d2 = dir(a0 + (a1 || 0));
+        const k = [e[0] + d2[0] * l2, e[1] + d2[1] * l2];
+        seg(ctx, [e, k], w - 2, col, C.ink, t, key + 1);                      // 前腕(肌)
+        seg(ctx, [root, e], w + 4, sleeve || C.cloth, C.ink, t, key);          // 上腕(袖)
+        ctx.fillStyle = col; ctx.strokeStyle = C.ink; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(k[0], k[1], w * 0.62, 0, 7); ctx.fill(); ctx.stroke();   // 手
+        return k;
+      };
+      const legPts = (leg, col, key) => { const d1 = dir(leg[0]), kn = [hip[0] + d1[0] * L.thigh, hip[1] + d1[1] * L.thigh], d2 = dir(leg[0] - leg[1]), an = [kn[0] + d2[0] * L.shin, kn[1] + d2[1] * L.shin];
+        seg(ctx, [hip, kn, an], 26, col, C.ink, t, key); ctx.fillStyle = shade(C.ink, 0.1); ctx.strokeStyle = C.ink; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(an[0] + f * 12, an[1] - 4, 24, 12, 0, 0, 7); ctx.fill(); ctx.stroke(); };
+      // 胴体の向き(lean は前傾)
+      const tl = p.lean + p.torso, up = [Math.sin(tl) * f, -Math.cos(tl)];
+      const neck = [hip[0] + up[0] * L.torso, hip[1] + up[1] * L.torso];
+      const shoulder = [hip[0] + up[0] * (L.torso - 14), hip[1] + up[1] * (L.torso - 14)];
+      // 奥側 → 手前側
+      legPts(p.legF, C.pants, 1);
+      limb(shoulder, p.armF[0], p.armF[1], L.upper, L.fore, 22, C.skin, 20, shade(C.cloth, -0.3));
+      // 胴体
+      const nx = Math.cos(tl) * f, ny = Math.sin(tl);                           // 胴体の横方向
+      const tw = 44, bw = 38;
+      const q = [[hip[0] - nx * bw, hip[1] - ny * bw], [hip[0] + nx * bw, hip[1] + ny * bw], [neck[0] + nx * tw, neck[1] + ny * tw], [neck[0] - nx * tw, neck[1] - ny * tw]];
+      const g = ctx.createLinearGradient(q[0][0], q[0][1], q[1][0], q[1][1]); g.addColorStop(0, C.cloth); g.addColorStop(1, shade(C.cloth, -0.25));
+      ctx.lineJoin = "round"; ctx.strokeStyle = C.ink; ctx.lineWidth = C.outline * 2; ctx.fillStyle = g;
+      ctx.beginPath(); q.forEach((pt, i) => { const x = pt[0] + jit(30 + i, t, C.boil), y = pt[1] + jit(40 + i, t, C.boil); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = C.rim; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(q[1][0] - nx * 4, q[1][1] - ny * 4); ctx.lineTo(q[2][0] - nx * 4, q[2][1] - ny * 4); ctx.stroke();   // 光の当たる縁
+      legPts(p.legN, shade(C.pants, 0.12), 2);
+      // 頭
+      const hd = p.head + tl * 0.4, hu = [Math.sin(hd) * f, -Math.cos(hd)];
+      const hc = [neck[0] + hu[0] * (L.neck + L.head), neck[1] + hu[1] * (L.neck + L.head)];
+      seg(ctx, [neck, [neck[0] + hu[0] * L.neck, neck[1] + hu[1] * L.neck]], 22, C.skin, C.ink, t, 60);
+      ctx.fillStyle = C.skin; ctx.strokeStyle = C.ink; ctx.lineWidth = C.outline * 1.6;
+      ctx.beginPath(); ctx.ellipse(hc[0] + jit(70, t, C.boil), hc[1] + jit(71, t, C.boil), L.head * 0.92, L.head, hd * f, 0, 7); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = C.hair; ctx.beginPath(); ctx.ellipse(hc[0] - f * 6, hc[1] - 14, L.head * 0.98, L.head * 0.78, hd * f, Math.PI, 2 * Math.PI); ctx.fill();    // 髪
+      face(ctx, hc, hd, f, p, t, C);
+      limb(shoulder, p.armN[0], p.armN[1], L.upper, L.fore, 22, shade(C.skin, 0.04), 21, C.cloth);
+      ctx.restore();
+    }
+    return { draw, L, C };
+  }
+  function face(ctx, hc, hd, f, p, t, C) {
+    const ex = hc[0] + f * 16, ey = hc[1] - 4, lk = p.look, bl = p.blink;
+    const eye = (x, y, r) => {
+      ctx.fillStyle = "#fff"; ctx.strokeStyle = C.ink; ctx.lineWidth = 2.5;
+      if (p.eye === "closed" || bl > 0.8) { ctx.beginPath(); ctx.moveTo(x - r, y); ctx.quadraticCurveTo(x, y + r * 0.6, x + r, y); ctx.stroke(); return; }
+      const rr = p.eye === "wide" ? r * 1.25 : r; ctx.beginPath(); ctx.ellipse(x, y, rr, rr * (1 - bl * 0.8), 0, 0, 7); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = C.ink; ctx.beginPath(); ctx.arc(x + lk[0] * rr * 0.45 * f, y + lk[1] * rr * 0.4, rr * 0.45, 0, 7); ctx.fill();
+    };
+    eye(ex, ey, 9); eye(ex + f * 22, ey, 8);
+    // 眉(brow: -1=困り/心配 ... +1=怒り。眉1本で心配と怒りが入れ替わる)
+    ctx.strokeStyle = C.ink; ctx.lineWidth = 3.5; ctx.lineCap = "round";
+    [[ex, 1], [ex + f * 22, -1]].forEach(([x, side], i) => { const a = p.brow * 0.5 * (i ? -1 : 1) * f; ctx.beginPath(); ctx.moveTo(x - 10, ey - 17 + a * 8); ctx.lineTo(x + 10, ey - 17 - a * 8); ctx.stroke(); });
+    const mx = hc[0] + f * 13, my = hc[1] + 22;
+    ctx.fillStyle = "#7a2a2a"; ctx.strokeStyle = C.ink; ctx.lineWidth = 3;
+    if (p.mouth === "open") { ctx.beginPath(); ctx.ellipse(mx + f * 4, my, 8, 10, 0, 0, 7); ctx.fill(); ctx.stroke(); }
+    else if (p.mouth === "grin") { ctx.beginPath(); ctx.moveTo(mx - 12, my - 4); ctx.quadraticCurveTo(mx, my + 14, mx + 14, my - 4); ctx.closePath(); ctx.fill(); ctx.stroke(); }
+    else if (p.mouth === "frown") { ctx.beginPath(); ctx.moveTo(mx - 9, my + 4); ctx.quadraticCurveTo(mx, my - 5, mx + 9, my + 4); ctx.stroke(); }
+    else if (p.mouth === "flat") { ctx.beginPath(); ctx.moveTo(mx - 8, my); ctx.lineTo(mx + 8, my); ctx.stroke(); }
+    else { ctx.beginPath(); ctx.moveTo(mx - 10, my - 2); ctx.quadraticCurveTo(mx, my + 8, mx + 10, my - 2); ctx.stroke(); }
+  }
+  function shade(hex, k) { const n = parseInt(hex.slice(1), 16), r = n >> 16, g = (n >> 8) & 255, b = n & 255, f = (c) => Math.round(clamp(c + (k > 0 ? (255 - c) * k : c * k), 0, 255)); return `rgb(${f(r)},${f(g)},${f(b)})`; }
+  return { make, poseAt, walk, run, DEF, EASE };
+})();
+      const { clamp, lerp, smooth, ease, mulberry32, rain, vignette, glow, project, timeRemap } = SCENE_LIB;
+      const DUR = 3.2, ctx = document.getElementById("c").getContext("2d");
+      // ★ここだけ書く: 時刻 t(秒) の純関数。Math.random / Date.now を使わない(乱数は mulberry32(seed))。
+      // s3_stalk: 一人称(POV)のドリーイン、一点透視の肋骨回廊、光芒、砂嵐。VP=(960,500)、焦点 PF、床は目の下 HFL。
+      const W = 1920, H = 1080, VPX = 960, VPY = 500, PF = 1000, HFL = 132, TAU = Math.PI * 2;
+      const C_ = { carbon: [14, 13, 12], bone: [237, 228, 211], amber: [217, 130, 43], dust: [201, 119, 46], flare: [255, 217, 160],
+        rust: [122, 46, 18], cyan: [63, 224, 208], sun: [246, 210, 154], glow: [232, 166, 90] };
+      const rgba = (c, a = 1) => `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${a})`;
+      const mix = (a, b, k) => [lerp(a[0], b[0], k), lerp(a[1], b[1], k), lerp(a[2], b[2], k)];
+      const p2out = (u) => 1 - Math.pow(1 - clamp(u), 3), p3out = (u) => 1 - Math.pow(1 - clamp(u), 4);   // GSAP power2/3.out
+      // --- 乱数は seed 303 から一括生成(順序固定) ---
+      const R = mulberry32(303);
+      const NOISE = Array.from({ length: 256 }, () => R() * 2 - 1);
+      const vnoise = (x) => { const i = Math.floor(x), f = x - i, u = f * f * (3 - 2 * f); return lerp(NOISE[i & 255], NOISE[(i + 1) & 255], u); };
+      const PN = 600, PART = Array.from({ length: PN }, () => { const z = R(); return { z, x0: R() * (W + 400), y0: R() * H, v: 900 + 900 * z, vy: (R() * 2 - 1) * 80, ph: R() }; })
+        .sort((a, b) => a.z - b.z);
+      const BANDS = Array.from({ length: 9 }, () => ({ y: 330 + R() * 520, h: 30 + R() * 90, w: 900 + R() * 900, x0: R() * 3400, v: 380 + R() * 320, a: 0.08 + R() * 0.12, k: R() }));
+      const CRACKS = Array.from({ length: 44 }, (_, j) => ({ z: 220 + j * 240 + R() * 90, x1: -700 - R() * 900, x2: 700 + R() * 900, a: 0.5 + R() * 0.5 }));
+      const RAYS = [[-168, 2.2], [-131, 4.6], [-104, 1.6], [-78, 6.4], [-49, 2.8], [-22, 4.0], [14, 2.0]];   // 角度(度)・半幅(度): 不均等
+      const ARCH_N = 14, ARCH_GAP = 700, AW = 850, AT = 120;
+      // --- 敵(PUPPET の立ち姿を左右反転で重ねた正面シルエット。顔なし) ---
+      const CARB = "#0E0D0C";
+      const PUP = PUPPET.make({ skin: CARB, cloth: CARB, pants: CARB, hair: CARB, ink: CARB, rim: "rgba(0,0,0,0)", shadow: "rgba(0,0,0,0)", boil: 0, outline: 4, u: 1 });
+      Object.assign(PUP.L, { head: 34, torso: 140, thigh: 92, shin: 90, upper: 62, fore: 58 });
+      const POSE = { x: 0, y: 0, lean: 0, torso: 0, head: 0, legN: [0.1, 0.06], legF: [0.1, 0.06], armN: [0.22, 0.35], armF: [0.22, 0.35], eye: "closed", mouth: "flat", brow: 0, bob: 0, lift: 0 };
+      const legH = PUP.L.thigh * Math.cos(0.1) + PUP.L.shin * Math.cos(0.04);
+      const HC = legH + PUP.L.torso + PUP.L.neck + PUP.L.head;            // 足元から頭の中心まで(単位)
+      const eC = document.createElement("canvas"); eC.width = 400; eC.height = 400; const ex = eC.getContext("2d");
+      const rC = document.createElement("canvas"); rC.width = W; rC.height = H; const rx = rC.getContext("2d");
+      function drawEnemyLocal(k, sq) {
+        ex.setTransform(1, 0, 0, 1, 0, 0); ex.clearRect(0, 0, 400, 400);
+        ex.save(); ex.translate(200, 380); ex.scale(1 + sq * 0.4, 1 - sq); ex.scale(k, k);
+        PUP.draw(ex, Object.assign({}, POSE, { facing: 1 }), 0); PUP.draw(ex, Object.assign({}, POSE, { facing: -1 }), 0);
+        ex.fillStyle = CARB; ex.beginPath(); ex.ellipse(0, -HC - 8, PUP.L.head * 1.18, PUP.L.head * 0.82, 0, Math.PI, TAU); ex.fill();   // ヘルメット
+        ex.fillRect(-PUP.L.head * 1.25, -HC - 10, PUP.L.head * 2.5, 9);
+        ex.restore();
+      }
+      // 自然な身長(単位)を一度だけ測る
+      const NAT_H = (() => { drawEnemyLocal(0.5, 0); const d = ex.getImageData(0, 0, 400, 400).data; for (let y = 0; y < 400; y++) for (let x = 0; x < 400; x++) if (d[(y * 400 + x) * 4 + 3] > 20) return (380 - y) / 0.5; return 420; })();
+      const ENEMY_D = 2366, ENEMY_H = 146.6;                                  // 奥行き・身長(ワールド)。L36 足 y=560、L77 高さ100/足 y=590
+      function cam(F) {
+        const e = 900 * ease((F - 18) / 59);                                  // L18–77 前進 0→900(power1.inOut)
+        const env = smooth((F - 18) / 5) * (1 - smooth((F - 73) / 5));         // 歩行の強さ(L78 で 0)
+        let dy = -5 * Math.cos(TAU * (F - 24) / 12) * env;                    // 足音 L24,36,48,60,72 で沈む
+        let dx = 3 * Math.sin(Math.PI * (F - 24) / 12) * env + 0.8 * vnoise(F / 9) * env;
+        dy += 0.6 * vnoise(F / 7 + 40) * env;
+        const bA = smooth((F - 76) / 4);
+        dy += 1.5 * Math.sin(TAU * (F - 78) / 34) * bA;                       // 呼吸 ±1.5px(L95 で 0)
+        return { e, dx, dy, env };
+      }
+      function archPath(c) {
+        const T = AT, y0 = HFL;
+        c.beginPath();
+        c.moveTo(-AW - T - 70, y0); c.quadraticCurveTo(-AW - T, y0 - 20, -AW - T, -80);
+        c.bezierCurveTo(-AW - T, -720, -470, -1090, 0, -1160 - T);
+        c.bezierCurveTo(470, -1090, AW + T, -720, AW + T, -80);
+        c.quadraticCurveTo(AW + T, y0 - 20, AW + T + 70, y0);
+        c.lineTo(AW, y0); c.lineTo(AW, -80);
+        c.bezierCurveTo(AW, -660, 430, -1010, 0, -1160);
+        c.bezierCurveTo(-430, -1010, -AW, -660, -AW, -80);
+        c.lineTo(-AW, y0); c.closePath();
+      }
+      function archInner(c) {
+        c.beginPath(); c.moveTo(-AW, HFL); c.lineTo(-AW, -80);
+        c.bezierCurveTo(-AW, -660, -430, -1010, 0, -1160); c.bezierCurveTo(430, -1010, AW, -660, AW, -80); c.lineTo(AW, HFL);
+      }
+      function draw(t) {
+        const F = Math.round(t * 30 * 1000) / 1000, fr = Math.floor(F + 1e-6);
+        const { e, dx, dy } = cam(F), vx = VPX + dx, vy = VPY + dy;
+        const gust = Math.pow(Math.max(0, Math.sin(1.3 * t + 0.5)), 6);
+        ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.globalCompositeOperation = "source-over"; ctx.filter = "none";
+        // 1) 空: 上は錆、地平線へ琥珀
+        let g = ctx.createLinearGradient(0, 0, 0, vy);
+        g.addColorStop(0, rgba(mix(C_.rust, C_.carbon, 0.25))); g.addColorStop(0.3, rgba(C_.rust)); g.addColorStop(0.7, rgba(mix(C_.rust, C_.amber, 0.7))); g.addColorStop(1, rgba(C_.amber));
+        ctx.fillStyle = g; ctx.fillRect(0, 0, W, vy + 1);
+        // 2) 床(塩の大地、逆光で手前ほど暗い)
+        g = ctx.createLinearGradient(0, vy, 0, H);
+        g.addColorStop(0, rgba(C_.dust)); g.addColorStop(0.25, rgba(mix(C_.dust, C_.carbon, 0.45))); g.addColorStop(1, rgba(mix(C_.amber, C_.carbon, 0.8)));
+        ctx.fillStyle = g; ctx.fillRect(0, vy, W, H - vy);
+        ctx.save(); ctx.translate(vx, vy); ctx.scale(0.42, 1);                // 太陽へ続く床の照り返し
+        g = ctx.createRadialGradient(0, 0, 0, 0, 0, 620); g.addColorStop(0, rgba(C_.flare, 0.42)); g.addColorStop(1, rgba(C_.flare, 0));
+        ctx.fillStyle = g; ctx.fillRect(-1500, 0, 3000, 700); ctx.restore();
+        // 床の割れ目(奥行きに固定=前進で手前へ流れる)、柱の影の帯(VPへ収束)
+        CRACKS.forEach((c) => { const d = c.z - e; if (d < 40) return; const s = PF / d, y = vy + HFL * s; if (y > H + 4) return;
+          ctx.strokeStyle = rgba(C_.carbon, 0.22 * c.a * (1 - clamp((d - 400) / 9000))); ctx.lineWidth = Math.max(0.8, 2.2 * s);
+          ctx.beginPath(); ctx.moveTo(vx + c.x1 * s, y); ctx.lineTo(vx + c.x2 * s, y + 0.6 * s); ctx.stroke(); });
+        [[-AW - AT - 40, -AW + 10], [AW - 10, AW + AT + 40], [-260, -250], [250, 260]].forEach(([a, b], i) => {
+          const s1 = PF / 60, s2 = PF / 12000; ctx.fillStyle = rgba(C_.carbon, i < 2 ? 0.32 : 0.12); ctx.beginPath();
+          ctx.moveTo(vx + a * s2, vy + HFL * s2); ctx.lineTo(vx + b * s2, vy + HFL * s2); ctx.lineTo(vx + b * s1, vy + HFL * s1); ctx.lineTo(vx + a * s1, vy + HFL * s1); ctx.fill(); });
+        // 3) 太陽: 砂越しの鈍い円盤 r=70(無限遠=ドリーで大きさ不変)
+        g = ctx.createRadialGradient(vx, vy, 0, vx, vy, 430); g.addColorStop(0, rgba(C_.glow, 0.75)); g.addColorStop(0.35, rgba(C_.glow, 0.3)); g.addColorStop(1, rgba(C_.glow, 0));
+        ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+        g = ctx.createRadialGradient(vx, vy, 0, vx, vy, 76); g.addColorStop(0, rgba(C_.sun)); g.addColorStop(0.86, rgba(C_.sun, 0.97)); g.addColorStop(1, rgba(C_.sun, 0));
+        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(vx, vy, 76, 0, TAU); ctx.fill();
+        // 4) 肋骨のアーチ(奥→手前)。距離で霞に溶ける。内縁に FLARE のリム
+        for (let k = ARCH_N - 1; k >= 0; k--) {
+          const d = 1000 + k * ARCH_GAP - e; if (d < 110) continue;
+          const s = PF / d, fog = 1 - Math.exp(-Math.max(0, d - 700) / 6500);
+          ctx.save(); ctx.translate(vx, vy); ctx.scale(s, s);
+          archPath(ctx); ctx.fillStyle = rgba(mix(C_.carbon, mix(C_.dust, C_.glow, 0.25), fog)); ctx.fill();
+          archInner(ctx); ctx.strokeStyle = rgba(C_.flare, 0.55 * (1 - fog) + 0.08); ctx.lineWidth = Math.max(1.2, 2.6 * s) / s; ctx.stroke();
+          ctx.restore();
+        }
+        // 5) 霞(世界の空気)と横に流れるベール
+        ctx.fillStyle = rgba(C_.dust, 0.1 + 0.05 * gust); ctx.fillRect(0, 0, W, H);
+        BANDS.forEach((b) => { const span = W + b.w * 2, x = ((b.x0 - b.v * t) % span + span) % span - b.w;
+          const a = b.a * (0.8 + 0.25 * Math.sin(0.6 * t + b.k * 6) + 0.5 * gust);
+          ctx.save(); ctx.translate(x, b.y + dy * 0.6); ctx.scale(b.w / b.h, 1);
+          g = ctx.createRadialGradient(0, 0, 0, 0, 0, b.h); g.addColorStop(0, rgba(b.k < 0.5 ? C_.dust : C_.amber, a)); g.addColorStop(1, rgba(C_.dust, 0));
+          ctx.fillStyle = g; ctx.fillRect(-b.h, -b.h, b.h * 2, b.h * 2); ctx.restore(); });
+        // 6) 光芒: 太陽から扇状に7本(不均等、screen、blur 6px)
+        const intro = Math.pow(1 - clamp(F / 17), 3);                         // 入りのベール 1→0(power2.out)
+        rx.setTransform(1, 0, 0, 1, 0, 0); rx.clearRect(0, 0, W, H);
+        g = rx.createRadialGradient(vx, vy, 60, vx, vy, 1250); g.addColorStop(0, rgba(C_.flare, 0.42)); g.addColorStop(0.45, rgba(C_.flare, 0.12)); g.addColorStop(1, rgba(C_.flare, 0));
+        rx.fillStyle = g;
+        RAYS.forEach(([a0, hw], i) => { const a = (a0 + 1.6 * Math.sin(0.5 * t + i * 1.7)) * Math.PI / 180, w = hw * (0.85 + 0.15 * Math.sin(0.9 * t + i)) * Math.PI / 180;
+          rx.globalAlpha = 0.65 + 0.35 * Math.sin(0.7 * t + i * 2.3) * 0.5 + 0.25 * gust;
+          rx.beginPath(); rx.moveTo(vx, vy); rx.lineTo(vx + 1700 * Math.cos(a - w), vy + 1700 * Math.sin(a - w)); rx.lineTo(vx + 1700 * Math.cos(a + w), vy + 1700 * Math.sin(a + w)); rx.closePath(); rx.fill(); });
+        rx.globalAlpha = 1;
+        ctx.save(); ctx.globalCompositeOperation = "screen"; ctx.filter = "blur(6px)"; ctx.globalAlpha = 1 - intro; ctx.drawImage(rC, 0, 0); ctx.restore();
+        // 7) 敵: VP の真下に立つシルエット。L36 から 12f で現れる。縁に FLARE の逆光
+        const eA = smooth((F - 36) / 12);
+        const sE = PF / (ENEMY_D - e), feetY = vy + HFL * sE;
+        const sq = 0.1 * (1 - smooth((F - 40) / 30));                          // 低い構え→立つ(L36 高さ60px、L77 100px)
+        const kE = (ENEMY_H * sE) / NAT_H;
+        if (eA > 0) {
+          drawEnemyLocal(kE, sq);
+          ex.save(); ex.globalCompositeOperation = "source-atop"; ex.fillStyle = rgba(C_.dust, 0.12); ex.fillRect(0, 0, 400, 400); ex.restore();
+          ctx.save(); ctx.globalAlpha = eA;
+          ctx.fillStyle = rgba(C_.carbon, 0.16); ctx.beginPath(); ctx.moveTo(vx - 30 * kE, feetY); ctx.lineTo(vx + 30 * kE, feetY); ctx.lineTo(vx + 24, H); ctx.lineTo(vx - 24, H); ctx.fill();   // 手前へ伸びる影
+          ctx.shadowColor = rgba(C_.flare, 0.9); ctx.shadowBlur = 9; ctx.drawImage(eC, vx - 200, feetY - 380);
+          ctx.restore();
+        }
+        // 8) 砂嵐の粒(右→左、近いほど大きく長い)。光芒の中で明るい
+        ctx.lineCap = "round";
+        PART.forEach((p) => { const span = W + 400, x = ((p.x0 - p.v * t) % span + span) % span - 200, y = ((p.y0 + p.vy * t + dy * (0.5 + p.z)) % H + H) % H;
+          const len = p.v / 50 * (0.7 + 0.6 * p.z), ang = Math.atan2(y - vy, x - vx) * 180 / Math.PI;
+          let inRay = 0; for (const [a0, hw] of RAYS) if (Math.abs(ang - a0) < hw + 2) { inRay = 1; break; }
+          const a = (0.1 + 0.32 * p.z) * (1 + inRay * 0.9) * (0.85 + 0.3 * gust), col = mix(C_.amber, C_.flare, 0.35 + 0.5 * p.z);
+          ctx.strokeStyle = rgba(col, Math.min(0.85, a)); ctx.lineWidth = 0.6 + 2.2 * p.z * p.z;
+          ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + len, y - len * 0.07); ctx.stroke(); });
+        // 9) バイザー: L90 に CYAN が2f強く光り、以後50%(唯一の寒色)
+        if (fr >= 90) {
+          const vY = feetY - (HC - 22) * kE * (1 - sq), flash = fr < 92;
+          ctx.save(); ctx.globalCompositeOperation = "lighter";
+          g = ctx.createRadialGradient(vx, vY, 0, vx, vY, flash ? 46 : 16); g.addColorStop(0, rgba(C_.cyan, flash ? 0.55 : 0.16)); g.addColorStop(1, rgba(C_.cyan, 0));
+          ctx.fillStyle = g; ctx.fillRect(vx - 50, vY - 50, 100, 100); ctx.restore();
+          ctx.fillStyle = rgba(C_.cyan, flash ? 1 : 0.5); const vw = 48 * kE, vh = Math.max(4, 16 * kE);
+          ctx.beginPath(); ctx.ellipse(vx, vY, vw / 2, vh / 2, 0, 0, TAU); ctx.fill();
+        }
+        // 10) 一人称の銃身(架空の形)。歩行と同期して少し遅れて揺れる
+        const gEnv = smooth((F - 18) / 5) * (1 - smooth((F - 74) / 5));
+        const gdy = 9 * Math.cos(TAU * (F - 25.5) / 12) * gEnv + 2 * (dy - (-5 * Math.cos(TAU * (F - 24) / 12) * cam(F).env)), gdx = 6 * Math.sin(Math.PI * (F - 25) / 12) * gEnv;
+        ctx.save(); ctx.translate(gdx, gdy);
+        g = ctx.createLinearGradient(1210, 800, 1700, 1080); g.addColorStop(0, rgba(mix(C_.carbon, C_.amber, 0.06))); g.addColorStop(1, rgba(C_.carbon));
+        ctx.fillStyle = g; ctx.beginPath();
+        [[1210, 800], [1920, 1010], [1920, 1090], [1590, 1090], [1520, 1010], [1430, 948], [1335, 892], [1245, 846], [1210, 830]].forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
+        ctx.closePath(); ctx.fill();
+        ctx.fillStyle = rgba(mix(C_.carbon, C_.amber, 0.12));                 // 放熱スリット(架空の意匠)
+        for (let i = 0; i < 5; i++) { const x = 1300 + i * 52, y = 800 + (x - 1210) * (210 / 710);
+          ctx.beginPath(); ctx.moveTo(x, y + 12); ctx.lineTo(x + 30, y + 21); ctx.lineTo(x + 30, y + 26); ctx.lineTo(x, y + 17); ctx.fill(); }
+        ctx.strokeStyle = rgba(mix(C_.carbon, C_.amber, 0.18)); ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(1560, 960); ctx.lineTo(1920, 1066); ctx.stroke();
+        ctx.fillStyle = rgba(C_.carbon); ctx.fillRect(1206, 801, 8, 29);         // 銃口の面 (1210,800–830)
+        ctx.strokeStyle = rgba(C_.flare, 0.6); ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(1210, 800); ctx.lineTo(1920, 1010); ctx.stroke();   // 上縁リム
+        ctx.strokeStyle = rgba(C_.flare, 0.25); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(1210, 801); ctx.lineTo(1210, 830); ctx.stroke();
+        ctx.restore();
+        // 11) 入り: s2 最終と同じ砂塵の壁(#C9772E+中心 r360 の #E8A65A)が晴れていく
+        if (intro > 0) {
+          ctx.save(); ctx.globalAlpha = intro; ctx.fillStyle = rgba(C_.dust); ctx.fillRect(0, 0, W, H);
+          g = ctx.createRadialGradient(VPX, VPY, 0, VPX, VPY, 360); g.addColorStop(0, rgba(C_.glow)); g.addColorStop(1, rgba(C_.glow, 0));
+          ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); ctx.restore();
+        }
+        // 12) クロスヘア: 中心 (960,540) 固定、4本 12x2px、BONE 70%。L66 出現、L78–89 で 28→8px
+        if (F >= 66) {
+          const gap = 28 - 20 * p3out((F - 78) / 11);
+          ctx.fillStyle = rgba(C_.bone, 0.7 * smooth((F - 66) / 3 + 0.34));
+          ctx.fillRect(960 + gap, 539, 12, 2); ctx.fillRect(960 - gap - 12, 539, 12, 2); ctx.fillRect(959, 540 - gap - 12, 2, 12); ctx.fillRect(959, 540 + gap, 2, 12);
+        }
+      }
+      window.__timelines = window.__timelines || {};
+      const tl = gsap.timeline({ paused: true }), st = { t: 0 };
+      tl.to(st, { t: DUR, duration: DUR, ease: "none", onUpdate: () => draw(st.t) }, 0);
+      draw(0); window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>

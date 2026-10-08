@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <script src="assets/gsap.min.js"></script>
+    <style>
+      @font-face { font-family: "Yuji Syuku"; src: url("assets/fonts/YujiSyuku-sub.ttf") format("truetype"); font-weight: 400; }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: #fffdf5; }
+      #root { position: relative; width: 100%; height: 100%; background: #fffdf5; overflow: hidden;
+        font-family: "Yuji Syuku", serif; }
+      .abs { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; }
+      #grain { opacity: 0.32; mix-blend-mode: multiply; }
+      #tape { position: absolute; left: 1716px; top: 0; width: 156px; height: 800px; background: #0a0a12;
+        clip-path: inset(0 0 100% 0); filter: url(#rough2); }
+      #tape span { position: absolute; left: 0; top: 78px; width: 156px; writing-mode: vertical-rl;
+        font-size: 104px; line-height: 1; letter-spacing: 0.04em; color: #fffdf5; text-align: start;
+        display: block; padding-left: 26px; }
+      #word { position: absolute; left: 50px; top: 40px; width: 300px; height: 600px; writing-mode: vertical-rl;
+        font-size: 280px; line-height: 1; color: #0a0a12; filter: url(#rough2); clip-path: inset(0 0 100% 0);
+        display: flex; justify-content: center; }
+      #seal { position: absolute; left: 128px; top: 720px; width: 270px; height: 270px; background: #ff2a4d;
+        filter: url(#rough2); opacity: 0; }
+      #seal .in { position: absolute; inset: 12px; border: 5px solid #fffdf5; }
+      #seal .c { position: absolute; width: 127px; height: 127px; writing-mode: vertical-rl; text-orientation: upright; font-size: 104px; line-height: 127px; color: #fffdf5; text-align: center; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="0.8" data-width="1920" data-height="1080">
+      <!-- 背景: 墨のにじみ山 + 円相 -->
+      <svg class="abs" viewBox="0 0 1920 1080" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <filter id="blur10" x="-10%" y="-20%" width="120%" height="140%"><feGaussianBlur stdDeviation="10" /></filter>
+          <filter id="blur3" x="-10%" y="-20%" width="120%" height="140%"><feGaussianBlur stdDeviation="3" /></filter>
+          <filter id="rough" x="-8%" y="-8%" width="116%" height="116%">
+            <feTurbulence type="fractalNoise" baseFrequency="0.03" numOctaves="2" seed="4" result="n" />
+            <feDisplacementMap in="SourceGraphic" in2="n" scale="10" />
+          </filter>
+          <filter id="rough2" x="-5%" y="-5%" width="110%" height="110%">
+            <feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="2" seed="9" result="n" />
+            <feDisplacementMap in="SourceGraphic" in2="n" scale="6" />
+          </filter>
+        </defs>
+        <g filter="url(#blur10)">
+          <path d="M0 800 L170 720 L300 780 L520 670 L720 770 L930 700 L1160 790 L1420 690 L1620 780 L1920 700 L1920 1080 L0 1080Z" fill="#0a0a12" opacity="0.10" />
+        </g>
+        <ellipse cx="960" cy="800" rx="1100" ry="40" fill="#fffdf5" opacity="0.8" filter="url(#blur10)" />
+        <g filter="url(#blur3)">
+          <path d="M0 900 L240 800 L400 880 L640 790 L860 890 L1100 830 L1350 900 L1560 820 L1920 910 L1920 1080 L0 1080Z" fill="#0a0a12" opacity="0.20" />
+        </g>
+        <ellipse cx="900" cy="960" rx="1000" ry="36" fill="#fffdf5" opacity="0.7" filter="url(#blur10)" />
+        <path d="M0 990 L300 940 L520 985 L820 930 L1100 990 L1500 945 L1920 995 L1920 1080 L0 1080Z" fill="#0a0a12" opacity="0.34" filter="url(#rough)" />
+        <!-- 円相(薄墨) -->
+        <path id="ring" pathLength="1" d="M1260 330 C1180 190 900 150 700 230 C500 310 440 560 540 740 C640 920 940 960 1140 860 C1290 785 1370 640 1352 500"
+          fill="none" stroke="#0a0a12" stroke-opacity="0.22" stroke-width="62" stroke-linecap="round"
+          stroke-dasharray="1" stroke-dashoffset="1" filter="url(#rough)" />
+      </svg>
+
+      <!-- 剣(右へ走る) -->
+      <svg class="abs" viewBox="0 0 1920 1080" xmlns="http://www.w3.org/2000/svg">
+        <g id="sword" filter="url(#rough2)">
+          <g id="streaks" fill="none" stroke="#0a0a12" stroke-linecap="round">
+            <path class="sk" pathLength="1" stroke-dasharray="1" d="M150 505 L560 505" stroke-width="6" stroke-opacity="0.55" />
+            <path class="sk" pathLength="1" stroke-dasharray="1" d="M60 565 L520 565" stroke-width="4" stroke-opacity="0.45" />
+            <path class="sk" pathLength="1" stroke-dasharray="1" d="M200 625 L570 625" stroke-width="7" stroke-opacity="0.5" />
+          </g>
+          <!-- 柄 -->
+          <path d="M392 536 L566 530 L566 596 L392 592 Q372 564 392 536Z" fill="#0a0a12" />
+          <g stroke="#fffdf5" stroke-width="3" stroke-opacity="0.75" fill="none">
+            <path d="M430 534 L458 594" /><path d="M458 534 L430 594" />
+            <path d="M474 533 L502 595" /><path d="M502 533 L474 595" />
+            <path d="M518 532 L546 596" /><path d="M546 532 L518 596" />
+          </g>
+          <circle cx="386" cy="564" r="20" fill="#0a0a12" />
+          <!-- 鍔 -->
+          <ellipse cx="578" cy="564" rx="22" ry="70" fill="#0a0a12" />
+          <ellipse cx="578" cy="564" rx="8" ry="52" fill="none" stroke="#fffdf5" stroke-opacity="0.5" stroke-width="3" />
+          <!-- 刃(根元側) -->
+          <g id="base">
+            <path d="M590 530 L960 535 L936 550 L978 563 L942 577 L960 590.3 L590 594 Z" fill="#0a0a12" />
+            <path d="M606 576 L930 574" stroke="#fffdf5" stroke-opacity="0.55" stroke-width="3" fill="none" />
+          </g>
+          <!-- 刃(切っ先側) -->
+          <g id="tip">
+            <path d="M960 535 L1190 538 L1280 566 L1190 588 L960 590.3 L942 577 L978 563 L936 550 Z" fill="#0a0a12" />
+            <path d="M990 575 L1210 573" stroke="#fffdf5" stroke-opacity="0.55" stroke-width="3" fill="none" />
+          </g>
+        </g>
+
+        <!-- 素手 -->
+        <g id="hand" filter="url(#rough2)">
+          <path d="M1370 650 L1620 1100" stroke="#0a0a12" stroke-width="170" stroke-linecap="round" fill="none" />
+          <path d="M1330 460 L1325 330" stroke="#0a0a12" stroke-width="44" stroke-linecap="round" />
+          <path d="M1285 548 L1272 372" stroke="#0a0a12" stroke-width="44" stroke-linecap="round" />
+          <path d="M1378 540 L1388 318" stroke="#0a0a12" stroke-width="44" stroke-linecap="round" />
+          <path d="M1428 570 L1458 372" stroke="#0a0a12" stroke-width="42" stroke-linecap="round" />
+          <path d="M1432 640 L1520 520" stroke="#0a0a12" stroke-width="46" stroke-linecap="round" />
+          <ellipse cx="1356" cy="610" rx="98" ry="104" fill="#0a0a12" />
+          <path d="M1306 560 L1306 640 M1356 548 L1356 656" stroke="#fffdf5" stroke-opacity="0.35" stroke-width="3" fill="none" />
+        </g>
+
+        <!-- 墨の飛沫 -->
+        <g id="splat" transform="translate(1264 562)" filter="url(#rough2)"></g>
+      </svg>
+
+      <svg id="grain" class="abs" viewBox="0 0 1920 1080" xmlns="http://www.w3.org/2000/svg">
+        <filter id="paper" x="0" y="0" width="100%" height="100%">
+          <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="3" seed="2" />
+          <feColorMatrix type="matrix" values="0 0 0 0 0.45  0 0 0 0 0.4  0 0 0 0 0.3  0 0 0 0.9 -0.28" />
+        </filter>
+        <rect width="1920" height="1080" filter="url(#paper)" />
+      </svg>
+
+      <div id="tape"><span>伝説の剣は、</span></div>
+      <div id="word">素手</div>
+      <div id="seal" aria-label="で終了。"><div class="in"></div><span class="c" style="left:135px;top:8px">で</span><span class="c" style="left:135px;top:135px">終</span><span class="c" style="left:8px;top:8px">了</span><span class="c" style="left:8px;top:135px">。</span></div>
+    </div>
+
+    <script>
+      function rng(a) { return function () { a |= 0; a = (a + 0x6d2b79f5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a);
+        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+      const R = rng(20240801);
+      const ns = "http://www.w3.org/2000/svg";
+      const splat = document.getElementById("splat");
+      const dots = [];
+      for (let i = 0; i < 44; i++) {
+        const ang = (R() * 300 - 150 + 180) * Math.PI / 180; // 主に左・上下方向へ
+        const dist = 90 + R() * (i < 14 ? 460 : 300);
+        const big = i < 14;
+        const el = document.createElementNS(ns, big ? "ellipse" : "circle");
+        const r = big ? 5 + R() * 11 : 3 + R() * 9;
+        if (big) { el.setAttribute("rx", r * 3.2); el.setAttribute("ry", r * 0.7);
+          el.setAttribute("transform", ""); } else { el.setAttribute("r", r); }
+        el.setAttribute("cx", 0); el.setAttribute("cy", 0); el.setAttribute("fill", "#0a0a12");
+        el.setAttribute("opacity", 0);
+        splat.appendChild(el);
+        dots.push({ el, dx: Math.cos(ang) * dist, dy: Math.sin(ang) * dist, rot: ang * 180 / Math.PI, big, d: 0.12 + R() * 0.16 });
+      }
+
+      const tl = gsap.timeline({ paused: true });
+      // 背景: 円相・走り線
+      tl.fromTo("#ring", { strokeDashoffset: 1 }, { strokeDashoffset: 0, duration: 0.24, ease: "power2.out" }, 0);
+      tl.fromTo(".sk", { strokeDashoffset: 1 }, { strokeDashoffset: 0, duration: 0.14, ease: "power2.out", stagger: 0.02 }, 0);
+      tl.to(".sk", { opacity: 0, duration: 0.06 }, 0.24);
+      // 見出し(帯が上から引かれる)
+      tl.fromTo("#tape", { clipPath: "inset(0 0 100% 0)" }, { clipPath: "inset(0 0 0% 0)", duration: 0.15, ease: "power3.out" }, 0);
+      // 剣と素手が接近
+      tl.fromTo("#sword", { x: -330 }, { x: 0, duration: 0.25, ease: "power2.in" }, 0);
+      tl.fromTo("#hand", { x: 260 }, { x: 0, duration: 0.25, ease: "power2.in" }, 0);
+      // ヒット 0.25
+      tl.to("#hand", { x: 26, duration: 0.05, ease: "power3.out" }, 0.25);
+      tl.to("#hand", { x: 0, duration: 0.3, ease: "sine.inOut" }, 0.3);
+      tl.to("#base", { x: -26, duration: 0.04, ease: "power2.out" }, 0.25);
+      tl.to("#base", { x: 0, duration: 0.2, ease: "elastic.out(1,0.35)" }, 0.29);
+      tl.to("#tip", { svgOrigin: "960 562", rotation: -16, duration: 0.04, ease: "power2.out" }, 0.25);
+      tl.to("#tip", { x: -150, y: -980, rotation: -16 - 820, duration: 0.5, ease: "power2.out" }, 0.29);
+      dots.forEach((d, i) => {
+        tl.set(d.el, { opacity: 1 }, 0.25);
+        tl.fromTo(d.el, { x: 0, y: 0, scale: 0.15, rotation: d.big ? d.rot : 0 }, { x: d.dx, y: d.dy, scale: 1, duration: d.d, ease: "power4.out" }, 0.25);
+      });
+      // 結果の単語 0.45
+      tl.fromTo("#word", { clipPath: "inset(0 0 100% 0)" }, { clipPath: "inset(0 0 0% 0)", duration: 0.07, ease: "power2.out" }, 0.45);
+      // 判子 0.60
+      tl.fromTo("#seal", { opacity: 0, scale: 1.14, rotation: -4 }, { opacity: 1, scale: 1, rotation: -2, duration: 0.05, ease: "power4.in" }, 0.6);
+      window.__timelines["main"] = tl;
+      tl.seek(0);
+    </script>
+  </body>
+</html>

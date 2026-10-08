@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>百万の赤</title>
+    <script src="assets/gsap.min.js"></script>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: #000; }
+      #root {
+        position: relative; width: 100%; height: 100%; overflow: hidden; background: #000;
+        font-family: "Noto Sans JP", sans-serif; color: #fffdf5;
+      }
+      #world { position: absolute; inset: 0; transform-origin: 50% 50%; }
+      #swarm { position: absolute; inset: 0; width: 1920px; height: 1080px; display: block; }
+      #vignette {
+        position: absolute; inset: 0; pointer-events: none;
+        background: radial-gradient(ellipse 75% 75% at 50% 48%, rgba(0,0,0,0) 40%, rgba(0,0,0,.78) 100%);
+      }
+
+      /* 魔王軍 label */
+      #tag { position: absolute; left: 190px; top: 112px; opacity: 0; display: flex; align-items: center; gap: 22px; }
+      #tag .sq { width: 16px; height: 16px; background: #ff2a4d; box-shadow: 0 0 18px #ff2a4d; }
+      #tag .nm { font-weight: 700; font-size: 46px; letter-spacing: .28em; color: #fffdf5; text-shadow: 0 0 22px #000, 0 0 8px #000; }
+      #tagline { position: absolute; left: 190px; top: 178px; width: 360px; height: 2px; background: linear-gradient(90deg, #ff2a4d, rgba(255,42,77,0)); opacity: 0; }
+
+      /* counter */
+      #counter { position: absolute; left: 0; top: 440px; width: 1920px; height: 240px; opacity: 0; }
+      #digits { position: absolute; top: 0; height: 240px; display: flex; }
+      .slot { position: relative; width: 130px; height: 240px; overflow: hidden; flex: none;
+        -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 22%, #000 78%, transparent 100%);
+        mask-image: linear-gradient(180deg, transparent 0, #000 22%, #000 78%, transparent 100%); }
+      .slot.cm { width: 80px; mask-image: none; -webkit-mask-image: none; }
+      .strip { position: absolute; left: 0; top: 0; width: 100%; will-change: transform; }
+      .strip div, .cm div {
+        height: 240px; line-height: 240px; text-align: center;
+        font-family: "Space Mono", monospace; font-weight: 700; font-size: 212px;
+        font-variant-numeric: tabular-nums; letter-spacing: 0;
+      }
+      #digits { color: #e6e9f2; text-shadow: 0 0 40px rgba(0,0,0,.9); }
+      #digits.hot { color: #ff2a4d; text-shadow: 0 0 36px rgba(255,42,77,.75), 0 0 90px rgba(255,42,77,.45); }
+      #bar { position: absolute; left: 700px; top: 706px; width: 520px; height: 2px; background: rgba(230,233,242,.28); opacity: 0; }
+
+      /* party */
+      #party { position: absolute; left: 0; top: 740px; width: 1920px; height: 220px; }
+      #phead { position: absolute; left: 0; top: 0; width: 1920px; text-align: center; font-weight: 700; font-size: 38px;
+        letter-spacing: .42em; padding-left: .42em; color: #d7dcea; opacity: 0; }
+      .ic { position: absolute; top: 76px; width: 104px; height: 104px; opacity: 0; }
+      .ic .disc { position: absolute; inset: 0; border-radius: 50%; background: #fffdf5; box-shadow: 0 0 34px rgba(255,253,245,.25); overflow: hidden; }
+      .ic svg { position: absolute; inset: 0; width: 104px; height: 104px; }
+      .ic .xa, .ic .xb { position: absolute; left: 50%; top: 50%; width: 148px; height: 12px; margin: -6px 0 0 -74px; background: #ff2a4d;
+        box-shadow: 0 0 16px rgba(255,42,77,.8); opacity: 0; border-radius: 2px; }
+
+      /* stamp */
+      #stampwrap { position: absolute; left: 960px; top: 828px; width: 0; height: 0; }
+      #stamp { position: absolute; left: -210px; top: -110px; width: 420px; height: 220px; opacity: 0; filter: url(#ink); transform-origin: 50% 50%; }
+      #stamp .box { position: absolute; inset: 0; border: 12px solid #ff2a4d; border-radius: 10px; }
+      #stamp .box2 { position: absolute; inset: 22px; border: 3px solid #ff2a4d; border-radius: 4px; }
+      #stamp .tx { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+        font-weight: 700; font-size: 142px; letter-spacing: .06em; padding-left: .06em; color: #ff2a4d; }
+
+      /* hero dot */
+      #hero { position: absolute; left: 960px; top: 988px; width: 0; height: 0; }
+      #halo { position: absolute; left: -90px; top: -90px; width: 180px; height: 180px; border-radius: 50%; opacity: 0;
+        background: radial-gradient(circle, rgba(255,253,245,.55) 0, rgba(255,253,245,.16) 28%, rgba(255,253,245,0) 68%); }
+      #dot { position: absolute; left: -8px; top: -8px; width: 16px; height: 16px; border-radius: 50%; background: #fffdf5;
+        box-shadow: 0 0 14px #fffdf5, 0 0 40px rgba(255,253,245,.7); opacity: 0; }
+      #lv { position: absolute; left: 26px; top: -19px; font-family: "Space Mono", monospace; font-weight: 700; font-size: 32px; letter-spacing: .04em;
+        color: #fffdf5; opacity: 0; white-space: nowrap; line-height: 38px; }
+
+      #black { position: absolute; inset: 0; background: #000; opacity: 0; pointer-events: none; }
+    </style>
+  </head>
+  <body>
+    <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+      <filter id="ink" x="-10%" y="-10%" width="120%" height="120%">
+        <feTurbulence type="fractalNoise" baseFrequency="0.03" numOctaves="2" seed="7" result="n1" />
+        <feDisplacementMap in="SourceGraphic" in2="n1" scale="8" xChannelSelector="R" yChannelSelector="G" result="d" />
+        <feTurbulence type="fractalNoise" baseFrequency="0.75" numOctaves="2" seed="3" result="n2" />
+        <feColorMatrix in="n2" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  -12 0 0 0 7.6" result="holes" />
+        <feComposite in="d" in2="holes" operator="in" />
+      </filter>
+    </svg>
+
+    <div id="root" data-composition-id="main" data-start="0" data-duration="4" data-width="1920" data-height="1080">
+      <div id="world">
+        <canvas id="swarm" width="1920" height="1080"></canvas>
+
+        <div id="tag"><div class="sq"></div><div class="nm">魔王軍</div></div>
+        <div id="tagline"></div>
+
+        <div id="counter" data-layout-allow-overflow data-layout-allow-occlusion><div id="digits"></div></div>
+        <div id="bar"></div>
+
+        <div id="party">
+          <div id="phead">勇者パーティ</div>
+          <div class="ic" id="ic0" style="left:625px">
+            <div class="disc"><svg viewBox="0 0 104 104"><g fill="#0a0a12"><circle cx="52" cy="42" r="15"/><path d="M20 104 Q22 68 52 64 Q82 68 84 104Z"/><path d="M52 14 L58 28 L46 28Z"/></g></svg></div>
+            <div class="xa"></div><div class="xb"></div>
+          </div>
+          <div class="ic" id="ic1" style="left:795px">
+            <div class="disc"><svg viewBox="0 0 104 104"><g fill="#0a0a12"><circle cx="52" cy="50" r="14"/><path d="M20 104 Q22 74 52 70 Q82 74 84 104Z"/><path d="M30 38 L52 6 L74 38 Q52 30 30 38Z"/></g></svg></div>
+            <div class="xa"></div><div class="xb"></div>
+          </div>
+          <div class="ic" id="ic2" style="left:965px">
+            <div class="disc"><svg viewBox="0 0 104 104"><g fill="#0a0a12"><circle cx="52" cy="44" r="15"/><path d="M20 104 Q22 70 52 66 Q82 70 84 104Z"/></g><rect x="49" y="8" width="6" height="18" fill="#0a0a12"/><rect x="43" y="14" width="18" height="6" fill="#0a0a12"/></svg></div>
+            <div class="xa"></div><div class="xb"></div>
+          </div>
+          <div class="ic" id="ic3" style="left:1135px">
+            <div class="disc"><svg viewBox="0 0 104 104"><g fill="#0a0a12"><path d="M28 54 Q28 16 52 16 Q76 16 76 54 Q76 66 52 66 Q28 66 28 54Z"/><path d="M20 104 Q22 74 52 70 Q82 74 84 104Z"/></g><ellipse cx="52" cy="50" rx="15" ry="9" fill="#fffdf5"/></svg></div>
+            <div class="xa"></div><div class="xb"></div>
+          </div>
+        </div>
+
+        <div id="stampwrap"><div id="stamp"><div class="box"></div><div class="box2"></div><div class="tx">全滅</div></div></div>
+
+        <div id="hero"><div id="halo"></div><div id="dot"></div><div id="lv">Lv.1</div></div>
+      </div>
+      <div id="black"></div>
+    </div>
+
+    <script>
+      (function () {
+        var W = 1920, H = 1080, CX = 960, CY = 540;
+        var clamp = function (x, a, b) { return x < a ? a : x > b ? b : x; };
+        var smooth = function (a, b, x) { var t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
+        function mulberry32(a) { return function () { a |= 0; a = (a + 0x6D2B79F5) | 0; var t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+
+        /* ---------- seeded swarm (48,000 points) ---------- */
+        var N = 48000, rnd = mulberry32(20260401);
+        var X = new Float32Array(N), G = new Float32Array(N), Z = new Float32Array(N), PH = new Float32Array(N),
+            PH2 = new Float32Array(N), AMP = new Float32Array(N), FQ = new Float32Array(N), U = new Float32Array(N);
+        var SIZES = [2.3, 3.3, 4.6, 8.0], SIZEW = [0.45, 0.80, 0.97, 1.0];
+        var COLORS = ['#ff2a4d', '#b8102e', '#ff5a3c'];
+        var groups = []; for (var gi = 0; gi < 12; gi++) groups.push([]);
+        for (var i = 0; i < N; i++) {
+          U[i] = rnd();
+          X[i] = -60 + rnd() * (W + 120);
+          G[i] = clamp(0.55 * U[i] + 0.45 * rnd(), 0, 1);
+          Z[i] = rnd(); PH[i] = rnd() * 6.2832; PH2[i] = rnd() * 6.2832;
+          AMP[i] = 1.5 + rnd() * rnd() * 11; FQ[i] = 0.6 + rnd() * 1.4;
+          var r = rnd(), s = 0; while (SIZEW[s] < r) s++;
+          var cr = rnd(), c = cr < 0.62 ? 0 : cr < 0.88 ? 1 : 2;
+          groups[s * 3 + c].push(i);
+        }
+        var GI = groups.map(function (g) { return Int32Array.from(g); });
+
+        var cv = document.getElementById('swarm'), ctx = cv.getContext('2d');
+
+        /* ---------- counter model ---------- */
+        var T0 = 0.4, T1 = 2.0;
+        function valueAt(t) {
+          if (t <= T0) return 0;
+          if (t >= T1) return 1000000;
+          var u = (t - T0) / (T1 - T0);
+          return 1000000 * Math.pow(u, 2.3);
+        }
+        function pulseAt(t) { var d = t - 2.0; return d < 0 ? 0 : Math.exp(-d / 0.17); }
+
+        /* ---------- odometer DOM ---------- */
+        var digitsEl = document.getElementById('digits');
+        var order = [6, 'c', 5, 4, 3, 'c', 2, 1, 0];
+        var strips = {}, slotEls = {}, commaEls = [];
+        order.forEach(function (k) {
+          var s = document.createElement('div');
+          if (k === 'c') {
+            s.className = 'slot cm'; var d = document.createElement('div'); d.textContent = ','; s.appendChild(d); commaEls.push(s);
+          } else {
+            s.className = 'slot'; s.setAttribute("data-layout-allow-overflow",""); s.setAttribute("data-layout-allow-occlusion",""); var st = document.createElement('div'); st.className = 'strip'; st.setAttribute('data-layout-allow-overflow',''); st.setAttribute('data-layout-allow-occlusion','');
+            for (var n = 0; n <= 10; n++) { var dd = document.createElement('div'); dd.setAttribute('data-layout-allow-overflow',''); dd.setAttribute('data-layout-allow-occlusion',''); dd.textContent = String(n % 10); st.appendChild(dd); }
+            s.appendChild(st); strips[k] = st; slotEls[k] = s;
+          }
+          digitsEl.appendChild(s);
+        });
+        digitsEl.style.left = (1920 - (7 * 130 + 2 * 80)) / 2 + 'px';
+
+        function setCounter(v) {
+          var kk, x, lower, c;
+          for (kk = 0; kk <= 6; kk++) {
+            if (kk === 0) { x = v; }
+            else {
+              lower = (v / Math.pow(10, kk - 1)) % 10; c = clamp(lower - 9, 0, 1); c = c * c * (3 - 2 * c);
+              x = Math.floor(v / Math.pow(10, kk)) + c;
+            }
+            var pos = ((x % 10) + 10) % 10;
+            strips[kk].style.transform = 'translate3d(0,' + (-pos * 240).toFixed(2) + 'px,0)';
+            var on = (kk === 0) || v >= Math.pow(10, kk) - 0.5;
+            slotEls[kk].style.opacity = on ? 1 : 0.1;
+          }
+          commaEls[0].style.opacity = v >= 1000000 - 0.5 ? 1 : 0.1;
+          commaEls[1].style.opacity = v >= 1000 ? 1 : 0.1;
+        }
+
+        /* ---------- swarm render (pure function of t) ---------- */
+        function draw(t) {
+          ctx.globalCompositeOperation = 'source-over';
+          ctx.globalAlpha = 1; ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
+          if (t < T0) return;
+          var env = pulseAt(t);
+          var v = valueAt(t), pv = v / 1000000;
+          pv = pv + 0.02 * smooth(0.4, 0.7, t); if (t >= T1) pv = 1.05;
+          var k = t / 4;
+          var ymax = H * (0.9 + 0.05 * clamp((t - 2) / 1.6, 0, 1));
+          var hotX = [], hotY = [], hotS = [];
+          ctx.globalCompositeOperation = 'lighter';
+          var baseAlpha = [0.95, 0.72, 0.8, 0.4];
+          for (var gidx = 0; gidx < 12; gidx++) {
+            var sz = SIZES[(gidx / 3) | 0];
+            ctx.fillStyle = COLORS[gidx % 3];
+            var bright = (0.88 + 0.12 * smooth(2.0, 2.2, t)) + 0.32 * env;
+            ctx.globalAlpha = clamp(baseAlpha[(gidx / 3) | 0] * bright, 0, 1);
+            var arr = GI[gidx];
+            for (var q = 0; q < arr.length; q++) {
+              var i = arr[q];
+              var a = (pv - U[i]) * 12;
+              if (a <= 0) continue;
+              var born = a < 1;
+              if (a > 1) a = 1;
+              var y = G[i] * ymax - (1 - a) * (1 - a) * 150;
+              var x = X[i] + Math.sin(t * FQ[i] + PH[i]) * AMP[i];
+              y += Math.cos(t * FQ[i] * 0.8 + PH2[i]) * AMP[i] * 0.6;
+              var zs = 1 + 0.06 * k * Z[i] + 0.035 * env * (0.4 + Z[i]);
+              var sx = CX + (x - CX) * zs, sy = CY + (y - CY) * zs;
+              var f = 1 - 0.9 * smooth(760, 930, y);
+              var dx = (sx - CX) / 690, dy = (sy - 560) / 165;
+              var dd = dx * dx + dy * dy;
+              if (dd < 1.5) f *= 0.04 + 0.96 * smooth(0.62, 1.5, dd);
+              var s = sz * (0.35 + 0.65 * a) * (1 + 0.55 * env) * f * (0.75 + 0.5 * Z[i]);
+              if (s < 0.45) continue;
+              ctx.fillRect(sx - s * 0.5, sy - s * 0.5, s, s);
+              if (born && sz < 3) { hotX.push(sx); hotY.push(sy); hotS.push(s); }
+            }
+          }
+          /* leading edge: freshly arrived points glow hot */
+          ctx.fillStyle = '#ffb4a3'; ctx.globalAlpha = 0.5;
+          for (var h = 0; h < hotX.length; h++) { var hs = hotS[h] * 0.6; ctx.fillRect(hotX[h] - hs * 0.5, hotY[h] - hs * 0.5, hs, hs); }
+          ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
+          var vg = ctx.createRadialGradient(CX, 520, 300, CX, 520, 1150);
+          vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(0.45, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,0.8)');
+          ctx.save(); ctx.translate(CX, 540); ctx.scale(1.35, 1); ctx.translate(-CX, -540);
+          ctx.fillStyle = vg; ctx.fillRect(-600, 0, W + 1200, H); ctx.restore();
+        }
+
+        function update(t) {
+          draw(t);
+          setCounter(valueAt(t));
+          var bgl = document.getElementById('digits');
+          if (t >= 2.0) bgl.classList.add('hot'); else bgl.classList.remove('hot');
+        }
+
+        /* ---------- timeline ---------- */
+        var tl = gsap.timeline({ paused: true });
+        var proxy = { t: 0 };
+        tl.to(proxy, { t: 4, duration: 4, ease: 'none', onUpdate: function () { update(proxy.t); } }, 0);
+        tl.fromTo('#world', { scale: 1 }, { scale: 1.12, duration: 4, ease: 'none' }, 0);
+
+        tl.fromTo('#tag', { opacity: 0, x: -14 }, { opacity: 1, x: 0, duration: 0.45, ease: 'power2.out' }, 0.4);
+        tl.fromTo('#tagline', { opacity: 0, scaleX: 0 }, { opacity: 1, scaleX: 1, duration: 0.7, ease: 'power2.out', transformOrigin: '0 50%' }, 0.45);
+        tl.fromTo('#counter', { opacity: 0 }, { opacity: 1, duration: 0.3, ease: 'none' }, 0.4);
+        tl.fromTo('#bar', { opacity: 0, scaleX: 0 }, { opacity: 1, scaleX: 1, duration: 0.8, ease: 'power2.out' }, 0.5);
+
+        /* CUE-A 2.00: red numerals + one beat. bar flares once */
+        tl.to('#bar', { backgroundColor: 'rgba(255,42,77,.9)', duration: 0.01 }, 2.0);
+        tl.to('#bar', { opacity: 0.35, duration: 0.5, ease: 'power2.out' }, 2.02);
+        tl.fromTo('#digits', { scale: 1 }, { scale: 1.035, duration: 0.07, ease: 'power1.out', transformOrigin: '50% 50%' }, 2.0);
+        tl.to('#digits', { scale: 1, duration: 0.45, ease: 'power2.out' }, 2.07);
+
+        /* party row */
+        tl.fromTo('#phead', { opacity: 0, y: 8 }, { opacity: 1, y: 0, duration: 0.3, ease: 'power2.out' }, 2.12);
+        for (var p = 0; p < 4; p++) {
+          var id = '#ic' + p, cue = 2.4 + p * 0.2;
+          tl.fromTo(id, { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.3, ease: 'power2.out' }, 2.12 + p * 0.04);
+          tl.fromTo(id + ' .xa', { opacity: 0, scaleX: 0, rotation: 45 }, { opacity: 1, scaleX: 1, rotation: 45, duration: 0.1, ease: 'power1.out' }, cue);
+          tl.fromTo(id + ' .xb', { opacity: 0, scaleX: 0, rotation: -45 }, { opacity: 1, scaleX: 1, rotation: -45, duration: 0.1, ease: 'power1.out' }, cue + 0.03);
+          tl.to(id + ' .disc', { opacity: 0.1, scale: 0.9, duration: 0.35, ease: 'power2.out' }, cue + 0.06);
+          tl.to(id + ' .xa, ' + id + ' .xb', { opacity: 0.55, duration: 0.5, ease: 'power1.out' }, cue + 0.16);
+        }
+        tl.to('#phead', { opacity: 0, duration: 0.2, ease: 'power1.out' }, 3.0);
+
+        /* CUE-C 3.20: quiet sinking stamp */
+        tl.fromTo('#stamp', { opacity: 0, scale: 1.14, rotation: -7 }, { opacity: 1, scale: 0.985, rotation: -7, duration: 0.2, ease: 'power2.in' }, 3.2);
+        tl.to('#stamp', { scale: 1.0, duration: 0.35, ease: 'power2.out' }, 3.401);
+
+        /* CUE-D 3.60: the lone white dot */
+        tl.fromTo('#dot', { opacity: 0, scale: 0.2 }, { opacity: 1, scale: 1, duration: 0.25, ease: 'power2.out' }, 3.6);
+        tl.fromTo('#halo', { opacity: 0, scale: 0.4 }, { opacity: 1, scale: 1, duration: 0.3, ease: 'power2.out' }, 3.6);
+        tl.to('#halo', { opacity: 0.6, scale: 1.12, duration: 0.12, ease: 'sine.inOut', yoyo: true, repeat: 1 }, 3.91);
+        tl.fromTo('#lv', { opacity: 0, x: -8 }, { opacity: 1, x: 0, duration: 0.3, ease: 'power2.out' }, 3.64);
+
+        /* exit: pure black on the last 2 frames */
+        tl.fromTo('#black', { opacity: 0 }, { opacity: 1, duration: 0.1, ease: 'none' }, 3.833);
+
+        update(0);
+        window.__timelines['main'] = tl;
+        tl.seek(0);
+      })();
+    </script>
+  </body>
+</html>

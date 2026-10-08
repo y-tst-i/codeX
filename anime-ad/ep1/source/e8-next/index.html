@@ -1,0 +1,394 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <script src="assets/gsap.min.js"></script>
+    <style>
+      @font-face { font-family: "Dela Gothic One"; src: url("assets/fonts/dela.woff2") format("woff2"); font-weight: 400; }
+      @font-face { font-family: "Potta One"; src: url("assets/fonts/potta.woff2") format("woff2"); font-weight: 400; }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: #0a0a12; }
+      #root { position: relative; width: 100%; height: 100%; overflow: hidden; background: #0a0a12;
+        font-family: "Dela Gothic One", sans-serif; color: #0a0a12; }
+      .scene { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; overflow: hidden; visibility: hidden; }
+      .abs { position: absolute; }
+      .dela { font-family: "Dela Gothic One", sans-serif; font-weight: 400; white-space: nowrap; line-height: 1; }
+      .chr { position: absolute; display: block; }
+      #fontwarm { position: absolute; left: -3000px; top: 0; font-size: 20px; }
+      .ov { position: absolute; left: 0; top: 0; }
+
+      /* S1 */
+      #s1 { background: #ffd400; }
+      #s1-pink { left: -200px; top: 640px; width: 1100px; height: 700px; background: #ff5fa8; }
+      #s1-circ { left: 1330px; top: -200px; width: 640px; height: 640px; border-radius: 50%; background: #fffdf5; }
+      #s1-sq { left: 1500px; top: 640px; width: 260px; height: 260px; background: #19d3ff; }
+      #s1-txt { left: 0; top: 0; width: 1920px; text-align: center; font-size: 640px; color: #0a0a12;
+        text-shadow: 20px 20px 0 #ff5fa8, 40px 40px 0 #19d3ff; letter-spacing: 0; }
+      #s1-band { left: 0; top: 900px; width: 1920px; height: 110px; background: #0a0a12; overflow: hidden; }
+      #s1-bandtxt { left: 0; top: 18px; font-size: 64px; color: #ffd400; }
+
+      /* S2 */
+      #s2 { background: #19d3ff; }
+      #s2-white { left: 1000px; top: -100px; width: 1100px; height: 1300px; background: #fffdf5; }
+      #s2-hero { left: -140px; top: 20px; width: 884px; height: 1530px; }
+      #s2-ink { left: 880px; top: 320px; width: 1040px; height: 470px; background: #0a0a12; }
+      #s2-g1 { left: 905px; top: 370px; font-size: 230px; color: #fffdf5; }
+      #s2-g2 { left: 1130px; top: 285px; font-size: 560px; color: #ffd400; }
+      #s2-g3 { left: 1610px; top: 370px; font-size: 230px; color: #fffdf5; }
+
+      /* S3 */
+      #s3 { background: #ff5fa8; }
+      #s3-yel { left: 860px; top: -40px; width: 640px; height: 1200px; background: #ffd400; }
+      #s3-circ { left: 960px; top: 40px; width: 440px; height: 440px; border-radius: 50%; background: #fffdf5; }
+      .s3-bar { top: -60px; width: 120px; height: 1200px; background: #0a0a12; }
+      #s3-mina { left: 810px; top: -120px; width: 740px; height: 1665px; }
+      #s3-tag { left: 90px; top: 880px; font-size: 56px; color: #fffdf5; }
+
+      /* S4 */
+      #s4 { background: #fffdf5; }
+      #s4-dots { left: -100px; top: -100px; width: 1300px; height: 1300px;
+        background-image: radial-gradient(circle, #19d3ff 0 11px, transparent 12px); background-size: 44px 44px; }
+      #s4-circ { left: 120px; top: 120px; width: 860px; height: 860px; border-radius: 50%; background: #ffd400; }
+      #s4-pink { left: 1150px; top: -100px; width: 900px; height: 520px; background: #ff5fa8; }
+      #s4-ink { left: 1350px; top: 760px; width: 640px; height: 420px; background: #0a0a12; }
+      #s4-slime { left: 190px; top: 300px; width: 1050px; height: 770px; }
+
+      /* S5 */
+      #s5 { background: #0a0a12; }
+      #s5-sun { left: 460px; top: 40px; width: 1000px; height: 1000px; border-radius: 50%; background: #ffd400; }
+      #s5-bear { left: 640px; top: 90px; width: 640px; height: 752px; }
+      .conf { width: 36px; height: 36px; }
+
+      /* S6 */
+      #s6 { background: #19d3ff; }
+      #s6-pinkc { left: 1380px; top: 640px; width: 700px; height: 700px; border-radius: 50%; background: #ff5fa8; }
+      #s6-ink { left: -200px; top: 905px; width: 900px; height: 300px; background: #ffd400; }
+      #s6-white { left: 0; top: 0; width: 1920px; height: 90px; background: #fffdf5; }
+      .tile { display: flex; align-items: center; justify-content: center; line-height: 1; }
+      .t4 { width: 400px; height: 400px; font-size: 336px; }
+      .t3 { width: 300px; height: 300px; font-size: 252px; }
+      #s6-note { left: 0; top: 925px; width: 1920px; text-align: center; font-size: 40px; color: #0a0a12; }
+
+      /* F */
+      #f1 { background: #ff5fa8; }
+      #f1-circ { left: 560px; top: 140px; width: 800px; height: 800px; border-radius: 50%; background: #ffd400; }
+      #f1-hero { left: -56px; top: -140px; width: 2080px; height: 3600px; }
+      #f2 { background: #0a0a12; }
+      .f2c { top: 0; width: 640px; height: 1080px; overflow: hidden; }
+      #f3 { background: #fffdf5; }
+      #f3-txt { left: 0; top: 190px; width: 1920px; text-align: center; font-size: 560px; color: #0a0a12; text-shadow: 16px 16px 0 #ffd400; }
+      #f3-pink { left: 70px; top: 70px; width: 420px; height: 150px; background: #ff5fa8; }
+      #f3-next { left: 70px; top: 70px; width: 420px; height: 150px; text-align: center; font-size: 100px; line-height: 150px; color: #0a0a12; }
+      #f3-bar { left: 0; top: 860px; width: 1920px; height: 220px; background: #0a0a12; }
+
+      /* S7 */
+      #s7 { background: #0a0a12; }
+      #s7-tsuzuku { left: 0; top: 270px; width: 1920px; text-align: center; font-family: "Potta One", sans-serif; font-size: 230px; color: #fffdf5; letter-spacing: 0.08em; }
+      #s7-frame { left: 270px; top: 600px; width: 1380px; height: 220px; border: 3px solid #ffc400; border-radius: 6px; }
+      #s7-logo { left: 270px; top: 600px; width: 1380px; height: 220px; display: flex; align-items: center; justify-content: center; font-size: 118px; color: #ffc400;
+        background-image: linear-gradient(105deg, #ffc400 0%, #ffc400 38%, #fff6c2 50%, #ffc400 62%, #ffc400 100%); background-size: 300% 100%; background-position: 100% 0;
+        -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+      #fadeout { background: #0a0a12; width: 1920px; height: 1080px; opacity: 0; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="8" data-width="1920" data-height="1080">
+      <div id="fontwarm" class="dela">次回第話薬草が足りません</div>
+
+      <!-- S1 次回 (0-15) -->
+      <div id="s1" class="scene">
+        <div id="s1-pink" class="abs"></div>
+        <div id="s1-circ" class="abs"></div>
+        <div id="s1-sq" class="abs"></div>
+        <div id="s1-txt" class="abs dela">次回</div>
+        <div id="s1-band" class="abs"><div id="s1-bandtxt" class="abs dela">次回予告 ★ 次回予告 ★ 次回予告 ★ 次回予告 ★ 次回予告 ★ 次回予告 ★ 次回予告 ★ 次回予告 ★</div></div>
+      </div>
+
+      <!-- S2 第2話 (15-30) -->
+      <div id="s2" class="scene">
+        <div id="s2-white" class="abs"></div>
+        <div id="s2-hero" class="chr" style="background:url(assets/hero.svg) center/100% 100% no-repeat"></div>
+        <div id="s2-ink" class="abs"></div>
+        <div id="s2-g1" class="abs dela">第</div>
+        <div id="s2-g2" class="abs dela">2</div>
+        <div id="s2-g3" class="abs dela">話</div>
+      </div>
+
+      <!-- S3 ミナ (30-45) -->
+      <div id="s3" class="scene">
+        <div class="abs s3-bar" style="left:40px"></div>
+        <div class="abs s3-bar" style="left:230px"></div>
+        <div class="abs s3-bar" style="left:420px"></div>
+        <div id="s3-yel" class="abs"></div>
+        <div id="s3-circ" class="abs"></div>
+        <div id="s3-mina" class="chr" style="background:url(assets/mina.svg) center/100% 100% no-repeat"></div>
+      </div>
+
+      <!-- S4 スライム (45-60) -->
+      <div id="s4" class="scene">
+        <div id="s4-dots" class="abs"></div>
+        <div id="s4-pink" class="abs"></div>
+        <div id="s4-ink" class="abs"></div>
+        <div id="s4-circ" class="abs"></div>
+        <div id="s4-slime" class="chr" style="background:url(assets/slime.svg) center/100% 100% no-repeat"></div>
+      </div>
+
+      <!-- S5 熊 (60-75) -->
+      <div id="s5" class="scene">
+        <div id="s5-sun" class="abs"></div>
+        <div id="s5-confs"></div>
+        <div id="s5-bear" class="chr" style="background:url(assets/bear.svg) center/100% 100% no-repeat"></div>
+      </div>
+
+      <!-- S6 薬草が足りません (75-150) -->
+      <div id="s6" class="scene">
+        <div id="s6-pinkc" class="abs"></div>
+        <div id="s6-ink" class="abs"></div>
+        <div id="s6-white" class="abs"></div>
+        <div id="s6-tiles"></div>
+        <div id="s6-note" class="abs dela">※内容は予告なく変わることがあります</div>
+      </div>
+
+      <!-- Flashbacks -->
+      <div id="f1" class="scene">
+        <div id="f1-circ" class="abs"></div>
+        <div id="f1-hero" class="chr" style="background:url(assets/hero.svg) center/100% 100% no-repeat"></div>
+      </div>
+      <div id="f2" class="scene">
+        <div id="f2a" class="abs f2c" style="left:0;background:#ffd400"><div class="chr" id="f2-slime" style="background:url(assets/slime.svg) center/100% 100% no-repeat;left:-40px;top:420px;width:720px;height:528px"></div></div>
+        <div id="f2b" class="abs f2c" style="left:640px;background:#19d3ff"><div class="chr" id="f2-mina" style="background:url(assets/mina.svg) center/100% 100% no-repeat;left:-10px;top:80px;width:660px;height:1485px"></div></div>
+        <div id="f2c" class="abs f2c" style="left:1280px;background:#ff5fa8"><div class="chr" id="f2-bear" style="background:url(assets/bear.svg) center/100% 100% no-repeat;left:-10px;top:220px;width:660px;height:776px"></div></div>
+      </div>
+      <div id="f3" class="scene">
+        <div id="f3-bar" class="abs"></div>
+        <div id="f3-txt" class="abs dela">第2話</div>
+        <div id="f3-pink" class="abs"></div>
+        <div id="f3-next" class="abs dela">次回</div>
+      </div>
+
+      <!-- S7 つづく + ロゴ (180-240) -->
+      <div id="s7" class="scene">
+        <div id="s7-tsuzuku" class="abs">つづく</div>
+        <div id="s7-frame" class="abs"></div>
+        <div id="s7-logo" class="abs dela">レベル1なのに世界最強</div>
+      </div>
+
+      <div id="trans"></div>
+      <div id="flash" class="ov" style="width:1920px;height:1080px;opacity:0"></div>
+      <div id="fadeout" class="ov"></div>
+    </div>
+
+    <script>
+      const fr = (n) => n / 30;
+      const tl = gsap.timeline({ paused: true });
+      const $ = (s) => document.querySelector(s);
+
+      // seeded PRNG (deterministic)
+      let seed = 20260101;
+      const rnd = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
+
+      const Y = "#ffd400", C = "#19d3ff", P = "#ff5fa8", W = "#fffdf5", K = "#0a0a12";
+
+      /* ---------- scene visibility ---------- */
+      const sceneTimes = [["#s1", 0, 15], ["#s2", 15, 30], ["#s3", 30, 45], ["#s4", 45, 60], ["#s5", 60, 75],
+        ["#s6", 75, 150], ["#f1", 150, 160], ["#f2", 160, 170], ["#f3", 170, 180], ["#s7", 180, 240]];
+      sceneTimes.forEach(([id, a, b]) => {
+        tl.set(id, { visibility: "visible" }, fr(a));
+        if (b < 240) tl.set(id, { visibility: "hidden" }, fr(b));
+      });
+
+      /* ---------- transition builders (overlay blocks, new scene swapped at frame N) ---------- */
+      const trans = $("#trans");
+      function mk(css, color) {
+        const d = document.createElement("div");
+        d.className = "ov";
+        d.style.cssText = css + ";background:" + color + ";";
+        trans.appendChild(d);
+        return d;
+      }
+      // vertical blinds: strips scaleY down from top, exit shrink toward bottom
+      function blindsV(N, colors) {
+        const n = 8, w = 240;
+        for (let i = 0; i < n; i++) {
+          const d = mk(`left:${i * w}px;top:0;width:${w + 1}px;height:1080px`, colors[i % colors.length]);
+          const st = N - 4 + i * 0.35;
+          tl.fromTo(d, { scaleY: 0, transformOrigin: "50% 0%" }, { scaleY: 1, duration: fr(1.3), ease: "power2.in" }, fr(st));
+          tl.set(d, { transformOrigin: "50% 100%" }, fr(N));
+          tl.to(d, { scaleY: 0, duration: fr(1.5), ease: "power2.out" }, fr(N + 0.5 + (n - 1 - i) * 0.3));
+        }
+      }
+      // horizontal blinds: rows scaleX from left, exit shrink toward right
+      function blindsH(N, colors) {
+        const n = 6, h = 180;
+        for (let i = 0; i < n; i++) {
+          const d = mk(`left:0;top:${i * h}px;width:1920px;height:${h + 1}px`, colors[i % colors.length]);
+          const st = N - 4 + (n - 1 - i) * 0.5;
+          tl.fromTo(d, { scaleX: 0, transformOrigin: "0% 50%" }, { scaleX: 1, duration: fr(1.5), ease: "power2.in" }, fr(st));
+          tl.set(d, { transformOrigin: "100% 50%" }, fr(N));
+          tl.to(d, { scaleX: 0, duration: fr(1.6), ease: "power2.out" }, fr(N + 0.4 + (n - 1 - i) * 0.4));
+        }
+      }
+      // slab pass: layered blocks sweep across; leader on top, last block matches the new bg
+      function pass(N, colors, axis, dir) {
+        // colors top->bottom. axis "x"|"y"; dir +1 = from right/bottom toward left/top
+        const L = axis === "x" ? 1920 : 1080, size = axis === "x" ? 2500 : 1700;
+        const rev = colors.slice().reverse();
+        const els = [];
+        rev.forEach((c) => {
+          const css = axis === "x" ? `left:0;top:0;width:${size}px;height:1080px` : `left:0;top:0;width:1920px;height:${size}px`;
+          els.push(mk(css, c));
+        });
+        els.reverse(); // els[0] = top (leader)
+        els.forEach((d, i) => {
+          const start = N - 4 + i * 0.7, dur = 8;
+          const from = dir * (L + 40), to = -dir * (size + 40);
+          const p = axis === "x" ? "x" : "y";
+          const fromV = {}, toV = {};
+          fromV[p] = from; toV[p] = to; toV.duration = fr(dur); toV.ease = "power1.inOut";
+          tl.fromTo(d, fromV, toV, fr(start));
+        });
+      }
+      // diagonal pass (skewed wrapper moves left -> right)
+      function diag(N, colors) {
+        const rev = colors.slice().reverse();
+        const els = rev.map((c) => {
+          const wrap = mk(`left:0;top:0;width:2800px;height:1080px`, "transparent");
+          const inner = document.createElement("div");
+          inner.style.cssText = `position:absolute;left:0;top:-700px;width:2800px;height:2480px;background:${c};`;
+          wrap.appendChild(inner);
+          gsap.set(inner, { rotation: -20 });
+          return wrap;
+        });
+        els.reverse();
+        els.forEach((w, i) => {
+          tl.fromTo(w, { x: -3300 }, { x: 2400, duration: fr(8), ease: "power1.inOut" }, fr(N - 4 + i * 0.7));
+        });
+      }
+      // checker grid pop (diagonal stagger), exits the same way
+      function grid(N, colors) {
+        const cw = 240, ch = 216, cols = 8, rows = 5;
+        for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+          const d = mk(`left:${c * cw}px;top:${r * ch}px;width:${cw + 1}px;height:${ch + 1}px`, colors[(r + c) % colors.length]);
+          const k = r + c;
+          tl.fromTo(d, { scale: 0 }, { scale: 1.02, duration: fr(1.6), ease: "power2.in" }, fr(N - 4 + k * 0.12));
+          tl.to(d, { scale: 0, duration: fr(1.6), ease: "power2.out" }, fr(N + 0.3 + k * 0.12));
+        }
+      }
+      function flash(N, color) { // one frame, N-1
+        const f = $("#flash");
+        tl.set(f, { backgroundColor: color, opacity: 1 }, fr(N - 1));
+        tl.set(f, { opacity: 0 }, fr(N));
+      }
+
+      blindsV(15, [K, P, W, Y, K, P, W, Y]);
+      pass(30, [K, W, P], "x", 1);
+      blindsH(45, [Y, P, C, Y, P, C]);
+      diag(60, [Y, P, K]);
+      grid(75, [Y, P, W, K]);
+      pass(150, [K, W, P], "y", 1);
+      flash(160, C);
+      flash(170, K);
+
+      /* ---------- S1 ---------- */
+      tl.fromTo("#s1-txt", { scale: 0.86, rotation: -11, y: 30 }, { scale: 1, rotation: -5, y: 0, duration: fr(5), ease: "back.out(2)" }, 0);
+      tl.to("#s1-txt", { scale: 1.05, duration: fr(10), ease: "none" }, fr(5));
+      tl.fromTo("#s1-pink", { rotation: -14, x: -120 }, { rotation: -8, x: 0, duration: fr(15), ease: "power2.out" }, 0);
+      tl.fromTo("#s1-circ", { y: 60 }, { y: 0, duration: fr(8), ease: "back.out(2)" }, 0);
+      tl.fromTo("#s1-sq", { rotation: 0, x: 0 }, { rotation: 60, x: -40, duration: fr(15), ease: "none" }, 0);
+      tl.fromTo("#s1-bandtxt", { x: 0 }, { x: -700, duration: fr(15), ease: "none" }, 0);
+
+      /* ---------- S2 ---------- */
+      tl.fromTo("#s2-hero", { x: -420, rotation: 0 }, { x: 0, duration: fr(6), ease: "power3.out" }, fr(15));
+      tl.to("#s2-hero", { x: 40, duration: fr(9), ease: "none" }, fr(21));
+      tl.fromTo("#s2-ink", { x: 900, rotation: 4 }, { x: 0, rotation: 3, duration: fr(5), ease: "back.out(1.4)" }, fr(15));
+      tl.fromTo(["#s2-g1", "#s2-g3"], { y: -380, rotation: -20 }, { y: 0, rotation: 3, duration: fr(5), ease: "back.out(1.8)", stagger: fr(1) }, fr(16));
+      tl.fromTo("#s2-g2", { x: 500, rotation: 20 }, { x: 0, rotation: 3, duration: fr(5), ease: "back.out(1.6)" }, fr(17));
+      tl.fromTo("#s2-white", { x: 300 }, { x: 0, duration: fr(15), ease: "power2.out" }, fr(15));
+
+      /* ---------- S3 ---------- */
+      tl.fromTo("#s3-mina", { scale: 1.08, y: 20 }, { scale: 1, y: 0, duration: fr(15), ease: "power1.out" }, fr(30));
+      tl.fromTo("#s3-yel", { y: -200 }, { y: 0, duration: fr(5), ease: "power3.out" }, fr(30));
+      tl.fromTo("#s3-circ", { scale: 0 }, { scale: 1, duration: fr(6), ease: "back.out(2)" }, fr(31));
+      tl.fromTo(".s3-bar", { y: -1300 }, { y: 0, duration: fr(5), ease: "power3.out", stagger: fr(1.5) }, fr(30));
+
+      /* ---------- S4 ---------- */
+      tl.fromTo("#s4-slime", { scaleX: 1.15, scaleY: 0.82, transformOrigin: "50% 100%" }, { scaleX: 0.92, scaleY: 1.14, duration: fr(4), ease: "power2.out" }, fr(45));
+      tl.to("#s4-slime", { scaleX: 1.12, scaleY: 0.86, duration: fr(4), ease: "power2.in" }, fr(49));
+      tl.to("#s4-slime", { scaleX: 0.95, scaleY: 1.1, duration: fr(4), ease: "power2.out" }, fr(53));
+      tl.to("#s4-slime", { scaleX: 1.05, scaleY: 0.95, duration: fr(3), ease: "power2.in" }, fr(57));
+      tl.fromTo("#s4-circ", { scale: 0.7 }, { scale: 1, duration: fr(6), ease: "back.out(1.6)" }, fr(45));
+      tl.fromTo("#s4-pink", { x: 400, rotation: 6 }, { x: 0, rotation: -6, duration: fr(15), ease: "power2.out" }, fr(45));
+      tl.fromTo("#s4-ink", { y: 300, rotation: 0 }, { y: 0, rotation: 8, duration: fr(8), ease: "power3.out" }, fr(45));
+      tl.fromTo("#s4-dots", { x: 0, y: 0 }, { x: -88, y: 44, duration: fr(15), ease: "none" }, fr(45));
+
+      /* ---------- S5 (bear spins to the sky) ---------- */
+      const confs = $("#s5-confs");
+      const ccol = [C, P, W, Y];
+      for (let i = 0; i < 14; i++) {
+        const d = document.createElement("div");
+        d.className = "abs conf";
+        d.style.left = Math.floor(rnd() * 1800 + 30) + "px";
+        d.style.top = Math.floor(rnd() * 900 + 60) + "px";
+        d.style.background = ccol[i % 4];
+        confs.appendChild(d);
+        tl.fromTo(d, { y: 0, rotation: rnd() * 90 }, { y: -(300 + rnd() * 500), rotation: 360 + rnd() * 180, duration: fr(15), ease: "none" }, fr(60));
+      }
+      tl.fromTo("#s5-bear", { rotation: 0, y: 120, scale: 0.8 }, { rotation: 720, y: -260, scale: 1.05, duration: fr(15), ease: "power1.in" }, fr(60));
+      tl.fromTo("#s5-sun", { scale: 0.7 }, { scale: 1.1, duration: fr(15), ease: "none" }, fr(60));
+
+      /* ---------- S6 tiles ---------- */
+      const chars = ["薬", "草", "が", "足", "り", "ま", "せ", "ん"];
+      const tcol = [Y, P, W, K, Y, P, W, K];
+      const tfg = [K, K, K, Y, K, K, K, P];
+      const dirs = [[-1500, 0], [0, -1100], [1500, 0], [0, 1100], [-1500, 0], [0, 1100], [1500, 0], [0, -1100]];
+      const rots = [-3, 2, -2, 3, 2, -3, 3, -2];
+      const pos = [[170, 120], [590, 120], [1010, 120], [200, 560], [520, 560], [840, 560], [1160, 560], [1480, 560]];
+      const tiles = $("#s6-tiles");
+      chars.forEach((ch, i) => {
+        const d = document.createElement("div");
+        d.className = "abs tile dela " + (i < 3 ? "t4" : "t3");
+        d.textContent = ch;
+        d.style.left = pos[i][0] + "px"; d.style.top = pos[i][1] + "px";
+        d.style.background = tcol[i]; d.style.color = tfg[i];
+        tiles.appendChild(d);
+        const s = fr(75 + i * 9);
+        tl.fromTo(d, { x: dirs[i][0], y: dirs[i][1], rotation: rots[i] * 6 }, { x: 0, y: 0, rotation: rots[i], duration: fr(5), ease: "back.out(1.5)" }, s);
+      });
+      // bang tile
+      (function () {
+        const d = document.createElement("div");
+        d.className = "abs tile dela";
+        d.textContent = "！！";
+        d.style.cssText = "left:1450px;top:120px;width:380px;height:400px;font-size:250px;background:#0a0a12;color:#ffd400;";
+        tiles.appendChild(d);
+        tl.fromTo(d, { y: -700, rotation: 18 }, { y: 0, rotation: 5, duration: fr(5), ease: "back.out(1.8)" }, fr(75 + 8 * 9 + 2));
+      })();
+      tl.fromTo("#s6-note", { opacity: 0 }, { opacity: 1, duration: fr(3), ease: "none" }, fr(108));
+      tl.fromTo("#s6-pinkc", { scale: 0.6 }, { scale: 1.1, duration: fr(75), ease: "none" }, fr(75));
+      tl.fromTo("#s6-ink", { x: -60 }, { x: 60, duration: fr(75), ease: "none" }, fr(75));
+      tl.fromTo("#s6-white", { x: 300 }, { x: -300, duration: fr(75), ease: "none" }, fr(75));
+
+      /* ---------- Flashbacks ---------- */
+      tl.fromTo("#f1-hero", { rotation: -16, scale: 1.0 }, { rotation: -9, scale: 1.08, duration: fr(10), ease: "none" }, fr(150));
+      tl.fromTo("#f1-circ", { scale: 0.5 }, { scale: 1, duration: fr(4), ease: "back.out(2)" }, fr(150));
+      tl.fromTo(["#f2a", "#f2b", "#f2c"], { y: 1100 }, { y: 0, duration: fr(3), ease: "power3.out", stagger: fr(1) }, fr(160));
+      tl.fromTo("#f2-bear", { rotation: -12 }, { rotation: 12, duration: fr(10), ease: "none" }, fr(160));
+      tl.fromTo("#f3-txt", { x: -500 }, { x: 0, duration: fr(4), ease: "power3.out" }, fr(170));
+      tl.fromTo("#f3-bar", { x: 300 }, { x: 0, duration: fr(4), ease: "power3.out" }, fr(170));
+      tl.fromTo(["#f3-pink", "#f3-next"], { rotation: -12 }, { rotation: -6, duration: fr(4), ease: "back.out(2)" }, fr(170));
+
+      /* ---------- S7 ---------- */
+      tl.fromTo("#s7-tsuzuku", { opacity: 0, y: 14, scale: 0.94 }, { opacity: 1, y: 0, scale: 1, duration: fr(15), ease: "power1.out" }, fr(180));
+      tl.fromTo(["#s7-logo", "#s7-frame"], { opacity: 0, scale: 1.05 }, { opacity: 1, scale: 1, duration: fr(5), ease: "power2.out" }, fr(195));
+      tl.fromTo("#s7-logo", { backgroundPosition: "100% 0" }, { backgroundPosition: "0% 0", duration: fr(24), ease: "power1.inOut" }, fr(198));
+      tl.fromTo("#s7-tsuzuku", { y: 0 }, { y: -10, duration: fr(45), ease: "none" }, fr(195));
+
+      /* ---------- fade to black (last 2 frames pure black) ---------- */
+      tl.fromTo("#fadeout", { opacity: 0 }, { opacity: 1, duration: fr(13), ease: "power1.in" }, fr(225));
+      tl.set("#fadeout", { opacity: 1 }, fr(238));
+
+      window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>

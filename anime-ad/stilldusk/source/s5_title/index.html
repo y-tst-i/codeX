@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <script src="assets/gsap.min.js"></script>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 1920px; height: 1080px; overflow: hidden; background: #0E0D0C; }
+      #root { position: relative; width: 1920px; height: 1080px; background: #0E0D0C; overflow: hidden; }
+      canvas { position: absolute; left: 0; top: 0; }
+      @font-face { font-family: "NSJP"; src: url("assets/fonts/NotoSansJP700-sub.ttf") format("truetype"); font-weight: 700; font-style: normal; font-display: block; }
+      #fontwarm { position: absolute; left: -4000px; top: 0; opacity: 0; font-family: "NSJP"; font-weight: 700; font-size: 30px; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="3.0" data-width="1920" data-height="1080">
+      <canvas id="c" width="1920" height="1080"></canvas>
+    </div>
+    <div id="fontwarm" aria-hidden="true">STILLDUSK COMING SOON</div>
+    <script>
+// 場面で毎回書き直しがちな部品(再現性あり: 乱数は seed 付き、時刻 t の純関数)。new_scene.sh が index.html に埋め込む。
+const SCENE_LIB = (() => {
+  const mulberry32 = (a) => () => { a |= 0; a = (a + 0x6d2b79f5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+  const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+  const lerp = (a, b, k) => a + (b - a) * k;
+  const smooth = (x) => { x = clamp(x); return x * x * (3 - 2 * x); };
+  const ease = (x) => { x = clamp(x); return x < 0.5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2; };       // inOut
+  // 速度の山谷から、映像時間 t -> 素材時間 s(t) の表を作る(スピードランプ)。segs=[[終了秒, 速度], ...] 区間境界は smooth でつなぐ
+  function timeRemap(segs, fps = 30, blend = 0.2) {
+    const n = Math.ceil(segs[segs.length - 1][0] * fps) + 1, rate = (t) => {
+      let i = 0; while (i < segs.length - 1 && t >= segs[i][0]) i++;
+      const prev = i > 0 ? segs[i - 1][1] : segs[0][1], edge = i > 0 ? segs[i - 1][0] : 0;
+      const k = i > 0 ? smooth((t - edge) / blend) : 1; return lerp(prev, segs[i][1], k);
+    };
+    const tab = new Float64Array(n); for (let f = 1; f < n; f++) tab[f] = tab[f - 1] + rate((f - 0.5) / fps) / fps;
+    return (t) => { const x = clamp(t * fps, 0, n - 1), i = Math.floor(x), j = Math.min(n - 1, i + 1); return lerp(tab[i], tab[j], x - i); };
+  }
+  // 雨(3層ストリーク)。ctx に描く。強さ=intensity、風=wind(px/s)。層ごとに速度・長さ・濃さが違う
+  function rain(ctx, t, { w = 1920, h = 1080, seed = 7, intensity = 1, wind = 0.2, layers = [[400, 14, 0.15, 900], [250, 32, 0.3, 1500], [80, 80, 0.45, 2200]], color = "200,220,255" } = {}) {
+    ctx.save(); ctx.lineCap = "round";
+    layers.forEach(([count, len, alpha, speed], li) => {
+      const r = mulberry32(seed + li * 101); ctx.strokeStyle = `rgba(${color},${alpha})`; ctx.lineWidth = 1 + li * 0.6; ctx.beginPath();
+      for (let i = 0; i < count * intensity; i++) {
+        const x0 = r() * (w + 400) - 200, y0 = r() * h, ph = r(), y = (y0 + (t * speed) + ph * h) % (h + len) - len, x = x0 + wind * (y - y0);
+        ctx.moveTo(x, y); ctx.lineTo(x + wind * len, y + len);
+      }
+      ctx.stroke();
+    }); ctx.restore();
+  }
+  const vignette = (ctx, a = 0.4, w = 1920, h = 1080) => { const g = ctx.createRadialGradient(w / 2, h / 2, h * 0.45, w / 2, h / 2, h * 0.95); g.addColorStop(0, "rgba(0,0,0,0)"); g.addColorStop(1, `rgba(0,0,0,${a})`); ctx.fillStyle = g; ctx.fillRect(0, 0, w, h); };
+  const glow = (ctx, x, y, r, color = "255,120,180", a = 0.5) => { const g = ctx.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, `rgba(${color},${a})`); g.addColorStop(1, `rgba(${color},0)`); ctx.fillStyle = g; ctx.globalCompositeOperation = "lighter"; ctx.fillRect(x - r, y - r, r * 2, r * 2); ctx.globalCompositeOperation = "source-over"; };
+  // 一点透視の投影(消失点 vp, 焦点 F): ワールド (X,Y,Z) -> 画面。カメラの前進は Z から引く
+  const project = (X, Y, Z, vp = [960, 470], F = 1000, eye = 1.7) => [vp[0] + (X * F) / Z, vp[1] + ((eye - Y) * F) / Z];
+  return { mulberry32, clamp, lerp, smooth, ease, timeRemap, rain, vignette, glow, project };
+})();
+      const { clamp, lerp, smooth, ease, mulberry32, rain, vignette, glow, project, timeRemap } = SCENE_LIB;
+      const DUR = 3.0, ctx = document.getElementById("c").getContext("2d");
+      // ★ここだけ書く: 時刻 t(秒) の純関数。Math.random / Date.now を使わない(乱数は mulberry32(seed))。
+      // 色(BIBLE の6色のみ。透明度違いだけ使う)
+      const CARBON = "#0E0D0C", BONE = "#EDE4D3", AMBER = "#D9822B", FLARE = "#FFD9A0";
+      const C_RGB = "14,13,12", FL = "255,217,160", AM = "217,130,43", BO = "237,228,211";
+      const SUN = [960, 610], SUN_R = 150, HZ = 640;
+      const p3io = (x) => { x = clamp(x); return x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2; };
+      const p2o = (x) => { x = clamp(x); return 1 - (1 - x) * (1 - x); };
+      // seed 505 から一括生成(砂の微粒: 速度 |v|<=14+4+2 < 20px/s)
+      const R = mulberry32(505);
+      const DUST = Array.from({ length: 110 }, () => ({ x0: R() * 1920, y0: 300 + R() * 470, vx: (R() * 2 - 1) * 12, vy: (R() * 2 - 1) * 3, s: 0.7 + R() * 1.4, a: 0.12 + R() * 0.3, ph: R() * 6.2832 }));
+      // 右脚の根元の破片の山(高さ40px、対称を崩す唯一の要素)
+      const PILE = (() => { const r = mulberry32(506), pts = [[1712, HZ]], n = 16;
+        for (let i = 1; i < n; i++) { const u = i / n, x = lerp(1712, 1902, u) + (r() - 0.5) * 6, env = Math.pow(Math.sin(Math.PI * u), 0.7);
+          pts.push([x, HZ - (i === 8 ? 40 : 40 * env * (0.55 + 0.4 * r()))]); }
+        pts.push([1902, HZ]); return pts; })();
+
+      function sunGrad(r1, stops) { const g = ctx.createRadialGradient(SUN[0], SUN[1], 0, SUN[0], SUN[1], r1); stops.forEach(([o, c]) => g.addColorStop(o, c)); return g; }
+
+      function figurePath() { // 立ち姿 高さ40px、足元 (960,640)
+        const p = new Path2D(), X = 960, Y = HZ;
+        const poly = (pts) => { p.moveTo(X + pts[0][0], Y + pts[0][1]); pts.slice(1).forEach(([x, y]) => p.lineTo(X + x, Y + y)); p.closePath(); };
+        p.moveTo(X + 3.6, Y - 36.3); p.arc(X, Y - 36.3, 3.6, 0, Math.PI * 2);
+        poly([[-1.3, -33.5], [1.3, -33.5], [1.3, -31], [-1.3, -31]]);
+        poly([[-5.4, -31.6], [5.4, -31.6], [3.9, -18], [-3.9, -18]]);
+        poly([[-5.4, -31.6], [-4.0, -31.6], [-5.3, -18.6], [-6.7, -18.8]]);
+        poly([[4.0, -31.6], [5.4, -31.6], [6.7, -18.8], [5.3, -18.6]]);
+        poly([[-3.9, -18.2], [-0.5, -18.2], [-1.3, 0], [-4.2, 0]]);
+        poly([[0.5, -18.2], [3.9, -18.2], [4.2, 0], [1.3, 0]]);
+        return p;
+      }
+      const FIG = figurePath();
+
+      function drawWorld(t) {
+        // 空: RUST -> AMBER(地平線)
+        const sky = ctx.createLinearGradient(0, 0, 0, HZ);
+        sky.addColorStop(0, "#7A2E12"); sky.addColorStop(1, AMBER);
+        ctx.fillStyle = sky; ctx.fillRect(0, 0, 1920, HZ);
+        // 太陽の暈と地平線の靄
+        ctx.fillStyle = sunGrad(640, [[0, `rgba(${FL},0.55)`], [0.3, `rgba(${FL},0.22)`], [1, `rgba(${FL},0)`]]); ctx.fillRect(0, 0, 1920, HZ);
+        const hz = ctx.createLinearGradient(0, 540, 0, HZ); hz.addColorStop(0, `rgba(${FL},0)`); hz.addColorStop(1, `rgba(${FL},0.2)`);
+        ctx.fillStyle = hz; ctx.fillRect(0, 540, 1920, HZ - 540);
+        // 太陽の円盤 r=150 (#F6D29A -> FLARE)、地平線で切れる
+        ctx.save(); ctx.beginPath(); ctx.rect(0, 0, 1920, HZ); ctx.clip();
+        ctx.shadowColor = FLARE; ctx.shadowBlur = 48;
+        ctx.fillStyle = sunGrad(SUN_R, [[0, "#F6D29A"], [1, FLARE]]);
+        ctx.beginPath(); ctx.arc(SUN[0], SUN[1], SUN_R, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0;
+        // 軌道リングの弧: (120,640) - 頂点 (960,170) - (1800,640)、太さ70、CARBON
+        ctx.beginPath(); ctx.ellipse(960, HZ, 840, 470, 0, Math.PI, Math.PI * 2);
+        ctx.lineWidth = 70; ctx.strokeStyle = CARBON; ctx.stroke();
+        // 継ぎ目(左右対称)
+        ctx.strokeStyle = `rgba(${BO},0.05)`; ctx.lineWidth = 2;
+        for (let k = -9; k <= 9; k++) { const th = Math.PI * 1.5 + k * 0.17, c = Math.cos(th), s = Math.sin(th);
+          const nx = c / 840, ny = s / 470, nl = Math.hypot(nx, ny);
+          const cx = 960 + 840 * c, cy = HZ + 470 * s; ctx.beginPath(); ctx.moveTo(cx - 33 * nx / nl, cy - 33 * ny / nl); ctx.lineTo(cx + 33 * nx / nl, cy + 33 * ny / nl); ctx.stroke(); }
+        // バックライト: 太陽側(内縁)に FLARE の細いリム。太陽に近いほど強い
+        const rimG = sunGrad(950, [[0, `rgba(${FL},1)`], [0.4, `rgba(${FL},0.85)`], [1, `rgba(${FL},0.22)`]]);
+        const rimS = sunGrad(950, [[0, `rgba(${FL},0.3)`], [0.4, `rgba(${FL},0.2)`], [1, `rgba(${FL},0.04)`]]);
+        ctx.beginPath(); ctx.ellipse(960, HZ, 805, 435, 0, Math.PI, Math.PI * 2);
+        ctx.strokeStyle = rimS; ctx.lineWidth = 9; ctx.stroke();
+        ctx.strokeStyle = rimG; ctx.lineWidth = 2.5; ctx.stroke();
+        ctx.restore();
+        // 大地 CARBON、地平線の細い光と薄い靄
+        ctx.fillStyle = CARBON; ctx.fillRect(0, HZ, 1920, 1080 - HZ);
+        const gh = ctx.createLinearGradient(0, HZ, 0, 720); gh.addColorStop(0, `rgba(${AM},0.12)`); gh.addColorStop(1, `rgba(${AM},0)`);
+        ctx.fillStyle = gh; ctx.fillRect(0, HZ, 1920, 80);
+        ctx.fillStyle = sunGrad(700, [[0, `rgba(${FL},0.55)`], [1, `rgba(${FL},0.08)`]]); ctx.fillRect(0, HZ, 1920, 1.5);
+        // 破片の山(右脚の根元)
+        const pile = new Path2D(); PILE.forEach(([x, y], i) => (i ? pile.lineTo(x, y) : pile.moveTo(x, y))); pile.closePath();
+        ctx.fillStyle = CARBON; ctx.fill(pile);
+        ctx.beginPath(); PILE.slice(1, -1).forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
+        ctx.strokeStyle = `rgba(${FL},0.4)`; ctx.lineWidth = 1.4; ctx.lineJoin = "round"; ctx.stroke();
+        // 人物シルエット(太陽の円盤の前)+ 逆光のリム
+        ctx.save(); ctx.shadowColor = FLARE; ctx.shadowBlur = 7;
+        ctx.strokeStyle = `rgba(${FL},0.95)`; ctx.lineWidth = 2.4; ctx.lineJoin = "round"; ctx.stroke(FIG); ctx.restore();
+        ctx.fillStyle = CARBON; ctx.fill(FIG);
+        // 空気中の砂の微粒(唯一動くもの、20px/s 以下)
+        DUST.forEach((d) => {
+          const x = (((d.x0 + d.vx * t) % 1920) + 1920) % 1920, y = d.y0 + d.vy * t + 2 * Math.sin(0.7 * t + d.ph);
+          const near = Math.exp(-Math.hypot(x - SUN[0], y - SUN[1]) / 380);
+          ctx.fillStyle = `rgba(${FL},${(d.a * (0.55 + 0.9 * near)).toFixed(3)})`;
+          ctx.beginPath(); ctx.arc(x, y, d.s, 0, Math.PI * 2); ctx.fill();
+        });
+      }
+
+      // ビネット α0.35(四隅を1段落とす)。色は CARBON(真の黒を使わない)、楕円は画面比、非線形な落ち
+      function vig(a) {
+        ctx.save(); ctx.translate(960, 540); ctx.scale(1, 1080 / 1920);
+        const r = Math.hypot(960, 960), g = ctx.createRadialGradient(0, 0, 0, 0, 0, r);
+        g.addColorStop(0, `rgba(${C_RGB},0)`); g.addColorStop(0.5, `rgba(${C_RGB},0)`); g.addColorStop(0.72, `rgba(${C_RGB},${a * 0.3})`);
+        g.addColorStop(0.88, `rgba(${C_RGB},${a * 0.7})`); g.addColorStop(1, `rgba(${C_RGB},${a})`);
+        ctx.fillStyle = g; ctx.fillRect(-960, -960, 1920, 1920); ctx.restore();
+      }
+
+      // 字間つきの中央揃え文字(1字ずつ配置)
+      function spaced(str, cx, cy, px, em, color, alpha, strokeW) {
+        ctx.save(); ctx.font = `700 ${px}px NSJP`; ctx.textAlign = "left"; ctx.textBaseline = "alphabetic"; ctx.globalAlpha = alpha;
+        const chars = [...str], ws = chars.map((c) => ctx.measureText(c).width), sp = em * px;
+        const total = ws.reduce((a, b) => a + b, 0) + sp * (chars.length - 1), m = ctx.measureText(str);
+        const base = cy + (m.actualBoundingBoxAscent - m.actualBoundingBoxDescent) / 2;
+        let x = cx - total / 2; ctx.fillStyle = color; ctx.strokeStyle = color; ctx.lineWidth = strokeW; ctx.lineJoin = "round";
+        chars.forEach((c, i) => { if (strokeW) ctx.strokeText(c, x, base); ctx.fillText(c, x, base); x += ws[i] + sp; });
+        ctx.restore();
+      }
+
+      function draw(t) {
+        const L = Math.round(t * 30 * 1000) / 1000; // 場面内フレーム
+        ctx.clearRect(0, 0, 1920, 1080);
+        ctx.fillStyle = CARBON; ctx.fillRect(0, 0, 1920, 1080);
+        if (L < 2) return; // L0–1: 純粋な CARBON
+        // L12–29: 左右パネル(各960x1080)が開く power3.inOut。隙間の向こうに世界
+        const open = L >= 12 ? p3io((L - 12) / 17) : 0, g = open * 1920;
+        if (g > 0.01) { ctx.save(); ctx.beginPath(); ctx.rect(960 - g / 2, 0, g, 1080); ctx.clip(); drawWorld(t); ctx.restore(); }
+        // 縦の光の隙間(s1 f0 と同じ: x=960, y200–880, 幅2px, グロー16px, FLARE)。開き始めたらパネルの縁に残って消える
+        const slitA = L < 12 ? 1 : 1 - smooth((L - 12) / 9);
+        if (slitA > 0.001) {
+          ctx.save(); ctx.globalAlpha = slitA; ctx.fillStyle = FLARE; ctx.shadowColor = FLARE; ctx.shadowBlur = 16;
+          if (g <= 2) ctx.fillRect(959, 200, 2, 680);
+          else { ctx.fillRect(960 - g / 2 - 1, 200, 2, 680); ctx.fillRect(960 + g / 2 - 1, 200, 2, 680); }
+          ctx.restore();
+        }
+        vig(0.35);
+        // L24–41: タイトル 字間 0.6em→0.28em、不透明度 0→1 (power2.out)
+        const k = p2o((L - 24) / 17);
+        if (k > 0) spaced("STILLDUSK", 960, 800, 132, lerp(0.6, 0.28, k), BONE, k, 2.4);
+        // L48–59: COMING SOON 不透明度 0→1 (linear)
+        const c = clamp((L - 48) / 11);
+        if (c > 0) spaced("COMING SOON", 960, 905, 30, 0.4, AMBER, c, 0);
+      }
+      window.__timelines = window.__timelines || {};
+      const tl = gsap.timeline({ paused: true }), st = { t: 0 };
+      tl.to(st, { t: DUR, duration: DUR, ease: "none", onUpdate: () => draw(st.t) }, 0);
+      draw(0); window.__timelines["main"] = tl;
+      document.fonts.load('700 132px NSJP').then(() => draw(st.t));
+    </script>
+  </body>
+</html>

@@ -1,0 +1,594 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>s3-punch</title>
+    <script src="assets/gsap.min.js"></script>
+    <style>
+      @font-face { font-family: "Dela Gothic One"; src: url("assets/fonts/DelaGothicOne.ttf") format("truetype"); font-weight: 400; }
+      @font-face { font-family: "Yuji Boku"; src: url("assets/fonts/YujiBoku.ttf") format("truetype"); font-weight: 400; }
+      @font-face { font-family: "Noto Sans JP"; src: url("assets/fonts/NotoSansJP700.ttf") format("truetype"); font-weight: 700; }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: #000; }
+      #root { position: relative; width: 100%; height: 100%; overflow: hidden; background: #000; }
+      #cam { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; transform-origin: 1330px 520px; }
+      .layer { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; display: none; }
+      canvas { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; display: none; }
+
+      /* void behind the shattered screen */
+      #void { position: absolute; left: -120px; top: -120px; width: 2160px; height: 1320px;
+        background: linear-gradient(180deg, #05050d 0%, #0d0c2b 50%, #2a0e2c 100%); }
+      #glow { position: absolute; left: -120px; top: -120px; width: 2160px; height: 1320px; transform-origin: 1450px 640px;
+        background: radial-gradient(circle at 1450px 640px, rgba(255,246,206,1) 0, rgba(255,196,0,.95) 130px, rgba(255,110,30,.7) 380px, rgba(255,42,77,.34) 800px, rgba(120,20,90,.16) 1200px, rgba(120,20,90,0) 1600px); }
+
+      #glow2 { position: absolute; left: -120px; top: -120px; width: 2160px; height: 1320px;
+        background: radial-gradient(circle at 1450px 640px, rgba(255,42,77,.6) 0, rgba(200,30,100,.32) 420px, rgba(70,20,120,.14) 900px, rgba(70,20,120,0) 1500px); }
+      /* shards */
+      #shards { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; display: none; }
+      .shard { position: absolute; overflow: hidden; }
+      .shard .inner { position: absolute; width: 1920px; height: 1080px; }
+      .shard .dim { position: absolute; left: 0; top: 0; width: 100%; height: 100%; background: #0a0a12; opacity: 0; }
+      .shard .hot { position: absolute; left: 0; top: 0; width: 100%; height: 100%; background: #fffdf5; opacity: 0; }
+      .shard svg.edge { position: absolute; left: 0; top: 0; width: 100%; height: 100%; overflow: visible; }
+
+      /* punch frame */
+      .punch { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; overflow: hidden;
+        background: radial-gradient(circle at 1330px 520px, #fffbe0 0, #ffe27a 230px, #ffa11a 640px, #ff5a2a 1150px, #d8143a 1800px); }
+      .punch svg.lines { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; }
+      .dodo { position: absolute; left: 1010px; top: 600px; width: 880px; height: 420px; transform-origin: 440px 210px;
+        font-family: "Dela Gothic One", "Noto Sans JP", sans-serif; font-size: 380px; line-height: 1; white-space: nowrap;
+        color: #fffdf5; -webkit-text-stroke: 24px #0a0a12; paint-order: stroke fill; letter-spacing: -0.02em;
+        text-shadow: 18px 20px 0 #ff2a4d; }
+      .herobox { position: absolute; left: 0; top: 0; width: 520px; height: 900px; }
+      .herobox svg { overflow: visible; }
+
+      /* freeze frames */
+      .fa { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; overflow: hidden; }
+      .glint svg *:not(.eye) { visibility: hidden; }
+      .glint .eye { visibility: visible; }
+
+      /* kanji */
+      #kanji { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; display: none; }
+      .col { position: absolute; top: 70px; width: 250px; height: 800px; writing-mode: vertical-rl;
+        font-family: "Yuji Boku", "Noto Sans JP", serif; font-size: 244px; line-height: 1; letter-spacing: 0.02em;
+        color: #fffdf5; filter: url(#brush) drop-shadow(0 0 26px rgba(255,42,77,.55)); }
+      .col span { display: inline-block; text-shadow: 12px 14px 0 rgba(10,10,18,.92); }
+      .fleck { position: absolute; border-radius: 50%; background: #fffdf5; opacity: 0; }
+
+      /* star */
+      #star { position: absolute; left: 1650px; top: 120px; width: 180px; height: 180px; display: none; }
+      #kira { position: absolute; left: 1560px; top: 300px; display: none; white-space: nowrap;
+        font-family: "Dela Gothic One", "Noto Sans JP", sans-serif; font-size: 64px; color: #ffc400;
+        text-shadow: 4px 5px 0 #0a0a12; -webkit-text-stroke: 1px #fff5c0; transform: rotate(-9deg); }
+      #trail { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; display: none; }
+      .tdot { position: absolute; width: 9px; height: 9px; border-radius: 50%; background: #fffdf5; box-shadow: 0 0 12px #ffc400; opacity: 0; }
+
+      /* tape stamp */
+      #tapewrap { position: absolute; left: 0; top: 878px; width: 1920px; display: none; text-align: center; }
+      #tape { display: inline-block; filter: drop-shadow(8px 10px 0 rgba(10,10,18,.7)); }
+      #tape span { display: block; padding: 26px 74px 28px; background: #ffc400; color: #0a0a12;
+        font-family: "Noto Sans JP", sans-serif; font-weight: 700; font-size: 66px; letter-spacing: 0.04em; line-height: 1.15;
+        clip-path: polygon(0 0,100% 0,98.6% 16%,100% 33%,98.6% 50%,100% 66%,98.6% 83%,100% 100%,0 100%,1.4% 83%,0 66%,1.4% 50%,0 33%,1.4% 16%);
+        background-image: repeating-linear-gradient(90deg, rgba(255,255,255,.18) 0 3px, rgba(255,255,255,0) 3px 11px); }
+    </style>
+  </head>
+  <body>
+    <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+      <defs>
+        <filter id="brush" x="-8%" y="-4%" width="116%" height="108%">
+          <feTurbulence type="fractalNoise" baseFrequency="0.05 0.035" numOctaves="3" seed="11" result="n" />
+          <feDisplacementMap in="SourceGraphic" in2="n" scale="11" xChannelSelector="R" yChannelSelector="G" />
+        </filter>
+      </defs>
+    </svg>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="5.2" data-width="1920" data-height="1080">
+    <div aria-hidden="true" data-layout-ignore style="position:absolute;left:-5000px;top:0;white-space:nowrap;font-size:40px">
+      <span style="font-family:'Dela Gothic One'">ドッキラーン</span><span style="font-family:'Yuji Boku'">魔王、消滅。</span><span style="font-family:'Noto Sans JP';font-weight:700">※ただの準備運動です</span>
+    </div>
+      <div id="cam">
+        <!-- world behind the screen -->
+        <div id="voidwrap" class="layer"><div id="void"></div><div id="glow"></div><div id="glow2"></div></div>
+        <canvas id="ash" data-layout-allow-overflow width="1920" height="1080"></canvas>
+        <div id="shards"></div>
+        <canvas id="embers" data-layout-allow-overflow width="1920" height="1080"></canvas>
+        <canvas id="fx" width="1920" height="1080"></canvas>
+        <!-- freeze frames -->
+        <div id="fz0" class="layer" style="background:#000"></div>
+        <div id="fa1" class="layer"></div>
+        <div id="fa2" class="layer"></div>
+        <div id="fa3" class="layer"></div>
+        <div id="fwhite" class="layer" style="background:#fffdf5"></div>
+        <div id="fc0" class="layer"></div>
+        <div id="fc1" class="layer"></div>
+        <div id="fc2" class="layer"></div>
+        <canvas id="cracks" width="1920" height="1080"></canvas>
+        <!-- afterglow text -->
+        <div id="trail"></div>
+        <div id="kanji">
+          <div class="col" id="col1" data-layout-allow-overlap data-layout-allow-occlusion style="left:1180px"><span>魔</span><span>王</span><span>、</span></div>
+          <div class="col" id="col2" data-layout-allow-overlap data-layout-allow-occlusion style="left:900px"><span>消</span><span>滅</span><span>。</span></div>
+        </div>
+        <svg id="star" viewBox="-90 -90 180 180">
+          <g id="starg">
+            <path d="M0 -86 L2.2 -2.2 L86 0 L2.2 2.2 L0 86 L-2.2 2.2 L-86 0 L-2.2 -2.2 Z" fill="#fff5c0" opacity=".85" />
+            <path d="M0 -50 Q7 -7 50 0 Q7 7 0 50 Q-7 7 -50 0 Q-7 -7 0 -50 Z" fill="#ffc400" />
+            <path d="M0 -26 Q4 -4 26 0 Q4 4 0 26 Q-4 4 -26 0 Q-4 -4 0 -26 Z" fill="#fffdf5" />
+          </g>
+        </svg>
+        <div id="kira" data-layout-allow-overlap data-layout-allow-occlusion>キラーン</div>
+        <div id="tapewrap"><div id="tape" data-layout-allow-overlap data-layout-allow-occlusion><span>※ただの準備運動です</span></div></div>
+      </div>
+    </div>
+    <script>
+      // ---------- utils ----------
+      function mulberry32(a) { return function () { a |= 0; a = (a + 0x6d2b79f5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+      const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
+      const eo3 = (x) => 1 - Math.pow(1 - clamp(x, 0, 1), 3);
+      const eo2 = (x) => 1 - Math.pow(1 - clamp(x, 0, 1), 2);
+      const smooth = (a, b, x) => { const u = clamp((x - a) / (b - a), 0, 1); return u * u * (3 - 2 * u); };
+      function hash(n) { n = Math.imul(n ^ 61, 0x45d9f3b); n = Math.imul(n ^ (n >>> 15), 0x45d9f3b); return ((n ^ (n >>> 16)) >>> 0) / 4294967296; }
+      const $ = (id) => document.getElementById(id);
+      const P = { x: 1330, y: 520 };
+      const FPS = 30;
+
+      // ---------- hero ----------
+      const HERO = `<g class="cape"><path d="M186 262 C96 300 44 440 22 640 L64 604 L58 700 L112 636 L124 726 L166 622 C176 500 194 400 222 300 Z" fill="#0a0a12" stroke="#ffd34d" stroke-width="2.5" stroke-linejoin="round"/></g>
+  <g class="legs"><path d="M200 515 L258 520 L236 700 L218 846 L254 874 L102 874 L110 848 L172 832 L184 700 Z" fill="#0a0a12" stroke="#ffd34d" stroke-width="2.5" stroke-linejoin="round"/><path d="M256 515 L314 505 L332 690 L354 852 L416 874 L272 874 L284 842 L292 690 Z" fill="#0a0a12" stroke="#ffd34d" stroke-width="2.5" stroke-linejoin="round"/></g>
+  <g class="backarm"><path d="M192 262 L150 382 L140 482 L172 490 L198 402 L228 292 Z" fill="#0a0a12" stroke="#ffd34d" stroke-width="2.5" stroke-linejoin="round"/><circle cx="156" cy="498" r="27" fill="#0a0a12" stroke="#ffd34d" stroke-width="2.5"/></g>
+  <path class="torso" d="M180 252 C215 236 288 236 324 252 L348 402 L362 566 L190 580 L168 402 Z" fill="#0a0a12" stroke="#ffd34d" stroke-width="2.5" stroke-linejoin="round"/>
+  <path class="belt" d="M186 520 L360 508 L362 534 L188 546 Z" fill="#1a1a26" stroke="#ffd34d" stroke-width="2"/>
+  <g class="head"><path d="M222 205 L286 205 L290 244 L222 244 Z" fill="#0a0a12"/><ellipse cx="254" cy="170" rx="42" ry="47" fill="#0a0a12" stroke="#ffd34d" stroke-width="2.5"/><path d="M208 150 L168 100 L216 122 L204 56 L244 110 L264 34 L284 106 L322 64 L308 128 L336 146 L314 156 L212 156 Z" fill="#0a0a12" stroke="#ffd34d" stroke-width="2.5" stroke-linejoin="round"/><path class="band" d="M214 150 C170 138 118 170 76 232 C128 190 172 192 218 170 Z M222 156 C190 170 160 206 150 250 C176 214 200 196 226 182 Z" fill="#ff2a4d"/><path class="eye" d="M262 170 L298 160 L300 173 L266 180 Z" fill="#fffdf5"/></g>
+  <g class="scarf"><path d="M208 252 C150 252 96 236 28 296 C96 292 148 306 214 290 Z" fill="#ff2a4d"/><path d="M206 252 L312 250 L318 276 L202 284 Z" fill="#ff2a4d"/></g>
+  <g class="arm"><rect class="armrect" x="318" y="244" width="130" height="46" rx="23" fill="#0a0a12" stroke="#ffd34d" stroke-width="2.5"/><g class="fistg"><circle cx="452" cy="267" r="38" fill="#0a0a12" stroke="#ffd34d" stroke-width="2.5"/><path d="M448 247 Q466 243 484 249 M446 266 Q466 262 488 268 M449 285 Q466 282 482 287" stroke="#ffd34d" stroke-width="3" fill="none" stroke-linecap="round"/></g></g>`;
+      // eye in hero coords ~ (280,168). hero element is placed so that the eye is at (ex,ey)
+      function heroEl(o) {
+        const d = document.createElement("div");
+        d.className = "herobox";
+        d.style.left = o.ex - 280 + "px";
+        d.style.top = o.ey - 168 + "px";
+        d.style.transformOrigin = "280px 168px";
+        d.style.transform = `rotate(${o.tilt || 0}deg) scale(${o.s})`;
+        if (o.filter) d.style.filter = o.filter;
+        d.innerHTML = `<svg viewBox="0 0 520 900" width="520" height="900">${HERO}</svg>`;
+        if (o.behind) { const a = d.querySelector(".arm"); a.parentNode.insertBefore(a, d.querySelector(".torso")); }
+        const sx = o.sx == null ? 1 : o.sx;
+        d.querySelector(".arm").setAttribute("transform", `translate(320 267) rotate(${o.rot || 0}) scale(${sx} 1) translate(-320 -267)`);
+        const k = o.k || 1;
+        d.querySelector(".fistg").setAttribute("transform", `translate(452 267) scale(${k / sx} ${k}) translate(-452 -267)`);
+        return d;
+      }
+      const el = (tag, css, html) => { const e = document.createElement(tag); if (css) e.style.cssText = css; if (html) e.innerHTML = html; return e; };
+
+      // ---------- shock / crack geometry (seeded) ----------
+      const NA = 12, RINGS = [0, 150, 360, 680, 1100, 3300];
+      const rg = mulberry32(2024);
+      const rayAng = [];
+      for (let j = 0; j < NA; j++) rayAng.push(((j + (rg() - 0.5) * 0.55) * 2 * Math.PI) / NA + 0.2);
+      const V = [];
+      for (let i = 0; i <= RINGS.length - 1; i++) {
+        V[i] = [];
+        for (let j = 0; j < NA; j++) {
+          if (i === 0) { V[i][j] = { x: P.x, y: P.y }; continue; }
+          const a = rayAng[j] + (rg() - 0.5) * 0.07;
+          const r = RINGS[i] * (i === RINGS.length - 1 ? 1 : 1 + (rg() - 0.5) * 0.2);
+          V[i][j] = { x: P.x + Math.cos(a) * r, y: P.y + Math.sin(a) * r };
+        }
+      }
+      function jag(a, b, n) {
+        const pts = [a];
+        const dx = b.x - a.x, dy = b.y - a.y, len = Math.hypot(dx, dy) || 1;
+        const nx = -dy / len, ny = dx / len;
+        const amp = Math.min(len * 0.07, 26);
+        for (let m = 1; m < n; m++) {
+          const u = m / n + (rg() - 0.5) * 0.08, off = (rg() - 0.5) * 2 * amp;
+          pts.push({ x: a.x + dx * u + nx * off, y: a.y + dy * u + ny * off });
+        }
+        pts.push(b);
+        return pts;
+      }
+      const rayE = [], ringE = [];
+      for (let i = 0; i < RINGS.length; i++) {
+        rayE[i] = []; ringE[i] = [];
+        for (let j = 0; j < NA; j++) {
+          if (i < RINGS.length - 1) rayE[i][j] = jag(V[i][j], V[i + 1][j], i === 0 ? 3 : 4);
+          ringE[i][j] = i === 0 ? [V[0][j], V[0][j]] : jag(V[i][j], V[i][(j + 1) % NA], 3);
+        }
+      }
+      const rev = (a) => a.slice().reverse();
+      const CELLS = [];
+      for (let i = 0; i < RINGS.length - 1; i++) {
+        for (let j = 0; j < NA; j++) {
+          const j2 = (j + 1) % NA;
+          let pts = [].concat(rayE[i][j], ringE[i + 1][j].slice(1), rev(rayE[i][j2]).slice(1), i === 0 ? [] : rev(ringE[i][j]).slice(1, -1));
+          const out = [];
+          pts.forEach((p) => { const q = out[out.length - 1]; if (!q || Math.hypot(q.x - p.x, q.y - p.y) > 0.5) out.push(p); });
+          CELLS.push({ i, j, pts: out });
+        }
+      }
+
+      // ---------- punch frame (C layout) ----------
+      function speedLines(seed) {
+        const r = mulberry32(seed);
+        let ink = "", pap = "";
+        const R = 2900;
+        for (let n = 0; n < 130; n++) {
+          const th = r() * Math.PI * 2, r0 = 270 + r() * 330, w = 0.007 + r() * 0.03;
+          const p0 = [P.x + Math.cos(th) * r0, P.y + Math.sin(th) * r0];
+          const p1 = [P.x + Math.cos(th - w) * R, P.y + Math.sin(th - w) * R];
+          const p2 = [P.x + Math.cos(th + w) * R, P.y + Math.sin(th + w) * R];
+          const s = `${p0[0].toFixed(1)},${p0[1].toFixed(1)} ${p1[0].toFixed(1)},${p1[1].toFixed(1)} ${p2[0].toFixed(1)},${p2[1].toFixed(1)} `;
+          if (r() < 0.18) pap += s.replace(/ $/, "") + "|"; else ink += s.replace(/ $/, "") + "|";
+        }
+        const mk = (str, fill, op) => str.split("|").filter(Boolean).map((p) => `<polygon points="${p}" fill="${fill}" opacity="${op}"/>`).join("");
+        return `<svg class="lines" viewBox="0 0 1920 1080">${mk(ink, "#0a0a12", 0.92)}${mk(pap, "#fffdf5", 0.9)}</svg>`;
+      }
+      function impactStar() {
+        const r = mulberry32(5), n = 18;
+        let o = "", inn = "";
+        for (let k = 0; k < n * 2; k++) {
+          const a = (k / (n * 2)) * Math.PI * 2, rad = k % 2 ? 150 + r() * 40 : 330 + r() * 150;
+          o += `${(P.x + Math.cos(a) * rad).toFixed(1)},${(P.y + Math.sin(a) * rad).toFixed(1)} `;
+          const rad2 = k % 2 ? 90 : 215 + r() * 40;
+          inn += `${(P.x + Math.cos(a) * rad2).toFixed(1)},${(P.y + Math.sin(a) * rad2).toFixed(1)} `;
+        }
+        return `<svg class="lines" viewBox="0 0 1920 1080"><polygon points="${o}" fill="#fffdf5" stroke="#0a0a12" stroke-width="10" stroke-linejoin="round"/><polygon points="${inn}" fill="#fff2a8"/></svg>`;
+      }
+      function buildPunch(variant) {
+        const d = el("div"); d.className = "punch";
+        d.appendChild(el("div", "position:absolute;left:0;top:0", speedLines(100 + variant * 17)));
+        d.appendChild(el("div", "position:absolute;left:0;top:0", impactStar()));
+        d.appendChild(heroEl({ ex: 934, ey: 371, s: 1.5, tilt: -1.5, rot: -3, sx: 1.7, k: 1.8 }));
+        const dd = el("div", "", "ドッ"); dd.className = "dodo"; d.appendChild(dd);
+        return d;
+      }
+
+      // ---------- freeze frames A1..A3 ----------
+      function buildA1() {
+        const f = $("fa1");
+        f.style.background = "#ff7a18";
+        f.appendChild(el("div", "position:absolute;left:130px;top:-190px;width:1040px;height:1040px;border-radius:50%;background:#fffdf5"));
+        f.appendChild(el("div", "position:absolute;left:0;top:0;width:1920px;height:1080px;background:linear-gradient(115deg,rgba(10,10,18,0) 0 62%,#0a0a12 62% 64%,rgba(10,10,18,0) 64%)"));
+        f.appendChild(el("div", "position:absolute;left:0;top:0;width:1920px;height:1080px;background:#0a0a12;clip-path:polygon(0 100%,0 74%,36% 100%)"));
+        f.appendChild(el("div", "position:absolute;left:0;top:0;width:1920px;height:1080px;background:#ffc400;clip-path:polygon(100% 0,100% 40%,78% 0)"));
+        f.appendChild(heroEl({ ex: 760, ey: 330, s: 1.15, tilt: -5, rot: 180, sx: 1.7, k: 1.3, behind: true }));
+      }
+      function buildA2() {
+        const f = $("fa2");
+        f.style.background = "#19d3ff";
+        f.appendChild(el("div", "position:absolute;left:0;top:0;width:1920px;height:1080px;background:#0a0a12;clip-path:polygon(100% 0,100% 100%,56% 100%,74% 0)"));
+        f.appendChild(el("div", "position:absolute;left:0;top:0;width:1920px;height:1080px;background:#fffdf5;clip-path:polygon(0 0,34% 0,12% 100%,0 100%)"));
+        let rings = "";
+        [150, 215, 285].forEach((r, i) => { rings += `<circle cx="359" cy="473" r="${r}" fill="none" stroke="${i === 1 ? '#ff2a4d' : '#0a0a12'}" stroke-width="${10 - i * 2}" stroke-dasharray="${i === 1 ? '40 22' : '120 36'}"/>`; });
+        f.appendChild(el("div", "position:absolute;left:0;top:0;width:1920px;height:1080px", `<svg width="1920" height="1080" viewBox="0 0 1920 1080">${rings}</svg>`));
+        f.appendChild(heroEl({ ex: 700, ey: 290, s: 1.85, tilt: 5, rot: 180, sx: 1.75, k: 1.7, behind: true }));
+      }
+      function buildA3() {
+        const f = $("fa3");
+        f.style.background = "radial-gradient(circle at 980px 560px,#fff2a8 0,#ffc400 380px,#ff7a18 800px,#0a0a12 1400px)";
+        f.appendChild(el("div", "position:absolute;left:0;top:0;width:1920px;height:120px;background:#0a0a12"));
+        f.appendChild(el("div", "position:absolute;left:0;top:960px;width:1920px;height:120px;background:#0a0a12"));
+        f.appendChild(heroEl({ ex: 560, ey: 330, s: 2.6, tilt: -3, rot: 0, sx: 0.9, k: 2.1 }));
+        // cyan rim ticks near the fist
+        f.appendChild(el("div", "position:absolute;left:1040px;top:320px;width:420px;height:12px;background:#19d3ff;transform:rotate(-8deg)"));
+        f.appendChild(el("div", "position:absolute;left:1120px;top:790px;width:520px;height:10px;background:#fffdf5;transform:rotate(7deg)"));
+      }
+      buildA1(); buildA2(); buildA3();
+      // glint (eye only on black)
+      (function () {
+        const g = heroEl({ ex: 760, ey: 330, s: 1.15, tilt: -5, rot: 180, sx: 1.7, k: 1.3, behind: true, filter: "drop-shadow(0 0 10px #fffdf5) drop-shadow(0 0 34px #19d3ff)" });
+        g.classList.add("glint");
+        $("fz0").appendChild(g);
+        $("fz0").appendChild(el("div", "position:absolute;left:690px;top:260px;width:160px;height:160px;border-radius:50%;background:radial-gradient(circle,rgba(255,253,245,.55) 0,rgba(25,211,255,.22) 40%,rgba(25,211,255,0) 70%)"));
+        $("fz0").appendChild(el("div", "position:absolute;left:420px;top:326px;width:700px;height:5px;border-radius:3px;background:linear-gradient(90deg,rgba(255,253,245,0),#fffdf5 50%,rgba(255,253,245,0));opacity:.9;transform:rotate(-8deg)", ""));
+      })();
+      // C frames (3 'boil' variants) + shard source
+      const PC = [buildPunch(0), buildPunch(1), buildPunch(2)];
+      $("fc0").appendChild(PC[0]); $("fc1").appendChild(PC[1]); $("fc2").appendChild(PC[2]);
+
+      // ---------- shards ----------
+      const shardEls = [];
+      (function () {
+        const rs = mulberry32(99);
+        CELLS.forEach((c) => {
+          let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+          c.pts.forEach((p) => { x0 = Math.min(x0, p.x); y0 = Math.min(y0, p.y); x1 = Math.max(x1, p.x); y1 = Math.max(y1, p.y); });
+          const bx0 = Math.max(0, Math.floor(x0)), by0 = Math.max(0, Math.floor(y0)), bx1 = Math.min(1920, Math.ceil(x1)), by1 = Math.min(1080, Math.ceil(y1));
+          if (bx1 - bx0 < 4 || by1 - by0 < 4) return;
+          // centroid of bbox-clipped polygon (approx: mean of clamped points)
+          let cx = 0, cy = 0;
+          c.pts.forEach((p) => { cx += clamp(p.x, bx0, bx1); cy += clamp(p.y, by0, by1); });
+          cx /= c.pts.length; cy /= c.pts.length;
+          const poly = c.pts.map((p) => `${(p.x - bx0).toFixed(1)}px ${(p.y - by0).toFixed(1)}px`).join(",");
+          const w = bx1 - bx0, h = by1 - by0;
+          const s = el("div", `left:${bx0}px;top:${by0}px;width:${w}px;height:${h}px;clip-path:polygon(${poly});transform-origin:${(cx - bx0).toFixed(1)}px ${(cy - by0).toFixed(1)}px`);
+          s.className = "shard";
+          const inn = el("div", `left:${-bx0}px;top:${-by0}px`); inn.className = "inner";
+          inn.appendChild(buildPunch(2));
+          s.appendChild(inn);
+          const dim = el("div"); dim.className = "dim"; s.appendChild(dim);
+          const hot = el("div"); hot.className = "hot"; s.appendChild(hot);
+          const sp = c.pts.map((p) => `${(p.x - bx0).toFixed(1)},${(p.y - by0).toFixed(1)}`).join(" ");
+          s.insertAdjacentHTML("beforeend", `<svg class="edge" viewBox="0 0 ${w} ${h}"><polygon points="${sp}" fill="none" stroke="#fffdf5" stroke-width="9" stroke-linejoin="round"/><polygon points="${sp}" fill="none" stroke="#ffc400" stroke-width="3.5" stroke-linejoin="round" opacity=".9"/></svg>`);
+          $("shards").appendChild(s);
+          const dx = cx - P.x, dy = cy - P.y, dist = Math.hypot(dx, dy) || 1;
+          const near = 1 - clamp(dist / 1500, 0, 1);
+          shardEls.push({
+            s, dim, hot, cx, cy,
+            ux: dx / dist, uy: dy / dist,
+            A: 50 + near * 250 * (0.7 + rs() * 0.6) + rs() * 50,
+            B: 8 + rs() * 24,
+            tang: (rs() - 0.5) * 60,
+            zs: 0.04 + near * 0.55 * (0.6 + rs() * 0.6),
+            rz0: (rs() - 0.5) * 70 * (0.4 + near), rzw: (rs() - 0.5) * 12,
+            rx0: (rs() - 0.5) * 60, rxw: (rs() - 0.5) * 9,
+            ry0: (rs() - 0.5) * 60, ryw: (rs() - 0.5) * 9,
+            ph: rs() * 6.28, wob: 4 + rs() * 8,
+          });
+        });
+      })();
+
+      // ---------- ash particles (s1's red dots, after) ----------
+      const T0 = 31 / FPS;
+      const NP = 15000;
+      const PA = (function () {
+        const r = mulberry32(31415);
+        const a = { x: new Float32Array(NP), y: new Float32Array(NP), ta: new Float32Array(NP), ux: new Float32Array(NP), uy: new Float32Array(NP), v: new Float32Array(NP), k: new Float32Array(NP), L: new Float32Array(NP), sz: new Float32Array(NP), ph: new Float32Array(NP), sw: new Float32Array(NP) };
+        for (let i = 0; i < NP; i++) {
+          a.x[i] = -80 + r() * 2080; a.y[i] = -80 + r() * 1240;
+          const dx = a.x[i] - P.x, dy = a.y[i] - P.y, d = Math.hypot(dx, dy) || 1;
+          a.ta[i] = d >= 3000 ? 1e9 : T0 + 0.05 + (d / 3000) * 2.7;
+          const ang = Math.atan2(dy, dx) + (r() - 0.5) * 0.9;
+          a.ux[i] = Math.cos(ang); a.uy[i] = Math.sin(ang);
+          a.v[i] = (220 + r() * 620) * (1.35 - Math.min(d, 2400) / 2400);
+          a.k[i] = 0.8 + r() * 0.9;
+          a.L[i] = 2.6 + r() * 3.2;
+          a.sz[i] = 3.2 + r() * 3.0 + (r() < 0.08 ? 4 : 0);
+          a.ph[i] = r() * 6.28; a.sw[i] = 10 + r() * 36;
+        }
+        return a;
+      })();
+      const ashC = $("ash").getContext("2d");
+      function drawAsh(t) {
+        const c = ashC; c.clearRect(0, 0, 1920, 1080);
+        for (let i = 0; i < NP; i++) {
+          const a = t - PA.ta[i];
+          let x = PA.x[i], y = PA.y[i], al = 0.9, r = 255, g = 42, b = 77, sz = PA.sz[i];
+          if (a > 0) {
+            const k = PA.k[i], disp = PA.v[i] * k * (1 - Math.exp(-a / k));
+            const sway = PA.sw[i] * Math.sin(a * 1.3 + PA.ph[i]) * Math.min(1, a);
+            x += PA.ux[i] * disp + 46 * a + sway * 0.6;
+            y += PA.uy[i] * disp - 34 * a + sway;
+            const m1 = clamp(a / 0.5, 0, 1), m2 = clamp((a - 0.45) / 1.3, 0, 1);
+            r = 255 - 90 * m2; g = 42 + 80 * m1 + 28 * m2; b = 77 - 53 * m1 + 141 * m2;
+            al = 0.92 * Math.pow(Math.max(0, 1 - a / PA.L[i]), 1.25);
+            sz = sz * (1 + 0.25 * m2);
+          }
+          if (al <= 0.01 || x < -10 || x > 1930 || y < -10 || y > 1090) continue;
+          c.fillStyle = `rgba(${r | 0},${g | 0},${b | 0},${al.toFixed(3)})`;
+          c.fillRect(x - sz / 2, y - sz / 2, sz, sz);
+        }
+      }
+      // embers (front) + ambient motes
+      const NE = 300, NM = 130;
+      const EM = (function () {
+        const r = mulberry32(777), e = [];
+        for (let i = 0; i < NE; i++) {
+          const a = r() * 6.28, d = Math.sqrt(r()) * 760;
+          e.push({ x: P.x + Math.cos(a) * d, y: P.y + Math.sin(a) * d * 0.8, tb: T0 + 0.05 + r() * 1.5, vx: 40 + r() * 230 + Math.cos(a) * 140, vy: -(30 + r() * 170) + Math.sin(a) * 90, sz: 3 + r() * 7, life: 2.6 + r() * 2.8, ph: r() * 6.28 });
+        }
+        const m = [];
+        for (let i = 0; i < NM; i++) m.push({ x: r() * 1920, y: r() * 1080, vy: 8 + r() * 26, vx: -6 + r() * 14, sz: 1.5 + r() * 3.5, ph: r() * 6.28, sp: 1.2 + r() * 2.4 });
+        return { e, m };
+      })();
+      const embC = $("embers").getContext("2d");
+      function drawEmbers(t) {
+        const c = embC; c.clearRect(0, 0, 1920, 1080);
+        EM.e.forEach((p) => {
+          const a = t - p.tb; if (a < 0 || a > p.life) return;
+          const u = a / p.life, k = 1.1, d = 1 - Math.exp(-a / k);
+          const x = p.x + p.vx * k * d + 22 * Math.sin(a * 1.7 + p.ph), y = p.y + p.vy * k * d + 14 * Math.sin(a * 1.3 + p.ph * 2);
+          const al = Math.pow(1 - u, 1.2) * (0.65 + 0.35 * Math.sin(a * 11 + p.ph));
+          const m = clamp(u * 1.6, 0, 1);
+          const col = `${255},${(220 - 150 * m) | 0},${(120 - 60 * m) | 0}`;
+          c.fillStyle = `rgba(${col},${(al * 0.22).toFixed(3)})`; c.beginPath(); c.arc(x, y, p.sz * 2.3, 0, 6.283); c.fill();
+          c.fillStyle = `rgba(${col},${al.toFixed(3)})`; c.beginPath(); c.arc(x, y, p.sz * 0.7, 0, 6.283); c.fill();
+        });
+        EM.m.forEach((p) => {
+          const tt = t - T0; if (tt < 0) return;
+          const x = (p.x + p.vx * tt + 1920 * 4) % 1920, y = (p.y - p.vy * tt + 1080 * 4) % 1080;
+          const al = 0.55 * (0.5 + 0.5 * Math.sin(tt * p.sp + p.ph)) * smooth(0, 0.8, tt);
+          c.fillStyle = `rgba(255,236,170,${al.toFixed(3)})`; c.fillRect(x, y, p.sz, p.sz);
+        });
+      }
+      // crack / ring canvas
+      const fxC = $("fx").getContext("2d"), crC = $("cracks").getContext("2d");
+      function strokePoly(c, pts, R) {
+        let started = false;
+        for (let n = 0; n < pts.length; n++) {
+          const p = pts[n], d = Math.hypot(p.x - P.x, p.y - P.y);
+          if (d <= R) { if (!started) { c.moveTo(p.x, p.y); started = true; } else c.lineTo(p.x, p.y); }
+          else {
+            if (started) {
+              const q = pts[n - 1], dq = Math.hypot(q.x - P.x, q.y - P.y), u = (R - dq) / (d - dq || 1);
+              c.lineTo(q.x + (p.x - q.x) * u, q.y + (p.y - q.y) * u);
+            }
+            break;
+          }
+        }
+      }
+      function drawCracks(f) {
+        const c = crC; c.clearRect(0, 0, 1920, 1080);
+        if (f < 27 || f >= 31) return;
+        const u = (f - 27 + 0.5) / 4.0;
+        const R = 3400 * Math.pow(clamp(u, 0, 1), 1.7) + 140;
+        c.lineCap = "round"; c.lineJoin = "round";
+        const all = [];
+        for (let i = 0; i < RINGS.length - 1; i++) for (let j = 0; j < NA; j++) all.push(rayE[i][j]);
+        for (let i = 1; i < RINGS.length - 1; i++) for (let j = 0; j < NA; j++) all.push(ringE[i][j]);
+        [[16, "rgba(10,10,18,.92)"], [7, "#fffdf5"], [2.5, "#ffc400"]].forEach(([w, col]) => {
+          c.lineWidth = w; c.strokeStyle = col; c.beginPath();
+          all.forEach((pl) => strokePoly(c, pl, R));
+          c.stroke();
+        });
+        const g = c.createRadialGradient(P.x, P.y, 0, P.x, P.y, 340);
+        g.addColorStop(0, "rgba(255,255,255,.85)"); g.addColorStop(1, "rgba(255,255,255,0)");
+        c.fillStyle = g; c.fillRect(P.x - 340, P.y - 340, 680, 680);
+      }
+      function frontR(tau) { return tau <= 0 ? 0 : 3000 * (1 - Math.pow(1 - clamp(tau / 2.2, 0, 1), 2.2)); }
+      function drawFx(t) {
+        const c = fxC; c.clearRect(0, 0, 1920, 1080);
+        const tau = t - T0;
+        if (tau < 0) return;
+        const g0 = Math.exp(-tau / 0.22);
+        if (g0 > 0.02) {
+          const g = c.createRadialGradient(P.x, P.y, 0, P.x, P.y, 560);
+          g.addColorStop(0, `rgba(255,253,235,${(0.95 * g0).toFixed(3)})`); g.addColorStop(0.4, `rgba(255,196,0,${(0.5 * g0).toFixed(3)})`); g.addColorStop(1, "rgba(255,196,0,0)");
+          c.fillStyle = g; c.fillRect(0, 0, 1920, 1080);
+        }
+        [[0, "#fffdf5", 14], [0.1, "#ffc400", 8]].forEach(([dl, col, w]) => {
+          const tt = tau - dl; if (tt <= 0 || tt > 1.6) return;
+          const r = frontR(tt * 1.7), al = Math.pow(1 - tt / 1.6, 2);
+          c.strokeStyle = col; c.globalAlpha = al * 0.9; c.lineWidth = w * (1 - tt / 1.6) + 1.5;
+          c.beginPath(); c.arc(P.x, P.y, r, 0, 6.283); c.stroke(); c.globalAlpha = 1;
+        });
+      }
+
+      // ---------- shards update ----------
+      function updateShards(t) {
+        const tau = Math.max(0, t - T0);
+        const dimv = 0.62 * smooth(1.1, 3.4, t);
+        shardEls.forEach((p) => {
+          const e1 = 1 - Math.exp(-tau / 0.34), e2 = 1 - Math.exp(-tau / 0.5);
+          const mv = p.A * e1 + p.B * tau;
+          const x = p.ux * mv - p.uy * p.tang * (tau / 4) + Math.sin(tau * 0.9 + p.ph) * p.wob;
+          const y = p.uy * mv + p.ux * p.tang * (tau / 4) + Math.cos(tau * 0.7 + p.ph) * p.wob * 0.7;
+          const sc = 1 + p.zs * e2 + 0.012 * tau;
+          const rz = p.rz0 * e1 + p.rzw * tau, rx = p.rx0 * e1 + p.rxw * tau, ry = p.ry0 * e1 + p.ryw * tau;
+          p.s.style.transform = `translate3d(${x.toFixed(2)}px,${y.toFixed(2)}px,0) perspective(1700px) rotateX(${rx.toFixed(2)}deg) rotateY(${ry.toFixed(2)}deg) rotate(${rz.toFixed(2)}deg) scale(${sc.toFixed(4)})`;
+          p.dim.style.opacity = (dimv * (1 - 0.5 * clamp(p.zs / 0.5, 0, 1))).toFixed(3);
+          p.hot.style.opacity = (0.9 * Math.exp(-tau / 0.09)).toFixed(3);
+        });
+      }
+
+      // ---------- text / stamp state ----------
+      const colEls = [$("col1"), $("col2")];
+      const charEls = [].concat(Array.from(colEls[0].children), Array.from(colEls[1].children));
+      const charStart = [60, 64, 68, 73, 77, 81];
+      charEls.forEach((c) => { c.setAttribute("data-layout-allow-overlap", ""); c.setAttribute("data-layout-allow-occlusion", ""); });
+      // ink flecks around the kanji (seeded)
+      const flecks = (function () {
+        const r = mulberry32(4242), out = [];
+        for (let i = 0; i < 18; i++) {
+          const ci = Math.floor(r() * 6), cx = ci < 3 ? 1180 + 125 : 900 + 125, cy = 70 + (ci % 3) * 248 + 124;
+          const a = r() * 6.28, d = 150 + r() * 190, sz = 5 + r() * 15;
+          const f = el("div", `left:${(cx + Math.cos(a) * d).toFixed(0)}px;top:${(cy + Math.sin(a) * d * 0.9).toFixed(0)}px;width:${sz.toFixed(1)}px;height:${sz.toFixed(1)}px`);
+          f.className = "fleck"; f.setAttribute("data-layout-allow-occlusion", ""); f.setAttribute("data-layout-allow-overlap", ""); $("kanji").appendChild(f);
+          out.push({ f, ci, dl: 3 + r() * 5, sz });
+        }
+        return out;
+      })();
+      // trail dots from impact to star
+      const tdots = [];
+      for (let i = 0; i < 16; i++) {
+        const u = i / 15, qx = (1 - u) * (1 - u) * P.x + 2 * (1 - u) * u * 1560 + u * u * 1745, qy = (1 - u) * (1 - u) * P.y + 2 * (1 - u) * u * 140 + u * u * 212;
+        const d = el("div", `left:${qx.toFixed(0)}px;top:${qy.toFixed(0)}px`); d.className = "tdot"; $("trail").appendChild(d); tdots.push({ d, u });
+      }
+
+      // ---------- master render ----------
+      const cache = {};
+      function disp(id, on, mode) { const k = id; const v = on ? (mode || "block") : "none"; if (cache[k] !== v) { cache[k] = v; $(id).style.display = v; } }
+      let lastT = -1;
+      function render(t) {
+        const f = Math.round(t * FPS);
+        // freeze-frame layer logic (all hard cuts)
+        disp("fz0", f >= 6 && f < 9);
+        disp("fa1", f >= 9 && f < 12);
+        disp("fa2", f >= 12 && f < 15);
+        disp("fa3", f >= 15 && f < 18);
+        disp("fwhite", f >= 18 && f < 20);
+        const showC = f >= 20 && f < 31;
+        const v = f < 23 ? 0 : f < 25 ? 1 : f < 27 ? 2 : 2;
+        const vv = f < 22 ? 0 : f < 24 ? 1 : 2;
+        disp("fc0", showC && vv === 0); disp("fc1", showC && vv === 1); disp("fc2", showC && vv === 2);
+        // inversion on f20, f21 ; ドッ appears at f21
+        const inv = f === 20 || f === 21;
+        ["fc0", "fc1", "fc2"].forEach((id) => { const e = $(id); const ft = inv ? "grayscale(1) invert(1) contrast(1.5)" : "none"; if (e.dataset.ft !== ft) { e.dataset.ft = ft; e.style.filter = ft; } });
+        PC.forEach((pn) => {
+          const dd = pn.querySelector(".dodo");
+          if (f < 21) { dd.style.display = "none"; }
+          else {
+            dd.style.display = "block";
+            const k = clamp((f - 21) / 3, 0, 1);
+            dd.style.transform = `rotate(${-9 - 5 * (1 - k)}deg) scale(${1 + 0.13 * (1 - k) * (1 - k)})`;
+          }
+        });
+        // world behind
+        const world = f >= 31;
+        disp("voidwrap", world);
+        disp("ash", world); disp("embers", world); disp("fx", world, "block"); disp("shards", world);
+        disp("cracks", f >= 27 && f < 31);
+        if (world) {
+          const tau = t - T0;
+          const gl = $("glow");
+          gl.style.opacity = (0.95 * Math.exp(-tau / 0.5)).toFixed(3);
+          $("glow2").style.opacity = (0.55 + 0.45 * Math.exp(-tau / 1.5)).toFixed(3);
+          gl.style.transform = `scale(${(1 + 0.22 * tau).toFixed(3)})`;
+          drawAsh(t); drawEmbers(t); drawFx(t); updateShards(t);
+        }
+        drawCracks(f);
+        // camera: hit shake, then slow dolly with decaying wobble
+        let cx = 0, cy = 0, cr = 0, cs = 1;
+        if (f >= 21) {
+          cs = 1.055 + 0.055 * clamp((t - 1.0) / 4.2, 0, 1);
+          if (f < 31) { const amp = 24 * (1 - (f - 21) / 10); cx = (hash(f * 3 + 1) * 2 - 1) * amp; cy = (hash(f * 3 + 2) * 2 - 1) * amp * 0.8; cr = (hash(f * 3 + 3) * 2 - 1) * amp * 0.04; }
+          else { const tau = t - T0, amp = 16 * Math.exp(-tau / 0.55); cx = Math.sin(tau * 23) * amp; cy = Math.cos(tau * 19) * amp * 0.8; cr = Math.sin(tau * 17) * amp * 0.03; }
+        }
+        $("cam").style.transform = `translate(${cx.toFixed(2)}px,${cy.toFixed(2)}px) rotate(${cr.toFixed(3)}deg) scale(${cs.toFixed(4)})`;
+        // kanji
+        disp("kanji", f >= 60);
+        if (f >= 60) {
+          charEls.forEach((s, i) => {
+            const p = clamp((f - charStart[i]) / 8, 0, 1), q = eo2(p) * 135;
+            const m = `linear-gradient(168deg,#000 ${(q - 38).toFixed(1)}%,transparent ${q.toFixed(1)}%)`;
+            s.style.webkitMaskImage = m; s.style.maskImage = m;
+            const bl = 6.5 * eo3((f - charStart[i] - 3) / 12);
+            s.style.webkitTextStroke = bl.toFixed(2) + "px #fffdf5";
+            s.style.opacity = p > 0 ? 1 : 0;
+          });
+          flecks.forEach((fk) => {
+            const st = charStart[fk.ci] + fk.dl, k = (f - st) / 4;
+            const sc = k <= 0 ? 0 : k < 1 ? eo3(k) * 1.25 : 1.25 - 0.25 * clamp(k - 1, 0, 1) - 0.0;
+            fk.f.style.opacity = k <= 0 ? 0 : 0.9;
+            fk.f.style.transform = `scale(${Math.max(0, sc).toFixed(3)})`;
+          });
+        }
+        // trail + star
+        disp("trail", f >= 40 && f < 118);
+        if (f >= 40) tdots.forEach((td) => { const st = 40 + td.u * 36, k = (f - st) / 3; td.d.style.opacity = (clamp(k, 0, 1) * (1 - clamp((f - 80) / 18, 0, 1)) * 0.9).toFixed(3); });
+        disp("star", f >= 78); disp("kira", f >= 78);
+        if (f >= 78) {
+          const k = (f - 78) / 7, sc = k < 1 ? eo3(k) * 1.35 : 1.35 - 0.35 * eo3(k - 1) + 0.06 * Math.sin((f - 85) * 0.5);
+          $("starg").setAttribute("transform", `rotate(${(-25 + 25 * eo3(k)).toFixed(2)}) scale(${Math.max(0, sc).toFixed(3)})`);
+          const kk = clamp((f - 80) / 5, 0, 1);
+          $("kira").style.opacity = kk.toFixed(3);
+          $("kira").style.transform = `rotate(-9deg) translateY(${(10 * (1 - eo3(kk))).toFixed(1)}px)`;
+        }
+        // tape stamp
+        disp("tapewrap", f >= 120);
+        if (f >= 120) {
+          const k = clamp((f - 120) / 5, 0, 1), s = 1 + 0.32 * (1 - k) * (1 - k), rot = -3 - 7 * (1 - k) * (1 - k) + 0.35 * Math.sin((f - 125) * 0.12);
+          $("tape").style.transform = `rotate(${rot.toFixed(2)}deg) scale(${s.toFixed(3)})`;
+        }
+        // frozen-frame punch-in at eye glint
+        if (f >= 6 && f < 9) { const g = $("fz0"); g.style.opacity = f === 6 ? 0.55 : 1; }
+      }
+
+      const tl = gsap.timeline({ paused: true });
+      const proxy = { t: 0 };
+      tl.to(proxy, { t: 5.2, duration: 5.2, ease: "none", onUpdate: () => render(proxy.t) }, 0);
+      window.__timelines["main"] = tl;
+      render(0);
+    </script>
+  </body>
+</html>

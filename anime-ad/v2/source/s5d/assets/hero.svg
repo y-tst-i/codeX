@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 900" width="520" height="900">
+  <!-- HERO「アキラ」: レベル1の主人公。シルエット+金のリムライト。class名でGSAPが部位を動かせる。 -->
+  <g class="cape"><path d="M186 262 C96 300 44 440 22 640 L64 604 L58 700 L112 636 L124 726 L166 622 C176 500 194 400 222 300 Z" fill="#0a0a12" stroke="#ffd34d" stroke-width="2.5" stroke-linejoin="round"/></g>
+  <g class="legs">
+    <path d="M200 515 L258 520 L236 700 L218 846 L254 874 L102 874 L110 848 L172 832 L184 700 Z" fill="#0a0a12" stroke="#ffd34d" stroke-width="2.5" stroke-linejoin="round"/>
+    <path d="M256 515 L314 505 L332 690 L354 852 L416 874 L272 874 L284 842 L292 690 Z" fill="#0a0a12" stroke="#ffd34d" stroke-width="2.5" stroke-linejoin="round"/>
+  </g>
+  <g class="backarm"><path d="M192 262 L150 382 L140 482 L172 490 L198 402 L228 292 Z" fill="#0a0a12" stroke="#ffd34d" stroke-width="2.5" stroke-linejoin="round"/><circle cx="156" cy="498" r="27" fill="#0a0a12" stroke="#ffd34d" stroke-width="2.5"/></g>
+  <path class="torso" d="M180 252 C215 236 288 236 324 252 L348 402 L362 566 L190 580 L168 402 Z" fill="#0a0a12" stroke="#ffd34d" stroke-width="2.5" stroke-linejoin="round"/>
+  <path class="belt" d="M186 520 L360 508 L362 534 L188 546 Z" fill="#1a1a26" stroke="#ffd34d" stroke-width="2"/>
+  <g class="head">
+    <path d="M222 205 L286 205 L290 244 L222 244 Z" fill="#0a0a12"/>
+    <ellipse cx="254" cy="170" rx="42" ry="47" fill="#0a0a12" stroke="#ffd34d" stroke-width="2.5"/>
+    <path d="M208 150 L168 100 L216 122 L204 56 L244 110 L264 34 L284 106 L322 64 L308 128 L336 146 L314 156 L212 156 Z" fill="#0a0a12" stroke="#ffd34d" stroke-width="2.5" stroke-linejoin="round"/>
+    <path class="band" d="M214 150 C170 138 118 170 76 232 C128 190 172 192 218 170 Z M222 156 C190 170 160 206 150 250 C176 214 200 196 226 182 Z" fill="#ff2a4d"/>
+    <path class="eye" d="M262 170 L298 160 L300 173 L266 180 Z" fill="#fffdf5"/>
+  </g>
+  <g class="scarf"><path d="M208 252 C150 252 96 236 28 296 C96 292 148 306 214 290 Z" fill="#ff2a4d"/><path d="M206 252 L312 250 L318 276 L202 284 Z" fill="#ff2a4d"/></g>
+  <g class="arm"><rect class="armrect" x="318" y="244" width="130" height="46" rx="23" fill="#0a0a12" stroke="#ffd34d" stroke-width="2.5"/><g class="fistg"><circle cx="452" cy="267" r="38" fill="#0a0a12" stroke="#ffd34d" stroke-width="2.5"/></g></g>
+</svg>

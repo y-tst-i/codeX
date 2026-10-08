@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <script src="assets/gsap.min.js"></script>
+    <style>
+      @font-face { font-family: "Hachi Maru Pop"; src: url("assets/fonts/HachiMaruPop-sub.ttf") format("truetype"); font-weight: 400; }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: #4cc9f8; }
+      #root { position: relative; width: 100%; height: 100%; overflow: hidden; background: #4cc9f8;
+        font-family: "Hachi Maru Pop", sans-serif; }
+      #worldwrap { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; }
+      #world { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; filter: url(#warp); }
+      .t { position: absolute; white-space: nowrap; line-height: 1; paint-order: stroke fill; }
+      #tape { left: 64px; top: 62px; padding: 20px 52px 26px; background: #ffc400; color: #0a0a12; font-size: 100px;
+        border-radius: 22px; border: 8px solid #fff; box-shadow: 0 10px 0 rgba(10,10,18,0.28); transform-origin: 0 50%; }
+      #ha1 { left: 560px; top: 580px; font-size: 104px; color: #fff; -webkit-text-stroke: 9px #0a0a12; opacity: 0; }
+      #ha2 { left: 600px; top: 450px; font-size: 150px; color: #fff; -webkit-text-stroke: 12px #0a0a12; opacity: 0; }
+      #hack { font-family: "Noto Sans JP", sans-serif; font-weight: 700; left: 580px; top: 330px; font-size: 190px; color: #ffc400; -webkit-text-stroke: 16px #0a0a12; opacity: 0; transform-origin: 0 100%; }
+      #kusha { left: 680px; top: 330px; font-size: 280px; color: #ffc400; -webkit-text-stroke: 34px #fff; opacity: 0;
+        filter: drop-shadow(0 18px 0 #0a0a12); letter-spacing: 0.02em; }
+      #end { right: 80px; bottom: 74px; padding: 22px 56px 30px; background: #fff; color: #0a0a12; font-size: 130px;
+        border-radius: 90px; border: 12px solid #ffc400; box-shadow: 0 12px 0 rgba(10,10,18,0.3); opacity: 0; }
+      #flash { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; background: #fff; opacity: 0; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="0.8" data-width="1920" data-height="1080">
+      <svg width="0" height="0" style="position:absolute">
+        <filter id="warp" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+          <feTurbulence id="turb" type="fractalNoise" baseFrequency="0.004 0.010" numOctaves="2" seed="7" result="n" />
+          <feDisplacementMap id="disp" in="SourceGraphic" in2="n" scale="0" xChannelSelector="R" yChannelSelector="G" />
+        </filter>
+      </svg>
+
+      <div id="worldwrap"><div id="world">
+        <svg viewBox="0 0 1920 1080" width="1920" height="1080" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#3fc2f6" /><stop offset="1" stop-color="#c8f0ff" />
+            </linearGradient>
+          </defs>
+          <rect x="-100" y="-100" width="2120" height="1280" fill="url(#sky)" />
+          <circle cx="1560" cy="250" r="190" fill="#ffe27a" opacity="0.9" />
+          <circle cx="1560" cy="250" r="140" fill="#ffc400" opacity="0.55" />
+          <g id="clouds" fill="#fff"></g>
+
+          <!-- 巨大兵器 -->
+          <g id="missileWrap" transform="translate(1200 900)">
+            <g id="missile">
+              <g transform="translate(-1200 -900)">
+                <path d="M930 960 L1050 700 L1050 900 Z" fill="#0a0a12" />
+                <path d="M1450 960 L1310 700 L1310 900 Z" fill="#0a0a12" />
+                <path d="M1130 760 L1180 1000 L1230 760 Z" fill="#1d2a44" />
+                <rect x="1050" y="330" width="260" height="580" rx="8" fill="#0a0a12" />
+                <path d="M1180 96 C1262 190 1310 280 1310 340 L1050 340 C1050 280 1098 190 1180 96Z" fill="#ff2a4d" />
+                <rect x="1050" y="430" width="260" height="46" fill="#ffc400" />
+                <rect x="1050" y="490" width="260" height="14" fill="#fff" />
+                <rect x="1050" y="780" width="260" height="46" fill="#ffc400" />
+                <rect x="1050" y="838" width="260" height="14" fill="#fff" />
+                <circle cx="1180" cy="620" r="52" fill="#19d3ff" stroke="#fff" stroke-width="10" />
+                <circle cx="1166" cy="606" r="14" fill="#fff" opacity="0.8" />
+                <path d="M1075 350 L1075 900 M1285 350 L1285 900" stroke="#ffc400" stroke-width="3" opacity="0.5" />
+                <rect x="1110" y="905" width="140" height="36" rx="8" fill="#1d2a44" />
+              </g>
+            </g>
+          </g>
+
+          <!-- 主人公(顔アップ) -->
+          <g transform="translate(-100 150) scale(3.6) translate(-130 -20)">
+            <g id="scarf"><path d="M208 252 C150 252 96 236 28 296 C96 292 148 306 214 290 Z" fill="#ff2a4d"/><path d="M206 252 L312 250 L318 276 L202 284 Z" fill="#ff2a4d"/></g>
+            <path d="M180 252 C215 236 288 236 324 252 L348 402 L362 566 L190 580 L168 402 Z" fill="#0a0a12" stroke="#ffd34d" stroke-width="2.5" stroke-linejoin="round"/>
+            <g id="head">
+              <path d="M222 205 L286 205 L290 244 L222 244 Z" fill="#0a0a12"/>
+              <ellipse cx="254" cy="170" rx="42" ry="47" fill="#0a0a12" stroke="#ffd34d" stroke-width="2.5"/>
+              <path d="M208 150 L168 100 L216 122 L204 56 L244 110 L264 34 L284 106 L322 64 L308 128 L336 146 L314 156 L212 156 Z" fill="#0a0a12" stroke="#ffd34d" stroke-width="2.5" stroke-linejoin="round"/>
+              <path d="M214 150 C170 138 118 170 76 232 C128 190 172 192 218 170 Z M222 156 C190 170 160 206 150 250 C176 214 200 196 226 182 Z" fill="#ff2a4d"/>
+              <path id="eye" d="M262 170 L298 160 L300 173 L266 180 Z" fill="#fffdf5"/>
+              <g id="nose">
+                <path d="M290 168 Q318 176 309 194 Q300 199 289 193 Z" fill="#0a0a12" stroke="#ffd34d" stroke-width="2.5" stroke-linejoin="round"/>
+                <circle id="nostril" cx="302" cy="190" r="4.5" fill="#ff2a4d" />
+              </g>
+              <ellipse id="mouth" cx="278" cy="204" rx="9" ry="1.6" fill="#ff2a4d" />
+              <g id="tickle" stroke="#ffc400" stroke-width="3.5" stroke-linecap="round" opacity="0">
+                <path d="M322 164 L336 154" /><path d="M326 178 L342 176" /><path d="M322 192 L334 202" />
+              </g>
+            </g>
+          </g>
+
+          <!-- 風の流線 / 空気の波紋 -->
+          <g id="streaks" fill="#fff"></g>
+          <g id="rings" fill="none" stroke="#fff" stroke-linecap="round"></g>
+        </svg>
+      </div></div>
+
+      <div id="flash"></div>
+      <div id="tape" class="t">最終兵器は、</div>
+      <div id="ha1" class="t">ハ…</div>
+      <div id="ha2" class="t">ハ…ハ…</div>
+      <div id="hack" class="t">ハクション！</div>
+      <div id="kusha" class="t">くしゃみ</div>
+      <div id="end" class="t">で終了。</div>
+    </div>
+
+    <script>
+      function rng(a) { return function () { a |= 0; a = (a + 0x6d2b79f5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a);
+        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+      const R = rng(5150);
+      const ns = "http://www.w3.org/2000/svg";
+      function mk(tag, attrs, parent) { const e = document.createElementNS(ns, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); parent.appendChild(e); return e; }
+
+      // 雲
+      const clouds = document.getElementById("clouds");
+      const cloudPos = [[300, 170, 1.0], [880, 120, 0.8], [1250, 520, 1.1], [1700, 760, 1.3], [820, 880, 1.2], [140, 900, 0.9], [1500, 90, 0.7]];
+      const cloudEls = cloudPos.map(([x, y, s], i) => {
+        const g = mk("g", { transform: `translate(${x} ${y})` }, clouds);
+        const inner = mk("g", {}, g);
+        [[0, 0, 60], [62, -22, 74], [136, 0, 58], [60, 18, 70], [-34, 22, 40], [170, 24, 36]].forEach(([cx, cy, r]) => mk("circle", { cx: cx * s, cy: cy * s, r: r * s }, inner));
+        mk("rect", { x: -60 * s, y: 18 * s, width: 250 * s, height: 56 * s, rx: 28 * s }, inner);
+        inner.setAttribute("opacity", 0.92);
+        return inner;
+      });
+
+      // 風の流線(左→右、斜め)
+      const sg = document.getElementById("streaks");
+      const streakEls = [];
+      for (let i = 0; i < 30; i++) {
+        const y = -60 + R() * 1200, len = 500 + R() * 800, th = 9 + R() * 20;
+        const e = mk("rect", { x: -len, y: y, width: len, height: th, rx: th / 2, opacity: 0 }, sg);
+        streakEls.push({ e, delay: R() * 0.07, speed: 0.2 + R() * 0.08 });
+      }
+      // 波紋リング
+      const rg = document.getElementById("rings");
+      const ringEls = [];
+      for (let i = 0; i < 4; i++) {
+        const e = mk("ellipse", { cx: 470, cy: 800, rx: 40, ry: 40, "stroke-width": 20 - i * 3, opacity: 0 }, rg);
+        ringEls.push(e);
+      }
+
+      const tl = gsap.timeline({ paused: true });
+      // 空気のゆらぎ(常時ほんのり→くしゃみで大きく)
+      tl.fromTo("#disp", { attr: { scale: 4 } }, { attr: { scale: 14 }, duration: 0.25, ease: "sine.in" }, 0);
+      tl.to("#disp", { attr: { scale: 150 }, duration: 0.03, ease: "power2.out" }, 0.25);
+      tl.to("#disp", { attr: { scale: 0 }, duration: 0.3, ease: "power2.out" }, 0.28);
+      tl.fromTo("#turb", { attr: { baseFrequency: "0.004 0.010" } }, { attr: { baseFrequency: "0.009 0.02" }, duration: 0.7, ease: "none" }, 0);
+
+      // 見出しテープ 0→0.15
+      tl.fromTo("#tape", { x: -900, rotation: -6 }, { x: 0, rotation: -3, duration: 0.15, ease: "back.out(1.4)" }, 0);
+
+      // 鼻むずむず・縮む
+      tl.to("#nose", { svgOrigin: "296 182", scale: 1.3, duration: 0.035, yoyo: true, repeat: 5, ease: "sine.inOut" }, 0.01);
+      tl.to("#nostril", { svgOrigin: "302 190", scale: 1.8, duration: 0.05, yoyo: true, repeat: 3, ease: "sine.inOut" }, 0.02);
+      tl.fromTo("#tickle", { opacity: 0 }, { opacity: 1, duration: 0.02, yoyo: true, repeat: 7 }, 0.01);
+      tl.to("#head", { svgOrigin: "254 245", rotation: -5, duration: 0.1, ease: "sine.inOut" }, 0);
+      tl.to("#head", { rotation: -15, y: 6, duration: 0.14, ease: "power2.in" }, 0.1);
+      tl.to("#eye", { svgOrigin: "282 170", scaleY: 0.2, duration: 0.05 }, 0.17);
+      tl.to("#mouth", { attr: { ry: 8 }, duration: 0.04 }, 0.05);
+      tl.to("#mouth", { attr: { ry: 3 }, duration: 0.03 }, 0.1);
+      tl.to("#mouth", { attr: { ry: 12 }, duration: 0.05 }, 0.17);
+      // ハ… ハ…
+      tl.fromTo("#ha1", { opacity: 0, scale: 0.4, rotation: -8 }, { opacity: 1, scale: 1, rotation: -6, duration: 0.04, ease: "back.out(2)" }, 0.04);
+      tl.to("#ha1", { opacity: 0, duration: 0.02 }, 0.13);
+      tl.fromTo("#ha2", { opacity: 0, scale: 0.4, rotation: 4 }, { opacity: 1, scale: 1, rotation: 3, duration: 0.05, ease: "back.out(2)" }, 0.12);
+      tl.to("#ha2", { opacity: 0, duration: 0.02 }, 0.23);
+
+      // CUE-B 0.25 ヒット: くしゃみ
+      tl.to("#head", { rotation: 20, y: 18, duration: 0.03, ease: "power4.out" }, 0.25);
+      tl.to("#head", { rotation: 4, y: 0, duration: 0.25, ease: "sine.out" }, 0.28);
+      tl.to("#eye", { scaleY: 0.06, duration: 0.02 }, 0.25);
+      tl.to("#eye", { scaleY: 1, duration: 0.1 }, 0.5);
+      tl.to("#mouth", { attr: { rx: 12, ry: 15 }, duration: 0.03 }, 0.25);
+      tl.to("#mouth", { attr: { rx: 7, ry: 3 }, duration: 0.2 }, 0.45);
+      tl.fromTo("#flash", { opacity: 0.6 }, { opacity: 0, duration: 0.07, ease: "power2.out", immediateRender: false }, 0.25);
+      tl.to("#worldwrap", { keyframes: [{ x: -14, y: 8, duration: 0.025 }, { x: 11, y: -7, duration: 0.025 }, { x: -6, y: 4, duration: 0.025 }, { x: 0, y: 0, duration: 0.03 }] }, 0.25);
+      // 兵器が吹き飛ぶ
+      tl.fromTo("#missile", { x: 0, y: 0, rotation: 0 }, { svgOrigin: "1200 900", rotation: 8, x: -24, duration: 0.03, ease: "power2.out" }, 0.25);
+      tl.to("#missile", { x: 1950, y: -950, rotation: 520, duration: 0.27, ease: "power2.in" }, 0.28);
+      // 雲も流れる
+      cloudEls.forEach((c, i) => {
+        tl.to(c, { x: 420 + i * 70, scaleX: 1.5, svgOrigin: "0 0", duration: 0.35, ease: "power2.in" }, 0.25);
+      });
+      // 流線
+      streakEls.forEach((s, i) => {
+        tl.set(s.e, { opacity: 0.85 }, 0.25 + s.delay);
+        tl.fromTo(s.e, { x: 0 }, { x: 3200, duration: s.speed, ease: "power1.in" }, 0.25 + s.delay);
+      });
+      // 波紋
+      ringEls.forEach((r, i) => {
+        tl.fromTo(r, { attr: { rx: 40, ry: 40 }, opacity: 0.95 }, { attr: { rx: 900 + i * 130, ry: 900 + i * 130 }, opacity: 0, duration: 0.3, ease: "power2.out", immediateRender: false }, 0.25 + i * 0.035);
+      });
+      // ハクション！ 0.25→
+      tl.fromTo("#hack", { opacity: 0, scale: 0.3, rotation: -10 }, { opacity: 1, scale: 1.1, rotation: -7, duration: 0.05, ease: "back.out(2.5)" }, 0.25);
+      tl.to("#hack", { x: 900, opacity: 0, duration: 0.07, ease: "power2.in" }, 0.37);
+
+      // CUE-C 0.45 くしゃみ
+      tl.fromTo("#kusha", { opacity: 0, scale: 0.4, rotation: 6 }, { opacity: 1, scale: 1, rotation: -3, duration: 0.1, ease: "back.out(1.8)" }, 0.45);
+      tl.to("#kusha", { scale: 1.04, duration: 0.1, yoyo: true, repeat: 1, ease: "sine.inOut" }, 0.57);
+      // CUE-D 0.60 で終了。
+      tl.fromTo("#end", { opacity: 0, y: 220, rotation: 4 }, { opacity: 1, y: 0, rotation: -2, duration: 0.08, ease: "back.out(1.7)" }, 0.6);
+
+      window.__timelines["main"] = tl;
+      tl.seek(0);
+    </script>
+  </body>
+</html>
