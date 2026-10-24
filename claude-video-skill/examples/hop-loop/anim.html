@@ -1,0 +1,185 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>HOP LOOP</title>
+<!-- references/motion-lab.md の型で作った見本。4秒・240コマ・60fps・1080x1080・継ぎ目のないループ。
+     GOAL: 小さなゼリーの塊が文字の上を跳ねて1語を点け、宙返りで最初に戻る。見た人が「もう1回」と思う。
+     全コマが時刻 t の純関数(renderAt)。乱数は seed 付きだけ。?t= で止まる、?render=1 で再生しない。 -->
+<style>
+  html, body { margin: 0; background: #F3EFE7; }
+  canvas { display: block; width: 540px; height: 540px; }
+</style>
+</head>
+<body>
+<canvas id="c" width="1080" height="1080"></canvas>
+<script>
+// ---- TIME ----
+const FPS = 60, N = 240, DUR = N / FPS;            // 120 BPM: 1拍 = 30コマ
+// ---- BRAND(差し替えるのはここだけ) ----
+const C = { bg: '#F3EFE7', ink: '#1E1E24', mute: '#B9B2A6', hero: '#2A9D8F', heroDark: '#1F7A6F', accent: '#E4572E', floor: '#E7E1D6' };
+const WORD = ['H', 'O', 'P', '!'];
+// ---- MOTION(数値は全部ここ) ----
+const LAND = [30, 60, 90, 120];                   // 着地は拍の上
+const AIR = 18, CROUCH = 8;                        // 滞空18コマ、離陸前8コマのしゃがみ
+const FLIP = { crouch: 160, takeoff: 176, land: 210, height: 330 };
+const SQ_TAKE = [0.84, 1.24], SQ_LAND = [1.26, 0.72], SQ_CROUCH = [1.18, 0.78];
+const CAM = 1.15;
+const LETTER_X = [300, 480, 660, 840], LETTER_Y = 640, START_X = 120, GROUND = 640;
+
+function spring(t, zeta = 0.7, f = 2) {           // motion-lab.md §3
+  if (t <= 0) return 0;
+  const w = 2 * Math.PI * f;
+  if (zeta >= 1) return 1 - Math.exp(-w * t) * (1 + w * t);
+  const wd = w * Math.sqrt(1 - zeta * zeta);
+  return 1 - Math.exp(-zeta * w * t) * (Math.cos(wd * t) + (zeta * w / wd) * Math.sin(wd * t));
+}
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const lerp = (a, b, u) => a + (b - a) * u;
+const easeInOut = u => u < .5 ? 8 * u ** 4 : 1 - Math.pow(-2 * u + 2, 4) / 2;   // ease-in-out-quart
+const easeOutExpo = u => u >= 1 ? 1 : 1 - Math.pow(2, -10 * u);
+// 減衰する揺れ(着地後の余韻)。ループの終わりで0に落とす窓つき
+const wobble = (dt, zeta, f, amp) => dt <= 0 ? 0 : amp * (1 - spring(dt, zeta, f));
+
+// 主役の状態: 位置・つぶれ・回転・目
+function hero(fr) {
+  const pads = [START_X, ...LETTER_X];
+  let x = START_X, y = 0, sx = 1, sy = 1, rot = 0;
+  // 4回のホップ
+  for (let i = 0; i < 4; i++) {
+    const land = LAND[i], take = land - AIR, c0 = take - CROUCH;
+    if (fr >= c0 && fr < take) {                   // 予備動作: しゃがむ
+      const u = easeInOut((fr - c0) / CROUCH);
+      sx = lerp(1, SQ_CROUCH[0], u); sy = lerp(1, SQ_CROUCH[1], u); x = pads[i];
+    } else if (fr >= take && fr < land) {          // 空中: 弧、速度方向に伸びる
+      const u = (fr - take) / AIR;
+      x = lerp(pads[i], pads[i + 1], u); y = 4 * 150 * u * (1 - u);
+      const s = u < .5 ? 1 - 2 * u : 0.5 * (2 * u - 1); // 離陸直後に一番伸び、着地の直前は半分だけ
+      sx = lerp(1, SQ_TAKE[0], s * s); sy = lerp(1, SQ_TAKE[1], s * s);
+    }
+    if (fr >= land) x = pads[i + 1];
+  }
+  // 着地のつぶれ → 減衰比0.45で戻る
+  for (const land of [...LAND, FLIP.land]) {
+    const dt = (fr - land) / FPS;
+    if (dt >= 0 && dt < 0.6) {
+      const big = land === FLIP.land ? 1.25 : 1;
+      const k = wobble(dt, 0.45, 3.2, 1);
+      sx += (SQ_LAND[0] - 1) * k * big; sy += (SQ_LAND[1] - 1) * k * big;
+    }
+  }
+  // 大きな宙返りで最初に戻る
+  if (fr >= FLIP.crouch && fr < FLIP.takeoff) {
+    const u = easeInOut((fr - FLIP.crouch) / (FLIP.takeoff - FLIP.crouch));
+    x = LETTER_X[3]; sx = lerp(1, 1.3, u); sy = lerp(1, 0.66, u);
+  } else if (fr >= FLIP.takeoff && fr < FLIP.land) {
+    const u = (fr - FLIP.takeoff) / (FLIP.land - FLIP.takeoff);
+    x = lerp(LETTER_X[3], START_X, easeInOut(u)); y = 4 * FLIP.height * u * (1 - u);
+    rot = -2 * Math.PI * easeInOut(u);
+    const s = Math.abs(1 - 2 * u); sx = lerp(1, .86, s * s); sy = lerp(1, 1.2, s * s);
+  } else if (fr >= FLIP.land) x = START_X;
+  // ループの最後の12コマで残りの揺れを0へ(位置と速度を0コマ目に合わせる)
+  const tail = clamp((N - fr) / 12);
+  const fade = tail * tail * (3 - 2 * tail);
+  if (fr > N - 12) { sx = 1 + (sx - 1) * fade; sy = 1 + (sy - 1) * fade; }
+  // 呼吸: 1ループに2周期(整数周期なので継ぎ目で一致)
+  const breath = 0.015 * Math.sin(2 * Math.PI * 2 * fr / N);
+  sy *= 1 + breath; sx *= 1 - breath;
+  // 目: 着地のたびに次の文字を見る、140コマでまばたき
+  const look = fr < LAND[3] ? 1 : fr < FLIP.takeoff ? -1 : 1;
+  const blink = Math.abs(fr - 140) < 3 ? 0.15 : 1;
+  return { x, y, sx, sy, rot, look, blink };
+}
+
+// 文字の状態: 着地で点いて跳ね、宙返りの着地で右から順に消える
+function letter(i, fr, frKey) {
+  const on = LAND[i], off = FLIP.land + 3 * (3 - i);        // 3コマずつずらす
+  const lit = frKey >= on && frKey < off ? 1 : 0;           // 色はコマ単位で切り替える(ブラーで混ぜない)
+  let s = 1, dy = 0;
+  const d1 = (fr - on) / FPS;
+  if (d1 >= 0 && d1 < 0.8) { s += 0.22 * Math.exp(-5 * d1) * Math.sin(2 * Math.PI * 3 * d1); dy = 26 * Math.exp(-7 * d1) * Math.sin(2 * Math.PI * 2.5 * d1); }
+  const d2 = (fr - off) / FPS;
+  if (d2 >= 0 && d2 < 0.5) s += 0.06 * Math.exp(-8 * d2) * Math.sin(2 * Math.PI * 4 * d2);
+  return { lit, s, dy };
+}
+
+const cv = document.getElementById('c'), g = cv.getContext('2d');
+const off = document.createElement('canvas'); off.width = off.height = 1080; const o = off.getContext('2d');
+
+function drawFrame(ctx, fr, frKey) {
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.fillStyle = C.bg; ctx.fillRect(0, 0, 1080, 1080);
+  // 周辺減光(ごく薄く)
+  const vg = ctx.createRadialGradient(540, 560, 300, 540, 560, 820);
+  vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(60,40,20,0.10)');
+  ctx.fillStyle = vg; ctx.fillRect(0, 0, 1080, 1080);
+  ctx.setTransform(CAM, 0, 0, CAM, 540 - 480 * CAM, 540 - 600 * CAM);   // 動きの中心(480,600)を画面中央に
+  // 床と目盛り(タイムラインの床)
+  ctx.fillStyle = C.floor; ctx.fillRect(60, GROUND + 26, 960, 10);
+  ctx.fillStyle = C.mute;
+  for (let k = 0; k <= 8; k++) { const x = 60 + k * 120; ctx.fillRect(x - 1, GROUND + 40, 2, k % 2 ? 10 : 20); }
+  // 再生ヘッド: 一定速度で動き、各着地の拍で文字の下を通る
+  const ph = 60 + 960 * (fr / N);
+  ctx.fillStyle = C.accent; ctx.fillRect(ph - 2, GROUND + 36, 4, 28);
+  // 出発のパッド
+  ctx.fillStyle = C.mute; roundRect(ctx, START_X - 60, GROUND + 6, 120, 16, 8); ctx.fill();
+  // 文字
+  ctx.font = '800 190px "Inter Display", Inter, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+  for (let i = 0; i < 4; i++) {
+    const L = letter(i, fr, frKey);
+    ctx.save(); ctx.translate(LETTER_X[i], LETTER_Y + 20 + L.dy); ctx.scale(L.s, L.s);
+    ctx.fillStyle = L.lit ? C.accent : C.ink; ctx.fillText(WORD[i], 0, 0); ctx.restore();
+  }
+  // 主役
+  const h = hero(fr), W = 120, H = 96;
+  const base = baseY(h.x);
+  // 接地影: 高いほど小さく薄く
+  const hh = clamp(h.y / 360);
+  ctx.fillStyle = `rgba(40,30,20,${0.22 * (1 - hh)})`;
+  ctx.beginPath(); ctx.ellipse(h.x, base + 4, 64 * (1 - 0.5 * hh) * h.sx, 10 * (1 - 0.5 * hh), 0, 0, Math.PI * 2); ctx.fill();
+  ctx.save();
+  ctx.translate(h.x, base - h.y);
+  if (h.rot) { ctx.translate(0, -H / 2); ctx.rotate(h.rot); ctx.translate(0, H / 2); }
+  ctx.scale(h.sx, h.sy);                            // 足元を基準につぶれる
+  ctx.fillStyle = C.heroDark; roundRect(ctx, -W / 2, -H + 6, W, H, 34); ctx.fill();
+  ctx.fillStyle = C.hero; roundRect(ctx, -W / 2, -H, W, H - 6, 34); ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,0.28)'; roundRect(ctx, -W / 2 + 16, -H + 12, 40, 14, 7); ctx.fill();
+  ctx.fillStyle = C.ink;
+  for (const ex of [-20, 20]) { ctx.beginPath(); ctx.ellipse(ex + 8 * h.look, -H / 2 - 4, 7, 11 * h.blink, 0, 0, Math.PI * 2); ctx.fill(); }
+  ctx.restore();
+}
+// 主役の足元の高さ: 出発パッドの上、または文字の上
+function baseY(x) {
+  if (Math.abs(x - START_X) < 1e-6) return GROUND + 6;
+  for (let i = 0; i < 4; i++) if (Math.abs(x - LETTER_X[i]) < 1e-6) return LETTER_Y - 118;
+  // 空中: 出発点と文字の高さを補間
+  const pads = [[START_X, GROUND + 6], ...LETTER_X.map(v => [v, LETTER_Y - 118])].sort((a, b) => a[0] - b[0]);
+  for (let i = 0; i < pads.length - 1; i++) if (x >= pads[i][0] && x <= pads[i + 1][0]) return lerp(pads[i][1], pads[i + 1][1], (x - pads[i][0]) / (pads[i + 1][0] - pads[i][0]));
+  return GROUND + 6;
+}
+function roundRect(ctx, x, y, w, h, r) { ctx.beginPath(); ctx.roundRect(x, y, w, h, r); }
+
+// 1コマ内で SUB 回描いて平均する(半コマ=180度シャッターのモーションブラー)
+const SUB = 4;
+window.renderAt = function (t) {
+  const fr0 = ((t * FPS) % N + N) % N;
+  g.globalAlpha = 1;
+  for (let k = 0; k < SUB; k++) {
+    const fr = (fr0 - 0.5 + 0.5 * (k + 1) / SUB + N) % N;   // 後ろ向きのシャッター: 最後のサンプルがちょうどそのコマ
+    drawFrame(o, fr, Math.round(fr0));
+    g.globalAlpha = 1 / (k + 1); g.drawImage(off, 0, 0);
+  }
+  g.globalAlpha = 1;
+};
+
+const q = new URLSearchParams(location.search);
+document.fonts.ready.then(() => {
+  window.__ready = true;
+  if (q.has('t')) return window.renderAt(parseFloat(q.get('t')) || 0);
+  if (q.has('render')) return window.renderAt(0);
+  const t0 = performance.now();
+  (function loop() { window.renderAt(((performance.now() - t0) / 1000) % DUR); requestAnimationFrame(loop); })();
+});
+</script>
+</body>
+</html>

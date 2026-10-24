@@ -24,13 +24,14 @@ description: コードで作る動画(HyperFrames・three.js・ffmpeg)の、音�
 3. 音の作り方: 音楽は MIDI + 無料音源(`tools/midi_render.py`。`apt-get update && apt-get install -y fluidsynth musescore-general-soundfont-lossless`、`pip install pretty_midi mido`)、効果音は録音素材(`tools/sfx_lib.py`、CC0、282個)、環境音は合成(ピンクノイズを帯域で絞る)。
 4. 設計ルール(`references/sound-palette.md`、`references/sfx-catalog.md`、handbook §15): 場面ごとに楽器の系統・空間・帯域を変える/3層(音楽・環境・効果)/ほぼ無音の区間を2か所以上/純音のピン・サインのスイープは1本に最大2回/合成音は全体の3割以下/BGM は切れ目なく流し静かな所は下げる(ゼロにしない)/Jカット・Lカット。
 5. 結合と音量: `-c:v copy` で映像を再エンコードせず結合。`bash tools/assemble.sh` の考え方(2回通しの loudnorm、必要なら軽い圧縮)で **-14 LUFS・ピーク -1 dBTP 以下**。
-6. 確認: `python3 tools/sync_check.py`(映像と音の同期)、`python3 tools/review_checks.py <final.mp4>`(機械チェック)。
+6. 確認: `python3 tools/sync_check.py`(映像と音の同期)、`python3 tools/review_checks.py <final.mp4>`(機械チェック)、`python3 tools/audio_measure.py <final.mp4> --cues cues.json`(スマホの帯域の音量・各合図の頂点が「コマ+1」に来ているか・下地より何dB上か)。WAV は -2 dBTP 以下にして、AAC にした後も -1 dBTP 以下を保つ。
 - 改善の余地(試験での自己申告): 音の幅(LRA)が狭くヒット音が詰まりうる/BGM の低音が強く場面ごとの違いが小さい。
 
 ## 3. 担当の設置
 `bash tools/install_agent.sh` で `video-opus`(Opus・エフォート medium)を `~/.claude/agents/` に設置(**次のセッションから効く**)。音の担当・調べものはこれでよい。映像の通し制作は high。
 
 ## 4. 補助の道具(効くか未検証)
+**映像を頼む時の指示書**: 形容詞を数値に置き換え、定番の見た目を名指しで禁止し、全コマを時刻 t の純関数にする(`references/motion-lab.md`。雛形は `prompt-templates.md` F)。外部スキルに渡す指示書にもそのまま足せる。
 3D の仕上げ `tools/new_scene_three.sh` + `tools/assets/three/post.js` + `references/three-3d.md`(外部スキルは3Dを自前で組む必要がある)/ 後処理 `tools/look_pass.sh` / 映画技法の辞書(`python3 tools/cin.py`、424件)/ スタイル辞書(`tools/style.py`、43種)/ 審査の型(`references/review-gauntlet.md`)。
 
 ## 5. 未確定(正直に)

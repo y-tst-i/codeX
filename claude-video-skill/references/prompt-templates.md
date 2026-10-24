@@ -118,3 +118,28 @@ Audio: {{BGM源}} / {{SFXの着地点}} / {{ナレーションTTS}}、-14 LUFS�
 Process: まず10〜15秒版を作り、npx hyperframes check と snapshot で自己検証 → preview を見せる。
          承認後にだけ render。
 ```
+
+---
+
+## F. 数値で指示する型(Opus 5.5 Motion Lab)
+
+出典: Florence(@flxrnc)の X 記事と CTRL+Z の配布資料。考え方・数値表・作例は `motion-lab.md`。
+形容詞を数値に置き換え、定番を名指しで禁止する。BRAND だけ差し替えれば他の行は使い回せる。
+
+```
+GOAL: {{見た人に何を感じさせるか・させるか、1文}}
+OUTPUT: one self-contained HTML file, {{three.js 0.181.2 / Canvas 2D / HyperFrames}}, {{W}}x{{H}}.
+TIME: {{秒}} s x {{fps}} fps = {{総コマ}} frames, {{seamless loop / no loop}}, {{BPM}} BPM (1 beat = {{fps*60/BPM}} frames). Hits land on beats.
+BRAND: HERO {{主役の形・色(hex)・顔}} / SET {{舞台}} / ACCENT {{アクセント色の物}} / SCREEN TEXT {{画面の文字}} / PALETTE {{hex を列挙}}
+MODEL (3D): {{1 unit = 1 cm、寸法、面取り、素材: roughness / clearcoat / metalness}}
+LOOK: {{key/fill/rim の位置・色温度・強さ}}, contact shadows, bloom on {{光らせる物}} only. Post: {{grain %, vignette %}}.
+MOTION: ease enter cubic-bezier(0.16,1,0.3,1), move (0.76,0,0.24,1), exit (0.7,0,0.84,0); springs at damping ratio {{0.7}}; anticipation {{n}} frames, squash {{1.25x0.7}}, stretch {{0.85x1.28}}, limbs lag {{4/6}} frames.
+BEATS (s): {{0 …}} / {{2 …}} / {{…}} / {{最後: 0コマ目へつながる動き}}
+CAMERA: {{画角}} lens, {{各拍での仕事}}; never parks; end camera = start camera.
+BANNED: purple or blue gradients, glow orbs, neon, lens flares, decorative particles, spinning turntables, made-up text, everything fading in at once, fade-and-slide-up on every element, {{1回目で出た定番}}.
+CHECKS: renderAt(t) draws exactly time t, seeded random only. Stills around every hit. {{触れてはいけない物同士}} never touch; {{接地}}; frame N-1 flows into frame 0 in pose and velocity; text readable at phone size.
+
+Render contract: (motion-lab.md §2 の8行をそのまま貼る)
+```
+
+追加指示は「コマ番号+見えた物+数値」で、1回に1〜2個。例: 「外側の滴が112コマ目で8px はみ出す。滴を文字位置の40%から出して、7%の行き過ぎを1.97秒に」。音は別の指示書で、同じ合図表(コマ番号)から作る(`motion-lab.md` §8)。
