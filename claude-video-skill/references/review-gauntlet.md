@@ -18,7 +18,7 @@
 | 白フラッシュ | 意図した物だけ。1秒に3回を超える明滅は不可 | 経験(光過敏の一般目安) | review_checks |
 | 冒頭 | 0.3秒以内に動きがある | 経験 | review_checks |
 | 統合ラウドネス | -14 LUFS(±1)。落ち着いた作品は -16 まで | Gauntlet | review_checks |
-| 真のピーク | -1 dBTP 以下 | Gauntlet | review_checks |
+| 真のピーク | 完成 MP4 で -1 dBTP 以下(WAV の段階は -2 以下。SKILL.md §2) | Gauntlet | review_checks |
 | 音の起伏 | 迫力のある作品は LRA 3 LU 以上(平らな壁は安っぽい) | Gauntlet | review_checks(1未満で注意) |
 | 無音 | 途中に0.3秒以上の無音なし。音楽がロゴより先に消えない | Gauntlet | review_checks / 耳 |
 | 効果音と音楽 | 効果音は自分の帯域で音楽より約+4dB。2〜8kHz が10dB以上飛び出すクリックは不可 | Gauntlet | 手測り |

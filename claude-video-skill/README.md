@@ -1,38 +1,26 @@
 # video-with-claude-code
 
-Claude Code で動画(モーショングラフィックス、CM、アニメ、解説、予告)を作る時の**横断スキル**。特定プロジェクト用ではなく、全プロジェクトで効く。
+Claude Code で動画(モーショングラフィックス、CM、アニメ、解説、ループ)を作る時の**横断スキル**。特定プロジェクト用ではなく、全プロジェクトで効く。
+**読む入口は `SKILL.md` だけ**(決まりごと・手順・道具の地図・何が検証済みか)。
 
 ## 入れ方
 ```bash
 mkdir -p ~/.claude/skills
 cp -r claude-video-skill ~/.claude/skills/video-with-claude-code
 claude plugin marketplace add heygen-com/hyperframes && claude plugin install hyperframes@hyperframes   # 書き出しに必要(Node 22+, FFmpeg)
+bash ~/.claude/skills/video-with-claude-code/tools/install_agent.sh   # 担当 video-opus(次のセッションから効く)
 ```
 
-## 構成
-| ファイル | 内容 |
+## フォルダ
+| 場所 | 中身 |
 |---|---|
-| `references/legacy-skill-v2-multiagent.md` | 旧 SKILL.md(分業手順版)。メインから外した記録 |
-| `SKILL.md` | **音キット中心の本体(外部スキル video-by-reference を映像の主とする)**。旧説明: 要点版の本体(約4,600文字)**。入口ルール、担当とエフォート、標準の手順、のっぺり対策、環境の落とし穴、未確定の一覧。詳細は `references/handbook.md`(旧 SKILL.md の全文・§0〜§24)。旧説明: 導入、ワークフロー選び、品質要因、プロンプト骨格、音、分業手順(§11)、環境の落とし穴(§12)、長尺の知見(§13)、**映画の技法辞書の使い方(§14)**、**音の設計と無料の楽器音源(§15)**、**キャラの演技(§17)**、**実戦の型(§18)**、**のっぺり感への対処(§19)**、**質感・奥行きと3D(§20)**、**スタイル辞書(§21)**、**見た目の審査の型(§22)**、**トークン節約(§16)** |
-| `references/cinematic/` | **映画の技法424件の辞書**(日本語)。`START_HERE.md`(映画の文法10原則・目的→技法の早見・必修30技法)、`INDEX.md`(全技法の索引)、グループ別11ファイル(カメラ/ショット/構図/光/色・大気/レンズ・時間/編集/効果/ジャンル・バイラル)。各エントリに HyperFrames での作り方(数値・数式・既製部品名) |
-| `references/shot-spec-template.md` | 設計書の「場面カード」テンプレ(サイズ/アングル/動き/光/色/構図/時間/効果/つなぎ) |
-| `references/depth-and-texture.md` | **質感・奥行き**(のっぺり対策)の手法と数値、部品 `depth.js` の使い方 |
-| `references/three-3d.md` | **three.js の3D**: 手順、仕上げ処理の順と数値、seekの落とし穴、速度の実測、素材とライセンス |
-| `references/styles/` | **スタイル辞書(見た目の型43種)**: `INDEX.md`(日本語索引)、`lemo/`(原文、MIT)。`tools/style.py` で1つだけ引く |
-| `references/review-gauntlet.md` + `references/review/` | **見た目の審査の型**(機械チェック→目視→独立した審査役)、motion-video-kit(MIT)の原文。道具 `tools/review_checks.py` `tools/strip.sh` |
-| `agents/video-opus.md` + `tools/install_agent.sh` | 動画制作の担当の定義(Opus・エフォート中)と、`~/.claude/agents/` への設置道具(リポジトリ非依存) |
-| `references/handbook.md` §16-7c | エフォート medium/high の比較結果(`anime-ad/stilldusk/ab-effort/`) |
-| `references/handbook.md` §23 | 検討中の道具の記録(ArtCraft)。取り込み前の試験結果のみ |
-| `NOTICES.md` | 第三者の素材・コードのライセンス表示 |
-| `references/character-acting.md` | **キャラの演技**(予備動作・余韻・タイミング・表情・手描きらしさ)と、2.5D人型部品 `puppet.js` の使い方 |
-| `references/sfx-catalog.md` | 録音済み効果音の**実在する名前の一覧**と、無い音(銃声・爆発・風)の作り方 |
-| `references/sound-palette.md` | **音のパレット**(効果音の定番を避ける代替表、音色の種類の目標、場面ごとの設計) |
-| `references/motion-lab.md` | **数値で指示する動きの作り方**(Opus 5.5 Motion Lab の記事と CTRL+Z の資料から): 指示書の型、書き出しの約束事、イージング・ばね・拍の数値、`?t=` でコマを止める確認、ループと滑らかな書き出し、音を数値で直す方法(スマホの帯域・頂点の位置・AAC 対策) |
-| `references/prompt-templates.md` / `case-notes.md` | プロンプト雛形 / 事例メモ(skillry の Opus 5.5 動画) |
-| `tools/` | `sheet.sh`(コンタクトシート)/ `assemble.sh`(連結+音)/ `sync_check.py`(映像と音の同期)/ `audio_measure.py`(**スマホの帯域の音量・合図の頂点のずれ・下地との差**)/ `audio_instruments.py`(音の合成)/ `midi_render.py`(**本物の楽器音源(無料)でMIDIを鳴らす**)/ `new_scene_three.sh`+`fetch_three.sh`+`assets/three/post.js`(**three.js 3D場面の雛形**)/ `look_pass.sh`(**仕上げの質感: にじみ・粒・周辺減光**)/ `sfx_lib.py`+`assets/sfx-cc0/`(**録音済みの効果音282個(CC0)の検索・読み込み**)/ `cin.py`(**辞書を1項目だけ引く**)/ `style.py`(**スタイルを1つだけ引く**)/ `new_scene.sh`+`assets/`(**場面のひな形・部品・gsap**)/ `make_cinematic_index.py`(索引の再生成・網羅検証) |
+| `SKILL.md` | 入口。3本柱(映像の頼み方・音・チェック)、決まりごと、道具の地図 |
+| `references/` | 必要な時に1つずつ読む資料。映像: `motion-lab.md`・`prompt-templates.md`・`three-3d.md`・`character-acting.md`・`depth-and-texture.md`・`shot-spec-template.md`・`external-video-by-reference.md`、辞書 `cinematic/`・`styles/`。音: `sound-palette.md`・`sfx-catalog.md`。チェック: `review-gauntlet.md`・`review/`・`pitfalls.md`。記録: `case-notes.md` |
+| `tools/` | 道具(一覧は `tools/README.md`) |
+| `examples/hop-loop/` | `motion-lab.md` の型で作った4秒ループ(Canvas 2D + numpy の音、測定値と直した記録つき) |
+| `agents/` | 担当 `video-opus` の定義 |
+| `archive/` | 旧本体 `handbook.md`(実験の数字・ナレーションの設計・検討中の道具)と旧版。普段は読まない |
+| `NOTICES.md` | 第三者の素材・コードのライセンス |
 
-## 実例
-- `examples/hop-loop/`: `references/motion-lab.md` の型で作った4秒ループ(Canvas 2D + numpy の音、測定値と直した記録つき)。
-リポジトリの `anime-ad/`: 30秒CM(v2)、第1話ショート版(ep1)。設計書(`docs/BIBLE.md` `SCENES.md`)、音の合成スクリプト、場面別ソース付き。
-
+実例: 作業用の枝 `claude/anime-ad` の `anime-ad/`(30秒CM、第1話ショート版、比較試験の材料)。
 出典: 映画技法の解説は melies.co/cinematic-techniques を日本語で要約・再構成(原文の転載ではない)。HyperFrames の実装レシピは独自。
