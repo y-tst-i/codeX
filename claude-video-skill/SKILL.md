@@ -55,7 +55,7 @@ description: コードで作る動画(HyperFrames・three.js・Canvas・ffmpeg)�
 ## 6. 道具と資料の地図
 | 状態 | 道具・資料 |
 |---|---|
-| **試験で効いた** | 外部スキル `video-by-reference`/音のキット(`midi_render.py`・`sfx_lib.py`・`sound-palette.md`)/three.js の見せ場(`new_scene_three.sh`・`three-3d.md`)/`assemble.sh` の2回通し(-16.8 → -14.4 LUFS)/`review_checks.py` |
+| **試験で効いた** | 外部スキル `video-by-reference`/音のキット(`midi_render.py`・`sfx_lib.py`・`sound-palette.md`)(他の AI・Codex に渡すなら、音の道具だけを切り出した **`sound-kit/`**。`BRIEF.md` を読ませる)/three.js の見せ場(`new_scene_three.sh`・`three-3d.md`)/`assemble.sh` の2回通し(-16.8 → -14.4 LUFS)/`review_checks.py` |
 | **使って動いた**(効果の比較はまだ) | `audio_measure.py`・`motion-lab.md` の型(`examples/hop-loop/`)/`sync_check.py`/`sheet.sh`・`strip.sh`/`video-opus`(`tools/install_agent.sh`、次のセッションから効く) |
 | **未検証** | 映画の技法辞書(`references/cinematic/`・`cin.py`)/スタイル辞書(`references/styles/`・`style.py`)/2D の質感部品(`depth-and-texture.md`)/人型部品(`character-acting.md`・`puppet.js`)/仕上げ(`look_pass.sh`)/審査役の型 |
 | 記録 | `references/case-notes.md`(他人の作例)/`references/prompt-templates.md`(雛形 A〜F)/`NOTICES.md`(ライセンス)/`archive/`(旧本体 `handbook.md` と旧版。実験の数字・ナレーションの設計・検討中の道具 ArtCraft) |
