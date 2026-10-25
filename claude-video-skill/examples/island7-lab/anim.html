@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>ISLAND 7 LAB</title>
+<!-- PROMPT.md の指示書どおり。8s・480コマ・60fps・継ぎ目のないループ。描画は 2160x2160、1コマ 16 サンプル(シャッター・レンズ・サブピクセル)。
+     renderAt(t) の純関数、seed 付き乱数のみ。?t= で止まる、?render=1 で再生しない、?samples=1 で下書き。__state(t) で検査用の値を返す -->
+<link rel="stylesheet" href="fonts/sans/900.css">
+<style>
+  html, body { margin: 0; background: #DCE8EC; }
+  #c { display: block; width: 540px; height: 540px; }
+</style>
+<script type="importmap">{ "imports": { "three": "./assets/three/three.module.min.js", "three/addons/": "./assets/three/addons/" } }</script>
+</head>
+<body>
+<canvas id="c" width="2160" height="2160"></canvas>
+<script type="module">
+import * as THREE from 'three';
+
+// ---- TIME ----
+const FPS = 60, N = 480, S = 2160, K = 1080 / S;     // 描画は 2倍、仕上げで 1080 に縮める
+const q = new URLSearchParams(location.search);
+const SAMPLES = Number(q.get('samples') || 16), SHUTTER = 0.45;
+const LAND = [60, 90, 120, 150, 180, 210], AIR = 20, CROUCH = 10, STORM = 240, BOLT = 300, FREEZE = 333, PLAY = 444;
+// 物語の時刻 s(t): 0〜300 はそのまま、300〜333 はスローにして止める、333〜444 は逆に流す(巻き戻し)、444〜480 は 0
+function storyFrame(f) {
+  f = ((f % N) + N) % N;
+  if (f < BOLT) return f;
+  if (f < FREEZE) { const u = (f - BOLT) / (FREEZE - BOLT); return BOLT + (FREEZE - BOLT) * (u - u * u + u * u * u / 3); }   // ∫(1-u)² で速さ 1→0
+  const S_END = BOLT + (FREEZE - BOLT) / 3;
+  if (f < PLAY) return S_END * (1 - easeInOut((f - FREEZE) / (PLAY - FREEZE)));
+  return 0;
+}
+// ---- BRAND ----
+const C = { sky: 0xDCE8EC, storm: 0x2B3440, sea: 0x4F9DB5, seaStorm: 0x1C3442, sand: 0xE9D7B0, grass: 0x5E9E5A, ink: 0x1E1E24, pad: 0xF4F1EA, accent: 0xF2994A, stone: 0xB9B2A6, drain: 0x3E6E80, road: 0x6B6E70, roof: 0xC0563A, cloud: 0x66717D };
+const PAD_X = k => -6 + 2 * k, PAD_TOP = 0.06;
+
+// ---- 数値の道具(motion-lab.md §3) ----
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const lerp = (a, b, u) => a + (b - a) * u;
+const ss = (a, b, x) => { const u = clamp((x - a) / (b - a)); return u * u * (3 - 2 * u); };
+function easeInOut(u) { u = clamp(u); return u < .5 ? 8 * u ** 4 : 1 - Math.pow(-2 * u + 2, 4) / 2; }
+function spring(t, zeta = .55, f = 3) { if (t <= 0) return 0; const w = 2 * Math.PI * f, wd = w * Math.sqrt(1 - zeta * zeta);
+  return 1 - Math.exp(-zeta * w * t) * (Math.cos(wd * t) + (zeta * w / wd) * Math.sin(wd * t)); }
+const ring = (t, zeta, f) => t <= 0 ? 0 : Math.exp(-zeta * 2 * Math.PI * f * t) * Math.sin(2 * Math.PI * f * Math.sqrt(1 - zeta * zeta) * t);   // 減衰する揺れ
+function mulberry32(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+
+// ---- 住人の状態(物語の時刻 s の関数) ----
+function heroAt(s) {
+  let x = PAD_X(0), y = 0, vy = 0, sx = 1, sy = 1, crouch = 0, squash = 0;
+  for (let k = 1; k <= 6; k++) {
+    const L = LAND[k - 1], T = L - AIR, Cr = T - CROUCH;
+    if (s >= Cr && s < T) { crouch = easeInOut((s - Cr) / CROUCH); x = PAD_X(k - 1); }                                                   // 予備動作
+    else if (s >= T && s < L) { const u = (s - T) / AIR; x = lerp(PAD_X(k - 1), PAD_X(k), u); y = 4 * 1.6 * u * (1 - u); vy = 4 * 1.6 * (1 - 2 * u) * FPS / AIR;
+      const st = u < .5 ? 1 - 2 * u : .5 * (2 * u - 1); sx = lerp(1, .85, st * st); sy = lerp(1, 1.28, st * st); }                       // 弧と伸び
+    else if (s >= L) x = PAD_X(k);
+    const dt = (s - L) / FPS; if (dt >= 0 && dt < .8) squash += 1 - spring(dt, .55, 3);                                                   // 着地のつぶれ
+  }
+  // つぶれ(着地)からしゃがみ(次の離陸)へつなぐ: しゃがみが進むほど、つぶれの分を減らす
+  sx += .2 * crouch + .25 * squash * (1 - crouch); sy += -.25 * crouch - .3 * squash * (1 - crouch);
+  // 嵐: 平たく縮む(顔は逆に伸ばして形を保つ)
+  const hide = ss(255, 272, s); sx *= lerp(1, 1.35, hide); sy *= lerp(1, .62, hide);
+  return { x, y: PAD_TOP + y, vy, sx, sy, hide, eyesUp: ss(244, 262, s) };
+}
+function hatAt(s) {   // 余韻: 着地のたびに 2.2Hz・減衰比 0.22 で揺れる
+  let a = 0; for (const L of LAND) a += -.45 * ring((s - L) / FPS, .22, 2.2); return a;
+}
+
+// ---- 設備のボクセル(42 個) ----
+const pieces = [];
+function addPiece(day, x, y, z, color, sxz = 1, sh = 1, glow = false) { pieces.push({ day, home: new THREE.Vector3(x, y, z), color, sxz, sh, glow, order: 0 }); }
+{ const px = PAD_X;
+  for (let j = 0; j < 2; j++) for (let i = 0; i < 5; i++) addPiece(1, px(1) - .8 + .4 * i, .2 + .4 * j, -1.5, C.stone);                     // 1日目 壁
+  for (let i = 0; i < 4; i++) addPiece(2, px(2) - .6 + .4 * i, .1, 1.4, C.drain, 1, .5);                                                 // 2日目 水路
+  for (let j = 0; j < 2; j++) for (let i = 0; i < 3; i++) addPiece(3, px(3) - .4 + .4 * i, .06, -1.3 - .4 * j, C.road, 1, .3);          // 3日目 道
+  for (let j = 0; j < 4; j++) addPiece(4, px(4), .2 + .4 * j, -1.4, C.road, .6); addPiece(4, px(4), 1.8, -1.4, C.accent, .8, 1, true);  // 4日目 電柱
+  for (let j = 0; j < 2; j++) for (let i = 0; i < 2; i++) for (let k = 0; k < 2; k++) addPiece(5, px(5) - .2 + .4 * i, .2 + .4 * j, -1.6 - .4 * k, C.sand);
+  addPiece(5, px(5) - .2, 1.0, -1.8, C.roof); addPiece(5, px(5) + .2, 1.0, -1.8, C.roof);                                                 // 5日目 小屋
+  for (let j = 0; j < 6; j++) addPiece(6, px(6), .2 + .4 * j, -1.5, C.stone, .8); addPiece(6, px(6), 2.6, -1.5, C.accent, .8, 1, true); // 6日目 塔
+  const cnt = {}; for (const p of pieces) { p.order = cnt[p.day] = (cnt[p.day] || 0) + 1; p.order -= 1; }
+  const r = mulberry32(42), strike = new THREE.Vector3(px(6), 2.6, -1.5), centroid = {};
+  for (const p of pieces) (centroid[p.day] = centroid[p.day] || new THREE.Vector3(0, 0, 0)).add(p.home.clone().divideScalar(pieces.filter(q => q.day === p.day).length));
+  for (const p of pieces) {             // 吹き飛ぶ速さ: 雷の点から外向き + 上 + 散らし
+    const d = p.home.clone().sub(strike); d.y = Math.max(d.y, 0) + .6; d.normalize();
+    const th = p.order * 2.39996 + p.day, fan = new THREE.Vector3(Math.cos(th), 0, Math.sin(th));            // 隣の番号とは黄金角(約137°)ずつ違う向きへ散る
+    const away = new THREE.Vector3(p.home.x - px(6), 0, Math.min(-.6, p.home.z)).normalize();                // 住人(6日目の足場)から離れる
+    p.vel = d.multiplyScalar(12 + 6 * r()).add(fan.multiplyScalar(13)).add(away.multiplyScalar(6)).add(new THREE.Vector3(0, 10 + 2 * p.order % 5 + 4 * r(), 0));
+    p.extraTurns = 0;                                                         // 回しすぎると数字の向く瞬間が一瞬になる
+    p.fanTh = th; p.base = d.clone().normalize(); p.away = away; p.upV = 10 + 2 * p.order % 5 + 4 * r();   // d は上で長さを掛けて書き換わっているので、向きだけ取り直す
+  }
+  // 解いて決める: 飛んでいる間(物語 303〜311 コマ)に、先に決めたボクセル・住人・島の板と触れたら、散る向きを回して解き直す
+  const R = q => .17 * Math.sqrt(3) * Math.max(q.sxz, q.sh), at = (q, tau) => q.home.clone().add(q.vel.clone().multiplyScalar(tau)).add(new THREE.Vector3(0, -4.9 * tau * tau, 0));
+  const heroC = new THREE.Vector3(px(6), .6, 0), taus = Array.from({ length: 17 }, (_, i) => (3 + i * .5) / 60);
+  const mk = (q, th, m) => q.base.clone().multiplyScalar(2.5).add(new THREE.Vector3(Math.cos(th), 0, Math.sin(th)).multiplyScalar(m)).add(q.away.clone().multiplyScalar(Math.abs(q.home.x - px(6)) < 2.5 ? 3 : 0)).add(new THREE.Vector3(0, q.upV * .55, 0));   // 画面の中に収まる速さ。住人を避けるのは近くのボクセルだけ
+  pieces.forEach((q, i) => {
+    const ok = v => { q.vel = v; return !taus.some(tau => { const pq = at(q, tau);
+        if (pq.distanceTo(heroC) < R(q) + .75) return true;
+        if (pq.x < -6.4 || pq.x > 7.6 || pq.y > 7 || pq.z > 2.4) return true;                          // 嵐の場面で画面に映る範囲(check.py の画面検査と対)
+        if (pq.y - R(q) < 0 && Math.abs(pq.x) < 7.5 && Math.abs(pq.z) < 2.7) return true;
+        return pieces.slice(0, i).some(o => pq.distanceTo(at(o, tau)) < R(q) + R(o) + .02); }); };
+    let found = false;                                                                                     // 向き 24 × 強さ 7 × 上向き 5 を順に試す
+    for (const up of [1, 1.3, .8, 1.6, .6]) { for (const m of [8, 6, 10, 4, 12, 14, 2]) { for (let a = 0; a < 24 && !found; a++) found = ok(mk(q, q.fanTh + a * Math.PI / 12, m).add(new THREE.Vector3(0, q.upV * .55 * (up - 1), 0))); if (found) break; } if (found) break; }
+    q.solved = found;
+  });
+  window.__unsolved = pieces.filter(q => !q.solved).length; window.__unsolvedList = pieces.map((q, i) => q.solved ? null : [i, q.day, q.order, q.home.toArray()]).filter(Boolean);
+}
+const T_FACE = .1;                                                              // 飛び始めて 0.1 秒で数字がカメラを向く
+const GRAV = new THREE.Vector3(0, -9.8, 0);
+function pieceAt(p, s) {
+  const out = { pos: p.home.clone(), quat: new THREE.Quaternion(), scale: 0 };
+  const b0 = LAND[p.day - 1] - 1 + p.order;                                     // 着地のコマから、1個1コマずつ下から生える
+  out.scale = s < b0 ? 0 : Math.max(0, spring((s - b0) / FPS, .5, 4));
+  if (s >= BOLT) { const tau = (s - BOLT) / FPS; out.pos.add(p.vel.clone().multiplyScalar(tau)).add(GRAV.clone().multiplyScalar(.5 * tau * tau)); out.quat = p.spin(tau); }
+  return out;
+}
+
+// ---- three ----
+const renderer = new THREE.WebGLRenderer({ canvas: document.createElement('canvas'), antialias: false, preserveDrawingBuffer: true });
+renderer.setPixelRatio(1); renderer.setSize(S, S, false);
+renderer.toneMapping = THREE.NeutralToneMapping; renderer.toneMappingExposure = 1.05; renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(30, 1, .1, 400);
+const hemi = new THREE.HemisphereLight(0xEAF2F6, 0x8A7A60, 1.3); scene.add(hemi);
+const sun = new THREE.DirectionalLight(0xFFF2E0, 2.6); sun.position.set(-8, 16, 10); sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048);
+Object.assign(sun.shadow.camera, { left: -11, right: 11, top: 11, bottom: -11, near: 1, far: 50 }); sun.shadow.bias = -.0004; sun.shadow.radius = 3; scene.add(sun);
+const flashL = new THREE.PointLight(0xE8F0FF, 0, 40, 1.5); flashL.position.set(PAD_X(6), 6, -1.5); scene.add(flashL);
+const std = (color, o = {}) => new THREE.MeshStandardMaterial({ color, roughness: .8, ...o });
+
+// 海(波は実時間の周期 8 秒の整数倍で、ループで元に戻る)
+const seaGeo = new THREE.PlaneGeometry(140, 140, 140, 140); seaGeo.rotateX(-Math.PI / 2);
+const seaBase = seaGeo.attributes.position.array.slice();
+const sea = new THREE.Mesh(seaGeo, std(C.sea, { roughness: .45, flatShading: true })); sea.position.y = -.55; sea.receiveShadow = true; scene.add(sea);
+// 島の板と日の足場
+const slab = new THREE.Mesh(new THREE.BoxGeometry(15, 1.2, 5.4), std(C.sand)); slab.position.y = -.6; slab.receiveShadow = slab.castShadow = true; scene.add(slab);
+const grass = new THREE.Mesh(new THREE.BoxGeometry(15.02, .14, 1.6), std(C.grass)); grass.position.set(0, -.05, -2.0); grass.receiveShadow = true; scene.add(grass);
+const pads = []; for (let k = 0; k < 7; k++) { const m = new THREE.Mesh(new THREE.BoxGeometry(1.2, .06, 1.2), std(C.pad, { roughness: .5 })); m.position.set(PAD_X(k), PAD_TOP / 2, 0); m.receiveShadow = true; scene.add(m); pads.push(m); }
+// 住人(足元が原点)
+const hero = new THREE.Group(), body = new THREE.Group(); hero.add(body); scene.add(hero);
+const torso = new THREE.Mesh(new THREE.BoxGeometry(1.0, .8, .7), std(C.sand, { roughness: .55 })); torso.position.y = .65; torso.castShadow = true; body.add(torso);
+const face = new THREE.Group(); face.position.set(0, .7, .351); body.add(face);
+const eyes = [-.2, .2].map(x => { const e = new THREE.Mesh(new THREE.BoxGeometry(.12, .2, .02), std(C.ink, { roughness: .3 })); e.position.x = x; face.add(e); return e; });
+const hatP = new THREE.Group(); hatP.position.y = 1.05; body.add(hatP);
+for (const [x, r] of [[-.18, .5], [.18, -.5]]) { const l = new THREE.Mesh(new THREE.BoxGeometry(.5, .06, .26), std(C.grass)); l.position.set(x, .08, 0); l.rotation.z = r; l.castShadow = true; hatP.add(l); }
+const arms = [-1, 1].map(sd => { const g = new THREE.Group(); g.position.set(sd * .54, .78, 0); const m = new THREE.Mesh(new THREE.BoxGeometry(.14, .34, .16), std(C.sand, { roughness: .55 })); m.position.y = -.15; m.castShadow = true; g.add(m); body.add(g); return g; });
+const legs = [-1, 1].map(sd => { const g = new THREE.Group(); g.position.set(sd * .24, .25, 0); const m = new THREE.Mesh(new THREE.BoxGeometry(.2, .25, .22), std(0xCDB894, { roughness: .6 })); m.position.y = -.125; m.castShadow = true; g.add(m); body.add(g); return g; });
+// ボクセル(正面に日の数字)
+const digitTex = {}; for (let d = 1; d <= 6; d++) { const cv = document.createElement('canvas'); cv.width = cv.height = 128; const g = cv.getContext('2d');
+  g.fillStyle = '#fff'; g.fillRect(0, 0, 128, 128); g.fillStyle = '#1E1E24'; g.font = '900 92px "Noto Sans JP"'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(String(d), 64, 70);
+  const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; digitTex[d] = t; }
+const box = new THREE.BoxGeometry(.34, .34, .34);                                // 0.4 間隔に 0.34 の立方体(0.06 の隙間)
+for (const p of pieces) {
+  const side = p.glow ? std(p.color, { emissive: p.color, emissiveIntensity: .6 }) : std(p.color);
+  const front = std(p.color, { map: digitTex[p.day], roughness: .6 });                       // +z 面だけ数字(色は材質の色を掛ける)
+  p.mesh = new THREE.Mesh(box, [side, side, side, side, front, side]); p.mesh.castShadow = p.mesh.receiveShadow = true; scene.add(p.mesh);
+}
+// 雲のボクセル(嵐で集まる)
+const clouds = []; { const r = mulberry32(9); for (let i = 0; i < 34; i++) {
+  const home = new THREE.Vector3((r() - .5) * 17, 5.6 + r() * 1.8, -3.5 + (r() - .5) * 5), from = home.clone().add(new THREE.Vector3((r() < .5 ? -1 : 1) * (26 + r() * 10), 4 + r() * 4, -6 - r() * 8));
+  const m = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), std(C.cloud, { roughness: 1 })); m.scale.setScalar(1 + r() * 1.4); m.castShadow = true; scene.add(m); clouds.push({ m, home, from, d: r() * 14 }); } }
+// 雷(ジグザグの細い板)
+const bolt = new THREE.Group(); { const r = mulberry32(3); let a = new THREE.Vector3(PAD_X(6) + 1, 6.2, -1.5);
+  const end = new THREE.Vector3(PAD_X(6), 2.85, -1.5), mat = new THREE.MeshBasicMaterial({ color: new THREE.Color(6, 6.4, 7) });
+  for (let i = 1; i <= 7; i++) { const b = i === 7 ? end.clone() : a.clone().lerp(end, 1 / (8 - i)).add(new THREE.Vector3((r() - .5) * 1.4, 0, (r() - .5) * .4));
+    const seg = new THREE.Mesh(new THREE.BoxGeometry(.09, a.distanceTo(b), .09), mat); seg.position.copy(a).add(b).multiplyScalar(.5); seg.lookAt(b); seg.rotateX(Math.PI / 2); bolt.add(seg); a = b; } }
+scene.add(bolt);
+
+// カメラ(物語の時刻 s の関数 + 実時間の小さな回り込み。8秒で1周期なので継ぎ目で一致)
+function cameraAt(s, t) {
+  const h = heroAt(s), track = .15 * h.x, punch = 1 - .04 * Math.exp(-(((s - 304) / 10) ** 2));
+  const az = THREE.MathUtils.degToRad(14 + 6 * Math.sin(2 * Math.PI * t / 8)), el = THREE.MathUtils.degToRad(lerp(17, 13, ss(240, 290, s))), R = lerp(36, 32, ss(0, 210, s)) * punch;
+  const tg = new THREE.Vector3(track, 1.6 + 1.6 * ss(240, 290, s), -.6);
+  return { pos: new THREE.Vector3(Math.sin(az) * Math.cos(el), Math.sin(el), Math.cos(az) * Math.cos(el)).multiplyScalar(R).add(tg), tg, focus: new THREE.Vector3(h.x, .8, 0) };
+}
+// 飛ぶボクセルの回転: 0.1 秒で数字がカメラを向くように、向きから逆算する(余分に 1〜2 回転)
+for (const p of pieces) {
+  const posF = p.home.clone().add(p.vel.clone().multiplyScalar(T_FACE)).add(GRAV.clone().multiplyScalar(.5 * T_FACE * T_FACE));
+  let lo = BOLT, hi = FREEZE; for (let i = 0; i < 40; i++) { const m = (lo + hi) / 2; if (storyFrame(m) < BOLT + T_FACE * FPS) lo = m; else hi = m; }   // 物語の 306 コマになる実時間
+  const cam = cameraAt(BOLT + T_FACE * FPS, lo / FPS).pos; window.__faceFrame = lo;
+  const qF = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), cam.sub(posF).normalize());
+  let ang = 2 * Math.acos(clamp(qF.w, -1, 1)); const ax = new THREE.Vector3(qF.x, qF.y, qF.z); if (ax.length() < 1e-6) ax.set(0, 1, 0); ax.normalize();
+  ang += 2 * Math.PI * p.extraTurns;
+  p.spin = tau => new THREE.Quaternion().setFromAxisAngle(ax, ang * tau / T_FACE);
+}
+
+// ---- 1 サンプルの場面 ----
+function sceneAt(t, sKey) {
+  const f = t * FPS, s = storyFrame(f), h = heroAt(s), storm = ss(STORM, 290, s);
+  scene.background = new THREE.Color(C.sky).lerp(new THREE.Color(C.storm), storm);
+  const fl = s >= BOLT ? Math.exp(-(s - BOLT) / 2.2) : 0;
+  scene.background.lerp(new THREE.Color(0xE6EEF8), fl * .6);
+  sun.intensity = lerp(2.6, .15, storm); hemi.intensity = lerp(1.3, .85, storm) + fl * 1.5; flashL.intensity = fl * 220;
+  sea.material.color.set(C.sea).lerp(new THREE.Color(C.seaStorm), storm);
+  // 海: 実時間の整数周期
+  const A = lerp(.12, .38, storm), p = seaGeo.attributes.position.array, w = 2 * Math.PI * t / 8;
+  for (let i = 0; i < p.length; i += 3) { const x = seaBase[i], z = seaBase[i + 2]; p[i + 1] = A * (Math.sin(.35 * x + 2 * w) * .6 + Math.sin(.5 * z - 3 * w + 1) * .4 + Math.sin(.9 * (x + z) + 5 * w) * .15); }
+  seaGeo.attributes.position.needsUpdate = true;
+  // 住人
+  hero.position.set(h.x, h.y, 0); body.scale.set(h.sx, h.sy, 1);
+  face.scale.set(1 / h.sx, 1 / h.sy, 1);                                     // 体を伸ばしても顔は形を保つ
+  face.position.y = .7 + .08 * h.eyesUp;
+  const breath = .012 * Math.sin(2 * Math.PI * 2 * t / 8); body.scale.y *= 1 + breath;   // 呼吸(8秒で2周期)
+  const blink = Math.abs(s - 20) < 3 || Math.abs(f - 465) < 3 ? .15 : 1; eyes.forEach(e => e.scale.y = blink);
+  const vyLag = d => heroAt(s - d).vy;                                       // 腕は 4コマ、脚は 6コマ遅れる
+  arms.forEach((a, i) => a.rotation.z = (i ? -1 : 1) * clamp(.15 + vyLag(4) * .035, -.9, .9));
+  legs.forEach(l => l.rotation.x = clamp(-vyLag(6) * .03, -.6, .6));
+  hatP.rotation.z = hatAt(s) + clamp(-vyLag(3) * .02, -.4, .4);
+  // 足場と設備
+  pads.forEach((m, k) => m.material.color.set(k === 0 || sKey < LAND[k - 1] ? C.pad : C.accent));   // 色はコマ単位(ブラーで混ぜない)
+  for (const pc of pieces) { const st = pieceAt(pc, s); pc.mesh.visible = st.scale > .001; pc.mesh.position.copy(st.pos); pc.mesh.position.y += (st.scale - 1) * .17 * pc.sh;
+    pc.mesh.quaternion.copy(st.quat); pc.mesh.scale.set(pc.sxz * st.scale, pc.sh * st.scale, pc.sxz * st.scale); }
+  for (const c of clouds) { const u = easeInOut(ss(STORM + c.d, 292, s)); c.m.position.copy(c.from).lerp(c.home, u); c.m.visible = u > 0; c.m.rotation.y = c.d * .3; }
+  bolt.visible = s >= BOLT && s < BOLT + 4;
+  return { s, storm };
+}
+
+// ---- 16 サンプルを半精度で平均し、VHS の仕上げを1パスで掛ける ----
+const rtOpt = { type: THREE.HalfFloatType, depthBuffer: true };
+const sampleRT = new THREE.WebGLRenderTarget(S, S, rtOpt), accRT = new THREE.WebGLRenderTarget(S, S, { type: THREE.HalfFloatType, depthBuffer: false });
+const quadCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1), quadGeo = new THREE.PlaneGeometry(2, 2);
+const addMat = new THREE.ShaderMaterial({ uniforms: { tex: { value: null }, w: { value: 1 } }, depthTest: false, depthWrite: false, transparent: true,
+  blending: THREE.CustomBlending, blendSrc: THREE.OneFactor, blendDst: THREE.OneFactor, blendEquation: THREE.AddEquation,
+  vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0., 1.); }',
+  fragmentShader: 'uniform sampler2D tex; uniform float w; varying vec2 vUv; void main(){ gl_FragColor = vec4(texture2D(tex, vUv).rgb * w, 1.); }' });
+const finalMat = new THREE.ShaderMaterial({ uniforms: { tAcc: { value: accRT.texture }, vhs: { value: 0 }, frame: { value: 0 } }, toneMapped: true, depthTest: false,
+  vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0., 1.); }',
+  fragmentShader: `uniform sampler2D tAcc; uniform float vhs, frame; varying vec2 vUv;
+    float h(vec2 p){ return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
+    void main(){ vec2 uv = vUv; float bp = 1. - fract(frame / 75.), bd = exp(-pow((uv.y - bp) * 28., 2.));
+      uv.x += vhs * (bd * .03 * (h(vec2(floor(uv.y * 300.), frame)) - .5) + .0015 * sin(uv.y * 90. + frame * .4));
+      float o = vhs * .004; vec3 c = vec3(texture2D(tAcc, uv + vec2(o, 0.)).r, texture2D(tAcc, uv).g, texture2D(tAcc, uv - vec2(o, 0.)).b);
+      c *= 1. - vhs * .2 * step(.5, fract(gl_FragCoord.y / 6.));                      // 走査線(1080 で 3px 間隔)
+      c = mix(c, vec3(dot(c, vec3(.3, .59, .11))), vhs * .3) + vhs * bd * .25;          // 色を抜き、帯を明るく
+      c += vhs * .05 * (h(gl_FragCoord.xy + frame) - .5);
+      gl_FragColor = vec4(c, 1.);
+      #include <tonemapping_fragment>
+      #include <colorspace_fragment>
+    }` });
+const quad = new THREE.Mesh(quadGeo, addMat), quadScene = new THREE.Scene(); quadScene.add(quad);
+const R2 = i => [(.5 + i * .7548776662) % 1, (.5 + i * .5698402910) % 1];        // 低食い違い列(レンズとサブピクセル)
+
+function renderFrame(t) {
+  const f0 = Math.round(t * FPS * 1000) / 1000, sKey = storyFrame(Math.round(f0));
+  renderer.setRenderTarget(accRT); renderer.setClearColor(0, 1); renderer.clear();
+  for (let k = 0; k < SAMPLES; k++) {
+    const ts = SAMPLES > 1 ? t + ((k + .5) / SAMPLES - .5) * SHUTTER / FPS : t;   // 0.45 コマのシャッター
+    sceneAt(ts, sKey);
+    const cam = cameraAt(storyFrame(ts * FPS), ts), [a, b] = R2(k);
+    const right = new THREE.Vector3(), up = new THREE.Vector3(); camera.position.copy(cam.pos); camera.lookAt(cam.tg); camera.updateMatrixWorld();
+    right.setFromMatrixColumn(camera.matrixWorld, 0); up.setFromMatrixColumn(camera.matrixWorld, 1);
+    if (SAMPLES > 1) {                                                            // レンズの上の点(被写界深度): ピントは住人
+      const rr = .16 * Math.sqrt(a), th = 2 * Math.PI * b, lookShift = cam.tg.clone().sub(cam.pos).normalize().multiplyScalar(cam.focus.distanceTo(cam.pos));
+      const focusPt = cam.pos.clone().add(lookShift);
+      camera.position.add(right.multiplyScalar(rr * Math.cos(th))).add(up.multiplyScalar(rr * Math.sin(th))); camera.lookAt(focusPt);
+      camera.setViewOffset(S, S, a - .5, b - .5, S, S);                           // サブピクセルのずれ
+    } else camera.clearViewOffset();
+    renderer.setRenderTarget(sampleRT); renderer.setClearColor(scene.background, 1); renderer.clear(); renderer.render(scene, camera);
+    quad.material = addMat; addMat.uniforms.tex.value = sampleRT.texture; addMat.uniforms.w.value = 1 / SAMPLES;
+    renderer.setRenderTarget(accRT); renderer.autoClear = false; renderer.render(quadScene, quadCam); renderer.autoClear = true;
+  }
+  const vhs = ss(FREEZE - 2, FREEZE + 4, f0) * (1 - ss(PLAY, PLAY + 3, f0));
+  quad.material = finalMat; finalMat.uniforms.vhs.value = vhs; finalMat.uniforms.frame.value = Math.round(f0);
+  renderer.setRenderTarget(null); renderer.render(quadScene, quadCam);
+  return { sKey, vhs };
+}
+
+// ---- 2D: 日の一覧と VHS の表示 ----
+const out = document.getElementById('c'), g = out.getContext('2d');
+const JP = '"Noto Sans JP", sans-serif';
+const LABELS = { x: 70, y: 110, dy: 70, w: 300 }, OSD = { x: S - 70, y: 120 };
+function labelRect() { return [LABELS.x - 20, LABELS.y - 70, LABELS.w, LABELS.dy * 7 + 30]; }
+function osdRect() { return [OSD.x - 470, OSD.y - 80, 470, 110]; }
+function overlay(f, sKey, vhs) {
+  g.save(); g.font = `900 60px ${JP}`; g.textBaseline = 'alphabetic';
+  { const [x, y, w, h] = labelRect(); g.fillStyle = 'rgba(246,243,236,.86)'; g.beginPath(); g.roundRect(x, y, w, h, 18); g.fill(); }   // 空の明るさに関係なく読める下地
+  for (let k = 0; k < 7; k++) {
+    const lit = k < 6 ? sKey >= LAND[k] : sKey >= STORM, y = LABELS.y + k * LABELS.dy, col = !lit ? 'rgba(30,30,36,.5)' : k === 6 ? '#B8322A' : '#1E1E24';
+    g.save(); g.translate(LABELS.x + 18, y - 22); g.rotate(Math.PI / 4); g.lineWidth = 5; g.strokeStyle = col; g.fillStyle = lit ? (k === 6 ? '#B8322A' : '#F2994A') : 'rgba(0,0,0,0)';
+    g.fillRect(-14, -14, 28, 28); g.strokeRect(-14, -14, 28, 28); g.restore();
+    g.fillStyle = col; g.fillText(`${k + 1}日目`, LABELS.x + 56, y);
+  }
+  if (vhs > .01) {
+    const rew = f < PLAY, txt = rew ? '◀◀ REWIND' : 'PLAY ▶', on = rew ? (Math.floor(f / 20) % 2 === 0 ? 1 : .55) : 1 - ss(PLAY + 12, PLAY + 18, f);
+    g.globalAlpha = on; g.font = `900 64px ${JP}`; g.textAlign = 'right'; g.fillStyle = '#F6F3EC'; g.shadowColor = 'rgba(0,0,0,.6)'; g.shadowBlur = 10; g.fillText(txt, OSD.x, OSD.y);
+  } else if (f >= PLAY && f < PLAY + 18) {
+    g.globalAlpha = 1 - ss(PLAY + 12, PLAY + 18, f); g.font = `900 64px ${JP}`; g.textAlign = 'right'; g.fillStyle = '#F6F3EC'; g.shadowColor = 'rgba(0,0,0,.6)'; g.shadowBlur = 10; g.fillText('PLAY ▶', OSD.x, OSD.y);
+  }
+  g.restore();
+}
+window.renderAt = function (t) {
+  const f = t * FPS, r = renderFrame(t);
+  g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.drawImage(renderer.domElement, 0, 0); overlay(f, r.sKey, r.vhs);
+};
+// 検査用: そのコマの位置を全部返す(PROMPT.md の CHECKS)
+window.__state = function (t) {
+  const f = t * FPS, s = storyFrame(f), h = heroAt(s), cam = cameraAt(s, t);
+  sceneAt(t, storyFrame(Math.round(f))); camera.position.copy(cam.pos); camera.lookAt(cam.tg); camera.clearViewOffset(); camera.updateMatrixWorld();
+  const toScreen = v => { const p = v.clone().project(camera); return [(p.x * .5 + .5) * S * K, (-p.y * .5 + .5) * S * K]; };
+  return { f, s, hero: { x: h.x, footY: h.y, vy: h.vy, sx: h.sx, sy: h.sy, faceSx: face.scale.x * h.sx, faceSy: face.scale.y * h.sy, px: hero.position.toArray(), body: body.scale.toArray(), hat: hatP.rotation.z,
+      arm: arms[0].rotation.z, leg: legs[0].rotation.x, screen: toScreen(new THREE.Vector3(h.x, h.y + .6, 0)) },
+    pieces: pieces.map(p => { const st = pieceAt(p, s); const n = new THREE.Vector3(0, 0, 1).applyQuaternion(st.quat), toCam = cam.pos.clone().sub(st.pos).normalize();
+      return { day: p.day, pos: st.pos.toArray(), screen: toScreen(st.pos), scale: st.scale, r: .17 * Math.sqrt(3) * Math.max(p.sxz, p.sh), facing: THREE.MathUtils.radToDeg(Math.acos(clamp(n.dot(toCam), -1, 1))) }; }),
+    camera: cam.pos.toArray(), target: cam.tg.toArray(), labelsLit: Array.from({ length: 7 }, (_, k) => k < 6 ? storyFrame(Math.round(f)) >= LAND[k] : storyFrame(Math.round(f)) >= STORM),
+    labelRect: labelRect().map(v => v * K), osdRect: osdRect().map(v => v * K), heroRadius: .75, slabTop: 0 };
+};
+
+Promise.all([document.fonts.load(`900 60px "Noto Sans JP"`, '1234567日目◀▶ REWINDPLAY')]).then(() => {
+  for (const d in digitTex) { const t = digitTex[d], cv = t.image, gg = cv.getContext('2d'); gg.fillStyle = '#fff'; gg.fillRect(0, 0, 128, 128); gg.fillStyle = '#1E1E24'; gg.font = '900 92px "Noto Sans JP"'; gg.textAlign = 'center'; gg.textBaseline = 'middle'; gg.fillText(d, 64, 70); t.needsUpdate = true; }
+  window.__ready = true;
+  if (q.has('t')) return window.renderAt(parseFloat(q.get('t')) || 0);
+  if (q.has('render')) return window.renderAt(0);
+  const t0 = performance.now();
+  (function loop() { window.renderAt(((performance.now() - t0) / 1000) % (N / FPS)); requestAnimationFrame(loop); })();
+});
+</script>
+</body>
+</html>
