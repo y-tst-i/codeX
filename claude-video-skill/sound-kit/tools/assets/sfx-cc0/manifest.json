@@ -1,0 +1,1688 @@
+[
+{
+"name": "footstep_carpet_000",
+"pack": "impact-sounds",
+"kind": "footstep_carpet",
+"dur": 0.145
+},
+{
+"name": "footstep_carpet_001",
+"pack": "impact-sounds",
+"kind": "footstep_carpet",
+"dur": 0.145
+},
+{
+"name": "footstep_carpet_002",
+"pack": "impact-sounds",
+"kind": "footstep_carpet",
+"dur": 0.145
+},
+{
+"name": "footstep_carpet_003",
+"pack": "impact-sounds",
+"kind": "footstep_carpet",
+"dur": 0.145
+},
+{
+"name": "footstep_carpet_004",
+"pack": "impact-sounds",
+"kind": "footstep_carpet",
+"dur": 0.145
+},
+{
+"name": "footstep_concrete_000",
+"pack": "impact-sounds",
+"kind": "footstep_concrete",
+"dur": 0.106
+},
+{
+"name": "footstep_concrete_001",
+"pack": "impact-sounds",
+"kind": "footstep_concrete",
+"dur": 0.108
+},
+{
+"name": "footstep_concrete_002",
+"pack": "impact-sounds",
+"kind": "footstep_concrete",
+"dur": 0.113
+},
+{
+"name": "footstep_concrete_003",
+"pack": "impact-sounds",
+"kind": "footstep_concrete",
+"dur": 0.11
+},
+{
+"name": "footstep_concrete_004",
+"pack": "impact-sounds",
+"kind": "footstep_concrete",
+"dur": 0.114
+},
+{
+"name": "footstep_grass_000",
+"pack": "impact-sounds",
+"kind": "footstep_grass",
+"dur": 0.778
+},
+{
+"name": "footstep_grass_001",
+"pack": "impact-sounds",
+"kind": "footstep_grass",
+"dur": 0.674
+},
+{
+"name": "footstep_grass_002",
+"pack": "impact-sounds",
+"kind": "footstep_grass",
+"dur": 0.692
+},
+{
+"name": "footstep_grass_003",
+"pack": "impact-sounds",
+"kind": "footstep_grass",
+"dur": 0.669
+},
+{
+"name": "footstep_grass_004",
+"pack": "impact-sounds",
+"kind": "footstep_grass",
+"dur": 0.59
+},
+{
+"name": "footstep_snow_000",
+"pack": "impact-sounds",
+"kind": "footstep_snow",
+"dur": 0.374
+},
+{
+"name": "footstep_snow_001",
+"pack": "impact-sounds",
+"kind": "footstep_snow",
+"dur": 0.374
+},
+{
+"name": "footstep_snow_002",
+"pack": "impact-sounds",
+"kind": "footstep_snow",
+"dur": 0.374
+},
+{
+"name": "footstep_snow_003",
+"pack": "impact-sounds",
+"kind": "footstep_snow",
+"dur": 0.374
+},
+{
+"name": "footstep_snow_004",
+"pack": "impact-sounds",
+"kind": "footstep_snow",
+"dur": 0.374
+},
+{
+"name": "footstep_wood_000",
+"pack": "impact-sounds",
+"kind": "footstep_wood",
+"dur": 0.25
+},
+{
+"name": "footstep_wood_001",
+"pack": "impact-sounds",
+"kind": "footstep_wood",
+"dur": 0.252
+},
+{
+"name": "footstep_wood_002",
+"pack": "impact-sounds",
+"kind": "footstep_wood",
+"dur": 0.251
+},
+{
+"name": "footstep_wood_003",
+"pack": "impact-sounds",
+"kind": "footstep_wood",
+"dur": 0.252
+},
+{
+"name": "footstep_wood_004",
+"pack": "impact-sounds",
+"kind": "footstep_wood",
+"dur": 0.248
+},
+{
+"name": "impactBell_heavy_000",
+"pack": "impact-sounds",
+"kind": "impactBell_heavy",
+"dur": 1.48
+},
+{
+"name": "impactBell_heavy_001",
+"pack": "impact-sounds",
+"kind": "impactBell_heavy",
+"dur": 1.741
+},
+{
+"name": "impactBell_heavy_002",
+"pack": "impact-sounds",
+"kind": "impactBell_heavy",
+"dur": 0.697
+},
+{
+"name": "impactBell_heavy_003",
+"pack": "impact-sounds",
+"kind": "impactBell_heavy",
+"dur": 0.654
+},
+{
+"name": "impactBell_heavy_004",
+"pack": "impact-sounds",
+"kind": "impactBell_heavy",
+"dur": 0.301
+},
+{
+"name": "impactGeneric_light_000",
+"pack": "impact-sounds",
+"kind": "impactGeneric_light",
+"dur": 0.139
+},
+{
+"name": "impactGeneric_light_001",
+"pack": "impact-sounds",
+"kind": "impactGeneric_light",
+"dur": 0.118
+},
+{
+"name": "impactGeneric_light_002",
+"pack": "impact-sounds",
+"kind": "impactGeneric_light",
+"dur": 0.14
+},
+{
+"name": "impactGeneric_light_003",
+"pack": "impact-sounds",
+"kind": "impactGeneric_light",
+"dur": 0.138
+},
+{
+"name": "impactGeneric_light_004",
+"pack": "impact-sounds",
+"kind": "impactGeneric_light",
+"dur": 0.14
+},
+{
+"name": "impactGlass_heavy_000",
+"pack": "impact-sounds",
+"kind": "impactGlass_heavy",
+"dur": 0.241
+},
+{
+"name": "impactGlass_heavy_001",
+"pack": "impact-sounds",
+"kind": "impactGlass_heavy",
+"dur": 0.429
+},
+{
+"name": "impactGlass_heavy_002",
+"pack": "impact-sounds",
+"kind": "impactGlass_heavy",
+"dur": 0.247
+},
+{
+"name": "impactGlass_heavy_003",
+"pack": "impact-sounds",
+"kind": "impactGlass_heavy",
+"dur": 0.172
+},
+{
+"name": "impactGlass_heavy_004",
+"pack": "impact-sounds",
+"kind": "impactGlass_heavy",
+"dur": 0.399
+},
+{
+"name": "impactGlass_light_000",
+"pack": "impact-sounds",
+"kind": "impactGlass_light",
+"dur": 0.21
+},
+{
+"name": "impactGlass_light_001",
+"pack": "impact-sounds",
+"kind": "impactGlass_light",
+"dur": 0.21
+},
+{
+"name": "impactGlass_light_002",
+"pack": "impact-sounds",
+"kind": "impactGlass_light",
+"dur": 0.21
+},
+{
+"name": "impactGlass_light_003",
+"pack": "impact-sounds",
+"kind": "impactGlass_light",
+"dur": 0.21
+},
+{
+"name": "impactGlass_light_004",
+"pack": "impact-sounds",
+"kind": "impactGlass_light",
+"dur": 0.21
+},
+{
+"name": "impactGlass_medium_000",
+"pack": "impact-sounds",
+"kind": "impactGlass_medium",
+"dur": 0.543
+},
+{
+"name": "impactGlass_medium_001",
+"pack": "impact-sounds",
+"kind": "impactGlass_medium",
+"dur": 0.543
+},
+{
+"name": "impactGlass_medium_002",
+"pack": "impact-sounds",
+"kind": "impactGlass_medium",
+"dur": 0.543
+},
+{
+"name": "impactGlass_medium_003",
+"pack": "impact-sounds",
+"kind": "impactGlass_medium",
+"dur": 0.543
+},
+{
+"name": "impactGlass_medium_004",
+"pack": "impact-sounds",
+"kind": "impactGlass_medium",
+"dur": 0.543
+},
+{
+"name": "impactMetal_heavy_000",
+"pack": "impact-sounds",
+"kind": "impactMetal_heavy",
+"dur": 0.168
+},
+{
+"name": "impactMetal_heavy_001",
+"pack": "impact-sounds",
+"kind": "impactMetal_heavy",
+"dur": 0.359
+},
+{
+"name": "impactMetal_heavy_002",
+"pack": "impact-sounds",
+"kind": "impactMetal_heavy",
+"dur": 0.117
+},
+{
+"name": "impactMetal_heavy_003",
+"pack": "impact-sounds",
+"kind": "impactMetal_heavy",
+"dur": 0.207
+},
+{
+"name": "impactMetal_heavy_004",
+"pack": "impact-sounds",
+"kind": "impactMetal_heavy",
+"dur": 0.134
+},
+{
+"name": "impactMetal_light_000",
+"pack": "impact-sounds",
+"kind": "impactMetal_light",
+"dur": 0.351
+},
+{
+"name": "impactMetal_light_001",
+"pack": "impact-sounds",
+"kind": "impactMetal_light",
+"dur": 0.252
+},
+{
+"name": "impactMetal_light_002",
+"pack": "impact-sounds",
+"kind": "impactMetal_light",
+"dur": 0.236
+},
+{
+"name": "impactMetal_light_003",
+"pack": "impact-sounds",
+"kind": "impactMetal_light",
+"dur": 0.482
+},
+{
+"name": "impactMetal_light_004",
+"pack": "impact-sounds",
+"kind": "impactMetal_light",
+"dur": 0.213
+},
+{
+"name": "impactMetal_medium_000",
+"pack": "impact-sounds",
+"kind": "impactMetal_medium",
+"dur": 0.272
+},
+{
+"name": "impactMetal_medium_001",
+"pack": "impact-sounds",
+"kind": "impactMetal_medium",
+"dur": 0.143
+},
+{
+"name": "impactMetal_medium_002",
+"pack": "impact-sounds",
+"kind": "impactMetal_medium",
+"dur": 0.119
+},
+{
+"name": "impactMetal_medium_003",
+"pack": "impact-sounds",
+"kind": "impactMetal_medium",
+"dur": 0.254
+},
+{
+"name": "impactMetal_medium_004",
+"pack": "impact-sounds",
+"kind": "impactMetal_medium",
+"dur": 0.109
+},
+{
+"name": "impactMining_000",
+"pack": "impact-sounds",
+"kind": "impactMining",
+"dur": 0.937
+},
+{
+"name": "impactMining_001",
+"pack": "impact-sounds",
+"kind": "impactMining",
+"dur": 0.869
+},
+{
+"name": "impactMining_002",
+"pack": "impact-sounds",
+"kind": "impactMining",
+"dur": 0.805
+},
+{
+"name": "impactMining_003",
+"pack": "impact-sounds",
+"kind": "impactMining",
+"dur": 0.992
+},
+{
+"name": "impactMining_004",
+"pack": "impact-sounds",
+"kind": "impactMining",
+"dur": 0.83
+},
+{
+"name": "impactPlank_medium_000",
+"pack": "impact-sounds",
+"kind": "impactPlank_medium",
+"dur": 0.779
+},
+{
+"name": "impactPlank_medium_001",
+"pack": "impact-sounds",
+"kind": "impactPlank_medium",
+"dur": 0.779
+},
+{
+"name": "impactPlank_medium_002",
+"pack": "impact-sounds",
+"kind": "impactPlank_medium",
+"dur": 0.779
+},
+{
+"name": "impactPlank_medium_003",
+"pack": "impact-sounds",
+"kind": "impactPlank_medium",
+"dur": 0.779
+},
+{
+"name": "impactPlank_medium_004",
+"pack": "impact-sounds",
+"kind": "impactPlank_medium",
+"dur": 0.779
+},
+{
+"name": "impactPlate_heavy_000",
+"pack": "impact-sounds",
+"kind": "impactPlate_heavy",
+"dur": 0.489
+},
+{
+"name": "impactPlate_heavy_001",
+"pack": "impact-sounds",
+"kind": "impactPlate_heavy",
+"dur": 0.352
+},
+{
+"name": "impactPlate_heavy_002",
+"pack": "impact-sounds",
+"kind": "impactPlate_heavy",
+"dur": 0.494
+},
+{
+"name": "impactPlate_heavy_003",
+"pack": "impact-sounds",
+"kind": "impactPlate_heavy",
+"dur": 0.347
+},
+{
+"name": "impactPlate_heavy_004",
+"pack": "impact-sounds",
+"kind": "impactPlate_heavy",
+"dur": 0.559
+},
+{
+"name": "impactPlate_light_000",
+"pack": "impact-sounds",
+"kind": "impactPlate_light",
+"dur": 0.542
+},
+{
+"name": "impactPlate_light_001",
+"pack": "impact-sounds",
+"kind": "impactPlate_light",
+"dur": 0.655
+},
+{
+"name": "impactPlate_light_002",
+"pack": "impact-sounds",
+"kind": "impactPlate_light",
+"dur": 0.489
+},
+{
+"name": "impactPlate_light_003",
+"pack": "impact-sounds",
+"kind": "impactPlate_light",
+"dur": 0.528
+},
+{
+"name": "impactPlate_light_004",
+"pack": "impact-sounds",
+"kind": "impactPlate_light",
+"dur": 0.657
+},
+{
+"name": "impactPlate_medium_000",
+"pack": "impact-sounds",
+"kind": "impactPlate_medium",
+"dur": 0.609
+},
+{
+"name": "impactPlate_medium_001",
+"pack": "impact-sounds",
+"kind": "impactPlate_medium",
+"dur": 0.616
+},
+{
+"name": "impactPlate_medium_002",
+"pack": "impact-sounds",
+"kind": "impactPlate_medium",
+"dur": 0.515
+},
+{
+"name": "impactPlate_medium_003",
+"pack": "impact-sounds",
+"kind": "impactPlate_medium",
+"dur": 0.654
+},
+{
+"name": "impactPlate_medium_004",
+"pack": "impact-sounds",
+"kind": "impactPlate_medium",
+"dur": 0.534
+},
+{
+"name": "impactPunch_heavy_000",
+"pack": "impact-sounds",
+"kind": "impactPunch_heavy",
+"dur": 0.649
+},
+{
+"name": "impactPunch_heavy_001",
+"pack": "impact-sounds",
+"kind": "impactPunch_heavy",
+"dur": 0.536
+},
+{
+"name": "impactPunch_heavy_002",
+"pack": "impact-sounds",
+"kind": "impactPunch_heavy",
+"dur": 0.457
+},
+{
+"name": "impactPunch_heavy_003",
+"pack": "impact-sounds",
+"kind": "impactPunch_heavy",
+"dur": 0.474
+},
+{
+"name": "impactPunch_heavy_004",
+"pack": "impact-sounds",
+"kind": "impactPunch_heavy",
+"dur": 0.536
+},
+{
+"name": "impactPunch_medium_000",
+"pack": "impact-sounds",
+"kind": "impactPunch_medium",
+"dur": 0.431
+},
+{
+"name": "impactPunch_medium_001",
+"pack": "impact-sounds",
+"kind": "impactPunch_medium",
+"dur": 0.405
+},
+{
+"name": "impactPunch_medium_002",
+"pack": "impact-sounds",
+"kind": "impactPunch_medium",
+"dur": 0.541
+},
+{
+"name": "impactPunch_medium_003",
+"pack": "impact-sounds",
+"kind": "impactPunch_medium",
+"dur": 0.455
+},
+{
+"name": "impactPunch_medium_004",
+"pack": "impact-sounds",
+"kind": "impactPunch_medium",
+"dur": 0.543
+},
+{
+"name": "impactSoft_heavy_000",
+"pack": "impact-sounds",
+"kind": "impactSoft_heavy",
+"dur": 0.505
+},
+{
+"name": "impactSoft_heavy_001",
+"pack": "impact-sounds",
+"kind": "impactSoft_heavy",
+"dur": 0.572
+},
+{
+"name": "impactSoft_heavy_002",
+"pack": "impact-sounds",
+"kind": "impactSoft_heavy",
+"dur": 0.572
+},
+{
+"name": "impactSoft_heavy_003",
+"pack": "impact-sounds",
+"kind": "impactSoft_heavy",
+"dur": 0.544
+},
+{
+"name": "impactSoft_heavy_004",
+"pack": "impact-sounds",
+"kind": "impactSoft_heavy",
+"dur": 0.501
+},
+{
+"name": "impactSoft_medium_000",
+"pack": "impact-sounds",
+"kind": "impactSoft_medium",
+"dur": 0.118
+},
+{
+"name": "impactSoft_medium_001",
+"pack": "impact-sounds",
+"kind": "impactSoft_medium",
+"dur": 0.183
+},
+{
+"name": "impactSoft_medium_002",
+"pack": "impact-sounds",
+"kind": "impactSoft_medium",
+"dur": 0.135
+},
+{
+"name": "impactSoft_medium_003",
+"pack": "impact-sounds",
+"kind": "impactSoft_medium",
+"dur": 0.14
+},
+{
+"name": "impactSoft_medium_004",
+"pack": "impact-sounds",
+"kind": "impactSoft_medium",
+"dur": 0.147
+},
+{
+"name": "impactTin_medium_000",
+"pack": "impact-sounds",
+"kind": "impactTin_medium",
+"dur": 0.159
+},
+{
+"name": "impactTin_medium_001",
+"pack": "impact-sounds",
+"kind": "impactTin_medium",
+"dur": 0.174
+},
+{
+"name": "impactTin_medium_002",
+"pack": "impact-sounds",
+"kind": "impactTin_medium",
+"dur": 0.134
+},
+{
+"name": "impactTin_medium_003",
+"pack": "impact-sounds",
+"kind": "impactTin_medium",
+"dur": 0.215
+},
+{
+"name": "impactTin_medium_004",
+"pack": "impact-sounds",
+"kind": "impactTin_medium",
+"dur": 0.179
+},
+{
+"name": "impactWood_heavy_000",
+"pack": "impact-sounds",
+"kind": "impactWood_heavy",
+"dur": 0.313
+},
+{
+"name": "impactWood_heavy_001",
+"pack": "impact-sounds",
+"kind": "impactWood_heavy",
+"dur": 0.313
+},
+{
+"name": "impactWood_heavy_002",
+"pack": "impact-sounds",
+"kind": "impactWood_heavy",
+"dur": 0.313
+},
+{
+"name": "impactWood_heavy_003",
+"pack": "impact-sounds",
+"kind": "impactWood_heavy",
+"dur": 0.313
+},
+{
+"name": "impactWood_heavy_004",
+"pack": "impact-sounds",
+"kind": "impactWood_heavy",
+"dur": 0.313
+},
+{
+"name": "impactWood_light_000",
+"pack": "impact-sounds",
+"kind": "impactWood_light",
+"dur": 0.266
+},
+{
+"name": "impactWood_light_001",
+"pack": "impact-sounds",
+"kind": "impactWood_light",
+"dur": 0.266
+},
+{
+"name": "impactWood_light_002",
+"pack": "impact-sounds",
+"kind": "impactWood_light",
+"dur": 0.266
+},
+{
+"name": "impactWood_light_003",
+"pack": "impact-sounds",
+"kind": "impactWood_light",
+"dur": 0.266
+},
+{
+"name": "impactWood_light_004",
+"pack": "impact-sounds",
+"kind": "impactWood_light",
+"dur": 0.266
+},
+{
+"name": "impactWood_medium_000",
+"pack": "impact-sounds",
+"kind": "impactWood_medium",
+"dur": 0.333
+},
+{
+"name": "impactWood_medium_001",
+"pack": "impact-sounds",
+"kind": "impactWood_medium",
+"dur": 0.333
+},
+{
+"name": "impactWood_medium_002",
+"pack": "impact-sounds",
+"kind": "impactWood_medium",
+"dur": 0.333
+},
+{
+"name": "impactWood_medium_003",
+"pack": "impact-sounds",
+"kind": "impactWood_medium",
+"dur": 0.333
+},
+{
+"name": "impactWood_medium_004",
+"pack": "impact-sounds",
+"kind": "impactWood_medium",
+"dur": 0.333
+},
+{
+"name": "back_001",
+"pack": "interface-sounds",
+"kind": "back",
+"dur": 0.064
+},
+{
+"name": "back_002",
+"pack": "interface-sounds",
+"kind": "back",
+"dur": 0.07
+},
+{
+"name": "back_003",
+"pack": "interface-sounds",
+"kind": "back",
+"dur": 0.093
+},
+{
+"name": "back_004",
+"pack": "interface-sounds",
+"kind": "back",
+"dur": 0.073
+},
+{
+"name": "bong_001",
+"pack": "interface-sounds",
+"kind": "bong",
+"dur": 0.123
+},
+{
+"name": "click_001",
+"pack": "interface-sounds",
+"kind": "click",
+"dur": 0.1
+},
+{
+"name": "click_002",
+"pack": "interface-sounds",
+"kind": "click",
+"dur": 0.01
+},
+{
+"name": "click_003",
+"pack": "interface-sounds",
+"kind": "click",
+"dur": 0.01
+},
+{
+"name": "click_004",
+"pack": "interface-sounds",
+"kind": "click",
+"dur": 0.01
+},
+{
+"name": "click_005",
+"pack": "interface-sounds",
+"kind": "click",
+"dur": 0.01
+},
+{
+"name": "close_001",
+"pack": "interface-sounds",
+"kind": "close",
+"dur": 0.148
+},
+{
+"name": "close_002",
+"pack": "interface-sounds",
+"kind": "close",
+"dur": 0.314
+},
+{
+"name": "close_003",
+"pack": "interface-sounds",
+"kind": "close",
+"dur": 0.314
+},
+{
+"name": "close_004",
+"pack": "interface-sounds",
+"kind": "close",
+"dur": 0.323
+},
+{
+"name": "confirmation_001",
+"pack": "interface-sounds",
+"kind": "confirmation",
+"dur": 0.29
+},
+{
+"name": "confirmation_002",
+"pack": "interface-sounds",
+"kind": "confirmation",
+"dur": 0.539
+},
+{
+"name": "confirmation_003",
+"pack": "interface-sounds",
+"kind": "confirmation",
+"dur": 0.322
+},
+{
+"name": "confirmation_004",
+"pack": "interface-sounds",
+"kind": "confirmation",
+"dur": 0.49
+},
+{
+"name": "drop_001",
+"pack": "interface-sounds",
+"kind": "drop",
+"dur": 0.11
+},
+{
+"name": "drop_002",
+"pack": "interface-sounds",
+"kind": "drop",
+"dur": 0.191
+},
+{
+"name": "drop_003",
+"pack": "interface-sounds",
+"kind": "drop",
+"dur": 0.191
+},
+{
+"name": "drop_004",
+"pack": "interface-sounds",
+"kind": "drop",
+"dur": 0.287
+},
+{
+"name": "error_001",
+"pack": "interface-sounds",
+"kind": "error",
+"dur": 0.165
+},
+{
+"name": "error_002",
+"pack": "interface-sounds",
+"kind": "error",
+"dur": 0.165
+},
+{
+"name": "error_003",
+"pack": "interface-sounds",
+"kind": "error",
+"dur": 0.533
+},
+{
+"name": "error_004",
+"pack": "interface-sounds",
+"kind": "error",
+"dur": 0.103
+},
+{
+"name": "error_005",
+"pack": "interface-sounds",
+"kind": "error",
+"dur": 0.5
+},
+{
+"name": "error_006",
+"pack": "interface-sounds",
+"kind": "error",
+"dur": 0.5
+},
+{
+"name": "error_007",
+"pack": "interface-sounds",
+"kind": "error",
+"dur": 0.192
+},
+{
+"name": "error_008",
+"pack": "interface-sounds",
+"kind": "error",
+"dur": 0.139
+},
+{
+"name": "glass_001",
+"pack": "interface-sounds",
+"kind": "glass",
+"dur": 0.278
+},
+{
+"name": "glass_002",
+"pack": "interface-sounds",
+"kind": "glass",
+"dur": 0.125
+},
+{
+"name": "glass_003",
+"pack": "interface-sounds",
+"kind": "glass",
+"dur": 0.124
+},
+{
+"name": "glass_004",
+"pack": "interface-sounds",
+"kind": "glass",
+"dur": 0.692
+},
+{
+"name": "glass_005",
+"pack": "interface-sounds",
+"kind": "glass",
+"dur": 0.111
+},
+{
+"name": "glass_006",
+"pack": "interface-sounds",
+"kind": "glass",
+"dur": 0.111
+},
+{
+"name": "glitch_001",
+"pack": "interface-sounds",
+"kind": "glitch",
+"dur": 0.02
+},
+{
+"name": "glitch_002",
+"pack": "interface-sounds",
+"kind": "glitch",
+"dur": 0.03
+},
+{
+"name": "glitch_003",
+"pack": "interface-sounds",
+"kind": "glitch",
+"dur": 0.01
+},
+{
+"name": "glitch_004",
+"pack": "interface-sounds",
+"kind": "glitch",
+"dur": 0.023
+},
+{
+"name": "maximize_001",
+"pack": "interface-sounds",
+"kind": "maximize",
+"dur": 0.258
+},
+{
+"name": "maximize_002",
+"pack": "interface-sounds",
+"kind": "maximize",
+"dur": 0.258
+},
+{
+"name": "maximize_003",
+"pack": "interface-sounds",
+"kind": "maximize",
+"dur": 0.212
+},
+{
+"name": "maximize_004",
+"pack": "interface-sounds",
+"kind": "maximize",
+"dur": 0.418
+},
+{
+"name": "maximize_005",
+"pack": "interface-sounds",
+"kind": "maximize",
+"dur": 0.526
+},
+{
+"name": "maximize_006",
+"pack": "interface-sounds",
+"kind": "maximize",
+"dur": 0.38
+},
+{
+"name": "maximize_007",
+"pack": "interface-sounds",
+"kind": "maximize",
+"dur": 0.186
+},
+{
+"name": "maximize_008",
+"pack": "interface-sounds",
+"kind": "maximize",
+"dur": 0.225
+},
+{
+"name": "maximize_009",
+"pack": "interface-sounds",
+"kind": "maximize",
+"dur": 0.225
+},
+{
+"name": "minimize_001",
+"pack": "interface-sounds",
+"kind": "minimize",
+"dur": 0.258
+},
+{
+"name": "minimize_002",
+"pack": "interface-sounds",
+"kind": "minimize",
+"dur": 0.258
+},
+{
+"name": "minimize_003",
+"pack": "interface-sounds",
+"kind": "minimize",
+"dur": 0.212
+},
+{
+"name": "minimize_004",
+"pack": "interface-sounds",
+"kind": "minimize",
+"dur": 0.418
+},
+{
+"name": "minimize_005",
+"pack": "interface-sounds",
+"kind": "minimize",
+"dur": 0.526
+},
+{
+"name": "minimize_006",
+"pack": "interface-sounds",
+"kind": "minimize",
+"dur": 0.38
+},
+{
+"name": "minimize_007",
+"pack": "interface-sounds",
+"kind": "minimize",
+"dur": 0.186
+},
+{
+"name": "minimize_008",
+"pack": "interface-sounds",
+"kind": "minimize",
+"dur": 0.225
+},
+{
+"name": "minimize_009",
+"pack": "interface-sounds",
+"kind": "minimize",
+"dur": 0.225
+},
+{
+"name": "open_001",
+"pack": "interface-sounds",
+"kind": "open",
+"dur": 0.148
+},
+{
+"name": "open_002",
+"pack": "interface-sounds",
+"kind": "open",
+"dur": 0.314
+},
+{
+"name": "open_003",
+"pack": "interface-sounds",
+"kind": "open",
+"dur": 0.314
+},
+{
+"name": "open_004",
+"pack": "interface-sounds",
+"kind": "open",
+"dur": 0.323
+},
+{
+"name": "pluck_001",
+"pack": "interface-sounds",
+"kind": "pluck",
+"dur": 0.102
+},
+{
+"name": "pluck_002",
+"pack": "interface-sounds",
+"kind": "pluck",
+"dur": 0.165
+},
+{
+"name": "question_001",
+"pack": "interface-sounds",
+"kind": "question",
+"dur": 0.491
+},
+{
+"name": "question_002",
+"pack": "interface-sounds",
+"kind": "question",
+"dur": 0.333
+},
+{
+"name": "question_003",
+"pack": "interface-sounds",
+"kind": "question",
+"dur": 0.332
+},
+{
+"name": "question_004",
+"pack": "interface-sounds",
+"kind": "question",
+"dur": 0.332
+},
+{
+"name": "scratch_001",
+"pack": "interface-sounds",
+"kind": "scratch",
+"dur": 0.139
+},
+{
+"name": "scratch_002",
+"pack": "interface-sounds",
+"kind": "scratch",
+"dur": 0.139
+},
+{
+"name": "scratch_003",
+"pack": "interface-sounds",
+"kind": "scratch",
+"dur": 0.123
+},
+{
+"name": "scratch_004",
+"pack": "interface-sounds",
+"kind": "scratch",
+"dur": 0.325
+},
+{
+"name": "scratch_005",
+"pack": "interface-sounds",
+"kind": "scratch",
+"dur": 0.325
+},
+{
+"name": "scroll_001",
+"pack": "interface-sounds",
+"kind": "scroll",
+"dur": 1.0
+},
+{
+"name": "scroll_002",
+"pack": "interface-sounds",
+"kind": "scroll",
+"dur": 1.0
+},
+{
+"name": "scroll_003",
+"pack": "interface-sounds",
+"kind": "scroll",
+"dur": 1.0
+},
+{
+"name": "scroll_004",
+"pack": "interface-sounds",
+"kind": "scroll",
+"dur": 1.0
+},
+{
+"name": "scroll_005",
+"pack": "interface-sounds",
+"kind": "scroll",
+"dur": 1.0
+},
+{
+"name": "select_001",
+"pack": "interface-sounds",
+"kind": "select",
+"dur": 0.043
+},
+{
+"name": "select_002",
+"pack": "interface-sounds",
+"kind": "select",
+"dur": 0.043
+},
+{
+"name": "select_003",
+"pack": "interface-sounds",
+"kind": "select",
+"dur": 0.383
+},
+{
+"name": "select_004",
+"pack": "interface-sounds",
+"kind": "select",
+"dur": 0.383
+},
+{
+"name": "select_005",
+"pack": "interface-sounds",
+"kind": "select",
+"dur": 0.383
+},
+{
+"name": "select_006",
+"pack": "interface-sounds",
+"kind": "select",
+"dur": 1.944
+},
+{
+"name": "select_007",
+"pack": "interface-sounds",
+"kind": "select",
+"dur": 0.047
+},
+{
+"name": "select_008",
+"pack": "interface-sounds",
+"kind": "select",
+"dur": 0.047
+},
+{
+"name": "switch_001",
+"pack": "interface-sounds",
+"kind": "switch",
+"dur": 0.618
+},
+{
+"name": "switch_002",
+"pack": "interface-sounds",
+"kind": "switch",
+"dur": 0.611
+},
+{
+"name": "switch_003",
+"pack": "interface-sounds",
+"kind": "switch",
+"dur": 0.5
+},
+{
+"name": "switch_004",
+"pack": "interface-sounds",
+"kind": "switch",
+"dur": 0.5
+},
+{
+"name": "switch_005",
+"pack": "interface-sounds",
+"kind": "switch",
+"dur": 0.612
+},
+{
+"name": "switch_006",
+"pack": "interface-sounds",
+"kind": "switch",
+"dur": 0.611
+},
+{
+"name": "switch_007",
+"pack": "interface-sounds",
+"kind": "switch",
+"dur": 0.614
+},
+{
+"name": "tick_001",
+"pack": "interface-sounds",
+"kind": "tick",
+"dur": 0.023
+},
+{
+"name": "tick_002",
+"pack": "interface-sounds",
+"kind": "tick",
+"dur": 0.023
+},
+{
+"name": "tick_004",
+"pack": "interface-sounds",
+"kind": "tick",
+"dur": 0.055
+},
+{
+"name": "toggle_001",
+"pack": "interface-sounds",
+"kind": "toggle",
+"dur": 0.139
+},
+{
+"name": "toggle_002",
+"pack": "interface-sounds",
+"kind": "toggle",
+"dur": 0.139
+},
+{
+"name": "toggle_003",
+"pack": "interface-sounds",
+"kind": "toggle",
+"dur": 0.139
+},
+{
+"name": "toggle_004",
+"pack": "interface-sounds",
+"kind": "toggle",
+"dur": 0.066
+},
+{
+"name": "beltHandle1",
+"pack": "rpg-audio",
+"kind": "beltHandle",
+"dur": 0.277
+},
+{
+"name": "beltHandle2",
+"pack": "rpg-audio",
+"kind": "beltHandle",
+"dur": 0.477
+},
+{
+"name": "bookClose",
+"pack": "rpg-audio",
+"kind": "bookClose",
+"dur": 0.231
+},
+{
+"name": "bookFlip1",
+"pack": "rpg-audio",
+"kind": "bookFlip",
+"dur": 0.769
+},
+{
+"name": "bookFlip2",
+"pack": "rpg-audio",
+"kind": "bookFlip",
+"dur": 0.43
+},
+{
+"name": "bookFlip3",
+"pack": "rpg-audio",
+"kind": "bookFlip",
+"dur": 0.231
+},
+{
+"name": "bookOpen",
+"pack": "rpg-audio",
+"kind": "bookOpen",
+"dur": 0.154
+},
+{
+"name": "bookPlace1",
+"pack": "rpg-audio",
+"kind": "bookPlace",
+"dur": 0.277
+},
+{
+"name": "bookPlace2",
+"pack": "rpg-audio",
+"kind": "bookPlace",
+"dur": 0.354
+},
+{
+"name": "bookPlace3",
+"pack": "rpg-audio",
+"kind": "bookPlace",
+"dur": 0.261
+},
+{
+"name": "chop",
+"pack": "rpg-audio",
+"kind": "chop",
+"dur": 0.24
+},
+{
+"name": "cloth1",
+"pack": "rpg-audio",
+"kind": "cloth",
+"dur": 0.661
+},
+{
+"name": "cloth2",
+"pack": "rpg-audio",
+"kind": "cloth",
+"dur": 0.415
+},
+{
+"name": "cloth3",
+"pack": "rpg-audio",
+"kind": "cloth",
+"dur": 0.477
+},
+{
+"name": "cloth4",
+"pack": "rpg-audio",
+"kind": "cloth",
+"dur": 0.384
+},
+{
+"name": "clothBelt",
+"pack": "rpg-audio",
+"kind": "clothBelt",
+"dur": 0.723
+},
+{
+"name": "clothBelt2",
+"pack": "rpg-audio",
+"kind": "clothBelt",
+"dur": 0.753
+},
+{
+"name": "creak1",
+"pack": "rpg-audio",
+"kind": "creak",
+"dur": 0.661
+},
+{
+"name": "creak2",
+"pack": "rpg-audio",
+"kind": "creak",
+"dur": 0.83
+},
+{
+"name": "creak3",
+"pack": "rpg-audio",
+"kind": "creak",
+"dur": 0.338
+},
+{
+"name": "doorClose_1",
+"pack": "rpg-audio",
+"kind": "doorClose",
+"dur": 0.675
+},
+{
+"name": "doorClose_2",
+"pack": "rpg-audio",
+"kind": "doorClose",
+"dur": 0.612
+},
+{
+"name": "doorClose_3",
+"pack": "rpg-audio",
+"kind": "doorClose",
+"dur": 0.714
+},
+{
+"name": "doorClose_4",
+"pack": "rpg-audio",
+"kind": "doorClose",
+"dur": 0.603
+},
+{
+"name": "doorOpen_1",
+"pack": "rpg-audio",
+"kind": "doorOpen",
+"dur": 0.919
+},
+{
+"name": "doorOpen_2",
+"pack": "rpg-audio",
+"kind": "doorOpen",
+"dur": 1.413
+},
+{
+"name": "drawKnife1",
+"pack": "rpg-audio",
+"kind": "drawKnife",
+"dur": 0.4
+},
+{
+"name": "drawKnife2",
+"pack": "rpg-audio",
+"kind": "drawKnife",
+"dur": 0.446
+},
+{
+"name": "drawKnife3",
+"pack": "rpg-audio",
+"kind": "drawKnife",
+"dur": 0.477
+},
+{
+"name": "dropLeather",
+"pack": "rpg-audio",
+"kind": "dropLeather",
+"dur": 0.415
+},
+{
+"name": "footstep00",
+"pack": "rpg-audio",
+"kind": "footstep",
+"dur": 0.249
+},
+{
+"name": "footstep01",
+"pack": "rpg-audio",
+"kind": "footstep",
+"dur": 0.282
+},
+{
+"name": "footstep02",
+"pack": "rpg-audio",
+"kind": "footstep",
+"dur": 0.242
+},
+{
+"name": "footstep03",
+"pack": "rpg-audio",
+"kind": "footstep",
+"dur": 0.269
+},
+{
+"name": "footstep04",
+"pack": "rpg-audio",
+"kind": "footstep",
+"dur": 0.323
+},
+{
+"name": "footstep05",
+"pack": "rpg-audio",
+"kind": "footstep",
+"dur": 0.276
+},
+{
+"name": "footstep06",
+"pack": "rpg-audio",
+"kind": "footstep",
+"dur": 0.242
+},
+{
+"name": "footstep07",
+"pack": "rpg-audio",
+"kind": "footstep",
+"dur": 0.256
+},
+{
+"name": "footstep08",
+"pack": "rpg-audio",
+"kind": "footstep",
+"dur": 0.256
+},
+{
+"name": "footstep09",
+"pack": "rpg-audio",
+"kind": "footstep",
+"dur": 0.215
+},
+{
+"name": "handleCoins",
+"pack": "rpg-audio",
+"kind": "handleCoins",
+"dur": 0.846
+},
+{
+"name": "handleCoins2",
+"pack": "rpg-audio",
+"kind": "handleCoins",
+"dur": 0.338
+},
+{
+"name": "handleSmallLeather",
+"pack": "rpg-audio",
+"kind": "handleSmallLeather",
+"dur": 0.338
+},
+{
+"name": "handleSmallLeather2",
+"pack": "rpg-audio",
+"kind": "handleSmallLeather",
+"dur": 0.307
+},
+{
+"name": "knifeSlice",
+"pack": "rpg-audio",
+"kind": "knifeSlice",
+"dur": 0.6
+},
+{
+"name": "knifeSlice2",
+"pack": "rpg-audio",
+"kind": "knifeSlice",
+"dur": 0.569
+},
+{
+"name": "metalClick",
+"pack": "rpg-audio",
+"kind": "metalClick",
+"dur": 0.446
+},
+{
+"name": "metalLatch",
+"pack": "rpg-audio",
+"kind": "metalLatch",
+"dur": 0.261
+},
+{
+"name": "metalPot1",
+"pack": "rpg-audio",
+"kind": "metalPot",
+"dur": 1.46
+},
+{
+"name": "metalPot2",
+"pack": "rpg-audio",
+"kind": "metalPot",
+"dur": 0.938
+},
+{
+"name": "metalPot3",
+"pack": "rpg-audio",
+"kind": "metalPot",
+"dur": 0.907
+}
+]
