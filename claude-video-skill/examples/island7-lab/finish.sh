@@ -25,4 +25,4 @@ print(f'GIF: {len(d)} コマ、合計 {sum(d) / 1000:.2f} 秒、コマの長さ 
 EOF
 ls -la out/island7-lab.mp4 out/island7-lab_x3.mp4 out/island7-lab.gif
 echo '--- 音(MP4 をデコードして測る)'; python3 $T/audio_measure.py out/island7-lab.mp4 --cues cues.json
-echo '--- 機械チェック(3回通し)'; python3 $T/review_checks.py out/island7-lab_x3.mp4 --holds holds.json
+echo '--- 機械チェック(3回通し)'; python3 $T/review_checks.py out/island7-lab_x3.mp4
