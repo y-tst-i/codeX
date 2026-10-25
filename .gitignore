@@ -45,3 +45,7 @@ tmp/
 temp/
 *.tmp
 *.swp
+
+# Python のキャッシュ
+__pycache__/
+*.pyc
