@@ -11,6 +11,8 @@
  7 低音の重なり: 120 Hz 未満(4 次 LP)の効果音ステムと音楽ステムの RMS(dBFS、同期点の -20〜+100 ms)。
    判定: 両方 -40 dBFS より大きく、差が 6 dB 未満 = 「重なり」
  8 音楽バスの頂点(仕上げのゲイン後、リミッターの前)、比較用 WAV の標本ピーク、15 kHz 以上の割合、ebur128 と loudnorm の差
+ 9 (2026-10-28 のルール修正)静けさは効果音ステムで見る(sfx_quiet_windows)。BGM ベッドは別に、落ち込みの最小値
+   (100 ms / 400 ms RMS の最小と中央値からの差、bgm_bed)を出す。ミックス全体の near_silent_windows は参考
 usage: $HOME/earshot_env/bin/python qa.py [--a-stems DIR]   出力: WORK/qa.json と標準出力
 A のステムは prepare.py が WORK/A_repro/ に再現する。無ければ A の場面分析だけ飛ばす
 """
@@ -25,6 +27,7 @@ import soundfile as sf
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
+import bgm_metrics as BM  # noqa: E402
 import common as C  # noqa: E402
 
 SECTIONS = [("一覧 0-3.75", 0.0, 3.75), ("詳細 3.75-6.87", 3.75, 6.87), ("大チェック・戻り・数 6.87-8.75", 6.87, 8.75),
@@ -121,6 +124,19 @@ def overlap(events, music, sfx):
     return rows
 
 
+def quiet_windows(x, thr=-40.0, min_s=0.3):
+    """100 ms RMS が thr dBFS 未満で min_s 以上続く窓(効果音ステムに使う)"""
+    m = x.mean(1); w = int(0.1 * C.SR)
+    r = 20 * np.log10(np.sqrt((m[: len(m) // w * w].reshape(-1, w) ** 2).mean(1)) + 1e-12)
+    out, st = [], None
+    for i, v in enumerate(list(r) + [0]):
+        if v < thr and st is None: st = i
+        if v >= thr and st is not None:
+            if (i - st) * 0.1 >= min_s - 1e-9: out.append([round(st * 0.1, 1), round(i * 0.1, 1)])
+            st = None
+    return out
+
+
 def mono(mp4, x):
     import re
     r = subprocess.run(["ffmpeg", "-nostats", "-i", mp4, "-vn", "-af", "pan=mono|c0=0.5*c0+0.5*c1,ebur128", "-f", "null", "-"],
@@ -210,11 +226,23 @@ def main():
             r["music_sections"] = sections(mus)
             r["sfx_sources"] = sorted({e.get("sound") for e in ev})
             r["n_sfx_events"] = len(ev)
+            # 2026-10-28 のルール修正: 静けさは効果音で見て、BGM ベッドは落ち込みの最小値を見る(別々に)
+            m = json.load(open(os.path.join(C.WORK, cond, "master.json")))
+            bed_path = os.path.join(C.WORK, cond, "raw_bgm_only.wav" if cond == "C" else "raw_music.wav")
+            if os.path.exists(bed_path):
+                bed, _ = sf.read(bed_path, dtype="float64")
+                r["bgm_bed"] = BM.bed_stats(bed[: C.N] * C.db(m["gain_db"]))
+            r["sfx_quiet_windows"] = quiet_windows(sfx)
         elif os.path.exists(os.path.join(a.a_stems, "stem_music.wav")):
             mus, _ = sf.read(os.path.join(a.a_stems, "stem_music.wav"), dtype="float64")
             if len(mus) != C.N:   # A は 48 kHz で書かれている
                 mus = np.pad(mus[: C.N], ((0, max(0, C.N - len(mus))), (0, 0)))
             r["music_sections"] = sections(mus)
+            r["bgm_bed"] = BM.bed_stats(mus)          # A: 音楽 + 環境音のステム(仕上げ後の大きさ)
+            sp = os.path.join(a.a_stems, "stem_sfx.wav")
+            if os.path.exists(sp):
+                sx, _ = sf.read(sp, dtype="float64")
+                r["sfx_quiet_windows"] = quiet_windows(sx[: C.N])
         else:
             r["music_sections"] = []
             print(f"(A のステムが無いので A の場面分析は飛ばす: {a.a_stems}。prepare.py で作れる)")
@@ -223,7 +251,8 @@ def main():
     for cond, r in res["conditions"].items():
         print(f"== {cond} ({r['code']}) mp4 I/TP/LRA {r['mp4_lufs_tp_lra']} wav {r['wav_lufs_tp_lra']} phone {r['phone_band_lufs']} "
               f"clip {r['clip_samples']}/{r['clip_runs_3plus']} dc {r['dc']} corr {r['lr_corr']}")
-        print("   near-silent:", r["near_silent_windows"], " digital-silence blocks:", len(r["digital_silence_50ms_blocks"]))
+        print("   mix near-silent (参考):", r["near_silent_windows"], " digital-silence blocks:", len(r["digital_silence_50ms_blocks"]))
+        print("   効果音の静けさ:", r.get("sfx_quiet_windows"), " BGM ベッド:", r.get("bgm_bed"))
         print(f"   mono {r['mono_lufs']} (mono-stereo {r['mono_minus_stereo_db']}) sections:", [(s['section'][:4], s['mono_loss_db'], s['lr_corr']) for s in r['mono_sections']])
         print(f"   sample peak {r['wav_sample_peak_dbfs']} hf15k {r['mp4_hf15k_share_db']} bytes {r['mp4_bytes']} loudnorm {r['loudnorm_vs_ebur128']}")
         if "music_bus_peak_dbfs" in r:

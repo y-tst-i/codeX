@@ -69,3 +69,36 @@
 - `prepare.py`: 映像を取り出せない時(git の外の写しなど)は理由を示して止まる(以前は先へ進み finish.py で分かりにくく止まった)。HOWTO に「git clone した作業コピーが必要」を追記。
 - `QA.md`: 「絵のコマとの差」と書いていた値が設計の狙いの時刻が基準だったので名前を直し、実際の絵のコマ基準の範囲を併記。
 - 元に戻す: この commit を `git revert`。
+
+## 2026-10-28 第2ラウンド(利用者の試聴結果を受けて: ルールの修正と BGM の作り直し)
+
+### 既存ファイルの変更(依頼元の指示で、この 3 つの該当箇所だけ)
+| ファイル | 変更前 | 変更後(要点) |
+|---|---|---|
+| `claude-video-skill/sound-kit/BRIEF.md` 設計ルール 4 | 「**ほぼ無音の区間を2か所以上**作る(静けさがあるから山が効く)。完全な無音にはしない。」 | 「**静けさは効果音で作る**: 効果音をほぼ鳴らさない区間を2か所以上。**BGM(ベッド)は落とさない**: 1曲として切れ目なく流し、小さくしても聞こえる状態を保つ(目安: 仕上げ後の 100 ms RMS で曲の中央値から -15 dB 以内。ゼロや -40 dBFS 級にしない)。静けさは効果音を減らす・音楽の密度を下げる・音域を絞ることで作る。」+ 修正の理由(試聴、1回・1人) |
+| 同 依頼のひな形 | 「数値(LUFS・ピーク・ほぼ無音の位置・純音ピンの回数)を報告する」 | 「数値(LUFS・ピーク・効果音の静けさの位置・BGM ベッドの最小レベル・純音ピンの回数)を報告する」 |
+| `claude-video-skill/references/sound-palette.md` 音の設計ルール 3 | 「**ほぼ無音の瞬間は「絞る」であって「ゼロ」ではない**: 山の前の一拍や衝撃の直後は、効果音と音楽を絞る(最低2か所)。ただし曲として流れ続けるBGMの層(ベッド)は全編に敷き、絞る窓でだけ下げる。…」 | 「**静けさは効果音で作り、BGM は切らない**: …**効果音**を鳴らさない・減らす(最低2か所)。BGM は 1 曲として途切れさせない。静かな所は密度・音域・少し下げる(中央値から -15 dB 以内、-40 dBFS 級に落とさない)。…BGM ごと -16〜-22 dB 落とす窓は不評だった(1回・1人)」 |
+| `claude-video-skill/SKILL.md` §4 の 4 | 「…/3層/ほぼ無音を2か所以上/BGM は切れ目なく流し静かな所は下げる/…」 | 「…/3層/静けさは効果音で2か所以上作り、BGM は1曲として切らない(密度・音域で静かにする。-40 dBFS 級に落とさない)/…」 |
+| `claude-video-skill/SKILL.md` §0(追記) | — | 「効果音は Kenney の録音と earshot の併用が1位(1回・1人)。併用版 > earshot だけ > 既存。BGM は3本とも不評。記録: RESULT_ROUND1.md」 |
+
+**元に戻す**: `git show d0b6f81:<ファイル> > <ファイル>` で 3 ファイルを第1ラウンドの版に戻せる(d0b6f81 は第2ラウンドの前の commit)。または、この第2ラウンドの commit を `git revert` する。
+
+### qa.py
+- 「ほぼ無音の窓」をミックス全体ではなく、**効果音ステムの静けさ**(`sfx_quiet_windows`)と **BGM ベッドの落ち込みの最小値**(`bgm_bed`: 100 ms / 400 ms RMS の最小と中央値からの差)に分けて出すようにした。ミックス全体の `near_silent_windows` は参考として残した。
+
+### 追加したファイル
+| 場所 | 中身 |
+|---|---|
+| `docs/sound-upgrade/RESULT_ROUND1.md` | 第1ラウンドの順位・所感・原因の見立て・earshot の結論 |
+| `docs/sound-upgrade/BGM_AUDIT_ROUND2.md` | BGM の監査(測定と楽譜)、作り直しの約束、2 案の違い、反対意見 |
+| `docs/sound-upgrade/QA_ROUND2.md` | 第2ラウンドの検査 |
+| `docs/sound-upgrade/compare_round2/` | 比較パック(動画 3 本、BGM だけの m4a 3 本、合計約 17.3 MB)と評価用紙 |
+| `docs/sound-upgrade/answer_key/ANSWER_KEY_ROUND2.md`・`round2_key.json` | 第2ラウンドの正解表と固定の記号 |
+| `projects/hitotsuzutsu/score2.py`・`make_round2.py`・`finish_round2.py`・`qa_round2.py`・`bgm_metrics.py`・`build_round2.sh` | 第2ラウンドのスクリプト。git の中は `PUBLISH=1` の時だけ書き換える |
+
+### 変えたスクリプト(結果は変わらない)
+- `mixer.py`: 仕上げ前の層(raw_music / raw_sfx / raw_room)も書き出す。`make_C.py`: C の身振りと BGM だけの音も書き出す。C の mix.wav はバイト単位で同じ(確認済み)。
+- `common.py`: `band_dip`(帯域を選んだ一瞬の谷)を追加。
+
+### 元に戻す(第2ラウンド全体)
+この commit を `git revert` する。作業ファイルは `docs/sound-upgrade/work/R2_*`・`work/compare_round2*`(git の外)を消す。

@@ -124,6 +124,10 @@ def music_gestures():
 def main():
     st = score.build()
     extra = music_gestures()
+    C.write(os.path.join(C.WORK, "C", "raw_gestures.wav"), extra, "FLOAT")     # C の音程の身振り(第2ラウンドで再利用)
+    # BGM だけ(身振りを除く)。第2ラウンドの「BGM だけの音声」の基準に使う
+    C.write(os.path.join(C.WORK, "C", "raw_bgm_only.wav"),
+            score.music_bus(st, low_duck_times=[(T("main_check") + F1 / 1000, 0.12, -9.0), (T("title_land") + F1 / 1000, 0.15, -15.0)]), "FLOAT")
     # 低音の重なりを解く: タイトル着地(本を閉じる録音)の瞬間だけ音楽の 120 Hz 未満を下げる
     music = score.music_bus(st, extra=extra, low_duck_times=[(T("main_check") + F1 / 1000, 0.12, -9.0), (T("title_land") + F1 / 1000, 0.15, -15.0)])
     mx = Mixer(music, room=st["room"])

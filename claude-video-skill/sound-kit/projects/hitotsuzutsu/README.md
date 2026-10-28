@@ -14,6 +14,7 @@
 | `finish.py` | 比較パック(A / B / C、固定の伏せ記号 `docs/sound-upgrade/answer_key/key.json`、同じ手順でそろえる、映像は -c:v copy)。`--publish` の時だけ git の中を更新 |
 | `qa.py` / `listen_earshot.py` | 検査(モデルなし)/ earshot の分析(モデルあり) |
 | `cue_sheet.py` | 実際の配置から `docs/sound-upgrade/CUE_SHEET.md` の表を書く |
-| `build_all.sh` | 全部を順に実行 |
+| `build_all.sh` | 全部を順に実行(第1ラウンド) |
+| `score2.py` / `make_round2.py` / `finish_round2.py` / `qa_round2.py` / `bgm_metrics.py` / `build_round2.sh` | 第2ラウンド: C の効果音のまま、BGM を「1 曲として聞こえる」2 案(warm / light)に差し替え、比較パック(動画 + BGM だけの音声)と検査 |
 
 出力は `docs/sound-upgrade/work/`(git に入れない)。git の中の比較用 mp4・正解表・`CUE_SHEET.md` の表は `PUBLISH=1 bash build_all.sh` の時だけ更新する。

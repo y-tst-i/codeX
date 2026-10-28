@@ -44,8 +44,17 @@ LISTEN=1 bash claude-video-skill/sound-kit/projects/hitotsuzutsu/build_all.sh   
 - 伏せ記号は `docs/sound-upgrade/answer_key/key.json`(git の中、固定)を読むので、作り直しても変わらない。引き直す時だけ `finish.py --new-key`。
 - 同じコマンドなら同じ音になる(seed 固定。B・C の mix.wav が作り直しでバイト単位で一致することを確認済み)。
 
+## 3b. 第2ラウンド(C の効果音のまま BGM を 2 案に差し替える)
+```bash
+bash claude-video-skill/sound-kit/projects/hitotsuzutsu/build_round2.sh             # → docs/sound-upgrade/work/R2_warm|R2_light/、work/compare_round2/、work/qa_round2.json
+LISTEN=1 PUBLISH=1 bash claude-video-skill/sound-kit/projects/hitotsuzutsu/build_round2.sh   # + earshot で拍を測り、git の中の compare_round2/ と正解表も更新
+```
+- 先に第1ラウンドの `build_all.sh` を 1 度通しておく(C の効果音の層 `work/C/raw_*.wav` を使うため)。
+- 伏せ記号は `docs/sound-upgrade/answer_key/round2_key.json`(固定)。
+
 ## 4. 別の映像に使う時
 1. 映像の合図表(`cues.json`: 名前とコマ番号)とコンタクトシートを先に作る。
 2. `projects/hitotsuzutsu/` を写して、`score.py`(和音・場面・楽器)と `make_C.py` の合図の表を**その映像のために書き直す**(テンプレートの使い回しをしない)。
-3. `qa.py` で帯域の重なり・同期・無音を見て、埋もれた音は音楽の編曲で空ける(音量だけで押し上げない)。
-4. 最後は名前を伏せて人が聴き比べる(`compare/LISTENING_SHEET.md` をひな形に)。
+3. BGM は 1 曲として作る(`score2.py` が見本: 1 小節 1 和音の一貫した進行、短いモチーフ、全編のオスティナート、場面は足し引きで)。静けさは効果音で作り、BGM を落とさない(`bgm_metrics.py` でベッドの最小を測る)。
+4. `qa.py` で帯域の重なり・同期・無音を見て、埋もれた音は音楽の編曲で空ける(音量だけで押し上げない)。
+5. 最後は名前を伏せて人が聴き比べる(`compare/LISTENING_SHEET.md` をひな形に)。

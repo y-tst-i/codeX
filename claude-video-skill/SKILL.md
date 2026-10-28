@@ -11,6 +11,7 @@ description: コードで作る動画(HyperFrames・three.js・Canvas・ffmpeg)�
 - **短い動画(15〜30秒)は、担当1人に通して作らせる**(`general-purpose` + `model: opus`、effort high)。自作の分業手順(設計→場面ごとの担当→結合)はスキルなしに負けたので外した。長尺で効くかは未検証。
 - **映像は外部スキル `video-by-reference` を主にする**(参照画像か参照動画つき)。スキルなし・自作より僅差で良かった。使い方: `references/external-video-by-reference.md`。
 - **音はこのスキルのキットを足す**。外部スキルの合成音だけの版より「絶対良い」と判定された。
+- **効果音は Kenney の録音と earshot(MIT、コードで描画する効果音バンク)の併用が1位**(「ひとつずつ」15 秒、2026-10-28、1回・1人): 併用版 > earshot だけの版 > 既存のキットの版(既存は「ダメではないが全体的に安っぽい」)。ただし BGM は3本とも不評(途中で BGM ごと小さくなり、つながりが無い)。記録: `docs/sound-upgrade/RESULT_ROUND1.md`
 - **見せ場の1〜2場面は three.js の3Dにする価値がある**(同じ場面カードの2D版より3D版が選ばれた。トークン約1.5倍)。
 - 数値で指示し、定番の見た目を名指しで禁止すると、モデル任せの見た目が消える(外部の作例。`references/motion-lab.md` §0)。このスキルでの試作は `examples/hop-loop/`。
 
@@ -52,7 +53,7 @@ description: コードで作る動画(HyperFrames・three.js・Canvas・ffmpeg)�
 1. 映像を先に完成させ、合図の時刻(cue sheet、コマ番号)を残してもらう。
 2. 音の担当1人(`video-opus`、約9万トークン・約7分)に、コンタクトシートと cue sheet から合図表を作らせる。
 3. 作り方: 音楽は `tools/midi_render.py`(`apt-get update && apt-get install -y fluidsynth musescore-general-soundfont-lossless`、`pip install pretty_midi mido`)、効果音は `tools/sfx_lib.py`(CC0、282個)、環境音はピンクノイズを帯域で絞る。短い打撃音を合成する時の作り方は `motion-lab.md` §8 と `examples/hop-loop/sound.py`。
-4. 設計ルール: `references/sound-palette.md`(場面ごとに楽器の系統・空間・帯域を変える/3層/ほぼ無音を2か所以上/BGM は切れ目なく流し静かな所は下げる/Jカット・Lカット)、名前の一覧は `references/sfx-catalog.md`。
+4. 設計ルール: `references/sound-palette.md`(場面ごとに楽器の系統・空間・帯域を変える/3層/静けさは効果音で2か所以上作り、BGM は1曲として切らない(密度・音域で静かにする。-40 dBFS 級に落とさない)/Jカット・Lカット)、名前の一覧は `references/sfx-catalog.md`。
 5. 結合と音量: `bash tools/assemble.sh`(映像は `-c:v copy`、2回通しの loudnorm、必要なら軽い圧縮)。
 
 ## 5. チェック

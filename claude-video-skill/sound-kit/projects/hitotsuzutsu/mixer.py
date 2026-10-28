@@ -141,6 +141,9 @@ def finish(name, music, room, sfx_bus, log, extra_info=None):
     C.write(os.path.join(out, "mix.wav"), y)
     C.write(os.path.join(out, "stem_music.wav"), (music + room) * g, "FLOAT")
     C.write(os.path.join(out, "stem_sfx.wav"), sfx_bus * g, "FLOAT")
+    # 仕上げ前の層(第2ラウンドで、効果音を同じ標本のまま BGM だけ差し替えるため)
+    for k, v in (("raw_music", music), ("raw_sfx", sfx_bus), ("raw_room", room)):
+        C.write(os.path.join(out, k + ".wav"), v, "FLOAT")
     info.update(extra_info or {})
     json.dump(info, open(os.path.join(out, "master.json"), "w"), ensure_ascii=False, indent=1)
     json.dump(log, open(os.path.join(out, "events.json"), "w"), ensure_ascii=False, indent=1, default=str)

@@ -241,6 +241,25 @@ def write(path, x, subtype="PCM_24"):
     sf.write(path, x.astype(np.float32), SR, subtype=subtype)
 
 
+def band_dip(x, items, ramp=0.02):
+    """帯域を選んだ一瞬の音量の谷(動的な EQ): items = [(t0, t1, lo_hz, hi_hz, depth_db)]。
+    その帯域だけゼロ位相で取り出して下げ、残りはそのまま(谷が無い所は元の音と同じ)"""
+    from scipy.signal import sosfiltfilt
+    t = np.arange(len(x)) / SR
+    y = np.array(x, np.float64, copy=True)
+    for t0, t1, lo, hi, d in items:
+        if d >= -0.05:
+            continue
+        a, b = int(max(0, t0 - 0.3) * SR), int(min(len(x) / SR, t1 + 0.3) * SR)
+        seg = y[a:b]
+        band = sosfiltfilt(butter(2, [max(40.0, lo), min(hi, SR / 2 * 0.9)], "bandpass", fs=SR, output="sos"), seg, axis=0)
+        tt = t[a:b]
+        g = np.clip(np.minimum((tt - (t0 - ramp)) / ramp, ((t1 + ramp) - tt) / ramp), 0, 1)
+        gain = 1 + (db(d) - 1) * g
+        y[a:b] = seg - band + band * gain[:, None]
+    return y
+
+
 def low_duck(x, times, depth_db=-9.0, f=160.0, pre=0.015, hold=0.12, rel=0.15):
     """周波数を選んだダッキング(既定 160 Hz: 検査の 120 Hz より少し上で切り、116 Hz の Bb2 なども確実に含める): x の f Hz 未満だけを times の各時刻のまわりで下げる(低い効果音とベースの重なりを解く)。
     ゼロ位相のフィルタで low を取り、high = x - low なので、下げない所は元の音と完全に同じ"""
