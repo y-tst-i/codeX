@@ -81,9 +81,13 @@ class Mixer:
             y = C.reverb(y, wet, **kw)
         start = t_pic + ev.get("offset_ms", 0) / 1000.0 - sync_s
         C.add(self.bus, y, start)
+        fr = ev.get("pic_frame", C.CUES.get(ev["cue"]))      # 狙った絵のコマ(派生の合図は make_*.py で明示)
+        frame_info = {} if fr is None else {"pic_frame": fr, "pic_frame_s": round(fr / C.FPS, 4),
+                                             "aim_minus_frame_ms": round((t_pic - fr / C.FPS) * 1000, 1),
+                                             "sync_minus_frame_ms": round((start + sync_s - fr / C.FPS) * 1000, 1)}
         self.log.append({k: ev[k] for k in ev if k not in ("y",)} | {
             "start_s": round(start, 4), "sync_at_s": round(start + sync_s, 4), "gain_db": round(float(g), 2),
-            "bed_lufs": round(float(bed), 2), "bed_nominal": nominal, "peak_capped": bool(capped), "l50_take_lufs": round(float(l50), 2)})
+            "bed_lufs": round(float(bed), 2), "bed_nominal": nominal, "peak_capped": bool(capped), **frame_info, "l50_take_lufs": round(float(l50), 2)})
 
     # ---- 出どころ別の読み込み
     def from_kit(self, ev, lock, kit_dir):
@@ -124,9 +128,16 @@ def finish(name, music, room, sfx_bus, log, extra_info=None):
     """music(仕上げ前)+ room + 効果音 → master。WORK/<name>/ に mix・ステム・合図の記録を書く"""
     out = os.path.join(C.WORK, name)
     os.makedirs(out, exist_ok=True)
+    # 音楽バスの頂点を、仕上げのゲインを掛けた後で -1 dBFS 以下に(v1 は音楽ステムだけで 0 dBFS を超える所があった)
+    g0 = C.db(-14.0 - C.ebur(music + room + sfx_bus)[0])
+    music, mus_red, _ = C.limiter(music, 20 * np.log10(C.db(-1.5) / g0))
     mix = music + room + sfx_bus
     y, info = C.master(mix)
     g = C.db(info["gain_db"])
+    pre = (mix - mix.mean(0)) * g
+    info["music_bus_limiter_db"] = round(mus_red, 2)
+    info["music_bus_peak_dbfs_after_gain"] = round(float(20 * np.log10(np.abs((music + room) * g).max())), 2)
+    info["mix_peak_before_final_limiter_dbfs"] = round(float(20 * np.log10(np.abs(pre).max())), 2)
     C.write(os.path.join(out, "mix.wav"), y)
     C.write(os.path.join(out, "stem_music.wav"), (music + room) * g, "FLOAT")
     C.write(os.path.join(out, "stem_sfx.wav"), sfx_bus * g, "FLOAT")

@@ -22,8 +22,10 @@
 | earshot の fit 音(`fit/*`、15 音) | 描画したテイクのみキャッシュ(git に入れない) | 元の録音は CC0 1.0(Freesound。earshot `docs/CREDITS_FIT.md`)。今回使ったのは `fit/click/floss_lid`(qubodup)・`fit/land.light/fingertip_book`(IENBA)・`fit/tick/domino`(Macif)・`fit/pop/mouth_plop`(CapsLok) | 帰属表示は不要(任意で記載) |
 | CLAP `laion/larger_clap_general`@16c8cc3 | 同梱しない(earshot が初回に Hugging Face から取得、`$HOME/earshot_env/home/hf`) | Apache-2.0 | 分析(rank・describe・match・timeline 等)だけに使用 |
 | AST `MIT/ast-finetuned-audioset-10-10-0.4593`@f826b80 | 同上 | BSD-3-Clause | 同上 |
+
+モデルの学習データについて: 上のライセンスはモデルの重み・コードの条件。学習に使われたデータ(CLAP は LAION-Audio-630K ほか、AST は AudioSet = YouTube の動画の音)は、それぞれ元のデータの条件がある。今回はモデルを**分析(測定・候補の並べ替え)にだけ**使い、モデルが作った音や学習データの音は作品に入れていない・再配布していない。商用の作品で分析結果を使う時も、学習データの条件は各モデルのカードで確認すること。
 | PyTorch 2.14.1(CPU 版)・transformers ほか earshot の依存 | venv のみ | 各 OSS ライセンス(BSD / Apache-2.0 ほか) | |
-| FluidSynth 2.3.4 | apt で導入(同梱しない) | LGPL-2.1 | 既存の手順どおり |
-| MuseScore General 0.2.1(`musescore-general-soundfont-lossless`) | apt で導入(同梱しない) | MIT・一部 CC0 | 既存の表にもあり。今回の BGM の音源 |
+| FluidSynth 2.3.4 | apt で導入(同梱しない) | LGPL-2.1-or-later(LGPL-2.1+) | 既存の手順どおり。リンクも改変もしていない(外部コマンドとして呼ぶだけ) |
+| MuseScore General 0.2.1(`musescore-general-soundfont-lossless`) | apt で導入(同梱しない) | MIT, parts PD or CC0(一部の標本はパブリックドメインまたは CC0) | 既存の表にもあり。今回の BGM の音源 |
 | FluidR3 GM(`fluid-soundfont-gm`) | apt で導入(同梱しない)、予備 | MIT | 今回の音には使っていない |
 | Kenney 効果音 | 既存の `sound-kit/tools/assets/sfx-cc0/` | CC0 | 新しい素材は足していない |

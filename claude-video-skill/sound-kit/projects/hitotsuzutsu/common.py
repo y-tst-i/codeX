@@ -132,7 +132,7 @@ def shelf(x, f, gain_db, kind="low"):
 
 
 # ------------------------------------------------------------------ 空間(リバーブ)
-def room_ir(rt=1.2, pre=0.012, bright=6000.0, lo_mult=1.25, hi_mult=0.45, er=0.35, width=1.0, seed=11):
+def room_ir(rt=1.2, pre=0.012, bright=6000.0, lo_mult=1.25, hi_mult=0.45, er=0.35, width=0.6, seed=11):
     """部屋のインパルス応答(ステレオ)。初期反射(数本のタップ)+ 後部残響(3 帯域で減衰の速さを変える:
     低域は長く、高域は短く = 本物の部屋に近い)。midi_render.make_ir(全帯域が同じ速さで減衰する雑音)より自然な尾を狙う。
     rt = 中域の残響時間(-60 dB まで)"""
@@ -159,7 +159,7 @@ def room_ir(rt=1.2, pre=0.012, bright=6000.0, lo_mult=1.25, hi_mult=0.45, er=0.3
         tail += nz * np.exp(-np.maximum(t - pre, 0) / tau)[:, None]
     tail *= np.clip((t - pre) / 0.02, 0, 1)[:, None]          # 20 ms で立ち上がる(初期反射の後)
     mid = tail.mean(1, keepdims=True); side = tail - mid
-    tail = mid + side * width
+    tail = mid + side * width        # 0.6: 尾の左右を少し揃える(1.0 = 無相関の尾は、モノラル化で 3 dB 落ちる)
     ir += tail / np.sqrt((tail ** 2).sum(0, keepdims=True) + 1e-12) * 0.9
     return ir
 
@@ -233,5 +233,23 @@ def master(mix, target=-14.0, ceil_db=-2.0):
 
 
 def write(path, x, subtype="PCM_24"):
+    """PCM は ±1 に収めて書く。FLOAT(ステム)は削らずにそのまま書く(頂点を後で正しく測れるように)"""
     os.makedirs(os.path.dirname(path), exist_ok=True)
-    sf.write(path, np.clip(np.asarray(x, np.float64), -1, 1).astype(np.float32), SR, subtype=subtype)
+    x = np.asarray(x, np.float64)
+    if subtype != "FLOAT":
+        x = np.clip(x, -1, 1)
+    sf.write(path, x.astype(np.float32), SR, subtype=subtype)
+
+
+def low_duck(x, times, depth_db=-9.0, f=160.0, pre=0.015, hold=0.12, rel=0.15):
+    """周波数を選んだダッキング(既定 160 Hz: 検査の 120 Hz より少し上で切り、116 Hz の Bb2 なども確実に含める): x の f Hz 未満だけを times の各時刻のまわりで下げる(低い効果音とベースの重なりを解く)。
+    ゼロ位相のフィルタで low を取り、high = x - low なので、下げない所は元の音と完全に同じ"""
+    from scipy.signal import sosfiltfilt
+    low = sosfiltfilt(butter(4, f, "lp", fs=SR, output="sos"), x, axis=0)
+    high = x - low
+    pts = [(0, 0)]
+    for item in times:               # 時刻だけ、または (時刻, 保持秒, 深さ dB)
+        t, h, d = (item, hold, depth_db) if np.isscalar(item) else (tuple(item) + (hold, depth_db))[:3]
+        pts += [(t - pre - 0.03, 0), (t - pre, d), (t + h, d), (t + h + rel, 0)]
+    g = env_points(pts + [(DUR, 0)])
+    return high + low * g

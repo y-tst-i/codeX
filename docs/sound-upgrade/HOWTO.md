@@ -34,15 +34,15 @@ $PY earshot_cache.py render swipe/paper --dur 0.7 --apex 0.33 -o /tmp/w.wav   # 
 
 ## 3. 「ひとつずつ」の B / C を作り直す
 ```bash
-git fetch origin claude/motion2d-hitotsuzutsu
-mkdir -p docs/sound-upgrade/work/src && cd docs/sound-upgrade/work/src
-git show origin/claude/motion2d-hitotsuzutsu:motion2d-hitotsuzutsu/hitotsuzutsu_final.mp4 > hitotsuzutsu_final.mp4
-ffmpeg -y -i hitotsuzutsu_final.mp4 -an -c:v copy video_only.mp4               # 映像だけ
-ffmpeg -y -i hitotsuzutsu_final.mp4 -vn -c:a pcm_s24le A_original_audio.wav      # 既存の音(条件 A)
-cd - && bash claude-video-skill/sound-kit/projects/hitotsuzutsu/build_all.sh   # B・C・比較パック・検査・キュー表(約 1 分)
-LISTEN=1 bash claude-video-skill/sound-kit/projects/hitotsuzutsu/build_all.sh  # + earshot の分析(モデル、約 2 分、メモリ 2.4 GB)
+git fetch origin claude/motion2d-hitotsuzutsu                    # 映像と既存の音(条件 A)がある枝(チェックアウトはしない)
+bash claude-video-skill/sound-kit/projects/hitotsuzutsu/build_all.sh            # 準備 → B・C → 比較パック → 検査 → キュー表(約 1 分)
+LISTEN=1 bash claude-video-skill/sound-kit/projects/hitotsuzutsu/build_all.sh   # + earshot の分析(モデル、約 2 分、メモリ 2.4 GB)
 ```
-出力: `docs/sound-upgrade/work/B|C/`(mix.wav・ステム・events.json)、`docs/sound-upgrade/compare/*.mp4`(記号の名前)、`docs/sound-upgrade/work/qa.json`。
+- 最初に `prepare.py` が枝から映像・元の音を取り出し(`work/src/`)、A の元の `make_audio.py` をそのまま実行して A のステムを再現する(`work/A_repro/`、検査の場面分析に使う。無ければその分析だけ飛ばす)。
+- 出力はすべて `docs/sound-upgrade/work/`(git の外): `B/`・`C/`(mix.wav・ステム・events.json)、`compare/*.mp4`、`compare_wav/`、`qa.json`、`CUE_SHEET_tables.md`。
+- **git の中の物は勝手に上書きしない**。比較パック(`compare/*.mp4`)・正解表(`answer_key/ANSWER_KEY.md`)・`CUE_SHEET.md` の表を更新したい時だけ `PUBLISH=1 bash .../build_all.sh`。
+- 伏せ記号は `docs/sound-upgrade/answer_key/key.json`(git の中、固定)を読むので、作り直しても変わらない。引き直す時だけ `finish.py --new-key`。
+- 同じコマンドなら同じ音になる(seed 固定。B・C の mix.wav が作り直しでバイト単位で一致することを確認済み)。
 
 ## 4. 別の映像に使う時
 1. 映像の合図表(`cues.json`: 名前とコマ番号)とコンタクトシートを先に作る。

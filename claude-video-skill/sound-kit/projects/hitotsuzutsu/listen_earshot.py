@@ -25,7 +25,7 @@ def short(d, keys):
 def main():
     from earshot import api
     out = os.path.join(C.WORK, "earshot"); os.makedirs(out, exist_ok=True)
-    key = json.load(open(os.path.join(C.WORK, "compare_key.json")))
+    key = json.load(open(os.path.join(C.REPO, "docs", "sound-upgrade", "answer_key", "key.json")))
     lv = json.load(open(os.path.join(C.WORK, "compare_levels.json")))
     cues = {"fps": 30, "events": [{"f": C.CUES[n], "kind": n} for n in
                                   ["card_land_1", "card_land_6_all", "select_click", "expand_land", "step_check_1", "step_check_2",

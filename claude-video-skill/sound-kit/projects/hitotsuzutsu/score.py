@@ -98,7 +98,7 @@ def keys_list():
     ccs = [(64, 127, 0.0), (64, 0, 2.45), (64, 127, 2.5), (64, 0, 3.85)]
     x = part(0, notes, ccs=ccs)
     x = lp(x, 3200); x = shelf(x, 250, -2.0, "low"); x = hp(x, 45)
-    x = reverb(x, 0.22, rt=0.7, pre=0.008, bright=4000, width=0.8, seed=21)
+    x = reverb(x, 0.22, rt=0.7, pre=0.008, bright=4000, width=0.6, seed=21)
     return fit_len(x) * db(-3.0)
 
 
@@ -127,7 +127,7 @@ def detail_band():
         d.append((70, hum(t0, 0.004), t0 + 0.05, vel(44 if k % 2 == 0 else 32, 5)))
     gx = part(24, g, tail=2.0)
     gx = hp(gx, 150); gx = peq(gx, 2800, -1.5, 1.2); gx = pan(gx, -0.22)
-    gx = reverb(gx, 0.16, rt=0.6, pre=0.004, bright=8000, width=1.0, seed=22)
+    gx = reverb(gx, 0.16, rt=0.6, pre=0.004, bright=8000, width=0.6, seed=22)
     bx = part(33, b, tail=1.0)
     bx = lp(bx, 1800); bx = hp(bx, 38); bx = peq(bx, 110, 1.5, 0.9)
     dx = part(0, d, drum=True, tail=1.0)
@@ -152,8 +152,8 @@ def strings_arc():
     ccs += [(11, 34, 12.5), (11, 92, 12.75), (11, 84, 13.6), (11, 50, 14.6), (11, 30, 15.0)]
     x = part(48, n, ccs=ccs, tail=3.0)
     x = hp(x, 70); x = lp(x, 5500); x = peq(x, 350, -2.0, 1.0)      # 5.5 kHz より上はクリックの帯域に空ける
-    x = width(x, 1.25)
-    x = reverb(x, 0.30, rt=1.6, pre=0.015, bright=6000, width=1.0, seed=24)
+    x = width(x, 0.7)      # v1 は 1.25(横を持ち上げ)で、止め・タイトルの左右相関が負に寄った(モノラル化で -2 dB)。音源の弦の標本自体も広い
+    x = reverb(x, 0.30, rt=1.6, pre=0.015, bright=6000, width=0.6, seed=24)
     return fit_len(x) * db(-6.0)
 
 
@@ -183,8 +183,8 @@ def graph_groove():
     # 今日の棒の着地(11.25 = 拍 18)で Bb に解決しかけ、11.55 で止める(L カット: エレピの尾だけ残す)
     ex = part(4, e, tail=2.5)
     ex = gate(ex, 9.95, stop - 0.02, fout=0.35)
-    ex = hp(ex, 120); ex = peq(ex, 900, -1.5, 1.0); ex = width(pan(ex, 0.18), 1.2)
-    ex = reverb(ex, 0.26, rt=1.2, pre=0.012, bright=7000, width=1.0, seed=25)
+    ex = hp(ex, 120); ex = peq(ex, 900, -1.5, 1.0); ex = width(pan(ex, 0.18), 1.0)
+    ex = reverb(ex, 0.26, rt=1.2, pre=0.012, bright=7000, width=0.6, seed=25)
     kx = part(0, k, drum=True, tail=1.0)
     kx = gate(kx, 9.95, stop, fout=0.12)
     kx = hp(kx, 50); kx = lp(kx, 9000)
@@ -204,10 +204,10 @@ def title_resolve():
     p += [(q, t0 + 0.018 * i, 15.3, v) for i, (q, v) in enumerate([(55, 50), (58, 48), (65, 52), (67, 54), (75, 56)])]
     p += [(79, 13.75, 15.3, 34)]                         # 静止の間に高い G をひとつ(余韻の中で)
     x = part(0, p, ccs=[(64, 127, 12.55), (64, 127, 15.0)], tail=3.5)
-    x = lp(x, 6000); x = hp(x, 35)
-    x = reverb(x, 0.34, rt=2.6, pre=0.02, bright=4500, width=1.0, seed=27)
+    x = lp(x, 6000); x = hp(x, 35); x = width(x, 0.75)      # 音源のピアノの標本は左右が広い(モノラル化の損失 -1.4 dB だった)
+    x = reverb(x, 0.34, rt=2.6, pre=0.02, bright=4500, width=0.6, seed=27)
     c = part(52, [(q, 12.6, 15.3, 40) for q in (63, 67, 70)], ccs=[(11, 50, 12.5), (11, 80, 13.2), (11, 60, 14.5)], tail=3.0)
-    c = hp(c, 220); c = lp(c, 5000); c = width(c, 1.3)
+    c = hp(c, 220); c = lp(c, 5000); c = width(c, 0.6)
     c = reverb(c, 0.4, rt=2.6, pre=0.02, bright=4500, seed=28)
     return {"keys_title": fit_len(x) * db(-4.5), "choir": fit_len(c) * db(-17.0)}
 
@@ -217,7 +217,9 @@ def room_tone():
     w = RNG.standard_normal((N, 2))
     f = np.fft.rfftfreq(N, 1 / SR); f[0] = f[1]
     y = np.fft.irfft(np.fft.rfft(w, axis=0) / np.sqrt(f)[:, None], N, axis=0)
-    y = hp(lp(y, 2500), 200); y /= np.abs(y).max()
+    y = hp(lp(y, 2500), 200)
+    y = y.mean(1, keepdims=True) + (y - y.mean(1, keepdims=True)) * 0.5   # 左右を独立にしない(止めの窓で相関が負に寄った)
+    y /= np.abs(y).max()
     return y * db(-57) * env_points([(0, -6), (0.5, 0), (14.0, 0), (15.0, -10)])
 
 
@@ -254,7 +256,7 @@ def stepdown(t_hit, depth_db=-8.0, lead=0.35, back=0.04):
     return env_points([(0, 0), (t_hit - lead - 0.08, 0), (t_hit - lead, depth_db), (t_hit - 0.005, depth_db), (t_hit + back, 0), (DUR, 0)])
 
 
-def music_bus(st, extra=None):
+def music_bus(st, extra=None, low_duck_times=()):
     """音楽の束ね: 全体の強弱(場面の弧)+ ステップダウン + 低域の整理。room(環境音)は別に足す"""
     keys = [k for k in st if k != "room"]
     m = sum(st[k] for k in keys)
@@ -266,6 +268,9 @@ def music_bus(st, extra=None):
                       (12.5, -1.0), (14.0, -1.5), (15.0, -9)])
     m = m * arc * stepdown(T("main_check") + 1 / 30, -8.0, 0.35)
     m = hp(m, 32, 4)
+    if low_duck_times:
+        from common import low_duck
+        m = low_duck(m, list(low_duck_times))
     return peak_comp(m)
 
 
