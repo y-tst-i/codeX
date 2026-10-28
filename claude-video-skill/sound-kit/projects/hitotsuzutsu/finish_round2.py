@@ -32,9 +32,11 @@ COND = {"base": ("C", "基準: C(併用版)そのまま。BGM は第1ラウン�
         "light": ("R2_light", "新しい BGM 案 2「軽い撥弦とマリンバ」: ピチカートのオスティナート + マリンバの旋律 + 指弾きベース + エレピ + リム/ハット/キック")}
 
 
-def codes():
+def codes(publish):
     if os.path.exists(KEYFILE):
         return json.load(open(KEYFILE))
+    if not publish:
+        sys.exit(f"{KEYFILE} が無い。新しく記号を引く時は --publish を付けて実行する(git の中の対応表と食い違わないように)")
     used = set(json.load(open(os.path.join(KEYDIR, "key.json"))).values())
     pool = [a + str(d) for a in "BCDFGLNPST" for d in range(2, 10)]
     picks = []
@@ -70,12 +72,16 @@ def main():
     ap = argparse.ArgumentParser(); ap.add_argument("--publish", action="store_true")
     a = ap.parse_args()
     os.makedirs(OUT, exist_ok=True)
-    key = codes()
+    key = codes(a.publish)
     rows = {}
     for cond, (d, desc) in COND.items():
         mix, _ = sf.read(os.path.join(C.WORK, d, "mix.wav"), dtype="float64", always_2d=True)
         bgm, _ = sf.read(os.path.join(C.WORK, d, "raw_bgm_only.wav"), dtype="float64", always_2d=True)
         r = {"code": key[cond]}
+        bgm = bgm[: C.N].copy()
+        nf, ni = int(0.08 * C.SR), int(0.005 * C.SR)            # BGM だけの音声: 最後に 80 ms・最初に 5 ms のフェード
+        bgm[-nf:] *= (0.5 + 0.5 * np.cos(np.linspace(0, np.pi, nf)))[:, None]
+        bgm[:ni] *= np.linspace(0, 1, ni)[:, None]
         for kind, x, ext, br in (("mix", mix, "mp4", "192k"), ("bgm", bgm, "m4a", "160k")):
             y, lim = level(x[: C.N])
             wav = os.path.join(OUT, f"{key[cond]}{'_bgm' if kind == 'bgm' else ''}.wav")
@@ -115,10 +121,13 @@ def main():
         for kind in ("mix", "bgm"):
             q = rows[c][kind]
             L.append(f"| `{key[c]}` | {'動画' if kind == 'mix' else 'BGM だけ'} | {q['lufs']} | {q['tp']} | {q['lra']} | {q['wav_sample_peak_dbfs']} | {q['limiter_db']} | {q['bytes']} |")
+    lim_b = {c: rows[c]["bgm"]["limiter_db"] for c in COND}
     L += ["", "## 既知の手がかり(消せなかった物)",
-          "- 基準の BGM は、第1ラウンドで聴いた Z9 と同じ音(効果音も同じ)。第1ラウンドを覚えている人には基準が分かる。",
+          "- 基準の BGM は、第1ラウンドで聴いた Z9 と同じ C のミックス(効果音も同じ)。第1ラウンドを覚えている人には基準が分かる。",
           "- LRA が条件で大きく違う(上の表)。静と動の差の大きさは編曲の違いそのもので、そろえていない。",
-          "- ファイルの大きさが数 KB 違う(AAC の結果)。", ""]
+          f"- BGM だけの音声を -14 LUFS にそろえる時のリミッターの量が違う({', '.join(f'{key[c]} {lim_b[c]} dB' for c in COND)})。基準は BGM に深い落ち込みがあるため大きい。",
+          "- ファイルの大きさが数 KB 違う(AAC の結果。上の表)。",
+          "- 条件ごとの検査の数値は `QA_ROUND2_BY_CONDITION.md`(このフォルダ)。", ""]
     open(os.path.join(KEYDIR, "ANSWER_KEY_ROUND2.md"), "w", encoding="utf-8").write("\n".join(L))
     print("published:", GIT_OUT, KEYDIR)
 

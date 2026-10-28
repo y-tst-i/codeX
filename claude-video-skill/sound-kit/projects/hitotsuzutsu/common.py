@@ -255,6 +255,7 @@ def band_dip(x, items, ramp=0.02):
         band = sosfiltfilt(butter(2, [max(40.0, lo), min(hi, SR / 2 * 0.9)], "bandpass", fs=SR, output="sos"), seg, axis=0)
         tt = t[a:b]
         g = np.clip(np.minimum((tt - (t0 - ramp)) / ramp, ((t1 + ramp) - tt) / ramp), 0, 1)
+        g = 0.5 - 0.5 * np.cos(np.pi * g)          # なめらかな(raised cosine の)立ち上がり・戻り
         gain = 1 + (db(d) - 1) * g
         y[a:b] = seg - band + band * gain[:, None]
     return y

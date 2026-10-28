@@ -77,13 +77,18 @@ def thirds():
     return f
 
 
-def band_db(x, fc):
+def sixths():
+    return 1000 * 2 ** (np.arange(-34, 28) / 6)    # 1/6 オクターブ(細かい区切り)
+
+
+def band_db(x, fc, half=1 / 6, nfft=None):
     n = len(x)
-    P = np.abs(np.fft.rfft(x * np.hanning(n))) ** 2
-    f = np.fft.rfftfreq(n, 1 / C.SR)
+    nfft = max(n, nfft or n)
+    P = np.abs(np.fft.rfft(x * np.hanning(n), nfft)) ** 2
+    f = np.fft.rfftfreq(nfft, 1 / C.SR)
     out = []
     for c in fc:
-        lo, hi = c / 2 ** (1 / 6), c * 2 ** (1 / 6)
+        lo, hi = c / 2 ** half, c * 2 ** half
         out.append(P[(f >= lo) & (f < hi)].sum() + 1e-20)
     return np.array(out)
 
@@ -117,11 +122,26 @@ def overlap(events, music, sfx):
         Ps2, Pm2 = band_db(sfx[a2:b2].mean(1), fc), band_db(music[a2:b2].mean(1), fc)
         o2 = np.argsort(Ps2)[::-1]; c2 = np.cumsum(Ps2[o2]) / Ps2.sum(); sel2 = o2[: int(np.searchsorted(c2, 0.8)) + 1]
         margin30 = 10 * np.log10(Ps2[sel2].sum() / Pm2[sel2].sum())
+        # 別の物差し: 同じ 30 ms を 1/6 オクターブ(FFT を 8192 点に補間)で
+        f6 = sixths()
+        Q6, M6 = band_db(sfx[a2:b2].mean(1), f6, 1 / 12, 8192), band_db(music[a2:b2].mean(1), f6, 1 / 12, 8192)
+        o6 = np.argsort(Q6)[::-1]; c6 = np.cumsum(Q6[o6]) / Q6.sum(); s6 = o6[: int(np.searchsorted(c6, 0.8)) + 1]
+        margin30_6 = 10 * np.log10(Q6[s6].sum() / M6[s6].sum())
         rows.append({"cue": e["cue"], "sound": e.get("sound"), "picture_s": round(e["t"], 3), "planned_sync_s": e["sync_at_s"],
                      "measured_peak_s": round(pk_t, 3), "peak_minus_picture_ms": round((pk_t - e["t"]) * 1000, 1),
                      "bands_hz": [int(fc[i]) for i in sorted(sel)], "sfx_over_music_db": round(float(margin), 1), "sfx_over_music_30ms_db": round(float(margin30), 1),
+                     "sfx_over_music_30ms_sixth_db": round(float(margin30_6), 1),
                      "low_sfx_db": round(float(lo_s), 1), "low_music_db": round(float(lo_m), 1)})
     return rows
+
+
+def rule_check(bed, quiet, limit_db=-15.0, edge=(0.6, 13.4)):
+    """BRIEF ルール 4 の合否: BGM ベッドの落ち込み(100 ms 窓を 10 ms ずつずらした最小)が中央値から limit_db 以内か、
+    効果音の静けさの窓が 2 か所以上か(始まり 0–0.6 s と終わり 13.4–15 s にかかる窓は数えない)"""
+    inner = [w for w in (quiet or []) if w[0] >= edge[0] and w[1] <= edge[1]]
+    d = (bed or {}).get("rms100_min_below_median_db")
+    return {"bgm_bed_within_limit": None if d is None else bool(d >= limit_db), "bgm_bed_min_below_median_db": d,
+            "sfx_quiet_windows_inner": inner, "sfx_quiet_ok": len(inner) >= 2}
 
 
 def quiet_windows(x, thr=-40.0, min_s=0.3):
@@ -233,6 +253,7 @@ def main():
                 bed, _ = sf.read(bed_path, dtype="float64")
                 r["bgm_bed"] = BM.bed_stats(bed[: C.N] * C.db(m["gain_db"]))
             r["sfx_quiet_windows"] = quiet_windows(sfx)
+            r["rule_check"] = rule_check(r.get("bgm_bed"), r["sfx_quiet_windows"])
         elif os.path.exists(os.path.join(a.a_stems, "stem_music.wav")):
             mus, _ = sf.read(os.path.join(a.a_stems, "stem_music.wav"), dtype="float64")
             if len(mus) != C.N:   # A は 48 kHz で書かれている
@@ -243,6 +264,7 @@ def main():
             if os.path.exists(sp):
                 sx, _ = sf.read(sp, dtype="float64")
                 r["sfx_quiet_windows"] = quiet_windows(sx[: C.N])
+                r["rule_check"] = rule_check(r["bgm_bed"], r["sfx_quiet_windows"])
         else:
             r["music_sections"] = []
             print(f"(A のステムが無いので A の場面分析は飛ばす: {a.a_stems}。prepare.py で作れる)")
@@ -253,6 +275,7 @@ def main():
               f"clip {r['clip_samples']}/{r['clip_runs_3plus']} dc {r['dc']} corr {r['lr_corr']}")
         print("   mix near-silent (参考):", r["near_silent_windows"], " digital-silence blocks:", len(r["digital_silence_50ms_blocks"]))
         print("   効果音の静けさ:", r.get("sfx_quiet_windows"), " BGM ベッド:", r.get("bgm_bed"))
+        print("   ルールの合否:", r.get("rule_check"))
         print(f"   mono {r['mono_lufs']} (mono-stereo {r['mono_minus_stereo_db']}) sections:", [(s['section'][:4], s['mono_loss_db'], s['lr_corr']) for s in r['mono_sections']])
         print(f"   sample peak {r['wav_sample_peak_dbfs']} hf15k {r['mp4_hf15k_share_db']} bytes {r['mp4_bytes']} loudnorm {r['loudnorm_vs_ebur128']}")
         if "music_bus_peak_dbfs" in r:

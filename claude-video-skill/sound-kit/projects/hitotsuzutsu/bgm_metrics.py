@@ -1,5 +1,6 @@
 """BGM(音楽ベッド)だけを測る道具(第2ラウンド)。モデルは使わない。
-- bed_stats: 100 ms と 400 ms の RMS(dBFS)の最小・中央値・最小の時刻(最初の 0.3 s と最後の 0.4 s は除く = 曲の入りと終わりの減衰)
+- bed_stats: 100 ms・50 ms・400 ms の RMS(dBFS)を 10 ms ずつずらして測った最小・中央値・最小の時刻
+  (最初の 0.3 s と最後の 0.4 s は除く = 曲の入りと終わりの減衰。区切り窓だと谷が隠れるので、ずらす)
 - beat_stats: 音の立ち上がり(librosa の onset 検出)の時刻と、そのすき間の最大。テンポの推定(librosa beat_track)
 - notes_gap: 楽譜(MIDI の発音時刻の一覧)からの、発音のすき間の最大
 """
@@ -8,26 +9,32 @@ import numpy as np
 import common as C
 
 
-def _rms_db(m, win):
-    w = int(win * C.SR); k = len(m) // w
-    return 20 * np.log10(np.sqrt((m[: k * w].reshape(k, w) ** 2).mean(1)) + 1e-12)
+def _slide_db(m, win, hop=0.01):
+    """win 秒の RMS を hop 秒ずつずらして(区切り窓では谷が隠れるため)。戻り値 (dB の列, 窓の中心の時刻)"""
+    w, h = int(win * C.SR), int(hop * C.SR)
+    c = np.r_[0.0, np.cumsum(m.astype(np.float64) ** 2)]
+    starts = np.arange(0, len(m) - w, h)
+    e = (c[starts + w] - c[starts]) / w
+    return 10 * np.log10(e + 1e-24), (starts + w / 2) / C.SR
 
 
 def bed_stats(x, t0=0.3, t1=None):
+    """100 ms と 50 ms の RMS を 10 ms ずつずらして測り、最小・中央値・最小の時刻(最初の 0.3 s と最後の 0.4 s は除く)。
+    400 ms も同じ方式で参考に出す"""
     x = np.asarray(x, np.float64)
     m = x.mean(1) if x.ndim == 2 else x
     t1 = t1 or (len(m) / C.SR - 0.4)
-    out = {}
-    for win in (0.1, 0.4):
-        r = _rms_db(m, win)
-        ts = (np.arange(len(r)) + 0.5) * win
+    out = {"method": "RMS, window slid by 10 ms"}
+    for win in (0.1, 0.05, 0.4):
+        r, ts = _slide_db(m, win)
         sel = (ts >= t0) & (ts <= t1)
         rr, tt = r[sel], ts[sel]
-        i = int(np.argmin(rr))
-        out[f"rms{int(win * 1000)}_min_dbfs"] = round(float(rr[i]), 1)
-        out[f"rms{int(win * 1000)}_min_at_s"] = round(float(tt[i]), 2)
-        out[f"rms{int(win * 1000)}_median_dbfs"] = round(float(np.median(rr)), 1)
-        out[f"rms{int(win * 1000)}_min_below_median_db"] = round(float(rr[i] - np.median(rr)), 1)
+        i = int(np.argmin(rr)); med = float(np.median(rr))
+        k = f"rms{int(round(win * 1000))}"
+        out[f"{k}_min_dbfs"] = round(float(rr[i]), 1)
+        out[f"{k}_min_at_s"] = round(float(tt[i]), 2)
+        out[f"{k}_median_dbfs"] = round(med, 1)
+        out[f"{k}_min_below_median_db"] = round(float(rr[i] - med), 1)
     return out
 
 

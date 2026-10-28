@@ -12,4 +12,4 @@ E=""; [ "${LISTEN:-0}" = 1 ] && E="--earshot"
 "$PY" make_C.py
 "$PY" make_round2.py
 "$PY" finish_round2.py $P
-"$PY" qa_round2.py $E
+"$PY" qa_round2.py $E $P

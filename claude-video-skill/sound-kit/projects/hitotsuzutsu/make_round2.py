@@ -23,8 +23,12 @@ import qa  # noqa: E402
 
 F1 = 1 / 30
 # 低い効果音の瞬間に音楽の 160 Hz 未満を下げる: make_C.py の 2 つ + 詳細の着地。タイトルは C より深く長く(新しい BGM は止めずに鳴っているため)
-DUCKS = [(C.T("main_check") + F1, 0.15, -15.0), (C.T("title_land") + F1, 0.25, -20.0), (C.T("expand_land") + F1, 0.15, -15.0)]
-MARGIN = 6.0       # 中域: 効果音の頂点の 30 ms で、効果音が音楽より MARGIN dB 上になるよう、足りない分だけ BGM のその帯域を一瞬下げる(最大 -6 dB)
+# タイトル着地は解決の主音のベースなので -6 dB・0.12 s に浅くした(前の版は -20 dB・0.25 s で、主音が約 0.4 s 消えていた)
+DUCKS = [(C.T("main_check") + F1, 0.15, -15.0), (C.T("title_land") + F1, 0.12, -6.0), (C.T("expand_land") + F1, 0.15, -20.0)]
+MARGIN = 6.0       # 中域: 効果音の頂点の 30 ms で、効果音が音楽より MARGIN dB 上になるよう、足りない分だけ BGM のその帯域を一瞬下げる
+CAP = -6.0         # 1 つの窓で下げる量の上限(dB)。重なった窓は足さずに深い方を取る
+RAMP = 0.05        # 下げ始め・戻りの時間(s)
+NO_DIP = {"hover_select"}   # C で -8 dB に絞った「ほぼ聞こえない」布の音。BGM を下げて出すと、BGM の谷の方が目立つ(ベッドが -15 dB を超えた)
 
 
 def rd(name):
@@ -43,20 +47,24 @@ def main(plans=("warm", "light")):
         bgm = score2.bus(st, low_duck_times=DUCKS)
         g = C.db(L_c - C.ebur(bgm + gest)[0])
         bgm = bgm * g
+        # 下げる量は、下げる前の BGM に対して 1 回だけ求める(前の版は 2 回繰り返して同じ窓に -6 dB が 2 度掛かっていた)
+        ev = qa.overlap(events, bgm + gest, sfx)
         dips = []
-        for _ in range(2):                         # 測る → その帯域を下げる、を 2 回
-            ev = qa.overlap(events, bgm + gest, sfx)
-            add = []
-            for e in ev:
-                need = e["sfx_over_music_30ms_db"] - MARGIN
-                if need < 0:
-                    lo, hi = min(e["bands_hz"]) / 1.26, max(e["bands_hz"]) * 1.26
-                    add.append((e["measured_peak_s"] - 0.03, e["measured_peak_s"] + 0.12, lo, hi, max(-6.0, need)))
-            bgm = C.band_dip(bgm, add)
-            dips += add
-        json.dump([[round(v, 3) for v in d] for d in dips], open(os.path.join(C.WORK, f"R2_{plan}", "band_dips.json"), "w"))
+        for e in sorted(ev, key=lambda e: e["measured_peak_s"]):
+            need = e["sfx_over_music_30ms_db"] - MARGIN
+            if need >= 0 or e["cue"] in NO_DIP:
+                continue
+            item = [e["measured_peak_s"] - 0.03, e["measured_peak_s"] + 0.12, min(e["bands_hz"]) / 1.26, max(e["bands_hz"]) * 1.26, max(CAP, need)]
+            if dips and item[0] <= dips[-1][1]:     # 時間が重なる窓は 1 つにまとめる(帯域は広げ、深さは深い方、上限 CAP)
+                p = dips[-1]
+                dips[-1] = [p[0], max(p[1], item[1]), min(p[2], item[2]), max(p[3], item[3]), max(CAP, min(p[4], item[4]))]
+            else:
+                dips.append(item)
         out = os.path.join(C.WORK, f"R2_{plan}")
-        C.write(os.path.join(out, "raw_bgm_only.wav"), bgm, "FLOAT")
+        C.write(os.path.join(out, "raw_bgm_only.wav"), bgm, "FLOAT")          # BGM だけの音声の元(谷を入れる前)
+        bgm = C.band_dip(bgm, dips, ramp=RAMP)
+        C.write(os.path.join(out, "raw_bgm_in_mix.wav"), bgm, "FLOAT")
+        json.dump([[round(v, 3) for v in d] for d in dips], open(os.path.join(out, "band_dips.json"), "w"))
         json.dump({"onsets": onsets}, open(os.path.join(out, "onsets.json"), "w"))
         finish(f"R2_{plan}", bgm + gest, room, sfx, events,
                {"plan": plan, "bgm_gain_to_match_C_db": round(20 * np.log10(g), 2), "C_music_lufs_premaster": L_c})

@@ -3,7 +3,8 @@
   場面ごとに楽器を丸ごと入れ替え、和音の変わり目が小節とずれ、主旋律が無く、BGM ごと -16〜-22 dB 落とす窓が 2 つ、
   立ち上がりの無い区間が最大 2.5 s(拍が途切れる)。
 この版の約束(2 案に共通):
-  - 調は Eb メジャー、和声は 1 小節(2.5 s = 4 拍)に 1 つ: Eb | Ab | Cm9 | Ab→Bbsus4 | Ab→Bb | Eb(タイトル = 拍 20 で解決)
+  - 調は Eb メジャー。和声は基本 1 小節(2.5 s = 4 拍)に 1 つ、4・5 小節目だけ 3 拍目で属和音へ(窓の開始 8.75 s と今日の棒 11.25 s
+    という絵の山に合わせた意図): Eb | Ab | Cm9 | Ab–Bbsus4 | Ab–Bbsus4 | Eb(I | IV | vi | IV–Vsus | IV–Vsus | I、拍 20 で解決)
   - 主旋律 = 4 音のモチーフ(Bb-C-Eb-○、「ひと・つ・ず・つ」)。1, 2, 4, 5 小節で言い換え、タイトルの拍 20 で Eb に着地
   - 拍を刻む層(オスティナート)を全編に置く。静かな所も止めず、音数・音域・強さを下げるだけ(BGM の落ち込みは中央値から -15 dB 以内)
   - 場面の変化は楽器の足し引き・音域・密度・残響で付ける。1 つの部屋(残響)を全体に使い、タイトルだけ響きを足す
@@ -29,7 +30,7 @@ H = [
     (7.5, 8.75, 44, [51, 56, 60, 63, 67], [56, 60, 63, 67]),       # Abmaj7
     (8.75, 10.0, 34, [53, 58, 60, 63, 65], [53, 58, 63, 65]),      # Bb9sus4(窓: 解決を待つ)
     (10.0, 11.25, 44, [51, 56, 60, 63, 67], [56, 60, 63, 67]),     # Abmaj7(グラフ)
-    (11.25, 12.5, 34, [53, 58, 62, 65, 70], [53, 58, 62, 65]),     # Bb(今日の棒 → 止め)
+    (11.25, 12.5, 34, [53, 58, 63, 65, 70], [53, 58, 63, 65]),     # Bb sus4(今日の棒 → 止め)。D を避ける: C の身振り(今日の棒の Eb6)と短 9 度でぶつかるため
     (12.5, DUR + 1, 39, [55, 58, 63, 65, 70], [55, 58, 63, 65, 70]),  # Eb add9(タイトル)
 ]
 # モチーフ(開始, [(音, 長さ), ...])。4 音目だけ言い換える
@@ -37,11 +38,14 @@ MOTIF = [
     (1.25, [(70, E), (72, E), (75, Q), (74, 2 * Q)]),             # 一覧が揃った拍 2: Bb C Eb D(maj7 の色で開いたまま)
     (3.75, [(70, E), (72, E), (75, Q), (72, 2 * Q)]),             # 選んだ拍 6: Bb C Eb C(Ab の上)
     (7.5, [(70, E), (72, E), (75, Q), (77, 3 * Q)]),              # 戻りの拍 12: Bb C Eb F(窓へ向けて上がる)
-    (10.9375, [(70, E / 2), (72, E / 2), (75, E), (74, Q)]),      # 棒が揃った後の拍 17.5: 速く言って Bb の D へ
+    (10.9375, [(70, E / 2), (72, E / 2), (75, E), (77, Q)]),      # 棒が揃った後の拍 17.5: 速く言って F へ(D は身振りの Eb6 と短 9 度になるので避けた)
     (12.1875, [(70, E / 2), (72, E / 2), (75, 4 * Q)]),           # タイトル: 拍 19.5 から上がって、拍 20(12.5)で Eb に着地
 ]
 QUIET = [(1.95, 2.95), (11.6, 12.2)]
-HOLES = [T("step_check_1"), T("step_check_2"), T("step_check_3"), T("main_check"), T("expand_land")]      # 効果音の静けさの窓(BGM は止めず、密度と音域を下げる)
+HOLES = [T("step_check_1"), T("step_check_2"), T("step_check_3"), T("main_check"), T("expand_land")]
+# 伴奏の音数を減らして効果音に空ける所(中域の効果音の頂点の時刻。C の events から)。±THIN 秒にかかるオスティナートの音は弾かない
+THIN_AT = [1.30, 7.80, 7.85, 8.17, 8.47, 11.30, 13.17]   # カードが浮く(3.07)の布は C で -8 dB に絞った「ほぼ聞こえない」音なので空けない
+THIN = 0.08      # 効果音の静けさの窓(BGM は止めず、密度と音域を下げる)
 
 
 def chord(t):
@@ -69,7 +73,7 @@ def ostinato(start, stop, vel, patt=(0, 2, 1, 3, 2, 4, 3, 1), shift=0, step=E, q
         else:
             p = ost[patt[k % len(patt)] % len(ost)]
             on_beat = abs((t / Q) - round(t / Q)) < 1e-3
-            if all(abs(t - h) > 0.05 for h in HOLES):      # チェック・大チェック・詳細の着地の拍は効果音に空ける
+            if all(abs(t - h) > 0.05 for h in HOLES) and all(abs(t - h) > THIN for h in THIN_AT):   # 効果音の瞬間は弾かない
                 out.append((p + shift, S.hum(t, 0.006, on_beat), t + step * 1.6, S.vel(vel + (6 if on_beat else 0))))
             t += step
         k += 1
@@ -89,7 +93,7 @@ def motif_notes(shift=0, vel=58):
 def bass_line(kind):
     out = []
     t = 0.0
-    while t < 14.4:
+    while t < 12.5 - 1e-6:                         # タイトルは下の長い主音 1 つだけ(同じ Eb2 を重ねて刻まない)
         bass, _, _ = chord(t + 1e-4)
         b = bass if bass < 46 else bass - 12
         q = in_quiet(t)
@@ -105,9 +109,18 @@ def bass_line(kind):
                 out.append((b, t, t + Q * 1.8, S.vel(46, 3))); t += 2 * Q; continue
             pos = round(((t % BAR) / E)) % 8
             if pos in (0, 3, 6):
-                out.append((b + (12 if pos == 3 else 0), t, t + E * 1.6, S.vel(74 if pos == 0 else 62, 3)))
+                end = t + E * 1.6
+                for h in THIN_AT:                  # 効果音の瞬間にかかる音は手前で切る(伴奏の音数で空ける)
+                    if t < h - THIN < end:
+                        end = h - THIN
+                out.append((b + (12 if pos == 3 else 0), t, max(t + 0.08, end), S.vel(74 if pos == 0 else 62, 3)))
             t += E
-    out.append((39, 12.5, 15.2, 56))
+    # タイトルの解決: 主音を 1 オクターブ上(Eb3)で拍 20 に置き、低い Eb2 は着地の音(本を閉じる録音、12.60)の後の 8 分裏から。
+    # 120 Hz 未満で着地の音と重ねないため(BGM 側の編曲で空ける。C の効果音は変えない)
+    out = [(p, s, min(e, 12.48), v) for p, s, e, v in out]     # タイトルの前の音はタイトルで切る(前の和音の低音を残さない)
+    if kind == "warm":
+        out.append((51, 12.5, 12.9, 44))           # light は Eb3 を置かず、主音はエレピの和音(Eb4)に任せる
+    out.append((39, 12.8125, 15.2, 56))
     return [n for n in out if n[1] < 15.0]
 
 
@@ -116,7 +129,8 @@ def perc(kind):
     out = []
     holes = [T("step_check_1"), T("step_check_2"), T("step_check_3"), T("main_check")]
     def free(t):
-        return not in_quiet(t) and all(abs(t - h) > 0.05 for h in holes) and t < 12.4
+        return (not in_quiet(t) and all(abs(t - h) > 0.05 for h in holes) and all(abs(t - h) > THIN for h in THIN_AT)
+                and t < 12.4)
     if kind == "warm":
         for t in np.arange(3.75, 11.55, E / 2):           # シェイカー 16 分(弱い)
             k = int(round((t - 3.75) / (E / 2)))
@@ -164,7 +178,7 @@ def build(plan):
         sn = []
         for a, b_, bass, ost, pad in H[2:]:
             sn += [(p, a, min(b_, 15.0) + 0.1, 56) for p in pad[:3]]
-        ccs = [(11, 40, 4.9), (11, 64, 6.0), (11, 52, 7.5), (11, 96, 9.9), (11, 58, 10.3), (11, 46, 11.6), (11, 40, 12.2), (11, 84, 12.8), (11, 60, 14.5)]
+        ccs = [(11, 40, 4.9), (11, 64, 6.0), (11, 52, 7.5), (11, 42, 7.75), (11, 46, 8.4), (11, 96, 9.9), (11, 58, 10.3), (11, 46, 11.6), (11, 40, 12.2), (11, 84, 12.8), (11, 60, 14.5)]
         s_ = S.part(48, sn, ccs=ccs, tail=2.5)
         st["strings"] = S.width(lp(hp(s_, 120), 5000), 0.7)
         st["perc"] = hp(S.part(0, perc("warm"), drum=True, tail=1.0), 60)
@@ -186,9 +200,15 @@ def build(plan):
             if a >= 12.5:
                 en += [(p, a + 0.01 * i, 15.3, 54) for i, p in enumerate(pad)]
                 continue
+            if abs(a - 7.5) < 1e-6:          # 戻り(7.5–8.75): 頭に短く置いて空ける(戻りの通過音と数字の音に)
+                en += [(p, a + 0.008 * i, a + 0.2, 44) for i, p in enumerate(pad)]
+                continue
+            if abs(a - 11.25) < 1e-6:        # 今日の棒の着地(11.30)に重ねず、次の 8 分裏から
+                en += [(p, a + E + 0.008 * i, b_ + 0.03, 44) for i, p in enumerate(pad)]
+                continue
             en += [(p, a + 0.008 * i, b_ + 0.03, 40 if a < 5.0 else 46) for i, p in enumerate(pad)]     # 和音は次の和音までつなぐ
-            if 10.0 <= a < 11.5:
-                en += [(p, a + 1.5 * Q, a + 2.4 * Q, 44) for p in pad]
+            if 10.0 <= a < 11.25:
+                en += [(p, a + 1.5 * Q, a + 1.9 * Q, 44) for p in pad]   # 2 拍目の裏の短い和音(今日の棒の着地 11.30 の前に切る)
         e_ = S.part(4, en, tail=2.5)
         st["epiano"] = S.width(lp(hp(e_, 150), 6000), 0.7)
         st["perc"] = hp(S.part(0, perc("light"), drum=True, tail=1.0), 60)
