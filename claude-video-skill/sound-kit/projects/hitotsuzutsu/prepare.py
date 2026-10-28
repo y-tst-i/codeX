@@ -35,6 +35,8 @@ def main():
     ok = show("hitotsuzutsu_final.mp4", os.path.join(src, "hitotsuzutsu_final.mp4"))
     for f in ("cues.json", "design.md", "motion-map.md", "holds.json"):
         show(f, os.path.join(src, f))
+    if not ok:
+        sys.exit("映像を取り出せない: git clone した作業コピーで、git fetch origin claude/motion2d-hitotsuzutsu の後に実行する(git archive の写しでは動かない)")
     if ok:
         mp4 = os.path.join(src, "hitotsuzutsu_final.mp4")
         for out, args in (("video_only.mp4", ["-an", "-c:v", "copy"]), ("A_original_audio.m4a", ["-vn", "-c:a", "copy"]),

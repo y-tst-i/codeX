@@ -17,7 +17,7 @@ $HOME/earshot_env/bin/earshot doctor               # 確認(モデルは読ま�
 - 効果音バンクの描画(`earshot sfx` / `kit`)はモデルもネットワークも使わない。
 - Gemini に音を送る `earshot llm` は使わない(キーと同意が要る)。
 
-以下 `PY=$HOME/earshot_env/bin/python`、作業場所はリポジトリの根。
+以下 `PY=$HOME/earshot_env/bin/python`、作業場所はリポジトリの根。**git clone した作業コピーが必要**(`prepare.py` が `git show` で別の枝から映像を取り出すため。zip や git archive の写しでは動かない)。
 
 ## 2. 効果音を探す(Kenney と earshot を横断)
 ```bash
