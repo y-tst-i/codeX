@@ -38,6 +38,14 @@ description: コードで作る動画(HyperFrames・three.js・Canvas・ffmpeg)�
 3. 3D は `tools/new_scene_three.sh` + `references/three-3d.md`。キャラは `references/character-acting.md`(伸ばしても崩れないコツは `motion-lab.md` §1)。
 4. 場面の設計を強くしたい時だけ: 映画の技法辞書(`python3 tools/cin.py <slug>`、1項目ずつ)、場面カード(`references/shot-spec-template.md`)、スタイル辞書(`python3 tools/style.py <slug>`)。
 
+### 3b. 映像は2つに枝分かれする(利用者と合意、2026-10-28)
+| 種類 | 使うもの |
+|---|---|
+| **3Dの映像**(ネオンの街を走る車、写真広告のような質感) | 上の §3: 外部スキル + three.js の3D + Codex の画像素材。ここの試験で勝った方法 |
+| **2Dのモーショングラフィックス**(文字・図解・UI・宣伝のアニメ) | Codex 側の持ち込み3スキル(`business-motion-film` / `motion-prompt` / `direct-cinematic-video`。受け渡し一式は枝 `codex-skill-import` の zip)。**2D側が実際に良いかは未検証** |
+- **動きの選び方(2D)**: 制作担当が、`motion-prompt` のギャラリーから**よしなに選ぶのを標準**にする(適用できる動きの7〜8割目安。場面ごとに「動き→ID」の対応表を残す)。**利用者が自分で選ぶ形も残す**: 依頼で「選びたい」と言われたら、`pick`(ブラウザで選ぶ)か、場面ごとに候補を3つ前後ずつ提示して選んでもらう。選ばれた物は勝手に足し引きしない。3Dの映像には、この7〜8割の目標を当てはめない(ギャラリーは Canvas 2D の部品)。
+- ギャラリーのサイトには、このクラウドから届く(2026-10-28 に確認)。部品の取得・実行は未検証。外部のコードなので、実行前に中身を読む。
+
 ## 4. 音の付け方(映像ができたあと)
 1. 映像を先に完成させ、合図の時刻(cue sheet、コマ番号)を残してもらう。
 2. 音の担当1人(`video-opus`、約9万トークン・約7分)に、コンタクトシートと cue sheet から合図表を作らせる。
@@ -49,7 +57,7 @@ description: コードで作る動画(HyperFrames・three.js・Canvas・ffmpeg)�
 1. 機械: `python3 tools/review_checks.py <final.mp4> [--holds holds.json]`(コマ数・黒コマ・静止・白フラッシュ・ラウドネス・無音)。
 2. 音: `python3 tools/audio_measure.py <final.mp4> --cues cues.json [--hits 打撃音だけ.wav --bed 下地だけ.wav]`(スマホの帯域・頂点のずれ・下地との差)。打撃音だけとミックスの両方で測る。映像の閃光との同期は `tools/sync_check.py`。
 3. 目視: `tools/sheet.sh`(コンタクトシート)、`tools/strip.sh`(0.2秒刻み)、`?t=` で止めたコマ、前後2コマの比較(`motion-lab.md` §5)。
-4. 独立した審査役(制作に関わらない担当): `references/review-gauntlet.md` §5 の雛形。
+4. **確認の流れ(利用者と合意、2026-10-28)**: ①制作担当が自己点検と機械的な検査(上の1〜3)②**完成版への独立レビュー1回**(制作に関わらない担当。渡すのは依頼書と完成した動画だけで、作り手の説明は渡さない。雛形: `references/review-gauntlet.md` §5)③修正後、**指摘箇所とその周辺だけ**を別の担当が再確認(1回)④追加のレビューは、大きな問題が残った場合に、負荷(トークン・時間)を説明して利用者に相談する(勝手に回数を増やさない)。練習用の動画は①だけでよい。実際に見た・聴いた物と、計測だけの物を区別して報告する。
 5. 落とし穴(HyperFrames の地雷・CDN・フォント・書き出しの中断・トークン節約): `references/pitfalls.md`。
 
 ## 6. 道具と資料の地図
