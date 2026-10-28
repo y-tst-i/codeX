@@ -1,0 +1,485 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ひとつずつ</title>
+<style>
+  html, body { margin: 0; background: #F3EFE6; }
+  canvas { display: block; width: 100vw; height: auto; max-width: 1920px; }
+</style>
+</head>
+<body>
+<canvas id="c" width="1920" height="1080"></canvas>
+<script>
+'use strict';
+// 架空のタスク管理アプリ「ひとつずつ」紹介 · 15.0 s · 1920x1080 · 30 fps · 96 BPM (1 拍 = 0.625 s)
+// すべての絵は時刻 t の純関数。乱数は種つき(紙目を焼くときだけ)。Date.now・タイマーは使わない。
+// 動きの出典と対応表は motion-map.md、絵コンテは design.md。
+
+// ---------------------------------------------------------------------------
+// Motion Prompt #001-024 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#001
+// kit "motion" から、この作品で使う道具だけを抜き出したもの(式と値は kit のまま)。
+const MPM = (() => {
+  const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+  const lerp = (a, b, x) => a + (b - a) * x;
+  const P = (t, a, b) => clamp((t - a) / (b - a));
+  const eIO = x => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+  const eOut = x => 1 - Math.pow(1 - x, 3);
+  const eOut5 = x => 1 - Math.pow(1 - x, 5);
+  const eIn = x => x * x * x;
+  const backOut = (x, s = 1.70158) => 1 + (s + 1) * Math.pow(x - 1, 3) + s * Math.pow(x - 1, 2);
+  const spring = (t, w = 14, d = 7) => t <= 0 ? 0 : 1 - Math.exp(-d * t) * Math.cos(w * t);   // 0→行き過ぎ→1
+  function rand(seed) { let s = seed >>> 0; return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; }
+  function hex(c) { return [parseInt(c.slice(1, 3), 16), parseInt(c.slice(3, 5), 16), parseInt(c.slice(5, 7), 16)]; }
+  function mix(a, b, t) { const A = hex(a), B = hex(b); return `rgb(${Math.round(lerp(A[0], B[0], t))},${Math.round(lerp(A[1], B[1], t))},${Math.round(lerp(A[2], B[2], t))})`; }
+  function rr(ctx, x, y, w, h, r) { ctx.beginPath(); ctx.roundRect(x, y, w, h, r); }
+  return { clamp, lerp, P, eIO, eOut, eOut5, eIn, backOut, spring, rand, mix, rr };
+})();
+
+// ---------------------------------------------------------------------------
+// Motion Prompt #145-168 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#145
+// kit "lp2" から、カーソル・クリック・遷移・チェックの道具を抜き出したもの。
+// 変更点: 1 回再生の映像なので path / click の「周期 CYC での折り返し (mod)」だけを外した。色は引数で受ける。
+const MPL2 = (() => {
+  const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+  const lerp = (a, b, x) => a + (b - a) * x;
+  const P = (t, a, b) => clamp((t - a) / (b - a));
+  const eIO = x => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+  const eOut = x => 1 - Math.pow(1 - x, 3);
+  // カーソルの通り道 [[秒, x, y], …](easeInOut 3乗でつなぐ)
+  function path(keys, u) {
+    if (u <= keys[0][0]) return [keys[0][1], keys[0][2]];
+    for (let i = 1; i < keys.length; i++) if (u < keys[i][0]) { const a = keys[i - 1], b = keys[i], f = eIO((u - a[0]) / (b[0] - a[0])); return [lerp(a[1], b[1], f), lerp(a[2], b[2], f)]; }
+    const l = keys[keys.length - 1]; return [l[1], l[2]];
+  }
+  // on(t) が最後に切り替わった時刻から dur 秒の遷移(CSS の transition と同じ考え方)。過去へさかのぼって調べる
+  function trans(on, u, dur, ease = eOut) {
+    const s = on(u);
+    for (let i = 0, t = u; i < 600; i++, t -= 1 / 120) if (on(t - 1 / 120) !== s) { const q = ease(P(u, t, t + dur)); return s ? q : 1 - q; }
+    return s ? 1 : 0;
+  }
+  // マウスのカーソル(矢印)。press で少し縮む
+  function cursor(k, x, y, press, ink) {
+    const s = 1.2 * (1 - 0.12 * press);
+    k.save(); k.translate(x, y); k.scale(s, s); k.beginPath();
+    [[0, 0], [0, 16.5], [4.2, 12.6], [7, 19], [9.8, 17.8], [7.1, 11.6], [12.6, 11.6]].forEach(([a, b], i) => i ? k.lineTo(a, b) : k.moveTo(a, b));
+    k.closePath(); k.lineJoin = 'round'; k.lineWidth = 1.6; k.strokeStyle = '#fff'; k.fillStyle = ink; k.fill(); k.stroke(); k.restore();
+  }
+  // クリックした所に出る小さな輪(0.35秒)と、押している間の縮み
+  function click(k, x, y, u, times, ink, inkRGB) {
+    let press = 0;
+    for (const tc of times) {
+      const d = u - tc;
+      if (d > -0.1 && d < 0.12) press = Math.max(press, 1 - Math.abs(d - 0.01) / 0.11);
+      if (d >= 0 && d < 0.35) { const q = d / 0.35; k.strokeStyle = `rgba(${inkRGB},${0.45 * (1 - q)})`; k.lineWidth = 2; k.beginPath(); k.arc(x, y, 5 + 13 * eOut(q), 0, 7); k.stroke(); }
+    }
+    cursor(k, x, y, clamp(press), ink);
+  }
+  function check(k, x, y, s, col, lw, f = 1) {   // チェックの線(f で描く途中)
+    const pts = [[-0.5, 0.02], [-0.14, 0.38], [0.52, -0.34]], L1 = Math.hypot(0.36, 0.36), L2 = Math.hypot(0.66, 0.72), L = (L1 + L2) * clamp(f);
+    k.save(); k.translate(x, y); k.strokeStyle = col; k.lineWidth = lw; k.lineCap = 'round'; k.lineJoin = 'round'; k.beginPath(); k.moveTo(pts[0][0] * s, pts[0][1] * s);
+    if (L <= L1) { const q = L / L1; k.lineTo(lerp(pts[0][0], pts[1][0], q) * s, lerp(pts[0][1], pts[1][1], q) * s); }
+    else { const q = (L - L1) / L2; k.lineTo(pts[1][0] * s, pts[1][1] * s); k.lineTo(lerp(pts[1][0], pts[2][0], q) * s, lerp(pts[1][1], pts[2][1], q) * s); }
+    if (L > 0) k.stroke(); k.restore();
+  }
+  return { path, trans, click, check };
+})();
+
+// ---------------------------------------------------------------------------
+// 作品側(ここから下はこの映像のための配置・内容。動きの数値は各ブロックの出典 ID のもの)
+const { clamp, lerp, P, eIO, eOut, eOut5, eIn, backOut, spring, mix, rr } = MPM;
+const W = 1920, H = 1080;
+const COL = {
+  BG: '#F3EFE6',     // 明るい生成りの地
+  PAPER: '#FCFAF5',  // カードの紙
+  INK: '#2B2824',    // 文字
+  SUB: '#6F685E',    // 補助の文字
+  ACC: '#2E6A4E',    // 差し色(チェックとグラフだけ)
+  LINE: '#DCD5C7'    // 罫・枠(INK と BG の中間色。パレット外の派生色)
+};
+const INK_RGB = '43,40,36';
+const JP = '"IPAPGothic", "IPAGothic", "WenQuanYi Zen Hei", sans-serif';
+const font = (px, bold = true) => `${bold ? 'bold ' : ''}${px}px ${JP}`;
+function txt(k, s, x, y, f, col, align = 'left', base = 'alphabetic') { k.font = f; k.fillStyle = col; k.textAlign = align; k.textBaseline = base; k.fillText(s, x, y); }
+
+// 時刻表(秒)。拍 = 0.625 s
+const T = {
+  cardT0: i => 0.15 + 0.12 * i,      // #002 のずらし
+  click: 3.75,                       // 拍6: カードを選ぶ
+  exp0: 3.85, exp1: 4.45,            // #161 拡大 (クリック +0.1 s, 0.6 s)
+  steps: [5.0, 5.625, 6.25],         // 拍8・9・10: 「できた」
+  mainCheck: 6.875,                  // 拍11: 大きいチェック
+  back: 7.375, back0: 7.475, back1: 8.075,   // #161 戻り
+  roll: 8.125,                       // 拍13: 完了数 2→3 (#164)
+  mask0: 8.75, mask1: 9.9,           // 拍14: #017 の円の窓
+  barsZ: 9.88,                       // #002 の棒の時刻 0
+  title: 11.875,                     // 拍19: #005 の時刻 0
+  icon: 13.125                       // 拍21: #001 アイコン
+};
+const CLICKS = [T.click, ...T.steps, T.mainCheck, T.back];
+
+// 並べ方(グリッド座標。押し込み push で画面座標へ)
+const SLOT = i => ({ x: 150 + (i % 3) * 550, y: 250 + Math.floor(i / 3) * 350, w: 520, h: 320 });
+const TASKS = [
+  { name: '資料を読む', tag: 'しごと', meta: 'ステップ 2', done: false },
+  { name: '植木に水', tag: 'いえ', meta: 'ステップ 3', done: false },
+  { name: 'メールを返す', tag: 'しごと', meta: 'ステップ 4', done: false },
+  { name: '買い物リスト', tag: 'いえ', meta: 'ステップ 5', done: true },
+  { name: 'ストレッチ', tag: 'からだ', meta: 'ステップ 2', done: true },
+  { name: '本を返す', tag: 'そと', meta: 'ステップ 1', done: false }
+];
+const SEL = 1;
+const STEP_NAMES = ['ベランダの鉢', '窓辺のポトス', '受け皿を拭く'];
+// 冒頭の 2% の押し込み(自作。motion-lab §3「保持中は 2% のゆっくりした寄り」)。3.85 s 以降は 1.02 で固定
+const PUSH_END = 1.02;
+const push = t => 1 + (PUSH_END - 1) * eIO(P(t, 0, T.exp0));
+const toScreen = (x, y, s) => [960 + (x - 960) * s, 540 + (y - 540) * s];
+const toGrid = (x, y, s) => [960 + (x - 960) / s, 540 + (y - 540) / s];
+// 詳細画面の枠: 画面座標 {150,110,1620,860} をグリッド座標へ
+const D = (() => { const [x, y] = toGrid(150, 110, PUSH_END); return { x, y, w: 1620 / PUSH_END, h: 860 / PUSH_END }; })();
+const DET = {   // 詳細画面の中の位置(グリッド座標)
+  chk: [D.x + 140, D.y + 262], back: { x: D.x + 56, y: D.y + 52, w: 220, h: 68 },
+  stepY: D.y + 520, stepX: [D.x + 360, D.x + 810, D.x + 1260],
+  btn: { x: D.x + D.w - 56 - 300, y: D.y + D.h - 56 - 104, w: 300, h: 104 }
+};
+const gs = (x, y) => toScreen(x, y, PUSH_END);
+// カーソルの通り道(画面座標)。kit lp2 の path で easeInOut 3乗
+const CUR = (() => {
+  const s1 = SLOT(SEL), s0 = SLOT(0);
+  const c0 = toScreen(s0.x + 250, s0.y + 180, 1.012), c1 = gs(s1.x + 250, s1.y + 180);
+  const b = gs(DET.btn.x + 150, DET.btn.y + 52), k = gs(DET.chk[0] + 10, DET.chk[1] + 12), bk = gs(DET.back.x + 110, DET.back.y + 36);
+  return [[0, -80, 600], [1.35, -80, 600], [2.0, c0[0], c0[1]], [2.85, c0[0], c0[1]], [3.25, c1[0], c1[1]], [3.85, c1[0], c1[1]],
+    [4.75, b[0], b[1]], [6.35, b[0], b[1]], [6.75, k[0], k[1]], [6.95, k[0], k[1]], [7.25, bk[0], bk[1]], [7.45, bk[0], bk[1]], [8.2, -90, 330]];
+})();
+const cursorAt = t => MPL2.path(CUR, t);
+
+// 紙目(種つきの乱数で 1 回だけ焼く)
+let GRAIN = null;
+function bakeGrain() {
+  const c = document.createElement('canvas'); c.width = c.height = 384;
+  const g = c.getContext('2d'), im = g.createImageData(384, 384), r = MPM.rand(20261028);
+  for (let i = 0; i < im.data.length; i += 4) {
+    const v = r(), dark = v < 0.55;
+    im.data[i] = im.data[i + 1] = im.data[i + 2] = dark ? 60 : 255;
+    im.data[i + 3] = Math.floor(r() * (dark ? 9 : 14));
+  }
+  g.putImageData(im, 0, 0);
+  // ごく弱い繊維(短い線)
+  const r2 = MPM.rand(7);
+  g.lineWidth = 1; g.strokeStyle = 'rgba(90,80,60,0.035)';
+  for (let i = 0; i < 160; i++) { const x = r2() * 384, y = r2() * 384, a = r2() * Math.PI, l = 6 + r2() * 18; g.beginPath(); g.moveTo(x, y); g.lineTo(x + Math.cos(a) * l, y + Math.sin(a) * l); g.stroke(); }
+  return c;
+}
+let GP = null;
+function grain(k, alpha) { if (!GP) return; k.save(); k.globalAlpha = alpha; k.fillStyle = GP; k.fill(); k.restore(); }
+
+// ---------------------------------------------------------------------------
+// カード 1 枚(グリッドの形 e=0 から 詳細画面の形 e=1 まで、同じ物として描く)
+function cardBody(k, x, y, w, h, r, sh, alpha = 1) {
+  k.save(); k.globalAlpha = alpha;
+  k.shadowColor = `rgba(${INK_RGB},${sh.a})`; k.shadowBlur = sh.blur; k.shadowOffsetY = sh.oy;
+  k.fillStyle = COL.PAPER; rr(k, x, y, w, h, r); k.fill();
+  k.restore();
+  k.save(); k.globalAlpha = alpha; rr(k, x, y, w, h, r); grain(k, 0.55);
+  k.strokeStyle = 'rgba(43,40,36,0.06)'; k.lineWidth = 1.5; rr(k, x + 0.75, y + 0.75, w - 1.5, h - 1.5, r); k.stroke();
+  k.restore();
+}
+function checkbox(k, x, y, r, fillAmt, checkAmt, alpha = 1) {
+  k.save(); k.globalAlpha = alpha;
+  k.fillStyle = mix(COL.PAPER, COL.ACC, fillAmt); k.beginPath(); k.arc(x, y, r, 0, 7); k.fill();
+  if (fillAmt < 1) { k.strokeStyle = `rgba(${INK_RGB},${0.28 * (1 - fillAmt)})`; k.lineWidth = Math.max(3, r * 0.11); k.beginPath(); k.arc(x, y, r - k.lineWidth / 2, 0, 7); k.stroke(); }
+  if (checkAmt > 0) MPL2.check(k, x, y, r * 0.88, COL.PAPER, r * 0.17, checkAmt);
+  k.restore();
+}
+function pill(k, cx, cy, label, px, alpha = 1, fill = 'rgba(43,40,36,0.06)', col = COL.SUB) {
+  k.save(); k.globalAlpha = alpha; k.font = font(px, false);
+  const tw = k.measureText(label).width, ph = px * 1.75, pw = tw + px * 1.4;
+  k.fillStyle = fill; rr(k, cx - pw / 2, cy - ph / 2, pw, ph, ph / 2); k.fill();
+  txt(k, label, cx, cy + px * 0.05, font(px, false), col, 'center', 'middle');
+  k.restore();
+  return pw;
+}
+// task の中身。e: 0 = グリッド, 1 = 詳細。state: {fill, check, titleDim}
+function cardContent(k, x, y, w, h, task, e, st, alpha = 1) {
+  const cx = x + lerp(64, 140, e), cy = y + lerp(68, 262, e), r = lerp(26, 46, e);
+  checkbox(k, cx, cy, r, st.fill, st.check, alpha);
+  // タグ(右上)
+  const tpx = lerp(26, 32, e);
+  k.save(); k.font = font(tpx, false); const tw = k.measureText(task.tag).width + tpx * 1.4; k.restore();
+  pill(k, x + w - lerp(36, 64, e) - tw / 2, y + lerp(68, 86, e), task.tag, tpx, alpha);
+  k.save(); k.globalAlpha = alpha;
+  txt(k, task.name, x + lerp(48, 220, e), y + lerp(206, 296, e), font(lerp(48, 100, e)), mix(COL.INK, COL.SUB, st.titleDim));
+  txt(k, task.meta, x + lerp(48, 222, e), y + lerp(266, 366, e), font(lerp(30, 38, e), false), COL.SUB);
+  k.restore();
+}
+
+// ---------------------------------------------------------------------------
+// 場面 A: 一覧 → 詳細 → 一覧
+function hoverOn(i) {   // カーソルがカード i の上にあるか(クリック後は選んだカードだけ持ち上がったまま)
+  const s = SLOT(i);
+  return t => {
+    if (t >= T.click) return i === SEL;
+    const [sx, sy] = cursorAt(t), [gx, gy] = toGrid(sx, sy, push(t));
+    return gx > s.x && gx < s.x + s.w && gy > s.y && gy < s.y + s.h;
+  };
+}
+const HOVER = TASKS.map((_, i) => hoverOn(i));
+const SH_BASE = { a: 0.08, blur: 20, oy: 7 }, SH_LIFT = { a: 0.22, blur: 75, oy: 41 }, SH_DET = { a: 0.14, blur: 60, oy: 26 };
+const lerpSh = (a, b, q) => ({ a: lerp(a.a, b.a, q), blur: lerp(a.blur, b.blur, q), oy: lerp(a.oy, b.oy, q) });
+const LIFT = 34;   // #081: 10 px × 3.4(デモのカード幅 146 → 520 の倍率)
+
+// Motion Prompt #160 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#160
+function selState(t) {   // 選んだカードの状態(大きいチェック: #160 の色 0.2 s・線 0.25 s)
+  const f = eOut(P(t, T.mainCheck, T.mainCheck + 0.2));
+  return { fill: f, check: P(t, T.mainCheck, T.mainCheck + 0.25), titleDim: f };
+}
+
+function drawHeader(k, t, alpha) {
+  if (alpha <= 0.001) return;
+  k.save(); k.globalAlpha = alpha;
+  txt(k, '今日のタスク', 150, 178, font(60), COL.INK);
+  // Motion Prompt #164 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#164
+  // 完了数(#164 の入れ替わり: 古い数字が上へ抜け、新しい数字が下から入る。0.32 s easeInOut 3乗)
+  const right = 1770, by = 178;
+  k.font = font(44, false); const wTail = k.measureText(' / 6').width;
+  k.font = font(72); const wDig = k.measureText('0').width;
+  k.font = font(34, false); const wLab = k.measureText('完了 ').width;
+  const xd = right - wTail - wDig;
+  txt(k, ' / 6', right, by, font(44, false), COL.SUB, 'right');
+  txt(k, '完了 ', xd - 8, by, font(34, false), COL.SUB, 'right');
+  const TH = 84, f = P(t, T.roll, T.roll + 0.32), o = eIO(f) * TH;
+  k.save(); k.beginPath(); k.rect(xd - 6, by - 70, wDig + 12, TH); k.clip();
+  if (f <= 0) txt(k, '2', xd + wDig / 2, by, font(72), COL.INK, 'center');
+  else if (f >= 1) txt(k, '3', xd + wDig / 2, by, font(72), COL.INK, 'center');
+  else { txt(k, '2', xd + wDig / 2, by - o, font(72), COL.INK, 'center'); txt(k, '3', xd + wDig / 2, by + TH - o, font(72), COL.INK, 'center'); }
+  k.restore();
+  k.restore();
+}
+
+function drawSceneA(k, t) {
+  k.fillStyle = COL.BG; k.fillRect(0, 0, W, H);
+  k.save(); k.beginPath(); k.rect(0, 0, W, H); grain(k, 1); k.restore();
+  const s = push(t);
+  // 拡大の進み e(#161: 0.6 s easeInOut 3乗。戻りは同じ動きの逆)
+  const fwd = t < T.back0;
+  const e = fwd ? eIO(P(t, T.exp0, T.exp1)) : 1 - eIO(P(t, T.back0, T.back1));
+  const ga = 1 - clamp(e * 1.6);               // 一覧(ほかのカード・見出し)は動きの最初の 62% で消える
+  const da = clamp((e - 0.6) / 0.4);           // 詳細の中身は最後の 40% で現れる
+  const morphing = t >= T.exp0 && t <= T.back1;
+
+  k.save(); k.translate(960, 540); k.scale(s, s); k.translate(-960, -540);
+  drawHeader(k, t, ga);
+  for (let i = 0; i < TASKS.length; i++) {
+    const sl = SLOT(i);
+    // 空きの枠(0 コマ目から見えている)
+    if (ga > 0.001) { k.save(); k.globalAlpha = ga; k.setLineDash([14, 12]); k.strokeStyle = COL.LINE; k.lineWidth = 3; rr(k, sl.x + 1.5, sl.y + 1.5, sl.w - 3, sl.h - 3, 24); k.stroke(); k.restore(); }
+    if (i === SEL && morphing) continue;
+    // Motion Prompt #002 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#002
+    // #002 スタガー: 0.15 + 0.12·i s から 0.5 s、backOut(s = 2.6)。枠の下端(見えない縁)からせり上がる
+    const t0 = T.cardT0(i), pg = P(t, t0, t0 + 0.5);
+    if (pg <= 0) continue;
+    const g = backOut(pg, 2.6);
+    // Motion Prompt #081 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#081
+    // #081 ホバーで浮く(0.3 s cubic ease-out)。一覧へ戻った後の選んだカードは、戻りの動きが置いた位置(浮いていない)のまま
+    const lift = (i === SEL && t > T.back1) ? 0 : LIFT * MPL2.trans(HOVER[i], t, 0.3);
+    const q = lift / LIFT;
+    const y = sl.y + (1 - g) * sl.h - lift;
+    const alpha = i === SEL ? 1 : ga;
+    if (alpha <= 0.001) continue;
+    k.save();
+    if (pg < 0.28) { k.beginPath(); k.rect(sl.x - 100, 0, sl.w + 200, sl.y + sl.h); k.clip(); }
+    cardBody(k, sl.x, y, sl.w, sl.h, 24, lerpSh(SH_BASE, SH_LIFT, q), alpha);
+    // チェック欄は棒の上の点と同じく 0.34 s 遅れて spring(16, 7) で出る
+    const task = TASKS[i], done = task.done || (i === SEL && t >= T.mainCheck);
+    const st = done ? (i === SEL ? selState(t) : { fill: 1, check: 1, titleDim: 1 }) : { fill: 0, check: 0, titleDim: 0 };
+    const cb = spring(t - t0 - 0.34, 16, 7);
+    const cx = sl.x + 64, cy = y + 68;
+    if (cb > 0.01) { k.save(); k.translate(cx, cy); k.scale(cb, cb); k.translate(-cx, -cy); checkbox(k, cx, cy, 26, st.fill, st.check, alpha); k.restore(); }
+    // 中身(チェック欄以外)
+    k.save(); k.globalAlpha = alpha;
+    k.font = font(26, false); const tw = k.measureText(task.tag).width + 26 * 1.4;
+    pill(k, sl.x + sl.w - 36 - tw / 2, y + 68, task.tag, 26);
+    txt(k, task.name, sl.x + 48, y + 206, font(48), mix(COL.INK, COL.SUB, st.titleDim));
+    txt(k, task.meta, sl.x + 48, y + 266, font(30, false), COL.SUB);
+    k.restore();
+    k.restore();
+  }
+
+  // Motion Prompt #161 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#161
+  // 選んだカード → 詳細画面(#161 ビュートランジション)
+  if (morphing) {
+    const sl = SLOT(SEL), y0 = sl.y - (fwd ? LIFT : 0);
+    const x = lerp(sl.x, D.x, e), y = lerp(y0, D.y, e), w = lerp(sl.w, D.w, e), h = lerp(sl.h, D.h, e), r = lerp(24, 32, e);
+    cardBody(k, x, y, w, h, r, lerpSh(fwd ? SH_LIFT : SH_BASE, SH_DET, e));
+    // Motion Prompt #085 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#085
+    // #085 リップル: 押した点から、カードのいちばん遠い角までの半径へ 0.6 s cubic ease-out。0.3〜0.8 s で消える
+    const d = t - T.click;
+    if (d >= 0 && d < 0.8) {
+      const [px, py] = toGrid(...cursorAt(T.click), PUSH_END);
+      const Rm = Math.max(Math.hypot(px - sl.x, py - y0), Math.hypot(px - sl.x - sl.w, py - y0), Math.hypot(px - sl.x, py - y0 - sl.h), Math.hypot(px - sl.x - sl.w, py - y0 - sl.h));
+      k.save(); rr(k, x, y, w, h, r); k.clip();
+      k.fillStyle = `rgba(${INK_RGB},${0.06 * (1 - P(d, 0.3, 0.8))})`; k.beginPath(); k.arc(px, py, Rm * eOut(P(d, 0, 0.6)), 0, 7); k.fill();
+      k.restore();
+    }
+    cardContent(k, x, y, w, h, TASKS[SEL], e, selState(t));
+    if (da > 0) drawDetail(k, t, da);
+  }
+  k.restore();
+
+  // カーソル(画面座標。高さ約 40 px)
+  const [cx, cy] = cursorAt(t);
+  if (cx > -60 && cy < H + 60) { k.save(); k.translate(cx, cy); k.scale(1.75, 1.75); MPL2.click(k, 0, 0, t, CLICKS, COL.INK, INK_RGB); k.restore(); }
+}
+
+// 詳細画面の中身: 戻るボタン・3 つのステップ(#068)・「できた」ボタン
+function drawDetail(k, t, da) {
+  k.save(); k.globalAlpha = da;
+  const b = DET.back;
+  k.fillStyle = 'rgba(43,40,36,0.06)'; rr(k, b.x, b.y, b.w, b.h, b.h / 2); k.fill();
+  txt(k, '← 一覧へ', b.x + b.w / 2, b.y + b.h / 2 + 2, font(32, false), COL.INK, 'center', 'middle');
+  // Motion Prompt #068 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#068
+  // #068 ステップインジケーター: クリックごとに今のステップがチェックになり、線が 0.3 s easeInOut 3乗で次へ伸びる
+  const xs = DET.stepX, Y = DET.stepY, R = 46, SEGW = xs[1] - xs[0];
+  let step = 0; T.steps.forEach(c => { if (t >= c) step++; });
+  const prog = T.steps.slice(0, 2).reduce((s, c) => s + eIO(P(t, c, c + 0.3)), 0);
+  k.fillStyle = COL.LINE; rr(k, xs[0], Y - 5, xs[2] - xs[0], 10, 5); k.fill();
+  if (prog > 0) { k.fillStyle = COL.ACC; rr(k, xs[0], Y - 5, SEGW * prog, 10, 5); k.fill(); }
+  xs.forEach((x, i) => {
+    const done = i < step, cur = i === step;
+    k.fillStyle = done ? COL.ACC : cur ? COL.INK : COL.PAPER; k.beginPath(); k.arc(x, Y, R, 0, 7); k.fill();
+    if (!(done || cur)) { k.strokeStyle = COL.LINE; k.lineWidth = 5; k.beginPath(); k.arc(x, Y, R - 2.5, 0, 7); k.stroke(); }
+    if (done) MPL2.check(k, x, Y, 40, COL.PAPER, 7.5); else txt(k, String(i + 1), x, Y + 2, font(40), cur ? COL.PAPER : COL.SUB, 'center', 'middle');
+    txt(k, STEP_NAMES[i], x, Y + 112, font(36, done || cur), done || cur ? COL.INK : COL.SUB, 'center');
+  });
+  // 「できた」ボタン
+  const n = DET.btn;
+  k.fillStyle = COL.INK; rr(k, n.x, n.y, n.w, n.h, n.h / 2); k.fill();
+  txt(k, 'できた', n.x + n.w / 2, n.y + n.h / 2 + 2, font(40), COL.PAPER, 'center', 'middle');
+  k.restore();
+}
+
+// ---------------------------------------------------------------------------
+// 場面 B: 今週の完了(グラフ) → タイトル
+const BAR = { N: 7, BW: 123, G: 56, VAL: [2, 4, 3, 5, 4, 6, 7], UNIT: 56 };   // #002: 幅 44・間 20 を ×2.8
+BAR.total = BAR.N * BAR.BW + (BAR.N - 1) * BAR.G; BAR.x0 = 960 - BAR.total / 2;
+const LY = 617;               // タイトルの区切り線の中心 = グラフの基線
+const BASE = LY - 7;          // 棒の下端
+const DAYS = ['月', '火', '水', '木', '金', '土', '日'];
+let TITLE_W = 0;
+
+function drawSceneB(k, t) {
+  k.fillStyle = COL.PAPER; k.fillRect(0, 0, W, H);
+  k.save(); k.beginPath(); k.rect(0, 0, W, H); grain(k, 0.8); k.restore();
+  const Z = T.barsZ;
+  const out = 1 - eIn(P(t, Z + 1.70, Z + 1.96));     // 見出し・曜日は棒の退場と一緒に消える(自作)
+  if (out > 0.001) {
+    k.save(); k.globalAlpha = out;
+    txt(k, '今週の完了', 150, 178, font(60), COL.INK);
+    DAYS.forEach((d, i) => txt(k, d, BAR.x0 + i * (BAR.BW + BAR.G) + BAR.BW / 2, BASE + 84, font(36, i === 6), i === 6 ? COL.INK : COL.SUB, 'center'));
+    k.restore();
+  }
+  // Motion Prompt #002 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#002
+  // #002 スタガー: 棒 i は 0.15 + 0.12·i s から 0.5 s で backOut(s = 2.6)。数字(元は白い点)は 0.34 s 遅れて spring(16, 7)
+  // 退場: 数字は 1.70 + 0.045·i s から 0.2 s、棒は 1.78 + 0.045·i s から 0.26 s(cubic ease-in)
+  for (let i = 0; i < BAR.N; i++) {
+    const t0 = Z + 0.15 + i * 0.12;
+    const g = backOut(P(t, t0, t0 + 0.5), 2.6) * (1 - eIn(P(t, Z + 1.78 + i * 0.045, Z + 2.04 + i * 0.045)));
+    if (g <= 0.001) continue;
+    const hh = BAR.VAL[i] * BAR.UNIT * g, x = BAR.x0 + i * (BAR.BW + BAR.G);
+    k.fillStyle = i === 6 ? COL.ACC : mix(COL.ACC, COL.PAPER, 0.62);
+    rr(k, x, BASE - hh, BAR.BW, hh, [Math.min(34, hh / 2), Math.min(34, hh / 2), 0, 0]); k.fill();
+    const dsc = spring(t - t0 - 0.34, 16, 7) * (1 - eIn(P(t, Z + 1.70 + i * 0.045, Z + 1.90 + i * 0.045)));
+    if (dsc > 0.01) {
+      const cx = x + BAR.BW / 2, cy = BASE - hh - 45;
+      k.save(); k.translate(cx, cy); k.scale(dsc, dsc);
+      txt(k, String(BAR.VAL[i]), 0, 2, font(44), COL.INK, 'center', 'middle');
+      k.restore();
+    }
+  }
+  // Motion Prompt #005 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#005
+  // 基線 → タイトルの区切り線(#005 の線の 0.1〜0.5 s easeInOut 3乗の区間で、中心から幅 1297 → ロゴとタイトルの幅へ伸びる)
+  const TT = T.title;
+  const lw = lerp(BAR.total + 100, 190 + 56 + TITLE_W, eIO(P(t, TT + 0.1, TT + 0.5)));
+  k.fillStyle = COL.INK; rr(k, 960 - lw / 2, LY - 7, lw, 14, 7); k.fill();
+  // #005 マスクリビール: 上の段は線の下から 336 px(120 × 2.8)上がる 0.35〜1.0 s quintic ease-out、
+  // 下の段は線の上から 168 px(60 × 2.8)下りる 0.55〜1.15 s。不透明度は変えず、クリップの外にいるだけで隠れる
+  if (t >= TT) {
+    const up = (1 - eOut5(P(t, TT + 0.35, TT + 1.0))) * 336;
+    const dn = (1 - eOut5(P(t, TT + 0.55, TT + 1.15))) * -168;
+    const lock = 190 + 56 + TITLE_W, L = (W - lock) / 2;
+    k.save(); k.beginPath(); k.rect(0, LY - 325, W, 325 - 13); k.clip();
+    txt(k, 'ひとつずつ', L + 246, LY - 20 + up, font(250), COL.INK, 'left', 'ideographic');
+    k.restore();
+    k.save(); k.beginPath(); k.rect(0, LY + 13, W, 147); k.clip();
+    txt(k, '今日のことを、ひとつずつ。', 960, LY + 123 + dn, font(64, false), COL.INK, 'center');
+    k.restore();
+    // Motion Prompt #001 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#001
+    // #001 ポップイン: 大きさ spring(15, 6.5)(頂点 約 1.26)、回転 −0.35 rad → 0 を spring(11, 6)
+    const sc = spring(t - T.icon, 15, 6.5), rot = (1 - spring(t - T.icon, 11, 6)) * -0.35;
+    if (sc > 0.002) {
+      const S = 190, X = L + 95, Y = LY - 20 - 112;
+      k.save(); k.translate(X, Y); k.rotate(rot); k.scale(sc, sc);
+      k.fillStyle = COL.ACC; rr(k, -S / 2, -S / 2, S, S, 49); k.fill();
+      k.fillStyle = 'rgba(255,255,255,.10)'; rr(k, -S / 2, -S / 2, S, S / 2, [49, 49, 0, 0]); k.fill();
+      MPL2.check(k, 0, 4, 104, COL.PAPER, 17);
+      k.restore();
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+const cv = document.getElementById('c'), ctx = cv.getContext('2d');
+const MASK_C = gs(SLOT(SEL).x + 64, SLOT(SEL).y + 68);   // 一覧に戻ったカードのチェック欄の中心(画面座標)
+const MASK_R = Math.max(...[[0, 0], [W, 0], [0, H], [W, H]].map(([x, y]) => Math.hypot(x - MASK_C[0], y - MASK_C[1]))) + 30;
+
+function renderAt(t) {
+  t = clamp(t, 0, 15);
+  const k = ctx;
+  k.setTransform(1, 0, 0, 1, 0, 0); k.globalAlpha = 1; k.globalCompositeOperation = 'source-over';
+  // Motion Prompt #017 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#017
+  // #017 マスクトランジション: チェック欄の中心から円が 0 → 画面を覆う半径へ(1.15 s easeInOut 3乗)、縁に線(7 × 2.8 ≈ 20 px)
+  const m = eIO(P(t, T.mask0, T.mask1));
+  if (m < 1) { k.save(); drawSceneA(k, t); k.restore(); }
+  if (m > 0) {
+    const R = m * MASK_R;
+    k.save(); k.beginPath(); k.arc(MASK_C[0], MASK_C[1], R, 0, 7); k.clip(); drawSceneB(k, t); k.restore();
+    if (m < 1) { k.save(); k.strokeStyle = COL.ACC; k.lineWidth = 20; k.beginPath(); k.arc(MASK_C[0], MASK_C[1], R, 0, 7); k.stroke(); k.restore(); }
+  }
+  // 「架空のアプリ」(全コマ。28 px)
+  k.save();
+  k.font = font(28, false); const tw = k.measureText('架空のアプリ').width;
+  const pw = tw + 36, ph = 50, px = W - 40 - pw, py = H - 34 - ph;
+  k.fillStyle = 'rgba(252,250,245,0.85)'; rr(k, px, py, pw, ph, ph / 2); k.fill();
+  k.strokeStyle = COL.LINE; k.lineWidth = 2; rr(k, px, py, pw, ph, ph / 2); k.stroke();
+  txt(k, '架空のアプリ', px + pw / 2, py + ph / 2 + 1, font(28, false), COL.SUB, 'center', 'middle');
+  k.restore();
+}
+window.renderAt = renderAt;
+window.__ready = false;
+
+(async function init() {
+  try { await Promise.all([document.fonts.load(font(60)), document.fonts.load(font(28, false))]); await document.fonts.ready; } catch (e) { /* 手元のフォントが無い時はそのまま */ }
+  GRAIN = bakeGrain(); GP = ctx.createPattern(GRAIN, 'repeat');
+  ctx.font = font(250); TITLE_W = ctx.measureText('ひとつずつ').width;
+  const q = new URLSearchParams(location.search);
+  if (q.has('t')) { renderAt(parseFloat(q.get('t')) || 0); window.__ready = true; return; }
+  renderAt(0); window.__ready = true;
+  if (q.has('render')) return;
+  // プレビュー再生(?t= / ?render の時は動かさない)
+  let start = null;
+  const loop = now => { if (start === null) start = now; renderAt(((now - start) / 1000) % 15); requestAnimationFrame(loop); };
+  requestAnimationFrame(loop);
+})();
+</script>
+<script>
+(function () {
+  var q = new URLSearchParams(location.search); if (!q.has('t')) return;
+  var t = parseFloat(q.get('t')) || 0;
+  function freeze() { if (typeof window.renderAt === 'function' && window.__ready) window.renderAt(t); }
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(freeze);
+  window.addEventListener('load', freeze);
+})();
+</script>
+</body>
+</html>
