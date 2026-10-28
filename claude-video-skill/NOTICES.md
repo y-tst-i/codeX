@@ -12,3 +12,5 @@
 | ArtCraft Crafting Apps (storytold/*) | 同梱しない・取り込んでいない(archive/handbook.md §23に試験結果のみ記録) | MIT OR Apache-2.0(名前とロゴは商標) | |
 | Quaternius | 同梱しない | 独自ライセンス(2026-08-28〜)・再配布禁止 | 公開リポジトリに入れない |
 参考にした考え方(コードは写していない): video-shotcraft(Apache-2.0。審査役・間の予算・揺れの回数制限の考え方を自分の言葉で書き直した)、 ClaudeAnimationBase(MIT)、lemo-opuscar DIRECTOR.md(MIT)、「コード映像見本帳」(しゅん氏、2026-09-28、ライセンス記載なし → 考え方と数値のみ、自分で実装)。
+
+| business-motion-film(echris6/motion-video-kit)・motion-prompt(showheyohtaki/motion-prompt の CLI) | `.claude/skills/business-motion-film/`・`.claude/skills/motion-prompt/`(各 `UPSTREAM_LICENSE`) | MIT | Codex 側で作った持ち込み一式。2026-10-28 に取り込み。`direct-cinematic-video` は Codex 側の自作 |
