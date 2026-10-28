@@ -27,7 +27,7 @@ const FPS = 30, N = 450;
     for (const s of rest) { const t = parseFloat(s); fs.writeFileSync(path.join(dir, `t_${t.toFixed(3)}.png`), await grab(t)); }
     console.log('stills:', rest.length);
   } else if (mode === 'frames') {
-    const dir = path.join(HERE, 'work', 'frames'); fs.mkdirSync(dir, { recursive: true });
+    const dir = path.join(HERE, 'work', process.env.FRAMES || 'frames'); fs.mkdirSync(dir, { recursive: true });
     const from = parseInt(rest[0] || '0', 10), to = parseInt(rest[1] || String(N - 1), 10);
     const t0 = Date.now();
     for (let f = from; f <= to; f++) {

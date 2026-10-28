@@ -145,11 +145,13 @@ const DET = {   // 詳細画面の中の位置(グリッド座標)
 };
 const gs = (x, y) => toScreen(x, y, PUSH_END);
 // カーソルの通り道(画面座標)。kit lp2 の path で easeInOut 3乗
+const CUR_IN = 14;   // カーソルが止まる位置(カード上端からの深さ、グリッド座標)
 const CUR = (() => {
-  const s1 = SLOT(SEL), s0 = SLOT(0);
-  const c0 = toScreen(s0.x + 250, s0.y + 180, 1.012), c1 = gs(s1.x + 250, s1.y + 180);
+  const s1 = SLOT(SEL);
   const b = gs(DET.btn.x + 150, DET.btn.y + 52), k = gs(DET.chk[0] + 10, DET.chk[1] + 12), bk = gs(DET.back.x + 110, DET.back.y + 36);
-  return [[0, -80, 600], [1.35, -80, 600], [2.0, c0[0], c0[1]], [2.85, c0[0], c0[1]], [3.25, c1[0], c1[1]], [3.85, c1[0], c1[1]],
+  // v2: 最初から「植木に水」へ。1.70 s に画面の上端から入り、1 本の easeInOut で降りて 3.07 s にカードへ入る(ほかのカードには触れない)
+  const a1 = gs(s1.x + 300, s1.y + CUR_IN);
+  return [[0, 1290, -60], [1.70, 1290, -60], [3.45, a1[0], a1[1]], [3.85, a1[0], a1[1]],
     [4.75, b[0], b[1]], [6.35, b[0], b[1]], [6.75, k[0], k[1]], [6.95, k[0], k[1]], [7.25, bk[0], bk[1]], [7.45, bk[0], bk[1]], [8.2, -90, 330]];
 })();
 const cursorAt = t => MPL2.path(CUR, t);
@@ -205,12 +207,12 @@ function cardContent(k, x, y, w, h, task, e, st, alpha = 1) {
   const cx = x + lerp(64, 140, e), cy = y + lerp(68, 262, e), r = lerp(26, 46, e);
   checkbox(k, cx, cy, r, st.fill, st.check, alpha);
   // タグ(右上)
-  const tpx = lerp(26, 32, e);
+  const tpx = lerp(30, 34, e);
   k.save(); k.font = font(tpx, false); const tw = k.measureText(task.tag).width + tpx * 1.4; k.restore();
   pill(k, x + w - lerp(36, 64, e) - tw / 2, y + lerp(68, 86, e), task.tag, tpx, alpha);
   k.save(); k.globalAlpha = alpha;
   txt(k, task.name, x + lerp(48, 220, e), y + lerp(206, 296, e), font(lerp(48, 100, e)), mix(COL.INK, COL.SUB, st.titleDim));
-  txt(k, task.meta, x + lerp(48, 222, e), y + lerp(266, 366, e), font(lerp(30, 38, e), false), COL.SUB);
+  txt(k, task.meta, x + lerp(48, 222, e), y + lerp(266, 366, e), font(lerp(32, 38, e), false), COL.SUB);
   k.restore();
 }
 
@@ -242,17 +244,25 @@ function drawHeader(k, t, alpha) {
   // Motion Prompt #164 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#164
   // 完了数(#164 の入れ替わり: 古い数字が上へ抜け、新しい数字が下から入る。0.32 s easeInOut 3乗)
   const right = 1770, by = 178;
+  // v2: 数へ目が行くように、入れ替わりの間だけ右上を軸に 1.6 倍へ(自作の強調。7.95〜8.2 s で拡大、8.6〜8.95 s で戻す。easeInOut 3乗)
+  const emph = 1 + 0.6 * (eIO(P(t, 7.95, 8.2)) - eIO(P(t, 8.6, 8.95)));
+  k.save(); k.translate(right, 150); k.scale(emph, emph); k.translate(-right, -150);
   k.font = font(44, false); const wTail = k.measureText(' / 6').width;
   k.font = font(72); const wDig = k.measureText('0').width;
-  k.font = font(34, false); const wLab = k.measureText('完了 ').width;
-  const xd = right - wTail - wDig;
+  const xd = right - wTail - wDig, dcx = xd + wDig / 2, dcy = by - 26;
   txt(k, ' / 6', right, by, font(44, false), COL.SUB, 'right');
-  txt(k, '完了 ', xd - 8, by, font(34, false), COL.SUB, 'right');
+  txt(k, '完了 ', xd - 8, by, font(36, false), COL.SUB, 'right');
   const TH = 84, f = P(t, T.roll, T.roll + 0.32), o = eIO(f) * TH;
-  k.save(); k.beginPath(); k.rect(xd - 6, by - 70, wDig + 12, TH); k.clip();
-  if (f <= 0) txt(k, '2', xd + wDig / 2, by, font(72), COL.INK, 'center');
-  else if (f >= 1) txt(k, '3', xd + wDig / 2, by, font(72), COL.INK, 'center');
-  else { txt(k, '2', xd + wDig / 2, by - o, font(72), COL.INK, 'center'); txt(k, '3', xd + wDig / 2, by + TH - o, font(72), COL.INK, 'center'); }
+  // Motion Prompt #071 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#071
+  // #071 バッジ: 数が届いた瞬間に大きさ 1.3 → 1(0.3 s)、波紋の輪が半径 12 → 28(× 3.3)・不透明度 0.5 → 0(0.5 s)
+  const land = T.roll + 0.32, dl = t - land;
+  if (dl >= 0 && dl < 0.5) { const q = dl / 0.5; k.strokeStyle = `rgba(${INK_RGB},${0.5 * (1 - q)})`; k.lineWidth = 4; k.beginPath(); k.arc(dcx, dcy, 3.3 * (12 + 16 * eOut(q)), 0, 7); k.stroke(); }
+  const pop = dl >= 0 ? lerp(1.3, 1, eOut(P(dl, 0, 0.3))) : 1;
+  k.save(); k.beginPath(); k.rect(xd - 30, by - 70 - 30, wDig + 60, TH + 60); k.clip();
+  if (f <= 0) txt(k, '2', dcx, by, font(72), COL.INK, 'center');
+  else if (f >= 1) { k.save(); k.translate(dcx, dcy); k.scale(pop, pop); k.translate(-dcx, -dcy); txt(k, '3', dcx, by, font(72), COL.INK, 'center'); k.restore(); }
+  else { k.save(); k.beginPath(); k.rect(xd - 6, by - 70, wDig + 12, TH); k.clip(); txt(k, '2', dcx, by - o, font(72), COL.INK, 'center'); txt(k, '3', dcx, by + TH - o, font(72), COL.INK, 'center'); k.restore(); }
+  k.restore();
   k.restore();
   k.restore();
 }
@@ -298,10 +308,10 @@ function drawSceneA(k, t) {
     if (cb > 0.01) { k.save(); k.translate(cx, cy); k.scale(cb, cb); k.translate(-cx, -cy); checkbox(k, cx, cy, 26, st.fill, st.check, alpha); k.restore(); }
     // 中身(チェック欄以外)
     k.save(); k.globalAlpha = alpha;
-    k.font = font(26, false); const tw = k.measureText(task.tag).width + 26 * 1.4;
-    pill(k, sl.x + sl.w - 36 - tw / 2, y + 68, task.tag, 26);
+    k.font = font(30, false); const tw = k.measureText(task.tag).width + 30 * 1.4;
+    pill(k, sl.x + sl.w - 36 - tw / 2, y + 68, task.tag, 30);
     txt(k, task.name, sl.x + 48, y + 206, font(48), mix(COL.INK, COL.SUB, st.titleDim));
-    txt(k, task.meta, sl.x + 48, y + 266, font(30, false), COL.SUB);
+    txt(k, task.meta, sl.x + 48, y + 266, font(32, false), COL.SUB);
     k.restore();
     k.restore();
   }
@@ -319,17 +329,43 @@ function drawSceneA(k, t) {
       const [px, py] = toGrid(...cursorAt(T.click), PUSH_END);
       const Rm = Math.max(Math.hypot(px - sl.x, py - y0), Math.hypot(px - sl.x - sl.w, py - y0), Math.hypot(px - sl.x, py - y0 - sl.h), Math.hypot(px - sl.x - sl.w, py - y0 - sl.h));
       k.save(); rr(k, x, y, w, h, r); k.clip();
-      k.fillStyle = `rgba(${INK_RGB},${0.06 * (1 - P(d, 0.3, 0.8))})`; k.beginPath(); k.arc(px, py, Rm * eOut(P(d, 0, 0.6)), 0, 7); k.fill();
+      k.fillStyle = `rgba(${INK_RGB},${0.06 * (1 - P(d, 0.3, 0.8)) * ga})`;   // v2: 一覧と同じく拡大の最初の 62% で消える k.beginPath(); k.arc(px, py, Rm * eOut(P(d, 0, 0.6)), 0, 7); k.fill();
       k.restore();
     }
     cardContent(k, x, y, w, h, TASKS[SEL], e, selState(t));
-    if (da > 0) drawDetail(k, t, da);
+    if (da > 0) { drawHints(k, t, da); drawDetail(k, t, da); }
   }
   k.restore();
 
   // カーソル(画面座標。高さ約 40 px)
   const [cx, cy] = cursorAt(t);
   if (cx > -60 && cy < H + 60) { k.save(); k.translate(cx, cy); k.scale(1.75, 1.75); MPL2.click(k, 0, 0, t, CLICKS, COL.INK, INK_RGB); k.restore(); }
+}
+
+// // Motion Prompt #163 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#163
+// #163 ホットスポットの脈: 輪が半径 r → r + 12·kk、不透明度 0.75 → 0、1.57 s ごと・2 本が半周期ずれ。
+// v2 の使い道: 次に押す所(今のステップ → 大きいチェック欄 → 一覧へ)だけに、押されるまでの間だけ出す。
+// 白い輪 → 紙の地で読めるよう墨色・強さ 0.45 倍・線幅 0.6 倍。窓の出入りは 0.15 s cubic ease-out。
+function hint(k, t, s, e, draw) {
+  const w = eOut(P(t, s, s + 0.15)) * (1 - eOut(P(t, e, e + 0.15)));
+  if (w <= 0.001) return;
+  for (let r = 0; r < 2; r++) {
+    const f = (((t - s) / 1.57 + r * 0.5) % 1 + 1) % 1;
+    k.strokeStyle = `rgba(${INK_RGB},${0.75 * 0.45 * (1 - f) * w})`; draw(f);
+  }
+}
+const HINTS = [
+  [T.exp1, T.steps[0], 0], [T.steps[0] + 0.3, T.steps[1], 1], [T.steps[1] + 0.3, T.steps[2], 2],
+  [T.steps[2] + 0.1, T.mainCheck, 'chk'], [T.mainCheck + 0.25, T.back, 'back']
+];
+function drawHints(k, t, da) {
+  k.save(); k.globalAlpha = da;
+  for (const [s, e, which] of HINTS) {
+    if (typeof which === 'number') { const R0 = 52, kk = R0 / 8; hint(k, t, s, e, f => { k.lineWidth = 2 * kk * 0.6; k.beginPath(); k.arc(DET.stepX[which], DET.stepY, R0 + 12 * kk * f, 0, 7); k.stroke(); }); }
+    else if (which === 'chk') { const R0 = 46, kk = R0 / 8; hint(k, t, s, e, f => { k.lineWidth = 2 * kk * 0.6; k.beginPath(); k.arc(DET.chk[0], DET.chk[1], R0 + 12 * kk * f, 0, 7); k.stroke(); }); }
+    else { const b = DET.back, kk = b.h / 2 / 8; hint(k, t, s, e, f => { const g = 12 * kk * f; k.lineWidth = 2 * kk * 0.6; rr(k, b.x - g, b.y - g, b.w + 2 * g, b.h + 2 * g, b.h / 2 + g); k.stroke(); }); }
+  }
+  k.restore();
 }
 
 // 詳細画面の中身: 戻るボタン・3 つのステップ(#068)・「できた」ボタン
@@ -340,7 +376,7 @@ function drawDetail(k, t, da) {
   txt(k, '← 一覧へ', b.x + b.w / 2, b.y + b.h / 2 + 2, font(32, false), COL.INK, 'center', 'middle');
   // Motion Prompt #068 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#068
   // #068 ステップインジケーター: クリックごとに今のステップがチェックになり、線が 0.3 s easeInOut 3乗で次へ伸びる
-  const xs = DET.stepX, Y = DET.stepY, R = 46, SEGW = xs[1] - xs[0];
+  const xs = DET.stepX, Y = DET.stepY, R = 52, SEGW = xs[1] - xs[0];
   let step = 0; T.steps.forEach(c => { if (t >= c) step++; });
   const prog = T.steps.slice(0, 2).reduce((s, c) => s + eIO(P(t, c, c + 0.3)), 0);
   k.fillStyle = COL.LINE; rr(k, xs[0], Y - 5, xs[2] - xs[0], 10, 5); k.fill();
@@ -349,8 +385,8 @@ function drawDetail(k, t, da) {
     const done = i < step, cur = i === step;
     k.fillStyle = done ? COL.ACC : cur ? COL.INK : COL.PAPER; k.beginPath(); k.arc(x, Y, R, 0, 7); k.fill();
     if (!(done || cur)) { k.strokeStyle = COL.LINE; k.lineWidth = 5; k.beginPath(); k.arc(x, Y, R - 2.5, 0, 7); k.stroke(); }
-    if (done) MPL2.check(k, x, Y, 40, COL.PAPER, 7.5); else txt(k, String(i + 1), x, Y + 2, font(40), cur ? COL.PAPER : COL.SUB, 'center', 'middle');
-    txt(k, STEP_NAMES[i], x, Y + 112, font(36, done || cur), done || cur ? COL.INK : COL.SUB, 'center');
+    if (done) MPL2.check(k, x, Y, 46, COL.PAPER, 8.5); else txt(k, String(i + 1), x, Y + 2, font(46), cur ? COL.PAPER : COL.SUB, 'center', 'middle');
+    txt(k, STEP_NAMES[i], x, Y + 118, font(40, done || cur), done || cur ? COL.INK : COL.SUB, 'center');
   });
   // 「できた」ボタン
   const n = DET.btn;
@@ -367,16 +403,18 @@ const LY = 617;               // タイトルの区切り線の中心 = グラ�
 const BASE = LY - 7;          // 棒の下端
 const DAYS = ['月', '火', '水', '木', '金', '土', '日'];
 let TITLE_W = 0;
+const ICON_GAP = 90;   // v2: 56 → 90。アイコンの行き過ぎ(約 1.26 倍)でも題字に寄らない
 
 function drawSceneB(k, t) {
   k.fillStyle = COL.PAPER; k.fillRect(0, 0, W, H);
   k.save(); k.beginPath(); k.rect(0, 0, W, H); grain(k, 0.8); k.restore();
   const Z = T.barsZ;
-  const out = 1 - eIn(P(t, Z + 1.70, Z + 1.96));     // 見出し・曜日は棒の退場と一緒に消える(自作)
+  // v2: 輪の窓の内側は文字なしで始め、見出し・曜日は輪が広がりきってから 0.25 s cubic ease-out で出す(自作)。消えるのは棒の退場と一緒
+  const out = eOut(P(t, T.mask1, T.mask1 + 0.25)) * (1 - eIn(P(t, Z + 1.70, Z + 1.96)));
   if (out > 0.001) {
     k.save(); k.globalAlpha = out;
     txt(k, '今週の完了', 150, 178, font(60), COL.INK);
-    DAYS.forEach((d, i) => txt(k, d, BAR.x0 + i * (BAR.BW + BAR.G) + BAR.BW / 2, BASE + 84, font(36, i === 6), i === 6 ? COL.INK : COL.SUB, 'center'));
+    DAYS.forEach((d, i) => txt(k, d, BAR.x0 + i * (BAR.BW + BAR.G) + BAR.BW / 2, BASE + 84, font(40, i === 6), i === 6 ? COL.INK : COL.SUB, 'center'));
     k.restore();
   }
   // Motion Prompt #002 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#002
@@ -384,15 +422,16 @@ function drawSceneB(k, t) {
   // 退場: 数字は 1.70 + 0.045·i s から 0.2 s、棒は 1.78 + 0.045·i s から 0.26 s(cubic ease-in)
   for (let i = 0; i < BAR.N; i++) {
     const t0 = Z + 0.15 + i * 0.12;
-    const g = backOut(P(t, t0, t0 + 0.5), 2.6) * (1 - eIn(P(t, Z + 1.78 + i * 0.045, Z + 2.04 + i * 0.045)));
+    const gIn = backOut(P(t, t0, t0 + 0.5), 2.6), g = gIn * (1 - eIn(P(t, Z + 1.78 + i * 0.045, Z + 2.04 + i * 0.045)));
     if (g <= 0.001) continue;
     const hh = BAR.VAL[i] * BAR.UNIT * g, x = BAR.x0 + i * (BAR.BW + BAR.G);
     k.fillStyle = i === 6 ? COL.ACC : mix(COL.ACC, COL.PAPER, 0.62);
     rr(k, x, BASE - hh, BAR.BW, hh, [Math.min(34, hh / 2), Math.min(34, hh / 2), 0, 0]); k.fill();
-    const dsc = spring(t - t0 - 0.34, 16, 7) * (1 - eIn(P(t, Z + 1.70 + i * 0.045, Z + 1.90 + i * 0.045)));
-    if (dsc > 0.01) {
-      const cx = x + BAR.BW / 2, cy = BASE - hh - 45;
-      k.save(); k.translate(cx, cy); k.scale(dsc, dsc);
+    // v2: 数は登場だけ spring で大きくなり、退場(1.70 + 0.045·i s から 0.2 s、cubic ease-in)は縮めずに薄くして消す
+    const dsc = spring(t - t0 - 0.34, 16, 7), dal = 1 - eIn(P(t, Z + 1.70 + i * 0.045, Z + 1.90 + i * 0.045));
+    if (dsc > 0.01 && dal > 0.001) {
+      const cx = x + BAR.BW / 2, cy = BASE - BAR.VAL[i] * BAR.UNIT * gIn - 45;   // 退場中は元の高さのまま薄くなる
+      k.save(); k.globalAlpha = dal; k.translate(cx, cy); k.scale(dsc, dsc);
       txt(k, String(BAR.VAL[i]), 0, 2, font(44), COL.INK, 'center', 'middle');
       k.restore();
     }
@@ -400,16 +439,16 @@ function drawSceneB(k, t) {
   // Motion Prompt #005 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#005
   // 基線 → タイトルの区切り線(#005 の線の 0.1〜0.5 s easeInOut 3乗の区間で、中心から幅 1297 → ロゴとタイトルの幅へ伸びる)
   const TT = T.title;
-  const lw = lerp(BAR.total + 100, 190 + 56 + TITLE_W, eIO(P(t, TT + 0.1, TT + 0.5)));
+  const lw = lerp(BAR.total + 100, 190 + ICON_GAP + TITLE_W, eIO(P(t, TT + 0.1, TT + 0.5)));
   k.fillStyle = COL.INK; rr(k, 960 - lw / 2, LY - 7, lw, 14, 7); k.fill();
   // #005 マスクリビール: 上の段は線の下から 336 px(120 × 2.8)上がる 0.35〜1.0 s quintic ease-out、
   // 下の段は線の上から 168 px(60 × 2.8)下りる 0.55〜1.15 s。不透明度は変えず、クリップの外にいるだけで隠れる
   if (t >= TT) {
     const up = (1 - eOut5(P(t, TT + 0.35, TT + 1.0))) * 336;
     const dn = (1 - eOut5(P(t, TT + 0.55, TT + 1.15))) * -168;
-    const lock = 190 + 56 + TITLE_W, L = (W - lock) / 2;
+    const lock = 190 + ICON_GAP + TITLE_W, L = (W - lock) / 2;   // 最初のコマから最終位置。アイコンは左の空きに入る
     k.save(); k.beginPath(); k.rect(0, LY - 325, W, 325 - 13); k.clip();
-    txt(k, 'ひとつずつ', L + 246, LY - 20 + up, font(250), COL.INK, 'left', 'ideographic');
+    txt(k, 'ひとつずつ', L + 190 + ICON_GAP, LY - 20 + up, font(250), COL.INK, 'left', 'ideographic');
     k.restore();
     k.save(); k.beginPath(); k.rect(0, LY + 13, W, 147); k.clip();
     txt(k, '今日のことを、ひとつずつ。', 960, LY + 123 + dn, font(64, false), COL.INK, 'center');
@@ -448,11 +487,11 @@ function renderAt(t) {
   }
   // 「架空のアプリ」(全コマ。28 px)
   k.save();
-  k.font = font(28, false); const tw = k.measureText('架空のアプリ').width;
-  const pw = tw + 36, ph = 50, px = W - 40 - pw, py = H - 34 - ph;
+  k.font = font(30, false); const tw = k.measureText('架空のアプリ').width;
+  const pw = tw + 36, ph = 52, px = W - 40 - pw, py = H - 34 - ph;
   k.fillStyle = 'rgba(252,250,245,0.85)'; rr(k, px, py, pw, ph, ph / 2); k.fill();
   k.strokeStyle = COL.LINE; k.lineWidth = 2; rr(k, px, py, pw, ph, ph / 2); k.stroke();
-  txt(k, '架空のアプリ', px + pw / 2, py + ph / 2 + 1, font(28, false), COL.SUB, 'center', 'middle');
+  txt(k, '架空のアプリ', px + pw / 2, py + ph / 2 + 1, font(30, false), COL.SUB, 'center', 'middle');
   k.restore();
 }
 window.renderAt = renderAt;

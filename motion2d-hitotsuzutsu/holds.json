@@ -1,5 +1,11 @@
 {
+  "_note": "v2. Intended pauses with reasons. Without this ledger review_checks reports 1.53 s of stillness (budget 0.50 s).",
   "holds": [
-    {"start": 13.6, "end": 15.0, "reason": "End card: title, tagline and icon held still for reading (the brief allows about 1.5 s of stillness at the end)"}
+    {"start": 2.80, "end": 3.10, "reason": "Cursor eases into 植木に水 (end of the easeInOut approach). It is moving, but the 40 px arrow is below the checker's pixel threshold; the card lift starts at 3.07 s (cue f92)."},
+    {"start": 3.53, "end": 3.87, "reason": "Selection read: 植木に水 is lifted and the cursor rests on it before the click at 3.75 s (cue f113). Click and expansion times are fixed by the sound."},
+    {"start": 9.70, "end": 9.93, "reason": "Tail of the ring transition (#017 easeInOut) leaving through the bottom-right corner. Per review item 4 no text appears until the ring has fully opened at 9.9 s."},
+    {"start": 11.30, "end": 11.70, "reason": "Reading the finished weekly graph after today's bar lands (11.25 s, cue f338) and before the bars exit (11.58 s). This is the hold in #002's own timing."},
+    {"start": 12.90, "end": 13.17, "reason": "Reading the title after it lands (12.875 s) before the icon pops in on beat 21 (13.125 s, cue f394)."},
+    {"start": 13.6, "end": 15.0, "reason": "End card: title, tagline and icon held still for reading (the brief allows about 1.5 s of stillness at the end)."}
   ]
 }
