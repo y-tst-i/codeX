@@ -106,7 +106,7 @@ layV = midi_layer(gV, 11, dict(rev=1.1, wet=0.3, lp_hz=8000, hp_hz=200, damp_hz=
 
 # C 戻り・数: カリンバ(近い・暗い)
 tc = (cues["count_roll"] + 1) / FPS + 0.04
-gC = [(67, 7.52, 8.0, 50), (70, tc, tc + 0.6, 62), (74, (cues["count_lock"] + 1) / FPS + 0.04, 9.0, 56)]
+gC = [(67, 7.52, 8.0, 50), (70, tc, tc + 0.6, 62), (74, (cues["count_lock"] + 1) / FPS + 0.06, 9.0, 44)]
 layC = midi_layer(gC, 108, dict(rev=0.35, wet=0.15, lp_hz=4000, hp_hz=200, damp_hz=3500), -4)
 
 # D 窓・棒: ハープのグリッサンド(窓の少し前から)+ ピチカートの上り
@@ -156,7 +156,14 @@ def bus_comp(x, below_peak_db=12.0, ratio=4.0, att=0.002, rel=0.12):
     return x * (over ** (1 / ratio - 1))[:, None]
 
 
-music = bus_comp(music) + amb
+# 山(大チェック・タイトル)の直前から 0.35 秒だけ音楽を少し下げ、合算の頂点を減らす(リミッターの削り量を下げる)
+def hit_duck(frames, depth=-4.0):
+    pts = [(0, 0)]
+    for f in frames:
+        t = (f + 1) / FPS
+        pts += [(t - 0.06, 0), (t - 0.01, depth), (t + 0.25, depth), (t + 0.45, 0)]
+    return env_points(pts + [(DUR, 0)])
+music = bus_comp(music) * hit_duck([cues["main_check"]]) * hit_duck([cues["title_land"]], -6.0) * hit_duck([cues["count_lock"]], -3.0) + amb
 
 # ---------------------------------------------------------------- 効果音(録音素材)
 sfx = np.zeros((N, 2)); synth_sfx = np.zeros((N, 2))
@@ -186,7 +193,7 @@ for k, (n, nm) in enumerate(zip(["card_land_1", "card_land_2", "card_land_3", "c
                                ["drop_001", "drop_002", "drop_003", "drop_004", "drop_001", "toggle_003"])):
     place(nm, cues[n], -19 + [0, -3, -3, -3, 0, -6][k] + RNG.uniform(-1, 1), pan=[-0.4, 0, 0.4, -0.4, 0, 0.4][k], lp=3500)
 place("bookFlip3", cues["card_land_1"], -30, shift=0.03, lp=5000)          # 紙が擦れる手触り(山はクリックより後)
-place("select_001", cues["hover_card_1"], -20, pan=-0.3, lp=5000)
+# hover_card_1 は v2 で絵がなくなったので音を付けない
 place("select_002", cues["hover_select"], -42, pan=0.0, lp=5000)
 place("click_001", cues["select_click"], -11, lp=6000, crest=9)
 place("toggle_004", cues["expand_start"], -24, lp=5000)
@@ -195,14 +202,15 @@ place("drop_001", cues["expand_land"], -25, lp=5000)
 for k, n in enumerate(["step_check_1", "step_check_2", "step_check_3"]):
     place(["toggle_002", "toggle_001", "toggle_002"][k], cues[n], -28 + k * 0.5, pan=[-0.3, 0, 0.3][k], lp=7000)
 # 大チェック(山): 押す音 + 確定音 + 紙の重い置き
-place("click_001", cues["main_check"], -15, lp=8000, crest=12)
+place("click_001", cues["main_check"], -18, lp=8000, crest=12)
 place("confirmation_002", cues["main_check"], -25, shift=0.045)
 place("bookPlace1", cues["main_check"], -27, shift=0.05, lp=3000)
 place("toggle_004", cues["back_click"], -21, lp=5000)
 place("minimize_001", cues["shrink_start"], -28, lp=4000, hp=300)
-place("drop_002", cues["shrink_land"], -30, lp=5000)
+place("drop_002", cues["shrink_land"], -27.5, lp=5000)
 place("toggle_001", cues["count_roll"], -22, pan=0.4, lp=5000)
-place("drop_002", cues["count_lock"], -18, pan=0.4, lp=4000)
+place("drop_002", cues["count_lock"], -25, pan=0.4, lp=4000)  # v2: 数字が弾んで輪が広がる打点。少し目立たせる
+# count_grow(f239)と新しい合図(hint_step_*・cursor_visible・week_heading_in)は無音
 # 窓の通過音(合成): ピンクノイズの帯域を上げていく(サインのスイープは使わない)
 d = 1.15; n = int(d * SR); s0 = int((cues["portal_start"] + 1) / FPS * SR) - int(0.15 * SR)
 w = pink(n); tt_ = np.linspace(0, 1, n)
@@ -212,18 +220,18 @@ wh = (lo * (1 - tt_)[:, None] + hi * tt_[:, None]) * (np.sin(np.pi * tt_) ** 1.5
 wh = wh / np.abs(wh).max() * db(-34)
 synth_sfx[s0:s0 + n] += wh
 place("glass_002", cues["portal_start"], -17, lp=6000, target=None)
-place("drop_003", cues["portal_end"], -28, lp=4000)
+place("drop_003", cues["portal_end"], -25.5, lp=4000)
 for k, n_ in enumerate(bar_names):
-    place(["pluck_001", "pluck_002"][k % 2], cues[n_], -23 + k * 0.4, pan=-0.6 + k * 0.2, lp=3000)
+    place(["pluck_001", "pluck_002"][k % 2], cues[n_], -23 + k * 0.4 + (2.5 if k == 0 else 0), pan=-0.6 + k * 0.2, lp=3000)
 place("drop_004", cues["bar_today_land"], -20, pan=0.5, lp=4000)
 # bars_exit は窓 2 の中なので音を付けない(意図した静けさ)
 place("bookFlip2", cues["title_line"], -30, shift=0.06, lp=5000)
 place("toggle_002", cues["title_line"], -40, lp=3500)
 # タイトル着地(山): 柔らかい打撃 + 木 + 紙
-place("impactSoft_medium_000", cues["title_land"], -19, lp=5000, crest=7)
+place("impactSoft_medium_000", cues["title_land"], -23, lp=5000, crest=7)
 place("impactWood_medium_000", cues["title_land"], -26, shift=0.03, lp=4000)
 place("bookPlace2", cues["title_land"], -28, shift=0.04, lp=2500)
-place("cloth4", cues["title_rise"], -26, lp=5000)
+place("cloth4", cues["title_rise"], -23.5, lp=5000)
 place("drop_003", cues["tagline_land"], -18, lp=3500)
 place("pluck_002", cues["icon_pop"], -20, pan=-0.3, lp=7000)
 sfx = sfx + synth_sfx
