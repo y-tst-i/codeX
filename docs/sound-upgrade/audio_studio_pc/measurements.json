@@ -1,0 +1,287 @@
+﻿{
+    "round1_D1_pizz_marimba_v1.wav":  {
+                                          "sec":  15.0,
+                                          "sr":  44100,
+                                          "lufs":  -16.7,
+                                          "truepeak":  -2.6,
+                                          "samplepeak":  -2.65,
+                                          "rms_median":  -19.7,
+                                          "rms_min":  -29.4,
+                                          "rms_max":  -13.1,
+                                          "spread_p5_p95":  8.9,
+                                          "silent_windows":  0,
+                                          "silent_at":  [
+
+                                                        ],
+                                          "last_1s_vs_median":  -1.1
+                                      },
+    "round1_D1_pizz_marimba_v2.wav":  {
+                                          "sec":  15.0,
+                                          "sr":  44100,
+                                          "lufs":  -17.4,
+                                          "truepeak":  -3.0,
+                                          "samplepeak":  -2.98,
+                                          "rms_median":  -21.3,
+                                          "rms_min":  -96.0,
+                                          "rms_max":  -12.0,
+                                          "spread_p5_p95":  20.0,
+                                          "silent_windows":  8,
+                                          "silent_at":  [
+                                                            14.2,
+                                                            14.3,
+                                                            14.4,
+                                                            14.5,
+                                                            14.6,
+                                                            14.7,
+                                                            14.8,
+                                                            14.9
+                                                        ],
+                                          "last_1s_vs_median":  -27.1
+                                      },
+    "round1_D2_epiano_bass_v1.wav":  {
+                                         "sec":  15.0,
+                                         "sr":  44100,
+                                         "lufs":  -17.1,
+                                         "truepeak":  -3.3,
+                                         "samplepeak":  -3.25,
+                                         "rms_median":  -23.5,
+                                         "rms_min":  -92.2,
+                                         "rms_max":  -12.4,
+                                         "spread_p5_p95":  33.2,
+                                         "silent_windows":  18,
+                                         "silent_at":  [
+                                                           13.2,
+                                                           13.3,
+                                                           13.4,
+                                                           13.5,
+                                                           13.6,
+                                                           13.7,
+                                                           13.8,
+                                                           13.9,
+                                                           14.0,
+                                                           14.1
+                                                       ],
+                                         "last_1s_vs_median":  -34.3
+                                     },
+    "round1_D2_epiano_bass_v2.wav":  {
+                                         "sec":  15.0,
+                                         "sr":  44100,
+                                         "lufs":  -18.5,
+                                         "truepeak":  -3.5,
+                                         "samplepeak":  -3.48,
+                                         "rms_median":  -28.9,
+                                         "rms_min":  -95.3,
+                                         "rms_max":  -14.1,
+                                         "spread_p5_p95":  35.5,
+                                         "silent_windows":  15,
+                                         "silent_at":  [
+                                                           9.7,
+                                                           9.8,
+                                                           13.7,
+                                                           13.8,
+                                                           13.9,
+                                                           14.0,
+                                                           14.1,
+                                                           14.2,
+                                                           14.3,
+                                                           14.4
+                                                       ],
+                                         "last_1s_vs_median":  -37.2
+                                     },
+    "round1_D3_guitar_v1.wav":  {
+                                    "sec":  15.0,
+                                    "sr":  44100,
+                                    "lufs":  -15.8,
+                                    "truepeak":  -2.3,
+                                    "samplepeak":  -2.26,
+                                    "rms_median":  -19.2,
+                                    "rms_min":  -95.7,
+                                    "rms_max":  -11.3,
+                                    "spread_p5_p95":  36.1,
+                                    "silent_windows":  23,
+                                    "silent_at":  [
+                                                      0.0,
+                                                      12.8,
+                                                      12.9,
+                                                      13.0,
+                                                      13.1,
+                                                      13.2,
+                                                      13.3,
+                                                      13.4,
+                                                      13.5,
+                                                      13.6
+                                                  ],
+                                    "last_1s_vs_median":  -39.9
+                                },
+    "round1_D3_guitar_v2.wav":  {
+                                    "sec":  15.0,
+                                    "sr":  44100,
+                                    "lufs":  -17.2,
+                                    "truepeak":  -1.2,
+                                    "samplepeak":  -1.33,
+                                    "rms_median":  -20.1,
+                                    "rms_min":  -91.7,
+                                    "rms_max":  -11.8,
+                                    "spread_p5_p95":  30.0,
+                                    "silent_windows":  12,
+                                    "silent_at":  [
+                                                      13.8,
+                                                      13.9,
+                                                      14.0,
+                                                      14.1,
+                                                      14.2,
+                                                      14.3,
+                                                      14.4,
+                                                      14.5,
+                                                      14.6,
+                                                      14.7
+                                                  ],
+                                    "last_1s_vs_median":  -36.9
+                                },
+    "round1_D4_synth_pad_v1.wav":  {
+                                       "sec":  15.0,
+                                       "sr":  44100,
+                                       "lufs":  -20.5,
+                                       "truepeak":  -9.9,
+                                       "samplepeak":  -9.87,
+                                       "rms_median":  -25.2,
+                                       "rms_min":  -93.8,
+                                       "rms_max":  -19.6,
+                                       "spread_p5_p95":  40.7,
+                                       "silent_windows":  33,
+                                       "silent_at":  [
+                                                         11.5,
+                                                         11.8,
+                                                         11.9,
+                                                         12.0,
+                                                         12.1,
+                                                         12.2,
+                                                         12.3,
+                                                         12.4,
+                                                         12.5,
+                                                         12.6
+                                                     ],
+                                       "last_1s_vs_median":  -47.0
+                                   },
+    "round1_D4_synth_pad_v2.wav":  {
+                                       "sec":  15.0,
+                                       "sr":  44100,
+                                       "lufs":  -20.2,
+                                       "truepeak":  -6.2,
+                                       "samplepeak":  -6.16,
+                                       "rms_median":  -29.4,
+                                       "rms_min":  -94.8,
+                                       "rms_max":  -17.3,
+                                       "spread_p5_p95":  61.3,
+                                       "silent_windows":  37,
+                                       "silent_at":  [
+                                                         11.3,
+                                                         11.4,
+                                                         11.5,
+                                                         11.6,
+                                                         11.7,
+                                                         11.8,
+                                                         11.9,
+                                                         12.0,
+                                                         12.1,
+                                                         12.2
+                                                     ],
+                                       "last_1s_vs_median":  -59.8
+                                   },
+    "round2_cut15s_D2b_epiano_bass_v1.wav":  {
+                                                 "sec":  15.0,
+                                                 "sr":  44100,
+                                                 "lufs":  -15.7,
+                                                 "truepeak":  -1.0,
+                                                 "samplepeak":  -1.0,
+                                                 "rms_median":  -18.9,
+                                                 "rms_min":  -38.2,
+                                                 "rms_max":  -12.8,
+                                                 "spread_p5_p95":  9.3,
+                                                 "silent_windows":  1,
+                                                 "silent_at":  [
+                                                                   14.9
+                                                               ],
+                                                 "last_1s_vs_median":  -4.7
+                                             },
+    "round2_cut15s_D2b_epiano_bass_v2.wav":  {
+                                                 "sec":  15.0,
+                                                 "sr":  44100,
+                                                 "lufs":  -17.1,
+                                                 "truepeak":  -1.0,
+                                                 "samplepeak":  -1.0,
+                                                 "rms_median":  -20.8,
+                                                 "rms_min":  -36.6,
+                                                 "rms_max":  -13.9,
+                                                 "spread_p5_p95":  11.8,
+                                                 "silent_windows":  1,
+                                                 "silent_at":  [
+                                                                   9.9
+                                                               ],
+                                                 "last_1s_vs_median":  -3.0
+                                             },
+    "round2_cut15s_D3b_guitar_v1.wav":  {
+                                            "sec":  15.0,
+                                            "sr":  44100,
+                                            "lufs":  -16.1,
+                                            "truepeak":  -2.4,
+                                            "samplepeak":  -2.39,
+                                            "rms_median":  -19.7,
+                                            "rms_min":  -38.1,
+                                            "rms_max":  -10.4,
+                                            "spread_p5_p95":  13.1,
+                                            "silent_windows":  1,
+                                            "silent_at":  [
+                                                              14.9
+                                                          ],
+                                            "last_1s_vs_median":  -1.2
+                                        },
+    "round2_cut15s_D3b_guitar_v2.wav":  {
+                                            "sec":  15.0,
+                                            "sr":  44100,
+                                            "lufs":  -16.1,
+                                            "truepeak":  -2.8,
+                                            "samplepeak":  -2.8,
+                                            "rms_median":  -18.9,
+                                            "rms_min":  -37.7,
+                                            "rms_max":  -9.4,
+                                            "spread_p5_p95":  11.7,
+                                            "silent_windows":  1,
+                                            "silent_at":  [
+                                                              14.9
+                                                          ],
+                                            "last_1s_vs_median":  -2.5
+                                        },
+    "round2_cut15s_D4b_synth_pad_v1.wav":  {
+                                               "sec":  15.0,
+                                               "sr":  44100,
+                                               "lufs":  -27.1,
+                                               "truepeak":  -12.7,
+                                               "samplepeak":  -12.66,
+                                               "rms_median":  -32.7,
+                                               "rms_min":  -46.2,
+                                               "rms_max":  -25.5,
+                                               "spread_p5_p95":  8.3,
+                                               "silent_windows":  0,
+                                               "silent_at":  [
+
+                                                             ],
+                                               "last_1s_vs_median":  -1.7
+                                           },
+    "round2_cut15s_D4b_synth_pad_v2.wav":  {
+                                               "sec":  15.0,
+                                               "sr":  44100,
+                                               "lufs":  -23.9,
+                                               "truepeak":  -11.9,
+                                               "samplepeak":  -11.91,
+                                               "rms_median":  -27.8,
+                                               "rms_min":  -40.1,
+                                               "rms_max":  -23.7,
+                                               "spread_p5_p95":  6.4,
+                                               "silent_windows":  0,
+                                               "silent_at":  [
+
+                                                             ],
+                                               "last_1s_vs_median":  -2.8
+                                           }
+}
