@@ -1,0 +1,171 @@
+{
+ "E1_solemn_v1.wav": {
+  "sec": 20.0,
+  "lufs": -14.7,
+  "truepeak": -1.1,
+  "rms_median": -22.9,
+  "rms_min": -81.9,
+  "spread_p5_p95": 41.4,
+  "silent_windows": 20,
+  "silent_at": [
+   0.0,
+   0.1,
+   0.2,
+   0.3,
+   0.4,
+   0.5,
+   0.6,
+   0.7,
+   0.8,
+   0.9
+  ],
+  "tempo_estimate_bpm": 156.6,
+  "rms_by_5s": [
+   -37.8,
+   -23.1,
+   -22.8,
+   -20.3
+  ],
+  "rms_9_10s": -22.1,
+  "rms_10_11s": -22.5,
+  "rms_last_1s_vs_median": -5.7,
+  "rms_last_2s": [
+   -21.2,
+   -28.6
+  ]
+ },
+ "E1_solemn_v2.wav": {
+  "sec": 20.0,
+  "lufs": -15.6,
+  "truepeak": -2.8,
+  "rms_median": -21.5,
+  "rms_min": -41.2,
+  "spread_p5_p95": 8.9,
+  "silent_windows": 1,
+  "silent_at": [
+   19.9
+  ],
+  "tempo_estimate_bpm": 97.5,
+  "rms_by_5s": [
+   -22.1,
+   -20.3,
+   -20.7,
+   -22.5
+  ],
+  "rms_9_10s": -19.6,
+  "rms_10_11s": -16.5,
+  "rms_last_1s_vs_median": -6.8,
+  "rms_last_2s": [
+   -21.7,
+   -28.3
+  ]
+ },
+ "E2_adventure_v1.wav": {
+  "sec": 20.0,
+  "lufs": -13.1,
+  "truepeak": -1.4,
+  "rms_median": -20.4,
+  "rms_min": -45.5,
+  "spread_p5_p95": 6.8,
+  "silent_windows": 1,
+  "silent_at": [
+   19.9
+  ],
+  "tempo_estimate_bpm": 94.0,
+  "rms_by_5s": [
+   -20.1,
+   -20.4,
+   -21.0,
+   -21.1
+  ],
+  "rms_9_10s": -21.6,
+  "rms_10_11s": -20.7,
+  "rms_last_1s_vs_median": -7.3,
+  "rms_last_2s": [
+   -19.4,
+   -27.6
+  ]
+ },
+ "E2_adventure_v2.wav": {
+  "sec": 20.0,
+  "lufs": -12.6,
+  "truepeak": -1.7,
+  "rms_median": -19.6,
+  "rms_min": -51.1,
+  "spread_p5_p95": 8.4,
+  "silent_windows": 2,
+  "silent_at": [
+   19.8,
+   19.9
+  ],
+  "tempo_estimate_bpm": 95.7,
+  "rms_by_5s": [
+   -19.5,
+   -19.5,
+   -19.4,
+   -21.7
+  ],
+  "rms_9_10s": -20.2,
+  "rms_10_11s": -20.6,
+  "rms_last_1s_vs_median": -9.7,
+  "rms_last_2s": [
+   -20.2,
+   -29.3
+  ]
+ },
+ "E3_mystic_v1.wav": {
+  "sec": 20.0,
+  "lufs": -15.6,
+  "truepeak": -2.7,
+  "rms_median": -21.7,
+  "rms_min": -50.6,
+  "spread_p5_p95": 8.0,
+  "silent_windows": 3,
+  "silent_at": [
+   19.7,
+   19.8,
+   19.9
+  ],
+  "tempo_estimate_bpm": 112.3,
+  "rms_by_5s": [
+   -21.4,
+   -20.7,
+   -22.2,
+   -24.9
+  ],
+  "rms_9_10s": -19.8,
+  "rms_10_11s": -21.9,
+  "rms_last_1s_vs_median": -10.8,
+  "rms_last_2s": [
+   -24.4,
+   -32.5
+  ]
+ },
+ "E3_mystic_v2.wav": {
+  "sec": 20.0,
+  "lufs": -14.8,
+  "truepeak": -2.7,
+  "rms_median": -22.8,
+  "rms_min": -50.8,
+  "spread_p5_p95": 8.5,
+  "silent_windows": 2,
+  "silent_at": [
+   19.8,
+   19.9
+  ],
+  "tempo_estimate_bpm": 94.0,
+  "rms_by_5s": [
+   -23.2,
+   -21.5,
+   -22.1,
+   -25.9
+  ],
+  "rms_9_10s": -19.9,
+  "rms_10_11s": -20.8,
+  "rms_last_1s_vs_median": -11.1,
+  "rms_last_2s": [
+   -25.2,
+   -33.9
+  ]
+ }
+}
