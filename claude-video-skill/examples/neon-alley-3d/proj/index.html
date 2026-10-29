@@ -1,0 +1,714 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <script src="assets/gsap.min.js"></script>
+    <script type="importmap">
+      { "imports": { "three": "./assets/three/three.module.min.js", "three/addons/": "./assets/three/addons/" } }
+    </script>
+    <style>
+      @font-face { font-family: "Dela"; src: url("assets/fonts/dela.woff2") format("woff2"); font-display: block; }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 1920px; height: 1080px; overflow: hidden; background: #05060c; }
+      #root { position: relative; width: 1920px; height: 1080px; background: #05060c; overflow: hidden; }
+      #gl { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; display: block; }
+      #flash { position: absolute; inset: 0; background: #fff; opacity: 0; pointer-events: none; }
+      #fontwarm { position: absolute; left: -9999px; top: 0; font-family: "Dela"; font-size: 20px; color: #000; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="15" data-width="1920" data-height="1080">
+      <canvas id="gl"></canvas>
+      <div id="flash"></div>
+      <div id="fontwarm">配達夜市路地営業中酒場電気急便雨屋台湯OPEN24</div>
+    </div>
+    <script>
+      // DOM 用 timeline: 白い閃光(場面転換)だけ。3D は hf-seek で描く。
+      window.__timelines = window.__timelines || {};
+      const tl = gsap.timeline({ paused: true });
+      const F = "#flash";
+      tl.set(F, { opacity: 0 }, 0);
+      // S1 -> S2: 目のフレアから白
+      tl.to(F, { opacity: 1, duration: 0.1, ease: "power2.in" }, 2.88);
+      tl.to(F, { opacity: 0, duration: 0.3, ease: "power2.out" }, 3.0);
+      // S2 -> S3: 短い白(2コマ)
+      tl.to(F, { opacity: 0.85, duration: 0.033, ease: "none" }, 6.967);
+      tl.to(F, { opacity: 0, duration: 0.17, ease: "power2.out" }, 7.0);
+      // S3 -> S4: 光の筋から白へ
+      tl.to(F, { opacity: 1, duration: 0.28, ease: "power3.in" }, 10.22);
+      tl.to(F, { opacity: 0, duration: 0.45, ease: "power2.out" }, 10.5);
+      tl.set({}, {}, 15);
+      window.__timelines["main"] = tl;
+    </script>
+    <script type="module">
+      import * as THREE from "three";
+      import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
+      import { TextGeometry } from "three/addons/geometries/TextGeometry.js";
+      import { FontLoader } from "three/addons/loaders/FontLoader.js";
+      import { Reflector } from "three/addons/objects/Reflector.js";
+      import { makePost } from "./assets/post.js";
+
+      const DUR = 15, W = 1920, H = 1080;
+      const mulberry32 = (a) => () => { a |= 0; a = (a + 0x6d2b79f5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+      const clamp = (x, a, b) => Math.min(b, Math.max(a, x)), lerp = (a, b, k) => a + (b - a) * k;
+      const smooth = (a, b, x) => { const k = clamp((x - a) / (b - a), 0, 1); return k * k * (3 - 2 * k); };
+      const ease3 = (a, b, x) => { const k = clamp((x - a) / (b - a), 0, 1); return k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2; };
+      const outC = (a, b, x) => { const k = clamp((x - a) / (b - a), 0, 1); return 1 - Math.pow(1 - k, 3); };
+      const hash = (n) => { const s = Math.sin(n * 127.1 + 311.7) * 43758.5453; return s - Math.floor(s); };
+      const vnoise = (x) => { const i = Math.floor(x), f = x - i, u = f * f * (3 - 2 * f); return lerp(hash(i), hash(i + 1), u) * 2 - 1; };
+      const shake = (t, f, seed) => vnoise(t * f + seed * 17.3) * 0.6 + vnoise(t * f * 2.3 + seed * 5.1) * 0.4;
+
+      const canvas = document.getElementById("gl");
+      const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: "high-performance", preserveDrawingBuffer: true });
+      renderer.setPixelRatio(1);
+      renderer.toneMapping = THREE.NeutralToneMapping;
+      renderer.toneMappingExposure = 1.0;
+
+      const scene = new THREE.Scene();
+      scene.background = new THREE.Color("#05060c");
+      scene.fog = new THREE.FogExp2(0x05060c, 0.035);
+      const camera = new THREE.PerspectiveCamera(35, W / H, 0.05, 140);
+      scene.add(camera);
+
+      const post = makePost(renderer, scene, camera, W, H, { quality: "fast" });
+      renderer.setSize(post.W, post.H, false);
+      post.bloom.strength = 0.5; post.bloom.radius = 0.55; post.bloom.threshold = 1.3;
+
+      // ---------- パレット(場面ごとに一色へ振り切る) ----------
+      const PAL = [
+        { name: "A", fog: "#030a1a", c: ["#22e4ff", "#2a6bff", "#7a3cff", "#18ffd0"], dens: 0.04, sky: "#0a2a6a" },
+        { name: "B", fog: "#16030b", c: ["#ff1e3c", "#ff2bd0", "#ff5a8a", "#ff3a1a"], dens: 0.035, sky: "#5a0620" },
+        { name: "C", fog: "#180a03", c: ["#ff7a1a", "#ffb43a", "#ff4a1a", "#ffd27a"], dens: 0.032, sky: "#6a2a06" },
+        { name: "D", fog: "#07051a", c: ["#ff2d95", "#2de2ff", "#8a4bff", "#ff6ad5"], dens: 0.022, sky: "#2a0a5a" },
+      ];
+      const EYE = new THREE.Color("#5dffb0");
+
+      // ---------- テクスチャ ----------
+      function cvs(w, h) { const c = document.createElement("canvas"); c.width = w; c.height = h; return [c, c.getContext("2d")]; }
+      function tex(c, srgb = true) { const t = new THREE.CanvasTexture(c); if (srgb) t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t; }
+      function lighten(hex, k) { const c = new THREE.Color(hex); c.lerp(new THREE.Color(1, 1, 1), k); return "#" + c.getHexString(); }
+      const texCache = {};
+      function signTex(text, col, vertical) {
+        const key = text + col + vertical; if (texCache[key]) return texCache[key];
+        const chars = [...text];
+        const w = vertical ? 256 : 220 * Math.max(chars.length, 2) + 80, h = vertical ? 200 * chars.length + 80 : 300;
+        const [c, g] = cvs(w, h);
+        g.fillStyle = "#07070b"; g.fillRect(0, 0, w, h);
+        const r = mulberry32(text.length * 31 + col.charCodeAt(2));
+        for (let i = 0; i < 400; i++) { g.fillStyle = `rgba(255,255,255,${r() * 0.03})`; g.fillRect(r() * w, r() * h, 2, 2); }
+        g.lineJoin = "round";
+        g.shadowColor = col; g.shadowBlur = 26; g.strokeStyle = col; g.lineWidth = 9;
+        g.strokeRect(18, 18, w - 36, h - 36);
+        g.shadowBlur = 0; g.strokeStyle = lighten(col, 0.7); g.lineWidth = 3; g.strokeRect(18, 18, w - 36, h - 36);
+        g.textAlign = "center"; g.textBaseline = "middle";
+        const fs = vertical ? 168 : 190;
+        g.font = `${fs}px Dela`;
+        const drawAll = () => {
+          if (vertical) chars.forEach((ch, i) => g.fillText(ch, w / 2, 40 + 200 * i + 100));
+          else g.fillText(text, w / 2, h / 2 + 8);
+        };
+        g.shadowColor = col; g.shadowBlur = 40; g.fillStyle = col; drawAll();
+        g.shadowBlur = 12; g.fillStyle = lighten(col, 0.55); drawAll();
+        const t = tex(c); texCache[key] = t; return t;
+      }
+      function windowTex(seed, hue) {
+        const [c, g] = cvs(256, 512); const r = mulberry32(seed);
+        g.fillStyle = "#000"; g.fillRect(0, 0, 256, 512);
+        for (let y = 20; y < 500; y += 44) for (let x = 14; x < 240; x += 40) {
+          if (r() < 0.32) { const warm = r() < 0.6; g.fillStyle = warm ? `rgba(255,${150 + r() * 60 | 0},${70 + r() * 50 | 0},${0.35 + r() * 0.5})` : hue; g.globalAlpha = 0.25 + r() * 0.6; g.fillRect(x, y, 26, 30); g.globalAlpha = 1; }
+        }
+        return tex(c);
+      }
+      function shopTex(seed, col) {
+        const [c, g] = cvs(256, 128); const r = mulberry32(seed);
+        const gr = g.createLinearGradient(0, 0, 0, 128); gr.addColorStop(0, col); gr.addColorStop(1, "#140c08");
+        g.fillStyle = gr; g.fillRect(0, 0, 256, 128);
+        g.globalAlpha = 0.55; g.fillStyle = "#000";
+        for (let i = 0; i < 4; i++) { const x = r() * 220, w = 14 + r() * 26, h = 40 + r() * 50; g.beginPath(); g.ellipse(x + w / 2, 128 - h - 8, w * 0.35, w * 0.4, 0, 0, 7); g.fill(); g.fillRect(x, 128 - h, w, h); }
+        g.globalAlpha = 1; g.fillStyle = "#050505";
+        for (let x = 0; x <= 256; x += 64) g.fillRect(x - 3, 0, 6, 128);
+        g.fillRect(0, 0, 256, 8); g.fillRect(0, 60, 256, 4);
+        if (r() < 0.6) { g.fillStyle = "rgba(0,0,0,.6)"; for (let x = 8; x < 250; x += 28) g.fillRect(x, 8, 22, 34 + r() * 6); }
+        return tex(c);
+      }
+      function asphaltTex() {
+        const N = 1024; const [c, g] = cvs(N, N); const [a, ga] = cvs(N, N); const r = mulberry32(99);
+        g.fillStyle = "#1a1b20"; g.fillRect(0, 0, N, N);
+        for (let i = 0; i < 26000; i++) { const v = 14 + r() * 40 | 0; g.fillStyle = `rgb(${v},${v},${v + 3})`; g.fillRect(r() * N, r() * N, 1 + r() * 3, 1 + r() * 3); }
+        // ひび
+        g.strokeStyle = "rgba(0,0,0,.6)"; g.lineWidth = 2;
+        for (let i = 0; i < 18; i++) { g.beginPath(); let x = r() * N, y = r() * N; g.moveTo(x, y); for (let k = 0; k < 8; k++) { x += (r() - 0.5) * 90; y += (r() - 0.5) * 90; g.lineTo(x, y); } g.stroke(); }
+        // 不透明度: 乾いた所 .78、濡れ .5、水たまり .06
+        ga.fillStyle = "rgb(150,150,150)"; ga.fillRect(0, 0, N, N);
+        for (let i = 0; i < 22; i++) {
+          const x = r() * N, y = r() * N, rad = 60 + r() * 190;
+          const gr = ga.createRadialGradient(x, y, rad * 0.2, x, y, rad);
+          gr.addColorStop(0, "rgb(14,14,14)"); gr.addColorStop(0.65, "rgb(24,24,24)"); gr.addColorStop(1, "rgba(150,150,150,0)");
+          ga.fillStyle = gr; ga.beginPath(); ga.ellipse(x, y, rad, rad * (0.5 + r() * 0.6), r() * 3, 0, 7); ga.fill();
+        }
+        for (let i = 0; i < 4000; i++) { const v = 120 + r() * 90 | 0; ga.fillStyle = `rgb(${v},${v},${v})`; ga.fillRect(r() * N, r() * N, 2, 2); }
+        const tc = tex(c), ta = tex(a, false);
+        for (const t of [tc, ta]) { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(6, 40); }
+        return [tc, ta];
+      }
+      function discTex(ring) {
+        const [c, g] = cvs(128, 128);
+        const gr = g.createRadialGradient(64, 64, 0, 64, 64, 62);
+        if (ring) { gr.addColorStop(0, "rgba(255,255,255,.55)"); gr.addColorStop(0.82, "rgba(255,255,255,.75)"); gr.addColorStop(0.92, "rgba(255,255,255,1)"); gr.addColorStop(1, "rgba(255,255,255,0)"); }
+        else { gr.addColorStop(0, "rgba(255,255,255,1)"); gr.addColorStop(0.35, "rgba(255,255,255,.5)"); gr.addColorStop(1, "rgba(255,255,255,0)"); }
+        g.fillStyle = gr; g.fillRect(0, 0, 128, 128); return tex(c);
+      }
+      function smokeTex() {
+        const [c, g] = cvs(256, 256); const r = mulberry32(5);
+        for (let i = 0; i < 60; i++) { const x = 60 + r() * 136, y = 60 + r() * 136, rad = 20 + r() * 70; const gr = g.createRadialGradient(x, y, 0, x, y, rad); gr.addColorStop(0, "rgba(255,255,255,.12)"); gr.addColorStop(1, "rgba(255,255,255,0)"); g.fillStyle = gr; g.fillRect(0, 0, 256, 256); }
+        return tex(c);
+      }
+      function shadowTex() {
+        const [c, g] = cvs(128, 128); const gr = g.createRadialGradient(64, 64, 4, 64, 64, 62);
+        gr.addColorStop(0, "rgba(0,0,0,.9)"); gr.addColorStop(0.5, "rgba(0,0,0,.55)"); gr.addColorStop(1, "rgba(0,0,0,0)");
+        g.fillStyle = gr; g.fillRect(0, 0, 128, 128); return tex(c);
+      }
+
+      // ---------- 環境マップ(ネオンの部屋を PMREM で焼く → クロームに色が映る) ----------
+      const pmrem = new THREE.PMREMGenerator(renderer);
+      function neonEnv(pal, seed) {
+        const s = new THREE.Scene(); s.background = new THREE.Color(pal.fog);
+        const r = mulberry32(seed);
+        const room = new THREE.Mesh(new THREE.BoxGeometry(30, 14, 30), new THREE.MeshBasicMaterial({ color: new THREE.Color(pal.fog).multiplyScalar(1.4), side: THREE.BackSide }));
+        s.add(room);
+        for (let i = 0; i < 16; i++) {
+          const col = new THREE.Color(pal.c[i % 4]).multiplyScalar(2 + r() * 5);
+          const m = new THREE.Mesh(new THREE.PlaneGeometry(1 + r() * 4, 0.3 + r() * 2.5), new THREE.MeshBasicMaterial({ color: col, side: THREE.DoubleSide }));
+          const a = r() * Math.PI * 2; m.position.set(Math.cos(a) * 12, -3 + r() * 9, Math.sin(a) * 12); m.lookAt(0, 0, 0); s.add(m);
+        }
+        const top = new THREE.Mesh(new THREE.PlaneGeometry(10, 2), new THREE.MeshBasicMaterial({ color: new THREE.Color(1, 1, 1).multiplyScalar(2.5), side: THREE.DoubleSide }));
+        top.position.set(0, 6.9, 0); top.rotation.x = Math.PI / 2; s.add(top);
+        return pmrem.fromScene(s, 0.02).texture;
+      }
+
+      // ---------- 共通の材質・形 ----------
+      const BOX = new THREE.BoxGeometry(1, 1, 1), PLANE = new THREE.PlaneGeometry(1, 1);
+      const wallMats = [0x15161d, 0x1b1a20, 0x111319, 0x201c1f].map((c) => new THREE.MeshStandardMaterial({ color: c, roughness: 0.82, metalness: 0.15 }));
+      const darkMetal = new THREE.MeshStandardMaterial({ color: 0x202228, roughness: 0.4, metalness: 0.85 });
+      const hdr = (hex, k) => new THREE.MeshBasicMaterial({ color: new THREE.Color(hex).multiplyScalar(k) });
+
+      // ---------- 床(鏡 + 濡れたアスファルト) ----------
+      const ReflShader = {
+        name: "WetReflector",
+        uniforms: { color: { value: null }, tDiffuse: { value: null }, textureMatrix: { value: null }, uTime: { value: 0 }, uStr: { value: 0.012 }, uStretch: { value: 0.012 } },
+        vertexShader: `uniform mat4 textureMatrix; varying vec4 vUv; varying vec3 vW;
+          #include <common>
+          #include <logdepthbuf_pars_vertex>
+          void main(){ vUv = textureMatrix * vec4(position,1.0); vW = (modelMatrix*vec4(position,1.0)).xyz; gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.0);
+          #include <logdepthbuf_vertex>
+          }`,
+        fragmentShader: `uniform vec3 color; uniform sampler2D tDiffuse; uniform float uTime; uniform float uStr; uniform float uStretch; varying vec4 vUv; varying vec3 vW;
+          #include <logdepthbuf_pars_fragment>
+          void main(){
+            #include <logdepthbuf_fragment>
+            vec2 d = vec2(sin(vW.x*3.1+vW.z*1.7+uTime*1.3)+0.5*sin(vW.z*7.3-uTime*0.7), cos(vW.z*2.9+uTime*1.1)+0.5*cos(vW.x*6.1+uTime*0.9))*uStr;
+            vec4 uv = vUv; uv.xy += d*uv.w;
+            vec3 acc = vec3(0.0); float wsum = 0.0;
+            for (int i=-3;i<=3;i++){ float fi=float(i); float w = exp(-fi*fi*0.18); vec4 u2 = uv; u2.y += fi*uStretch*uv.w; acc += texture2DProj(tDiffuse,u2).rgb*w; wsum += w; }
+            gl_FragColor = vec4(acc/wsum*color, 1.0);
+            #include <tonemapping_fragment>
+            #include <colorspace_fragment>
+          }`,
+      };
+      const mirror = new Reflector(new THREE.PlaneGeometry(60, 260), { textureWidth: 960, textureHeight: 540, multisample: 0, color: 0xffffff, shader: ReflShader, clipBias: 0.003 });
+      mirror.material.uniforms.color.value = new THREE.Color(0.78, 0.8, 0.86);
+      mirror.rotation.x = -Math.PI / 2; mirror.position.set(0, 0, -60); scene.add(mirror);
+      const [asphC, asphA] = asphaltTex();
+      const asphalt = new THREE.Mesh(new THREE.PlaneGeometry(60, 260), new THREE.MeshStandardMaterial({ map: asphC, alphaMap: asphA, transparent: true, roughness: 0.42, metalness: 0.1, depthWrite: true }));
+      asphalt.rotation.x = -Math.PI / 2; asphalt.position.set(0, 0.004, -60); scene.add(asphalt);
+
+      // ---------- 路地を作る ----------
+      const SH = shadowTex(), DISC = discTex(true), SOFT = discTex(false), SMOKE = smokeTex();
+      function makeAlley(o) {
+        const G = new THREE.Group(); const r = mulberry32(o.seed); const P = o.pal.c;
+        const winTex = [0, 1, 2].map((i) => windowTex(o.seed + i, P[i]));
+        const bulbs = [];
+        for (const side of [-1, 1]) {
+          let z = o.z0;
+          while (z > o.z1) {
+            let L = 1.6 + r() * 2.8; const h = 6 + r() * 7, set = r() * 0.5, d = 3;
+            if (z - L < o.z1) L = z - o.z1; if (L < 0.7) break;
+            const face = side * (o.hw + set);
+            const fac = new THREE.Mesh(BOX, wallMats[(r() * 4) | 0]); fac.scale.set(d, h, L - 0.06); fac.position.set(face + side * d / 2, h / 2, z - L / 2); G.add(fac);
+            // 上階の窓
+            const wm = new THREE.MeshStandardMaterial({ color: 0x050507, emissive: 0xffffff, emissiveIntensity: 1.6, emissiveMap: winTex[(r() * 3) | 0], roughness: 0.6 });
+            const win = new THREE.Mesh(PLANE, wm); win.scale.set(L * 0.85, h - 3.5); win.position.set(face - side * 0.02, 3.2 + (h - 3.5) / 2, z - L / 2); win.rotation.y = -side * Math.PI / 2; G.add(win);
+            // 1階の店の明かり
+            if (r() < 0.65) {
+              const sc = r() < 0.4 ? "#ffb070" : P[(r() * 4) | 0];
+              const shop = new THREE.Mesh(PLANE, new THREE.MeshBasicMaterial({ map: shopTex((r() * 1e6) | 0, sc), color: new THREE.Color().setScalar(0.7 + r() * 0.9) })); shop.scale.set(L * 0.7, 1.5); shop.position.set(face - side * 0.03, 0.95, z - L / 2); shop.rotation.y = -side * Math.PI / 2; G.add(shop);
+              const awn = new THREE.Mesh(BOX, darkMetal); awn.scale.set(0.6, 0.06, L * 0.8); awn.position.set(face - side * 0.3, 1.85, z - L / 2); G.add(awn);
+            }
+            // 突き出し看板(縦書き)
+            if (r() < 0.8) {
+              const txt = o.texts[(r() * o.texts.length) | 0], col = P[(r() * 4) | 0];
+              const n = [...txt].length, sh = 0.55 * n + 0.25, sw = 0.62;
+              const sg = new THREE.Group();
+              const m = new THREE.MeshBasicMaterial({ map: signTex(txt, col, true), color: new THREE.Color().setScalar(2.6 + r() * 2.4) });
+              const p1 = new THREE.Mesh(PLANE, m); p1.scale.set(sw, sh); p1.position.z = 0.03; sg.add(p1);
+              const p2 = p1.clone(); p2.rotation.y = Math.PI; p2.position.z = -0.03; sg.add(p2);
+              const fr = new THREE.Mesh(BOX, darkMetal); fr.scale.set(sw + 0.06, sh + 0.06, 0.05); sg.add(fr);
+              sg.position.set(face - side * (0.5 + r() * 0.15), 2.6 + r() * 3 + sh / 2, z - 0.3 - r() * (L - 0.6));
+              sg.userData.flick = r() < 0.25 ? r() * 100 : -1; sg.userData.mat = m; sg.userData.base = m.color.r;
+              G.add(sg); (o.flick || (o.flick = [])).push(sg);
+            }
+            // 壁の横看板
+            if (r() < 0.55) {
+              const txt = o.texts[(r() * o.texts.length) | 0], col = P[(r() * 4) | 0];
+              const n = [...txt].length; const sw = 0.5 * n + 0.4, sh = 0.62;
+              const m = new THREE.MeshBasicMaterial({ map: signTex(txt, col, false), color: new THREE.Color().setScalar(2.4 + r() * 2) });
+              const p = new THREE.Mesh(PLANE, m); p.scale.set(sw, sh); p.position.set(face - side * 0.04, 2.2 + r() * 1.2, z - L / 2); p.rotation.y = -side * Math.PI / 2; G.add(p);
+            }
+            // ネオン管の輪・縦線
+            if (r() < 0.45) {
+              const col = P[(r() * 4) | 0];
+              const ring = new THREE.Mesh(new THREE.TorusGeometry(0.28 + r() * 0.3, 0.022, 8, 48), hdr(col, 5));
+              ring.position.set(face - side * 0.05, 3 + r() * 3, z - L * (0.2 + r() * 0.6)); ring.rotation.y = -side * Math.PI / 2; G.add(ring);
+            }
+            if (r() < 0.5) {
+              const col = P[(r() * 4) | 0]; const tube = new THREE.Mesh(BOX, hdr(col, 4.5)); const hh = 1.5 + r() * 3;
+              tube.scale.set(0.035, hh, 0.035); tube.position.set(face - side * 0.05, 2.2 + hh / 2, z - 0.1); G.add(tube);
+            }
+            // 室外機・配管
+            if (r() < 0.6) { const ac = new THREE.Mesh(BOX, darkMetal); ac.scale.set(0.45, 0.5, 0.7); ac.position.set(face - side * 0.25, 2.4 + r() * 4, z - r() * L); G.add(ac); }
+            if (r() < 0.4) { const pp = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, h, 8), darkMetal); pp.position.set(face - side * 0.12, h / 2, z - L + 0.15); G.add(pp); }
+            z -= L;
+          }
+        }
+        // 頭上の電線と電球
+        const cableMat = new THREE.MeshStandardMaterial({ color: 0x08080a, roughness: 0.6 });
+        for (let z = o.z0 - 1; z > o.z1; z -= 2.2 + r() * 3) {
+          const y = 4.6 + r() * 2.2, sag = 0.4 + r() * 0.5, x0 = -o.hw - 0.2, x1 = o.hw + 0.2, z2 = z - (r() - 0.5) * 2;
+          const curve = new THREE.QuadraticBezierCurve3(new THREE.Vector3(x0, y, z), new THREE.Vector3(0, y - sag * 2, (z + z2) / 2), new THREE.Vector3(x1, y + (r() - 0.5), z2));
+          G.add(new THREE.Mesh(new THREE.TubeGeometry(curve, 16, 0.012, 4), cableMat));
+          if (r() < o.bulbRate) for (let k = 1; k < 9; k++) { const p = curve.getPoint(k / 9); bulbs.push([p, P[(k + ((r() * 4) | 0)) % 4]]); }
+        }
+        if (bulbs.length) {
+          const im = new THREE.InstancedMesh(new THREE.SphereGeometry(o.lantern ? 0.13 : 0.045, 12, 8), new THREE.MeshBasicMaterial({ color: new THREE.Color().setScalar(o.lantern ? 3.2 : 5) }), bulbs.length);
+          const m4 = new THREE.Matrix4();
+          bulbs.forEach(([p, c], i) => { m4.makeScale(1, o.lantern ? 1.35 : 1, 1).setPosition(p.x, p.y - (o.lantern ? 0.2 : 0.03), p.z); im.setMatrixAt(i, m4); im.setColorAt(i, new THREE.Color(o.lantern ? (i % 3 ? "#ff5a1a" : "#ffb43a") : c)); });
+          G.add(im);
+        }
+        // 奥の空の明るさ(霧をかけない)
+        const skyM = new THREE.MeshBasicMaterial({ color: new THREE.Color(o.pal.sky).multiplyScalar(1.6), fog: false });
+        if (!o.noSky) { const sky = new THREE.Mesh(PLANE, skyM); sky.scale.set(o.hw * 2 + 6, 30); sky.position.set(0, 14, o.z1 - 6); G.add(sky); }
+        // 遠景のボケ玉
+        const n = o.bokeh ?? 160, pos = new Float32Array(n * 3), colA = new Float32Array(n * 3);
+        for (let i = 0; i < n; i++) {
+          pos[i * 3] = (r() - 0.5) * (o.hw * 2 + 2); pos[i * 3 + 1] = (o.bokehY ?? 1) + r() * 8; pos[i * 3 + 2] = o.z1 + r() * (o.z0 - o.z1) * 0.7 - 4;
+          const c = new THREE.Color(P[(r() * 4) | 0]).multiplyScalar(0.6 + r() * 1.2); colA.set([c.r, c.g, c.b], i * 3);
+        }
+        const bg = new THREE.BufferGeometry(); bg.setAttribute("position", new THREE.BufferAttribute(pos, 3)); bg.setAttribute("color", new THREE.BufferAttribute(colA, 3));
+        G.add(new THREE.Points(bg, new THREE.PointsMaterial({ size: 0.55, map: DISC, vertexColors: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0.55 })));
+        // 湯気
+        o.smoke = [];
+        for (let i = 0; i < 10; i++) {
+          const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: SMOKE, color: new THREE.Color(P[i % 4]).lerp(new THREE.Color(1, 1, 1), 0.5), transparent: true, opacity: 0.11, depthWrite: false }));
+          const s = 2.5 + r() * 3; sp.scale.set(s, s, 1); sp.position.set((r() - 0.5) * o.hw * 1.8, 0.6 + r() * 1.5, o.z0 - r() * (o.z0 - o.z1)); sp.userData.s = r() * 10; G.add(sp); o.smoke.push(sp);
+        }
+        G.visible = false; scene.add(G); o.G = G; return o;
+      }
+
+      // ---------- ロボ ----------
+      const BOT = {};
+      function buildBot() {
+        const g = new THREE.Group(), body = new THREE.Group(); g.add(body);
+        const chrome = new THREE.MeshPhysicalMaterial({ color: 0xeef1f6, metalness: 1, roughness: 0.14, clearcoat: 1, clearcoatRoughness: 0.06 });
+        const gun = new THREE.MeshPhysicalMaterial({ color: 0x2a2d35, metalness: 0.85, roughness: 0.3, clearcoat: 0.6 });
+        const glass = new THREE.MeshPhysicalMaterial({ color: 0x030405, metalness: 0.4, roughness: 0.04, clearcoat: 1 });
+        const rubber = new THREE.MeshStandardMaterial({ color: 0x0b0b0d, roughness: 0.55, metalness: 0.1 });
+        const shell = new THREE.Mesh(new RoundedBoxGeometry(0.86, 0.56, 1.0, 5, 0.16), chrome); shell.position.y = 0.47; body.add(shell);
+        const visor = new THREE.Mesh(new RoundedBoxGeometry(0.68, 0.3, 0.1, 4, 0.05), glass); visor.position.set(0, 0.5, 0.47); body.add(visor);
+        BOT.eyeMat = new THREE.MeshBasicMaterial({ color: EYE.clone() });
+        const eg = new THREE.CapsuleGeometry(0.05, 0.1, 6, 14);
+        BOT.eyes = [-0.15, 0.15].map((x) => { const e = new THREE.Mesh(eg, BOT.eyeMat); e.position.set(x, 0.5, 0.525); e.scale.z = 0.4; body.add(e); return e; });
+        const cargo = new THREE.Mesh(new RoundedBoxGeometry(0.72, 0.36, 0.62, 3, 0.05), gun); cargo.position.set(0, 0.92, -0.12); body.add(cargo);
+        BOT.stripeMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(5, 5, 5) });
+        const stripe = new THREE.Mesh(BOX, BOT.stripeMat); stripe.scale.set(0.735, 0.045, 0.635); stripe.position.set(0, 0.92, -0.12); body.add(stripe);
+        const lid = new THREE.Mesh(BOX, chrome); lid.scale.set(0.3, 0.05, 0.2); lid.position.set(0, 1.12, -0.12); body.add(lid);
+        const ant = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.42, 6), chrome); ant.position.set(0.27, 1.28, -0.32); body.add(ant);
+        BOT.tipMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(6, 0.6, 0.4) });
+        const tip = new THREE.Mesh(new THREE.SphereGeometry(0.035, 12, 8), BOT.tipMat); tip.position.set(0.27, 1.5, -0.32); body.add(tip);
+        BOT.headMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(6, 6, 6) });
+        for (const x of [-0.3, 0.3]) { const hl = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.03, 16), BOT.headMat); hl.rotation.x = Math.PI / 2; hl.position.set(x, 0.3, 0.505); body.add(hl); }
+        BOT.underMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(4, 4, 4) });
+        const under = new THREE.Mesh(BOX, BOT.underMat); under.scale.set(0.5, 0.012, 0.7); under.position.set(0, 0.19, 0); body.add(under);
+        // 車輪
+        BOT.wheels = [];
+        const wg = new THREE.CylinderGeometry(0.17, 0.17, 0.12, 28), hg = new THREE.CylinderGeometry(0.085, 0.085, 0.13, 6);
+        for (const x of [-0.47, 0.47]) for (const z of [-0.32, 0.32]) {
+          const w = new THREE.Group(); w.position.set(x, 0.17, z);
+          const tire = new THREE.Mesh(wg, rubber); tire.rotation.z = Math.PI / 2; w.add(tire);
+          const hub = new THREE.Mesh(hg, chrome); hub.rotation.z = Math.PI / 2; w.add(hub);
+          const sp = new THREE.Mesh(BOX, gun); sp.scale.set(0.14, 0.03, 0.2); w.add(sp);
+          g.add(w); BOT.wheels.push(w);
+        }
+        const shadow = new THREE.Mesh(PLANE, new THREE.MeshBasicMaterial({ map: SH, transparent: true, depthWrite: false })); shadow.rotation.x = -Math.PI / 2; shadow.scale.set(1.5, 1.7, 1); shadow.position.y = 0.008; g.add(shadow);
+        BOT.shadow = shadow; BOT.g = g; BOT.body = body; scene.add(g);
+      }
+      function poseBot(p) {
+        BOT.g.position.set(p.x, 0, p.z); BOT.g.rotation.set(0, p.yaw, 0);
+        BOT.body.position.set(0, p.y, 0); BOT.body.rotation.set(p.pitch || 0, 0, p.roll || 0);
+        const sq = p.squash || 0; BOT.body.scale.set(1 + sq * 0.5, 1 - sq, 1 + sq * 0.5);
+        BOT.wheels.forEach((w) => { w.rotation.x = (p.dist || 0) / 0.17; w.position.y = 0.17 + p.y; });
+        const hgt = p.y; BOT.shadow.position.y = 0.008 - 0; BOT.shadow.material.opacity = clamp(1 - hgt * 0.6, 0.15, 1); BOT.shadow.scale.set(1.5 + hgt * 0.8, 1.7 + hgt * 0.8, 1); BOT.shadow.position.set(0, 0.008 - p.y * 0 , 0);
+        BOT.shadow.position.y = 0.008; BOT.shadow.updateMatrix();
+        BOT.eyeMat.color.copy(EYE).multiplyScalar(p.eye);
+        BOT.eyes.forEach((e) => (e.scale.y = p.blink ?? 1));
+      }
+
+      // ---------- 粒子 ----------
+      function makePoints(n, size, tex, opacity = 1) {
+        const g = new THREE.BufferGeometry();
+        g.setAttribute("position", new THREE.BufferAttribute(new Float32Array(n * 3), 3));
+        g.setAttribute("color", new THREE.BufferAttribute(new Float32Array(n * 3), 3));
+        const p = new THREE.Points(g, new THREE.PointsMaterial({ size, map: tex, vertexColors: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity }));
+        p.frustumCulled = false; scene.add(p); return p;
+      }
+      function makeLines(n) {
+        const g = new THREE.BufferGeometry();
+        g.setAttribute("position", new THREE.BufferAttribute(new Float32Array(n * 6), 3));
+        g.setAttribute("color", new THREE.BufferAttribute(new Float32Array(n * 6), 3));
+        const l = new THREE.LineSegments(g, new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
+        l.frustumCulled = false; return l;
+      }
+
+      // ---------- 組み立て ----------
+      const S = {};
+      async function build() {
+        await document.fonts.load("100px Dela", "配達夜市"); await document.fonts.ready;
+        S.env = PAL.map((p, i) => neonEnv(p, 11 + i * 7));
+        S.alleys = [
+          makeAlley({ seed: 101, z0: 8, z1: -40, hw: 2.4, pal: PAL[0], texts: ["路地", "配達", "雨", "夜市", "24", "OPEN"], bulbRate: 0.3 }),
+          makeAlley({ seed: 202, z0: 10, z1: -48, hw: 2.6, pal: PAL[1], texts: ["急便", "営業中", "酒場", "電気", "夜市", "配達", "OPEN"], bulbRate: 0.5 }),
+          makeAlley({ seed: 303, z0: 12, z1: -40, hw: 3.2, pal: PAL[2], texts: ["電気", "酒場", "屋台", "営業中", "湯"], bulbRate: 0.85, lantern: true }),
+          makeAlley({ seed: 404, z0: 14, z1: -0.5, hw: 3.3, pal: PAL[3], texts: ["配達", "夜市", "路地", "雨"], bulbRate: 0.4, bokeh: 40, bokehY: 5.5, noSky: true }),
+        ];
+        buildBot();
+        // 4つの点光源(数を固定してシェーダーの再コンパイルを避ける)
+        S.L = [0, 1, 2, 3].map(() => { const l = new THREE.PointLight(0xffffff, 0, 9, 2); scene.add(l); return l; });
+        S.hemi = new THREE.HemisphereLight(0x8899ff, 0x110808, 0.25); scene.add(S.hemi);
+        // S1: しずくと波紋
+        S.drips = makePoints(14, 0.06, SOFT, 1);
+        S.rings = [];
+        const rg = new THREE.RingGeometry(0.92, 1, 64);
+        for (let i = 0; i < 14; i++) { const m = new THREE.Mesh(rg, new THREE.MeshBasicMaterial({ color: new THREE.Color(1, 1, 1), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending })); m.rotation.x = -Math.PI / 2; m.position.y = 0.012; scene.add(m); S.rings.push(m); }
+        // 漂う塵
+        S.dust = makePoints(380, 0.03, SOFT, 0.9);
+        // 水しぶき
+        S.spray = makePoints(420, 0.05, SOFT, 0.85);
+        // 火花
+        S.sparks = makePoints(520, 0.07, SOFT, 1);
+        // 光の筋(ワープ)
+        S.warp = makeLines(420); camera.add(S.warp);
+        // S3 の小道具: 箱とスロープ、電柱とトランス、雷
+        const S3 = new THREE.Group();
+        const wood = new THREE.MeshStandardMaterial({ color: 0x5a3a22, roughness: 0.7 });
+        const crate = new THREE.Mesh(BOX, wood); crate.scale.set(0.9, 0.42, 0.7); crate.position.set(0, 0.21, -0.1); S3.add(crate);
+        const plank = new THREE.Mesh(BOX, darkMetal); plank.scale.set(0.8, 0.04, 1.5); plank.position.set(0, 0.2, 0.86); plank.rotation.x = -0.28; S3.add(plank);
+        const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.13, 9, 10), wallMats[0]); pole.position.set(3.0, 4.5, -1.6); S3.add(pole);
+        const trans = new THREE.Mesh(BOX, darkMetal); trans.scale.set(0.5, 0.7, 0.5); trans.position.set(2.85, 2.6, -1.6); S3.add(trans);
+        S.bolt = new THREE.Group();
+        const br = mulberry32(777);
+        const boltMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(9, 9, 12), fog: false });
+        const glowMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(1.2, 1.0, 2.2), transparent: true, opacity: 0.22, blending: THREE.AdditiveBlending, depthWrite: false, fog: false });
+        function boltPath(a, b, depth, rad) {
+          let pts = [a, b];
+          for (let k = 0; k < depth; k++) {
+            const np = [pts[0]];
+            for (let i = 1; i < pts.length; i++) { const p0 = pts[i - 1], p1 = pts[i]; const m = p0.clone().lerp(p1, 0.5); const L = p0.distanceTo(p1); m.x += (br() - 0.5) * L * 0.45; m.z += (br() - 0.5) * L * 0.3; np.push(m, p1); }
+            pts = np;
+          }
+          for (let i = 1; i < pts.length; i++) {
+            const p0 = pts[i - 1], p1 = pts[i], L = p0.distanceTo(p1);
+            for (const [mat, rr] of [[boltMat, rad], [glowMat, rad * 5]]) {
+              const c = new THREE.Mesh(new THREE.CylinderGeometry(rr, rr, L, 6), mat);
+              c.position.copy(p0).lerp(p1, 0.5); c.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), p1.clone().sub(p0).normalize()); S.bolt.add(c);
+            }
+          }
+          return pts;
+        }
+        const main = boltPath(new THREE.Vector3(4.6, 14, -5), new THREE.Vector3(2.85, 2.95, -1.6), 6, 0.04);
+        boltPath(main[30].clone(), main[30].clone().add(new THREE.Vector3(1.5, -5, 2)), 4, 0.02);
+        boltPath(main[44].clone(), main[44].clone().add(new THREE.Vector3(-1.2, -2.6, 1.5)), 4, 0.018);
+        S3.add(S.bolt); S.alleys[2].G.add(S3);
+        // S4: タイトル壁と NEON ALLEY
+        const D = S.alleys[3].G;
+        const endWall = new THREE.Mesh(BOX, new THREE.MeshStandardMaterial({ color: 0x0b0b10, roughness: 0.9, metalness: 0.1 })); endWall.scale.set(20, 12, 1); endWall.position.set(0, 6, -7.2); D.add(endWall);
+        const font = new FontLoader().parse(await (await fetch("assets/fonts/helvetiker_bold.typeface.json")).json());
+        const word = "NEON ALLEY", size = 0.92, res = font.data.resolution;
+        let adv = 0; const advs = [];
+        for (const ch of word) { advs.push(adv); adv += (font.data.glyphs[ch] ? font.data.glyphs[ch].ha : 300) * size / res + 0.08; }
+        const total = adv - 0.08; S.letters = [];
+        const side = new THREE.MeshPhysicalMaterial({ color: 0x1a1b22, metalness: 0.9, roughness: 0.25, clearcoat: 1 });
+        [...word].forEach((ch, i) => {
+          if (ch === " ") return;
+          const geo = new TextGeometry(ch, { font, size, depth: 0.22, curveSegments: 8, bevelEnabled: true, bevelThickness: 0.03, bevelSize: 0.022, bevelSegments: 2 });
+          const col = new THREE.Color(i < 4 ? PAL[3].c[0] : PAL[3].c[1]);
+          const front = new THREE.MeshStandardMaterial({ color: 0x08080b, emissive: col, emissiveIntensity: 0, roughness: 0.3, metalness: 0.2 });
+          const m = new THREE.Mesh(geo, [front, side]); m.position.set(-total / 2 + advs[i], 3.75, -6.55); D.add(m);
+          S.letters.push({ m, front, idx: S.letters.length, col });
+        });
+        // 看板の枠(ネオン管)と輪
+        S.frame = [];
+        const fw = total + 0.9, fy0 = 3.35, fy1 = 5.2;
+        for (const [w, h, x, y] of [[fw, 0.05, 0, fy0], [fw, 0.05, 0, fy1], [0.05, fy1 - fy0, -fw / 2, (fy0 + fy1) / 2], [0.05, fy1 - fy0, fw / 2, (fy0 + fy1) / 2]]) {
+          const b = new THREE.Mesh(BOX, new THREE.MeshBasicMaterial({ color: new THREE.Color(PAL[3].c[2]).multiplyScalar(0) })); b.scale.set(w, h, 0.05); b.position.set(x, y, -6.6); D.add(b); S.frame.push(b);
+        }
+        S.ring = new THREE.Mesh(new THREE.TorusGeometry(1.45, 0.05, 10, 96), new THREE.MeshBasicMaterial({ color: new THREE.Color(0, 0, 0) })); S.ring.position.set(0, 1.65, -6.6); D.add(S.ring);
+        S.ring2 = new THREE.Mesh(new THREE.TorusGeometry(1.25, 0.025, 8, 96), new THREE.MeshBasicMaterial({ color: new THREE.Color(0, 0, 0) })); S.ring2.position.set(0, 1.65, -6.6); D.add(S.ring2);
+        S.smallSign = new THREE.Mesh(PLANE, new THREE.MeshBasicMaterial({ map: signTex("配達", PAL[3].c[3], true), color: new THREE.Color().setScalar(3) }));
+        S.smallSign.scale.set(0.6, 1.35); S.smallSign.position.set(4.6, 2.2, -6.65); D.add(S.smallSign);
+        renderer.compile(scene, camera);
+      }
+
+      // ---------- 場面の切り替え ----------
+      let cur = -1;
+      function setScene(i, t) {
+        if (i !== cur) { S.alleys.forEach((a, k) => (a.G.visible = k === i)); scene.environment = S.env[i]; cur = i; }
+        const P = PAL[i];
+        scene.fog.color.set(P.fog); scene.background.set(P.fog); scene.fog.density = P.dens;
+        BOT.stripeMat.color.set(P.c[0]).multiplyScalar(5);
+        BOT.underMat.color.set(P.c[1]).multiplyScalar(0.35);
+        // 看板のちらつき
+        for (const s of S.alleys[i].flick || []) { if (s.userData.flick < 0) continue; const f = Math.floor(t * 15 + s.userData.flick); const on = hash(f) > 0.18 ? 1 : 0.15; s.userData.mat.color.setScalar(s.userData.base * on); }
+        for (const sp of S.alleys[i].smoke) { const k = sp.userData.s; sp.material.opacity = i === 3 ? 0.05 : 0.11; sp.material.rotation = k + t * 0.08; sp.position.y = 0.6 + ((k * 0.13 + t * 0.12) % 1.5); }
+      }
+
+      // ---------- 時間の地図 ----------
+      // S3 のスロー(タイムリマップ): 実時間 tau -> 物語時間 s
+      function rateS3(tau) { return 1 - 0.9 * smooth(0.85, 1.2, tau) + 0.9 * smooth(2.35, 2.7, tau); }
+      function storyS3(tau) { let s = 0; const dt = 0.002; for (let x = 0; x < tau; x += dt) s += rateS3(x + dt / 2) * Math.min(dt, tau - x); return s; }
+      // S3 のロボ軌道(物語時間)
+      function botS3(s) {
+        const v = 7, zL = 0.15, sL = 0.75, vy = 5.2, gr = 13;
+        let z = 5.4 - v * s, y = 0, pitch = 0, squash = 0;
+        if (s > sL - 0.18 && s < sL) { const k = (s - (sL - 0.18)) / 0.18; y = k * 0.38; pitch = -0.28 * k; }
+        if (s >= sL) { const a = s - sL; y = Math.max(0, 0.38 + vy * a - 0.5 * gr * a * a); pitch = lerp(-0.3, 0.32, smooth(0, 0.85, a)); if (y <= 0) pitch = 0; }
+        const land = sL + (vy + Math.sqrt(vy * vy + 2 * gr * 0.38)) / gr;
+        if (s > land) { const a = s - land; squash = 0.22 * Math.exp(-a * 9) * Math.cos(a * 30); pitch = 0.18 * Math.exp(-a * 8); }
+        return { x: 0, z, y, yaw: Math.PI, pitch, squash, dist: v * s, land };
+      }
+
+      const V = new THREE.Vector3(), V2 = new THREE.Vector3();
+      function look(px, py, pz, tx, ty, tz, roll = 0, fov = 35) {
+        camera.position.set(px, py, pz); camera.up.set(0, 1, 0); camera.lookAt(tx, ty, tz);
+        if (roll) camera.rotateZ(roll);
+        if (camera.fov !== fov) { camera.fov = fov; camera.updateProjectionMatrix(); }
+      }
+      function lights(i, bx, bz, k = 1) {
+        const P = PAL[i];
+        const cfg = [[-1.8, 2.6, 0.6, P.c[0], 14], [1.9, 1.6, -0.8, P.c[1], 12], [0.4, 0.5, 1.6, P.c[2], 4], [0, 2.2, -2.4, P.c[3], 10]];
+        cfg.forEach(([x, y, z, c, I], n) => { const l = S.L[n]; l.position.set(bx + x, y, bz + z); l.color.set(c); l.intensity = I * k; });
+      }
+
+      // 粒子の更新
+      function updDust(t, cx, cy, cz, col, amt) {
+        const p = S.dust.geometry.attributes.position, c = S.dust.geometry.attributes.color; const r = mulberry32(55); const cc = new THREE.Color(col);
+        for (let i = 0; i < p.count; i++) {
+          const ox = (r() - 0.5) * 9, oy = r() * 4, oz = (r() - 0.5) * 9, sp = 0.05 + r() * 0.12, ph = r() * 6.28, b = r();
+          p.setXYZ(i, cx + ox + Math.sin(t * 0.4 + ph) * 0.3, oy + ((t * sp + ph) % 4) * 0.25, cz + oz);
+          const k = amt * (0.3 + b * 1.2); c.setXYZ(i, cc.r * k, cc.g * k, cc.b * k);
+        }
+        p.needsUpdate = c.needsUpdate = true;
+      }
+      function clearPts(pts) { const c = pts.geometry.attributes.color; c.array.fill(0); c.needsUpdate = true; }
+      function updSpray(t, posAt, col, amt) {
+        const p = S.spray.geometry.attributes.position, c = S.spray.geometry.attributes.color; const r = mulberry32(77); const cc = new THREE.Color(col).lerp(new THREE.Color(1, 1, 1), 0.5);
+        for (let i = 0; i < p.count; i++) {
+          const life = 0.35 + r() * 0.3, ph = r() * life, vx = (r() - 0.5) * 2.2, vy = 1 + r() * 2.2, vz = 0.5 + r() * 2.5, wx = r() < 0.5 ? -0.45 : 0.45, wz = r() < 0.5 ? -0.32 : 0.32;
+          const a = (t + ph) % life, t0 = t - a; const b = posAt(t0);
+          if (!b) { c.setXYZ(i, 0, 0, 0); continue; }
+          const bx = b.x + Math.sin(b.yaw) * wz * 1 + Math.cos(b.yaw) * wx, bz = b.z + Math.cos(b.yaw) * wz - Math.sin(b.yaw) * wx;
+          const back = -1; // 進行方向の逆へ飛ぶ
+          p.setXYZ(i, bx + vx * a * 0.4 + Math.sin(b.yaw) * back * vz * a, Math.max(0.01, 0.05 + vy * a - 4.9 * a * a), bz + Math.cos(b.yaw) * back * vz * a);
+          const k = amt * b.sp * (1 - a / life) * 1.6; c.setXYZ(i, cc.r * k, cc.g * k, cc.b * k);
+        }
+        p.needsUpdate = c.needsUpdate = true;
+      }
+
+      // ---------- 時刻 t の状態 ----------
+      function update(t) {
+        const sc = t < 3 ? 0 : t < 7 ? 1 : t < 10.5 ? 2 : 3;
+        setScene(sc, t);
+        mirror.material.uniforms.uTime.value = Math.min(t, 13.6);
+        S.warp.visible = false; S.bolt.visible = false; clearPts(S.sparks); clearPts(S.drips);
+        S.rings.forEach((m) => (m.visible = false));
+        let exposure = 1.0;
+        const G = post.vig.uniforms;
+        if (sc === 0) {
+          // ===== S1 起動: 水たまりの縁、超ローアングル、ラックフォーカス =====
+          const eyeOn = t < 1.5 ? 0 : t < 1.62 ? (Math.floor(t * 30) % 2 ? 4 : 0.5) : t < 1.7 ? 1.5 : 4 + 2 * smooth(1.7, 2.0, t);
+          const flare = smooth(2.55, 2.95, t);
+          const rev = smooth(2.25, 2.6, t) * (1 - smooth(2.7, 2.9, t));
+          poseBot({ x: 0, z: 0, y: 0, yaw: -0.42, pitch: -0.1 * rev, squash: 0.06 * rev + (t > 1.5 && t < 1.8 ? 0.05 * Math.sin((t - 1.5) * 40) * (1.8 - t) * 3 : 0), dist: 0, eye: eyeOn + flare * 26, blink: 1 });
+          BOT.tipMat.color.setRGB(6, 0.6, 0.4).multiplyScalar(t > 1.5 && Math.floor(t * 4) % 2 ? 1 : 0.1);
+          BOT.headMat.color.setScalar(t > 1.7 ? 6 : 0.2);
+          const k = ease3(0, 3, t);
+          look(lerp(0.85, 0.32, k), lerp(0.1, 0.2, k) + shake(t, 0.7, 1) * 0.01, lerp(5.2, 2.7, k), lerp(0.25, 0, k), lerp(0.18, 0.42, k), -0.5, 0.03, 38);
+          const fN = 1.4, fR = camera.position.distanceTo(V.set(0, 0.45, 0));
+          post.dof.focus = lerp(fN, fR, ease3(1.45, 2.25, t)); post.dof.aper = 70; post.dof.maxCoc = 16;
+          lights(0, 0, 0, 0.6 + 0.6 * smooth(1.5, 2.0, t));
+          S.L[2].color.set(EYE); S.L[2].position.set(0, 0.5, 1.3); S.L[2].intensity = eyeOn * 0.9 + flare * 30;
+          // しずくと波紋
+          const dp = S.drips.geometry.attributes.position, dc = S.drips.geometry.attributes.color; const r = mulberry32(31);
+          let ri = 0;
+          for (let i = 0; i < 14; i++) {
+            const te = -0.6 + i * 0.27 + r() * 0.2, x = 0.2 + (r() - 0.5) * 1.6, z = 2.2 + (r() - 0.5) * 2.2, fall = 0.9;
+            const a = t - (te - fall);
+            if (a > 0 && a < fall) { dp.setXYZ(i, x, 3.6 - 0.5 * 4.4 * a * a, z); dc.setXYZ(i, 1.2, 1.6, 2); }
+            const age = t - te;
+            if (age > 0 && age < 1.4 && ri < S.rings.length) {
+              for (let rr = 0; rr < 2 && ri < S.rings.length; rr++) {
+                const ag = age - rr * 0.18; if (ag <= 0) continue;
+                const m = S.rings[ri++]; m.visible = true; const s = 0.03 + ag * 0.42; m.scale.set(s, s, 1); m.position.set(x, 0.012, z);
+                m.material.color.set(PAL[0].c[0]).multiplyScalar((1 - age / 1.4) * 1.1);
+              }
+            }
+          }
+          dp.needsUpdate = dc.needsUpdate = true;
+          updDust(t, 0, 0, 1, PAL[0].c[0], 0.8);
+          clearPts(S.spray);
+          mirror.material.uniforms.uStr.value = 0.006; mirror.material.uniforms.uStretch.value = 0.01;
+          G.amt.value = 0.45; G.warm.value = 0; G.sat.value = 1.15; G.contrast.value = 0.22; G.fade.value = 1;
+          exposure = lerp(0.6, 1.05, smooth(0, 0.8, t));
+        } else if (sc === 1) {
+          // ===== S2 疾走: 横の追走 → 正面へ回り込み =====
+          const tau = t - 3, v = 7.2;
+          const zAt = (tt) => 4 - v * (tt - 3);
+          const bounce = Math.abs(Math.sin(tau * 18)) * 0.025;
+          const bz = zAt(t);
+          poseBot({ x: 0.15, z: bz, y: bounce, yaw: Math.PI, pitch: 0.06, roll: Math.sin(tau * 9) * 0.02, dist: v * tau, eye: 5, squash: 0 });
+          BOT.tipMat.color.setRGB(6, 0.6, 0.4).multiplyScalar(Math.floor(t * 4) % 2 ? 1 : 0.1); BOT.headMat.color.setScalar(6);
+          let th, R, h, roll;
+          if (tau < 1.8) { th = Math.PI / 2 * 1.05; R = 2.9; h = 0.5; roll = 0; }
+          else { const k = ease3(1.8, 2.45, tau); th = lerp(Math.PI / 2 * 1.05, 0.12, k); R = lerp(2.9, 3.4, k); h = lerp(0.5, 0.3, k); roll = lerp(0, 0.14, k); }
+          if (tau > 2.45) { const k = smooth(2.45, 4, tau); th = lerp(0.12, -0.2, k); R = lerp(3.4, 1.25, k * k); h = lerp(0.3, 0.22, k); }
+          const lead = tau < 1.8 ? -0.5 : 0;
+          const cx = 0.15 + R * Math.sin(th), cz = bz - R * Math.cos(th) + lead;
+          look(cx + shake(t, 3, 2) * 0.03, h + shake(t, 4, 3) * 0.025, cz, 0.15, 0.45, bz + lead * 0.6, roll + shake(t, 2, 4) * 0.01, tau > 1.8 ? lerp(35, 30, smooth(1.8, 2.4, tau)) : 35);
+          post.dof.focus = camera.position.distanceTo(V.set(0.15, 0.5, bz)); post.dof.aper = 55; post.dof.maxCoc = 14;
+          lights(1, 0.15, bz, 1.1);
+          updDust(t, 0, 0, bz, PAL[1].c[2], 0.5);
+          updSpray(t, (tt) => (tt < 3 ? null : { x: 0.15, z: zAt(tt), yaw: Math.PI, sp: 1 }), PAL[1].c[0], 1);
+          mirror.material.uniforms.uStr.value = 0.01; mirror.material.uniforms.uStretch.value = 0.016;
+          G.amt.value = 0.42; G.warm.value = 0.05; G.sat.value = 1.2; G.contrast.value = 0.24; G.fade.value = 1;
+          exposure = 1.05;
+        } else if (sc === 2) {
+          // ===== S3 跳躍: スロー、雷、バレットタイム =====
+          const tau = t - 7, s = storyS3(tau);
+          const b = botS3(s);
+          poseBot({ ...b, eye: 6 });
+          BOT.tipMat.color.setRGB(6, 0.6, 0.4); BOT.headMat.color.setScalar(6);
+          const sLight = 1.1, la = s - sLight;
+          const boltOn = la > 0 && la < 0.075 && hash(Math.floor(la * 400)) > 0.25;
+          S.bolt.visible = boltOn;
+          const flash = la > 0 && la < 0.09 ? (boltOn ? 1 : 0.3) * (1 - la / 0.09) : 0;
+          // カメラ
+          const bc = V.set(0, b.y + 0.5, b.z);
+          let ang, R, h;
+          if (tau < 0.95) { ang = -0.55; R = 2.9; h = 0.35; }
+          else { const k = ease3(0.95, 2.7, tau); ang = lerp(-0.55, -2.25, k); R = lerp(2.9, 2.6, k); h = lerp(0.35, 0.9, Math.sin(k * Math.PI)) ; }
+          let cx = bc.x + R * Math.sin(ang), cz = bc.z - R * Math.cos(ang);
+          if (tau > 2.7) { const k = smooth(2.7, 3.5, tau); /* 着地後: カメラは止まり、ロボは奥へ */ const b2 = botS3(storyS3(2.7)); cx = b2.x + R * Math.sin(-2.25); cz = b2.z - R * Math.cos(-2.25) + k * 0.3; }
+          const sh = flash * 0.06 + (tau > 2.7 && tau < 3.0 ? 0.04 * (3.0 - tau) / 0.3 : 0);
+          look(cx + shake(t, 25, 5) * sh, Math.max(0.12, h) + shake(t, 27, 6) * sh, cz, bc.x, tau > 2.7 ? 0.5 : bc.y - 0.05 + 0.75 * smooth(1.0, 1.6, tau) * (1 - smooth(2.3, 2.75, tau)), bc.z, 0, 34);
+          post.dof.focus = camera.position.distanceTo(bc); post.dof.aper = 60; post.dof.maxCoc = 15;
+          lights(2, 0, b.z, 1.15);
+          S.L[3].position.set(2.4, 2.8, -1.4); S.L[3].color.set("#c9d4ff"); S.L[3].intensity = 10 + flash * 70;
+          exposure = 1.05 + flash * 0.5;
+          // 火花(物語時間で物理 → スローでもゆっくり)
+          const sp = S.sparks.geometry.attributes.position, scol = S.sparks.geometry.attributes.color; const r = mulberry32(91);
+          for (let i = 0; i < sp.count; i++) {
+            const t0 = sLight + r() * 0.25, vx = (r() - 0.5) * 7, vy = r() * 6, vz = (r() - 0.2) * 6, life = 0.4 + r() * 0.6;
+            const a = s - t0;
+            if (a < 0 || a > life) { scol.setXYZ(i, 0, 0, 0); continue; }
+            sp.setXYZ(i, 2.7 + vx * a * 0.6 - 0.8 * a, Math.max(0.02, 2.7 + vy * a - 9 * a * a), -1.6 + vz * a * 0.6);
+            const k = (1 - a / life) * 3.5; scol.setXYZ(i, 1.0 * k, 0.55 * k, 0.2 * k);
+          }
+          sp.needsUpdate = scol.needsUpdate = true;
+          updDust(t, 0, 0, b.z, PAL[2].c[3], 0.6);
+          updSpray(s, (ss) => { const q = botS3(ss); return q.y > 0.01 || ss < 0 ? { x: 0, z: q.z, yaw: Math.PI, sp: ss > q.land && ss < q.land + 0.15 ? 3 : 0.6 } : { x: 0, z: q.z, yaw: Math.PI, sp: ss > q.land && ss < q.land + 0.25 ? 3 : 1 }; }, PAL[2].c[1], 1);
+          mirror.material.uniforms.uStr.value = 0.008; mirror.material.uniforms.uStretch.value = 0.014;
+          G.amt.value = 0.4; G.warm.value = 0.1; G.sat.value = 1.15; G.contrast.value = 0.24; G.fade.value = 1;
+          // 光の筋(10.0〜10.5)
+          if (tau > 2.95) {
+            S.warp.visible = true; const k = smooth(2.95, 3.5, tau);
+            const wp = S.warp.geometry.attributes.position, wc = S.warp.geometry.attributes.color; const r2 = mulberry32(13);
+            for (let i = 0; i < wp.count / 2; i++) {
+              const a = r2() * Math.PI * 2, rad = 0.25 + r2() * 1.6, ph = r2(), L = 0.6 + r2() * 2.5 * k;
+              const zz = -8 + ((ph * 8 + tau * 20 * (0.5 + k)) % 8);
+              const x = Math.cos(a) * rad, y = Math.sin(a) * rad * 0.6;
+              wp.setXYZ(i * 2, x, y, zz); wp.setXYZ(i * 2 + 1, x * 1.06, y * 1.06, zz + L);
+              const c = k * (1.5 + r2() * 3); wc.setXYZ(i * 2, c * 0.2, c * 0.2, c * 0.2); wc.setXYZ(i * 2 + 1, c, c * 0.9, c * 0.75);
+            }
+            wp.needsUpdate = wc.needsUpdate = true;
+          }
+        } else {
+          // ===== S4 タイトル: 滑って止まる → 文字点灯 → 静止 =====
+          const T = Math.min(t, 13.6), tau = T - 10.5;
+          // ロボ: カメラの後ろから入り、180°ドリフトして停止
+          const k = outC(0, 1.55, tau);
+          const bz = lerp(7.5, 0, k), bx = lerp(0.9, 0, k) + Math.sin(k * Math.PI) * 0.5;
+          const yaw = Math.PI + Math.PI * ease3(0.55, 1.5, tau);
+          const settle = tau > 1.5 ? Math.exp(-(tau - 1.5) * 6) * Math.sin((tau - 1.5) * 22) : 0;
+          const blink = tau > 2.35 && tau < 2.5 ? 0.15 : 1;
+          poseBot({ x: bx, z: bz, y: 0, yaw, pitch: 0.08 * settle, roll: -0.1 * Math.sin(Math.PI * smooth(0.5, 1.5, tau)), squash: 0.07 * settle, dist: 7.5 * k, eye: 5, blink });
+          BOT.tipMat.color.setRGB(6, 0.6, 0.4).multiplyScalar(t < 13.6 ? (Math.floor(T * 4) % 2 ? 1 : 0.1) : 1); BOT.headMat.color.setScalar(6);
+          // 文字の点灯
+          S.letters.forEach((L, i) => {
+            const t0 = 0.7 + i * 0.16, a = tau - t0;
+            let on = a < 0 ? 0 : a < 0.24 ? (hash(Math.floor(a * 30) + i * 7) > 0.45 ? 1 : 0.08) : 1;
+            L.front.emissiveIntensity = on * 7;
+          });
+          const fOn = smooth(2.1, 2.3, tau);
+          S.frame.forEach((b) => b.material.color.set(PAL[3].c[2]).multiplyScalar(fOn * 4.5));
+          const rOn = tau > 0.35 ? (tau < 0.6 ? (Math.floor(tau * 30) % 2 ? 1 : 0.2) : 1) : 0;
+          S.ring.material.color.set(PAL[3].c[1]).multiplyScalar(rOn * 5); S.ring2.material.color.set(PAL[3].c[0]).multiplyScalar(rOn * 4);
+          // カメラ: 低く近い → 引いて上がる → 13.6 で静止
+          const c = ease3(0.25, 3.1, tau);
+          const px = lerp(0.7, 0, c), py = lerp(0.32, 1.45, c), pz = lerp(4.2, 9.2, c);
+          const tx = lerp(bx * 0.6, 0, c), ty = lerp(0.55, 2.35, c), tz = lerp(bz, -4, c);
+          const sk = (1 - smooth(0, 0.6, tau)) * 0.05;
+          look(px + shake(t, 20, 8) * sk, py + shake(t, 22, 9) * sk, pz, tx, ty, tz, 0, lerp(32, 36, c));
+          post.dof.focus = lerp(camera.position.distanceTo(V.set(bx, 0.5, bz)), camera.position.distanceTo(V.set(0, 0.6, 0)) + 2.5, smooth(1.6, 3.1, tau)); post.dof.aper = lerp(60, 30, c); post.dof.maxCoc = 14;
+          lights(3, bx, bz, 1);
+          S.L[3].position.set(0, 3.2, -5.2); S.L[3].color.set(PAL[3].c[0]); S.L[3].intensity = 3 + 7 * smooth(0.7, 2.2, tau);
+          updDust(T, 0, 0, 1.5, PAL[3].c[3], 0.55);
+          updSpray(T, (tt) => { const kk = outC(0, 1.55, tt - 10.5); if (tt < 10.5) return null; const zz = lerp(7.5, 0, kk); const yy = Math.PI + Math.PI * ease3(0.55, 1.5, tt - 10.5); return { x: lerp(0.9, 0, kk) + Math.sin(kk * Math.PI) * 0.5, z: zz, yaw: yy, sp: (1 - kk) * 2.2 }; }, PAL[3].c[1], 1);
+          mirror.material.uniforms.uStr.value = 0.007; mirror.material.uniforms.uStretch.value = 0.013;
+          G.amt.value = 0.5; G.warm.value = 0; G.sat.value = 1.2; G.contrast.value = 0.32; G.fade.value = 1;
+          exposure = 0.95;
+          // 冒頭の光の筋の残り(10.5〜10.8)
+          if (tau < 0.35) {
+            S.warp.visible = true; const kk = 1 - smooth(0, 0.35, tau);
+            const wp = S.warp.geometry.attributes.position, wc = S.warp.geometry.attributes.color; const r2 = mulberry32(13);
+            for (let i = 0; i < wp.count / 2; i++) {
+              const a = r2() * Math.PI * 2, rad = 0.25 + r2() * 1.6, ph = r2(), L = 0.6 + r2() * 2.5 * kk;
+              const zz = -8 + ((ph * 8 + (3 + tau) * 20 * (0.5 + kk)) % 8);
+              const x = Math.cos(a) * rad, y = Math.sin(a) * rad * 0.6;
+              wp.setXYZ(i * 2, x, y, zz); wp.setXYZ(i * 2 + 1, x * 1.06, y * 1.06, zz + L);
+              const cc = kk * (1.5 + r2() * 3); wc.setXYZ(i * 2, cc * 0.2, cc * 0.2, cc * 0.2); wc.setXYZ(i * 2 + 1, cc, cc * 0.9, cc * 0.75);
+            }
+            wp.needsUpdate = wc.needsUpdate = true;
+          }
+        }
+        renderer.toneMappingExposure = exposure;
+      }
+
+      function renderAt(t) { update(clamp(t, 0, DUR - 1 / 30)); post.render(); }
+
+      window.__hf = window.__hf || {}; window.__hf.buildReady = window.__hf.buildReady || {};
+      let built = false;
+      const ready = build().then(() => { built = true; renderAt(window.__hfThreeTime || 0); });
+      window.__hf.buildReady["three-scene"] = ready;
+      window.addEventListener("hf-seek", (e) => { if (built) renderAt(e.detail.time); else ready.then(() => renderAt(e.detail.time)); });
+    </script>
+  </body>
+</html>
