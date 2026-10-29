@@ -52,6 +52,14 @@ LISTEN=1 PUBLISH=1 bash claude-video-skill/sound-kit/projects/hitotsuzutsu/build
 - 先に第1ラウンドの `build_all.sh` を 1 度通しておく(C の効果音の層 `work/C/raw_*.wav` を使うため)。
 - 伏せ記号は `docs/sound-upgrade/answer_key/round2_key.json`(固定)。
 
+## 3c. 第3ラウンド(条件 D: PC の Audio Studio の BGM を S9 と比べる)
+```bash
+bash claude-video-skill/sound-kit/projects/hitotsuzutsu/build_round3.sh             # → work/R3_audit.json、work/R3_D1..D4/、work/compare_round3/、work/qa_round3.json
+LISTEN=1 PUBLISH=1 bash claude-video-skill/sound-kit/projects/hitotsuzutsu/build_round3.sh   # + earshot、git の中の compare_round3/ と answer_key/ の第3ラウンドの表も更新
+```
+- 入力は `docs/sound-upgrade/audio_studio_pc/D1.wav`〜`D4.wav`(PC で生成、44.1 kHz。48 kHz に変換して使う)。先に第1ラウンドの `build_all.sh` を 1 度通しておく。
+- 伏せ記号は `docs/sound-upgrade/answer_key/round3_key.json`(固定)。
+
 ## 4. 別の映像に使う時
 1. 映像の合図表(`cues.json`: 名前とコマ番号)とコンタクトシートを先に作る。
 2. `projects/hitotsuzutsu/` を写して、`score.py`(和音・場面・楽器)と `make_C.py` の合図の表を**その映像のために書き直す**(テンプレートの使い回しをしない)。

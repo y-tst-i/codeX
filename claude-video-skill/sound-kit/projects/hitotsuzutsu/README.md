@@ -16,5 +16,6 @@
 | `cue_sheet.py` | 実際の配置から `docs/sound-upgrade/CUE_SHEET.md` の表を書く |
 | `build_all.sh` | 全部を順に実行(第1ラウンド) |
 | `score2.py` / `make_round2.py` / `finish_round2.py` / `qa_round2.py` / `bgm_metrics.py` / `build_round2.sh` | 第2ラウンド: C の効果音のまま、BGM を「1 曲として聞こえる」2 案(warm / light)に差し替え、比較パック(動画 + BGM だけの音声)と検査 |
+| `audit_round3.py` / `make_round3.py` / `finish_round3.py` / `qa_round3.py` / `build_round3.sh` | 第3ラウンド(条件 D): PC の Audio Studio で作った BGM D1–D4(`docs/sound-upgrade/audio_studio_pc/`)を S9 と同じ物差しで点検し、C の効果音の下に S9 と同じ処理(低域の一瞬の下げ・中域の浅い谷・終わりのフェード)で置き、S9 と合わせた 5 本の比較パックと検査 |
 
 出力は `docs/sound-upgrade/work/`(git に入れない)。git の中の比較用 mp4・正解表・`CUE_SHEET.md` の表は `PUBLISH=1 bash build_all.sh` の時だけ更新する。

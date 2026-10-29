@@ -29,3 +29,8 @@
 | MuseScore General 0.2.1(`musescore-general-soundfont-lossless`) | apt で導入(同梱しない) | MIT, parts PD or CC0(一部の標本はパブリックドメインまたは CC0) | 既存の表にもあり。今回の BGM の音源 |
 | FluidR3 GM(`fluid-soundfont-gm`) | apt で導入(同梱しない)、予備 | MIT | 今回の音には使っていない |
 | Kenney 効果音 | 既存の `sound-kit/tools/assets/sfx-cc0/` | CC0 | 新しい素材は足していない |
+
+## 2026-10-29 第3ラウンド(条件 D)で新しく使った物
+| 物 | 場所 | ライセンス | 備考 |
+|---|---|---|---|
+| Stable Audio 3 small music(`sm-music + same-s`、`sa3-torch`、CPU)で PC が生成した BGM 4 本 | `docs/sound-upgrade/audio_studio_pc/D1.wav`〜`D4.wav`、それを使った `docs/sound-upgrade/compare_round3/` の 4 本 | モデルの重みは Stability AI Community License(利用者と関連会社の年間売上 100 万米ドル未満。商用目的は Stability AI への登録が必要)。生成物の権利は法律の範囲で利用者(同ライセンス 4(c)(iii)、`docs/sound-upgrade/AUDIO_STUDIO_PLAN.md` §3) | **生成物は社内の比較試聴用。商用に使う前に条件を確認**。モデルと版は `audio_studio_pc/generation_log.json` の記録(steps 8、cfg 1.0、シード 9601 / 9711 / 9722 / 9732)。重みの版のハッシュは記録に無い。Audio Studio MCP 本体・実行プログラムは MIT(同 §3)。詳しくは `AUDIO_STUDIO_PLAN.md` §8 |

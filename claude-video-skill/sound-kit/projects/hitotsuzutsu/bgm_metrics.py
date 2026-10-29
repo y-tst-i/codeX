@@ -59,3 +59,68 @@ def notes_gap(onsets, t0=0.0, t1=14.4):
     g = np.diff(np.r_[t0, on, t1])
     i = int(np.argmax(g))
     return {"max_note_gap_s": round(float(g[i]), 3), "max_note_gap_from_s": round(float(np.r_[t0, on][i]), 3)}
+
+
+# ------------------------------------------------------------------ 第3ラウンド(外から来た BGM の点検)
+KS_MAJ = np.array([6.35, 2.23, 3.48, 2.33, 4.38, 4.09, 2.52, 5.19, 2.39, 3.66, 2.29, 2.88])
+KS_MIN = np.array([6.33, 2.68, 3.52, 5.38, 2.60, 3.53, 2.54, 4.75, 3.98, 2.69, 3.34, 3.17])
+NOTES = ["C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B"]
+
+
+def _chroma(m, t0=None, t1=None):
+    import librosa
+    a = int((t0 or 0) * C.SR); b = int((t1 or len(m) / C.SR) * C.SR)
+    y = librosa.resample(m[a:b].astype(np.float32), orig_sr=C.SR, target_sr=22050)
+    ch = librosa.feature.chroma_cqt(y=y, sr=22050)
+    return ch.mean(1)
+
+
+def key_estimate(x, t0=None, t1=None):
+    """Krumhansl–Schmuckler の調の推定(全体、または区間)。戻り値: 1 位の調・相関・2 位"""
+    m = np.asarray(x).mean(1) if np.ndim(x) == 2 else np.asarray(x)
+    c = _chroma(m, t0, t1)
+    rows = []
+    for k in range(12):
+        rows.append((float(np.corrcoef(c, np.roll(KS_MAJ, k))[0, 1]), NOTES[k] + " major"))
+        rows.append((float(np.corrcoef(c, np.roll(KS_MIN, k))[0, 1]), NOTES[k] + " minor"))
+    rows.sort(reverse=True)
+    return {"key": rows[0][1], "r": round(rows[0][0], 3), "second": rows[1][1], "r2": round(rows[1][0], 3)}
+
+
+def ending_stats(x, tonic=3):
+    """終わり方: 最後の 2 s の 100 ms RMS の動き、最後の 1 s の和音らしさ(主和音 Eb-G-Bb の 3 音が音の重さに占める割合と、
+    最後の 1 s の調の推定)。tonic = 主音の音名番号(3 = Eb)"""
+    m = np.asarray(x).mean(1) if np.ndim(x) == 2 else np.asarray(x)
+    r, ts = _slide_db(m, 0.1, 0.05)
+    med = float(np.median(r))
+    tail = [(round(float(t), 2), round(float(v - med), 1)) for t, v in zip(ts, r) if t >= len(m) / C.SR - 2.0][::4]
+    c = _chroma(m, len(m) / C.SR - 1.0, None)
+    triad = [tonic % 12, (tonic + 4) % 12, (tonic + 7) % 12]
+    share = float(c[triad].sum() / c.sum())
+    best = max(range(12), key=lambda k: c[[k, (k + 4) % 12, (k + 7) % 12]].sum())
+    return {"last2s_db_vs_median_every_0.2s": tail, "last_100ms_db_vs_median": round(float(r[-1] - med), 1),
+            "tonic_triad_share_last1s": round(share, 3), "strongest_major_triad_last1s": NOTES[best],
+            "key_last2s": key_estimate(x, len(m) / C.SR - 2.0, None)["key"]}
+
+
+def band_shares(x):
+    """エネルギーの割合: 120 Hz 未満 / 200 Hz–4 kHz(効果音と競合する帯域)/ 8 kHz 超、と重心"""
+    m = np.asarray(x).mean(1) if np.ndim(x) == 2 else np.asarray(x)
+    P = np.abs(np.fft.rfft(m)) ** 2; f = np.fft.rfftfreq(len(m), 1 / C.SR)
+    tot = P[(f >= 20) & (f <= 20000)].sum() + 1e-30
+    sh = lambda a, b: round(float(P[(f >= a) & (f < b)].sum() / tot), 3)
+    return {"lt120": sh(20, 120), "b200_4k": sh(200, 4000), "gt8k": sh(8000, 20001),
+            "centroid_hz": round(float((P * f)[(f >= 20)].sum() / P[(f >= 20)].sum()))}
+
+
+def tech_stats(x):
+    """クリップ・直流・左右の相関・ピーク・ノイズの床(50 ms RMS の 5 パーセンタイル)・波高率"""
+    x = np.asarray(x, np.float64)
+    m = x.mean(1)
+    r, _ = _slide_db(m, 0.05, 0.05)
+    corr = float((x[:, 0] * x[:, 1]).sum() / np.sqrt((x[:, 0] ** 2).sum() * (x[:, 1] ** 2).sum() + 1e-30))
+    pk = float(np.abs(x).max())
+    rms = float(np.sqrt((x ** 2).mean()))
+    return {"clip_samples": int((np.abs(x) >= 0.999).sum()), "dc": [round(float(v), 5) for v in x.mean(0)], "lr_corr": round(corr, 3),
+            "peak_dbfs": round(20 * np.log10(pk + 1e-12), 2), "floor_p5_50ms_dbfs": round(float(np.percentile(r, 5)), 1),
+            "crest_db": round(20 * np.log10(pk / (rms + 1e-12)), 1)}

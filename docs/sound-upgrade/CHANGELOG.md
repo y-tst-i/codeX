@@ -126,3 +126,34 @@
 - 記録漏れ: `make_round2.py` の DUCKS で、詳細の着地(expand_land)の低域の下げを -15 dB → -20 dB(0.15 s、200 Hz 未満)に深くしていた。200 Hz 未満は warm -23 → -38 dBFS、light -27 → -46 dBFS(4.50〜4.65 s)。
 - 未対応(試聴で確認): light 案は 7.7〜8.75 s で、効果音のために空ける時刻(`score2.py` の THIN_AT 7.80/7.85/8.17/8.47)が密集し、伴奏(ピチカート・エレピ・打楽器、ベースの大半)がほぼ止まり、マリンバの旋律だけが残る。拍のすき間(0.625 s)の数値には出ない。warm も 8.0〜8.75 s でピアノの刻みが抜ける(ベース・弦・シェイカーは続く)。直す案: 空ける音を 1 つおきにする/空けずに弱く弾く。
 - warm の仕上げのリミッターの削り量 0.9 → 2.27 dB(13.16 s。基準 2.1 dB と同程度)。
+
+## 2026-10-29 PC: Audio Studio で BGM 4案(条件 D)を生成
+(PC 側の記録。枝 `pc/audio-studio-bgm` の af4a341 で CHANGELOG に足されていた文を、そのまま写した)
+- 追加のみ: `docs/sound-upgrade/audio_studio_pc/`(D1〜D4.wav、generation_log.json、REPORT.md、measurements.json)。
+- 小型音楽モデル(sm-music)、CPU、15.0 秒×4方向×各2回。聴感の評価はしていない(数値のみ)。
+- D2〜D4 は、最初の 15 秒の生成で終盤が無音になったため、20 秒で作って 15 秒に切る方法で作り直した。4案とも途中の無音は無し(数値)。主和音で終わる形は未確認。
+- 既存ファイルの変更なし。git が無く push 未実施(REPORT.md 参照)。
+
+## 2026-10-29 第3ラウンド: 条件 D(生成 BGM)と S9 の 5 本の比較パック
+AI は音を聴いていない。下は数値の測定と処理の記録。記号と中身の対応は `answer_key/` にだけ書いた(この文書には書かない)。
+
+### 足した物
+- `docs/sound-upgrade/audio_studio_pc/`: 枝 `pc/audio-studio-bgm`(af4a341)のファイル 7 個をそのまま取り込んだ(MD5 一致を確認。WAV 4 個で約 15.9 MB)。
+- スクリプト(`claude-video-skill/sound-kit/projects/hitotsuzutsu/`): `audit_round3.py`(元の BGM の点検)、`make_round3.py`(ミックス)、`finish_round3.py`(比較パック。git の中は `--publish` の時だけ)、`qa_round3.py`(検査)、`build_round3.sh`。`bgm_metrics.py` に `key_estimate`・`ending_stats`・`band_shares`・`tech_stats` を足した(既存の関数は変えていない)。
+- 比較パック `docs/sound-upgrade/compare_round3/`: 動画 5 本 + BGM だけの音声 5 本(計約 28.8 MB)と `LISTENING_SHEET_ROUND3.md`。
+- 正解表のフォルダ: `answer_key/round3_key.json`(固定の記号)、`ANSWER_KEY_ROUND3.md`、`QA_ROUND3_BY_CONDITION.md`、`AUDIT_ROUND3_BY_PLAN.md`。
+- `QA_ROUND3.md`(5 本まとめての値だけ)、`RESULT_ROUND3.md`(試聴の結果を書く枠)。`AUDIO_STUDIO_PLAN.md` に §8、`claude-video-skill/NOTICES.md` に第3ラウンドの表を追記(ライセンスの事実)。`HOWTO.md` §3c、プロジェクトの README に 1 行。
+
+### 生成 BGM 4 本の点検(数値。詳しくは評価の後に `answer_key/AUDIT_ROUND3_BY_PLAN.md`)
+- 4 本とも 15.000 s・96 BPM の格子に乗る拍・クリップ 0・BGM ベッドの落ち込み(100 ms)は -15 dB 以内。50 ms では 1 本が元のファイルの時点で -17.4 dB。
+- プロンプトは 4 本とも「E-flat major」だったが、調の推定は 4 本で別々(Eb 長調と推定された物は無い)。2 本は C の音程の身振り(Eb 長調の音 17 音)の半分以上が推定した調の音階の外。
+- 4 本とも高い音域がほとんど無い(平均スペクトルが最大から -60 dB になる所が 4.2〜14.0 kHz)。
+- 4 本とも、最後の 2 s の調が全体の調と違うか、最後まで音量が下がらない(PC の 20 s → 15 s の切り取りと 0.2 s のフェード)ため、「主音に解決して終わる」とはみなさなかった。
+
+### ミックス(S9 と同じ規則。BGM の編曲は変えていない)
+- BGM だけで -14.0 LUFS にそろえる → 「BGM + 身振り」を C の音楽バスに合わせる → 低い効果音の瞬間に 200 Hz 未満を一瞬下げる(`make_round2.DUCKS`)→ 中域の一瞬の谷(下げる前の BGM に対して 1 回だけ、重なる窓はまとめる、上限 -6 dB、50 ms、重なり 0)→ 生成 BGM 4 本は終わりに 14.0 s から 1.0 s のフェード → `mixer.finish`。
+- S9 は第2ラウンドのミックスをそのまま使った。比較パックは同じ手順で 2 回作り、10 ファイルの MD5 が一致することを確かめた。
+- 見つけた事: `make_round2.py light`(light だけ)で作り直すと、light の mix.wav が第2ラウンドの物とバイト単位で一致しない(warm と light を続けて作る `make_round2.py` では一致)。`build_round3.sh` は両方を作る形にした。原因は調べていない(warm を先に作ると状態が変わる所がある)。
+
+### 元に戻す
+この commit を `git revert` する。作業ファイルは `docs/sound-upgrade/work/R3_*`・`work/compare_round3*`・`work/qa_round3.json`(git の外)を消す。
