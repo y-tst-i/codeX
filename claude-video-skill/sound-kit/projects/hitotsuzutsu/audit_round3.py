@@ -52,9 +52,19 @@ def load_d(name):
     return y, src
 
 
+S9_SOURCE = os.path.join(C.WORK, "R3_S9_source.wav")
+
+
 def load_s9():
-    x, _ = sf.read(os.path.join(C.WORK, "R2_light", "raw_bgm_only.wav"), dtype="float64", always_2d=True)
-    return x[: C.N], {"sr": C.SR, "note": "WORK/R2_light/raw_bgm_only.wav(第2ラウンドの light の BGM、谷を入れる前・身振りなし)"}
+    """S9(第2ラウンドの light)の BGM を、低域の一瞬の下げ(low_duck)を入れずに作り直す。
+    score.py の乱数は 1 つの流れなので、第2ラウンドと同じく warm を先に作ってから light を作る(light だけだと別の音になる)。
+    D1–D4 と同じ扱いにするため、低域の下げは make_round3.py で後から掛ける。WORK/R3_S9_source.wav にも書く"""
+    import score2
+    score2.build("warm")
+    st, _ = score2.build("light")
+    x = score2.bus(st)[: C.N]
+    C.write(S9_SOURCE, x, "FLOAT")
+    return x, {"sr": C.SR, "note": "score2.build('light') → score2.bus(st)(低域の一瞬の下げなし)。WORK/R3_S9_source.wav"}
 
 
 def mono_lufs(x):

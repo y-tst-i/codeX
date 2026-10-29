@@ -29,7 +29,7 @@ GIT_OUT = os.path.join(DOCS, "compare_round3")
 KEYDIR = os.path.join(DOCS, "answer_key")
 KEYFILE = os.path.join(KEYDIR, "round3_key.json")
 OUT = os.path.join(C.WORK, "compare_round3")
-COND = {"S9": ("R2_light", "基準: 第2ラウンドの S9(light「軽い撥弦とマリンバ」、MIDI + FluidSynth で作曲した BGM)。ミックスは第2ラウンドの S9 と同じ"),
+COND = {"S9": ("R3_S9", "基準: 第2ラウンドの S9(light「軽い撥弦とマリンバ」、MIDI + FluidSynth で作曲した BGM)。曲は同じで、ミックスは D1–D4 と同じ規則で作り直した"),
         "D1": ("R3_D1", "Audio Studio(Stable Audio 3 small music)の生成 BGM D1: ピチカート + マリンバ"),
         "D2": ("R3_D2", "Audio Studio の生成 BGM D2: エレピ + ベース + ブラシ"),
         "D3": ("R3_D3", "Audio Studio の生成 BGM D3: ナイロン弦ギター"),
@@ -52,6 +52,12 @@ def codes(publish):
     os.makedirs(KEYDIR, exist_ok=True)
     json.dump(key, open(KEYFILE, "w"), indent=1)
     return key
+
+
+def audio_bit_rate(path):
+    r = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "a:0", "-show_entries", "stream=bit_rate", "-of", "csv=p=0", path],
+                       capture_output=True, text=True)
+    return int(r.stdout.strip())
 
 
 def main():
@@ -83,6 +89,7 @@ def main():
             I, TP, LRA = C.ebur(o)
             r[kind] = {"file": o, "wav": wav, "limiter_db": lim, "lufs": I, "tp": TP, "lra": LRA, "bytes": os.path.getsize(o),
                        "wav_sample_peak_dbfs": round(float(20 * np.log10(np.abs(y).max())), 3)}
+            r[kind]["audio_bit_rate"] = audio_bit_rate(o)
             if kind == "mix":
                 r[kind]["video_md5"] = F2.md5_video(o)
         rows[cond] = r
@@ -107,25 +114,34 @@ def write_key(key, rows):
     L = ["# 正解表(第3ラウンド)", "",
          "> **試聴の評価が終わるまで利用者に見せない前提のファイルです。** 先に `../compare_round3/LISTENING_SHEET_ROUND3.md` で評価してから開いてください。", "",
          "固定の対応表(機械用): `round3_key.json`。", "",
-         "| 記号 | 条件 | 中身 | 終わりのフェード |", "|---|---|---|---|"]
+         "| 記号 | 条件 | 中身 | 終わりのフェード(判定の理由) |", "|---|---|---|---|"]
     for c in COND:
         f = masters[c].get("end_fade")
-        fs = f"{f['start_s']} s から {f['length_s']} s(raised cosine、15.0 s で無音)" if f else "なし(作曲した終わり方のまま)"
-        L.append(f"| `{key[c]}`(`{key[c]}.mp4` / `{key[c]}_bgm.m4a`) | {c} | {COND[c][1]} | {fs} |")
+        fs = f"{f['start_s']} s から {f['length_s']} s(raised cosine、15.0 s で無音)" if f else "なし"
+        why = "。".join(masters[c].get("ending_reasons") or [])
+        if masters[c].get("ending_note"):
+            why += "。" + masters[c]["ending_note"]
+        L.append(f"| `{key[c]}`(`{key[c]}.mp4` / `{key[c]}_bgm.m4a`) | {c} | {COND[c][1]} | {fs}({why}) |")
     L += ["", "5 本とも効果音は C(併用版)の同じ標本で、C の音程の身振り(チェレスタ・ビブラフォン、Eb 長調の音)も 5 本とも同じ物が入っている。"
           "違うのは BGM だけ。BGM だけの音声には身振りを含めていない。", "",
           "そろえた条件: WAV → ゲインで統合 -14.0 LUFS(ffmpeg ebur128)→ 同じリミッター(-2.3 dBTP)→ 動画は AAC 192 kbps・映像 -c:v copy、BGM だけの音声は AAC 160 kbps の m4a。", "",
-          "| 記号 | 種類 | LUFS | 真のピーク dBTP | LRA | 標本ピーク dBFS | リミッター dB | バイト |", "|---|---|---|---|---|---|---|---|"]
+          "| 記号 | 種類 | LUFS | 真のピーク dBTP | LRA | 標本ピーク dBFS | リミッター dB | 音声のビットレート bps | バイト |", "|---|---|---|---|---|---|---|---|---|"]
     for c in COND:
         for kind in ("mix", "bgm"):
             q = rows[c][kind]
-            L.append(f"| `{key[c]}` | {'動画' if kind == 'mix' else 'BGM だけ'} | {q['lufs']} | {q['tp']} | {q['lra']} | {q['wav_sample_peak_dbfs']} | {q['limiter_db']} | {q['bytes']} |")
-    L += ["", "## 既知の手がかり(消せなかった物)",
-          f"- 基準の `{key['S9']}` は、第2ラウンドで聴いた S9 と同じミックス。第2ラウンドを覚えている人には基準が分かる。"
-          f"同じ手順で作り直したので、`{key['S9']}.mp4`・`{key['S9']}_bgm.m4a` は `../compare_round2/S9.mp4`・`S9_bgm.m4a` と**バイト単位で同じ**(MD5 やファイルの大きさを比べると分かる)。",
+            L.append(f"| `{key[c]}` | {'動画' if kind == 'mix' else 'BGM だけ'} | {q['lufs']} | {q['tp']} | {q['lra']} | {q['wav_sample_peak_dbfs']} | {q['limiter_db']} | {q['audio_bit_rate']} | {q['bytes']} |")
+    br = {c: rows[c]["mix"]["audio_bit_rate"] for c in COND}
+    top = max(br, key=br.get)
+    L += ["", "## 評価で気を付けること",
+          f"- D1(`{key['D1']}`)と D3(`{key['D3']}`)の ③「効果音と合っているか」は、Eb 長調に固定した身振り(チェレスタ・ビブラフォン)と BGM の調が合わないことを含めた評価になる"
+          "(プロンプトでは 4 本とも「E-flat major」を指定したが、モデルはその指定どおりにならなかった。調の推定は `AUDIT_ROUND3_BY_PLAN.md`)。", "",
+          "## 既知の手がかり(消せなかった物)",
+          f"- 基準の `{key['S9']}` は、第2ラウンドで聴いた S9 と同じ曲。ミックスは第3ラウンドの規則で作り直したので、第2ラウンドの S9 のファイルとはバイト単位では同じではない。"
+          "第2ラウンドを覚えている人には曲で基準が分かる。",
           "- 生成 BGM(D1–D4)は高い音域がほとんど無い(平均スペクトルが最大から -60 dB になる所: D1・D3 約 7.9 kHz、D2 約 14.0 kHz、D4 約 4.2 kHz。S9 は約 20.9 kHz)。"
           "BGM だけの音声では、こもった感じとして分かるかもしれない。",
           "- 生成 BGM 4 本は終わりにフェードを足した(上の表)。S9 は作曲した終わり方(タイトルで Eb に解決して減衰)。",
+          f"- 動画の音声のビットレートが条件で違う(上の表。最大は `{key[top]}` の {br[top] / 1000:.1f} kbps。AAC の指定は 5 本とも 192 kbps で、中身によって実際の値が変わる)。",
           "- LRA・リミッターの量・ファイルの大きさが条件で違う(上の表)。",
           "- 条件ごとの検査の数値は `QA_ROUND3_BY_CONDITION.md`、D1–D4 と S9 の BGM の点検は `AUDIT_ROUND3_BY_PLAN.md`(このフォルダ)。", ""]
     open(os.path.join(KEYDIR, "ANSWER_KEY_ROUND3.md"), "w", encoding="utf-8").write("\n".join(L))

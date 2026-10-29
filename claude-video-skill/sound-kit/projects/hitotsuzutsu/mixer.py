@@ -124,13 +124,17 @@ def _pan(y, p):
     return y * np.array([min(1.0, gl), min(1.0, gr)])
 
 
-def finish(name, music, room, sfx_bus, log, extra_info=None):
-    """music(仕上げ前)+ room + 効果音 → master。WORK/<name>/ に mix・ステム・合図の記録を書く"""
+def finish(name, music, room, sfx_bus, log, extra_info=None, music_bus_limiter=True):
+    """music(仕上げ前)+ room + 効果音 → master。WORK/<name>/ に mix・ステム・合図の記録を書く。
+    music_bus_limiter=False: 音楽バスのリミッターを掛けない(第3ラウンド。BGM だけを先に抑えてあり、身振りを条件ごとに違う量で削らないため)"""
     out = os.path.join(C.WORK, name)
     os.makedirs(out, exist_ok=True)
     # 音楽バスの頂点を、仕上げのゲインを掛けた後で -1 dBFS 以下に(v1 は音楽ステムだけで 0 dBFS を超える所があった)
     g0 = C.db(-14.0 - C.ebur(music + room + sfx_bus)[0])
-    music, mus_red, _ = C.limiter(music, 20 * np.log10(C.db(-1.5) / g0))
+    if music_bus_limiter:
+        music, mus_red, _ = C.limiter(music, 20 * np.log10(C.db(-1.5) / g0))
+    else:
+        mus_red = 0.0
     mix = music + room + sfx_bus
     y, info = C.master(mix)
     g = C.db(info["gain_db"])

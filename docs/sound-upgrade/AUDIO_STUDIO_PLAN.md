@@ -140,7 +140,16 @@ Audio Studio は音のファイルごとに同じ名前の `.json`(プロンプ�
 ## 8. 第3ラウンドで実際に使った生成物とライセンスの事実(2026-10-29 追記。§1〜§7 は変えていない)
 - 使った生成物: `docs/sound-upgrade/audio_studio_pc/D1.wav`〜`D4.wav`(各 15.000 s、44.1 kHz、24 bit、ステレオ)。PC で生成し、枝 `pc/audio-studio-bgm`(af4a341)から取り込んだ。
 - モデルと版(`audio_studio_pc/generation_log.json` の記録のまま): `"model": "sm-music + same-s"`、`"backend": "sa3-torch"`(CPU)、`"steps": 8`、`"cfg": 1.0`、`"sample_rate": 44100`、シード D1 9601 / D2 9711 / D3 9722 / D4 9732。`REPORT.md` の記載: 「Stable Audio 3 の小型音楽モデル(`sm-music`)」。重みのファイルの版(コミット・ハッシュ)は記録に無い(**未確認**)。
-- ライセンス(§3 の事実の再掲): モデルの重みは **Stability AI Community License**。利用者と関連会社を合わせた**年間売上が 100 万米ドル未満**であること。**商用目的で使う場合は Stability AI への登録が必要**。PC 側は 2026-10-29 に Hugging Face のモデルページを再確認できなかった(ログインが要るため。`REPORT.md` §2)。
+- ライセンス: モデルの重みは **Stability AI Community License**。条件は目的で分かれる(非商用は上限・登録なし、商用の目的は登録が要り年間売上 100 万米ドル超で終了)。詳しくは下の「§8 の追記」。PC 側は 2026-10-29 に Hugging Face のモデルページを再確認できなかった(ログインが要るため。`REPORT.md` §2)。
 - 扱い: **生成物は社内の比較試聴用。商用に使う前に条件を確認**(売上の条件・登録・表示の要否)。利用者は「販売しない・社内または個人の比較のため」として、この使い方を了承している(2026-10-29)。
 - 使った所: 第3ラウンドの比較パック `docs/sound-upgrade/compare_round3/`(5 本のうち 4 本の BGM)。どの記号かは `answer_key/ANSWER_KEY_ROUND3.md`。納品用の動画には入れていない。
 - こちらで加えた処理(生成物の中身は変えていない): 48 kHz への変換、音量の調整(-14 LUFS)、効果音の瞬間の低域・中域の一瞬の下げ(上限 -6 dB)、終わりの短いフェード、比較パックのリミッター(-2.3 dBTP)と AAC 化。
+
+### §8 の追記(2026-10-29、第3ラウンドの独立レビューを受けて)
+- **公開の状態(事実)**: このリポジトリ(`y-tst-i/codeX`)は公開(GitHub の visibility: public、2026-10-29 に API で確認)。生成物(`docs/sound-upgrade/audio_studio_pc/D1.wav`〜`D4.wav`)と、それを使った比較パック(`docs/sound-upgrade/compare_round3/`)も、公開の場所に置かれている。移す・消すかは利用者が決める(こちらでは動かしていない)。
+- **ライセンスの範囲(Stability AI Community License Agreement、文面の版「Last Updated: July 5, 2024」、出典 https://stability.ai/community-license-agreement 、2026-10-29 確認)**:
+  - 非商用の目的(Non-Commercial Purpose。文面の例: 個人の趣味での利用、評価・試験 "evaluation and testing")は、売上の上限も登録も無い。
+  - 商用の目的(Commercial Purpose。文面では「自分の事業や組織の内部業務(internal operations)」も含む)は、Stability AI への登録が要る。利用者と関連会社の年間売上が 100 万米ドルを超えると、ライセンスは終わる(続けるには Stability AI に別のライセンスを申し込む)。
+  - 今回の比較が会社の業務(CM の制作)のための物なら、商用の目的に当たり得る。どちらに当たるかの判断は利用者に任せる。
+- **ほかの条件(§3 を参照)**: 文章を読む部品 T5Gemma は Gemma Terms of Use。Stability AI の利用規約(AUP、https://stability.ai/use-policy )を守ること。
+- **記録で分からない事**: `generation_log.json` の `"model": "sm-music + same-s"` の `same-s` が何か(部品の名前・版)は**未確認**。

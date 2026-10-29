@@ -138,7 +138,7 @@
 AI は音を聴いていない。下は数値の測定と処理の記録。記号と中身の対応は `answer_key/` にだけ書いた(この文書には書かない)。
 
 ### 足した物
-- `docs/sound-upgrade/audio_studio_pc/`: 枝 `pc/audio-studio-bgm`(af4a341)のファイル 7 個をそのまま取り込んだ(MD5 一致を確認。WAV 4 個で約 15.9 MB)。
+- `docs/sound-upgrade/audio_studio_pc/`: 枝 `pc/audio-studio-bgm`(af4a341)のファイル 7 個を取り込んだ。WAV 4 個は同一(MD5 一致、計約 15.9 MB)。テキスト 3 個(REPORT.md・generation_log.json・measurements.json)は、リポジトリの .gitattributes により改行を LF に正規化(中身は同じ)。
 - スクリプト(`claude-video-skill/sound-kit/projects/hitotsuzutsu/`): `audit_round3.py`(元の BGM の点検)、`make_round3.py`(ミックス)、`finish_round3.py`(比較パック。git の中は `--publish` の時だけ)、`qa_round3.py`(検査)、`build_round3.sh`。`bgm_metrics.py` に `key_estimate`・`ending_stats`・`band_shares`・`tech_stats` を足した(既存の関数は変えていない)。
 - 比較パック `docs/sound-upgrade/compare_round3/`: 動画 5 本 + BGM だけの音声 5 本(計約 28.8 MB)と `LISTENING_SHEET_ROUND3.md`。
 - 正解表のフォルダ: `answer_key/round3_key.json`(固定の記号)、`ANSWER_KEY_ROUND3.md`、`QA_ROUND3_BY_CONDITION.md`、`AUDIT_ROUND3_BY_PLAN.md`。
@@ -153,7 +153,29 @@ AI は音を聴いていない。下は数値の測定と処理の記録。記�
 ### ミックス(S9 と同じ規則。BGM の編曲は変えていない)
 - BGM だけで -14.0 LUFS にそろえる → 「BGM + 身振り」を C の音楽バスに合わせる → 低い効果音の瞬間に 200 Hz 未満を一瞬下げる(`make_round2.DUCKS`)→ 中域の一瞬の谷(下げる前の BGM に対して 1 回だけ、重なる窓はまとめる、上限 -6 dB、50 ms、重なり 0)→ 生成 BGM 4 本は終わりに 14.0 s から 1.0 s のフェード → `mixer.finish`。
 - S9 は第2ラウンドのミックスをそのまま使った。比較パックは同じ手順で 2 回作り、10 ファイルの MD5 が一致することを確かめた。
-- 見つけた事: `make_round2.py light`(light だけ)で作り直すと、light の mix.wav が第2ラウンドの物とバイト単位で一致しない(warm と light を続けて作る `make_round2.py` では一致)。`build_round3.sh` は両方を作る形にした。原因は調べていない(warm を先に作ると状態が変わる所がある)。
+- 見つけた事: `make_round2.py light`(light だけ)で作り直すと、light の mix.wav が第2ラウンドの物とバイト単位で一致しない(warm と light を続けて作る `make_round2.py` では一致)。`build_round3.sh` は両方を作る形にした。原因: `score.py` の乱数が 1 つの流れ(`RNG = np.random.default_rng(20261028)`)で、warm を作ると進む(第3ラウンドの独立レビューの対応の時に確認)。
 
 ### 元に戻す
 この commit を `git revert` する。作業ファイルは `docs/sound-upgrade/work/R3_*`・`work/compare_round3*`・`work/qa_round3.json`(git の外)を消す。
+
+## 2026-10-29 第3ラウンドの独立レビュー(96a89f2 に対する指摘 1〜13)への対応
+AI は音を聴いていない。記号(G3 / K9 / M4 / N7 / T9)と対応は変えていない。上の第3ラウンドの節の「S9 は第2ラウンドのミックスをそのまま使った」は、この対応で変わった(下の 1)。
+
+| 番号 | 変えた物 |
+|---|---|
+| 1 | 効果音の頂点を守る下げを足した(`make_round3.py`: 合図と身振りの時刻の窓で、ミックスの頂点が -2.5 dBFS か「効果音・身振り・部屋だけの頂点 + 0.5 dB」を超える所だけ BGM を全帯域で浅く、足りなければ 40–250 Hz も。各上限 -6 dB、50 ms、ベッドのルールを優先)。BGM だけのリミッター(仕上げのゲインの後で -3.0 dBFS)。S9 も同じ規則で作り直した(公平のため。K9 は第2ラウンドの S9 とバイト一致でなくなった。正解表の手がかりも直した)。仕上げのリミッター 1.1〜4.25 → 0.0〜1.45 dB。合図ごとの効果音の頂点の 5 本の差は中央値 0.4 dB、最大 1.3 dB(mix.wav、段のチェック 3 つ目)/ 1.6 dB(比較パック)。表は `answer_key/QA_ROUND3_BY_CONDITION.md`、範囲は `QA_ROUND3.md`。評価用紙の「効果音は 5 本とも同じ」を数値どおりの言い方に |
+| 2 | `NOTICES.md` と `AUDIO_STUDIO_PLAN.md` §8 に「リポジトリは公開。生成物と比較パックも公開の場所」と事実だけ。ファイルは動かしていない |
+| 3 | ライセンスを目的で分けて書いた(非商用は上限・登録なし。商用の目的は会社の内部業務を含み、登録が要り、年間売上 100 万米ドル超で終了。CM 制作の業務なら商用に当たり得る、判断は利用者)。出典 URL・確認日 2026-10-29・「Last Updated: July 5, 2024」 |
+| 4 | T5Gemma(Gemma Terms of Use)と AUP(stability.ai/use-policy)を 1 行、`same-s` は未確認と |
+| 5 | 終わり方の判定を記録ベースに(`ending_decision`: 20 s で作って切った物 / 15 s で減衰しない物は作曲上の終わりではない。平行調は同じ扱い)。D2 が際どかったことを正解表と点検表に記録。4 本ともフェードの結論は同じ |
+| 6 | 条件ごとの表のベッドの最小に「最小はフェードの範囲」の注と、14.0 s までの値を並べた |
+| 7 | BGM だけの音声を低域の一瞬の下げの前から作り直した(5 本とも。S9 も score2 から下げの前を作り直した) |
+| 8 | 中域の谷: まとめる判定を「間が 3 × RAMP(0.15 s)未満」に(依頼の 2 × RAMP = 0.10 s では、間 0.101 s の組を拾えなかった)。帯域の上限 4.5 kHz |
+| 9 | 正解表に「D1・D3 の③は、Eb に固定した身振りとの調の不一致を含めた評価になる(プロンプトの Eb 指定をモデルが守らなかった)」 |
+| 10 | 正解表の手がかりに音声のビットレート(ffprobe)。評価用紙に「試聴する人には compare_round3 のフォルダだけを渡す」 |
+| 11 | 上の第3ラウンドの節の取り込みの行を「WAV 4 個は同一。テキスト 3 個は改行を LF に正規化(中身は同じ)」に直した |
+| 12 | 音楽バス(BGM + 身振り)のリミッターを使わない形にした(`mixer.finish(..., music_bus_limiter=False)`。既定は今までどおり)。5 本とも 0 dB |
+| 13 | git に入った大きな物はそのまま |
+
+### 変えたスクリプト
+`make_round3.py`(作り直し)、`audit_round3.py`(S9 を score2 から下げの前で作り直す、`WORK/R3_S9_source.wav`)、`finish_round3.py`(S9 = `R3_S9`、ビットレート、正解表の文)、`qa_round3.py`(効果音の頂点の表、14.0 s までのベッド、帯域ごとの下がり量、集計)、`mixer.py`(`finish` に `music_bus_limiter` 引数。既定 True なので第1・第2ラウンドの結果は変わらない)、`build_round3.sh`(make_round2 を呼ばない)。

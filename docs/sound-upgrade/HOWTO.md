@@ -58,6 +58,7 @@ bash claude-video-skill/sound-kit/projects/hitotsuzutsu/build_round3.sh         
 LISTEN=1 PUBLISH=1 bash claude-video-skill/sound-kit/projects/hitotsuzutsu/build_round3.sh   # + earshot、git の中の compare_round3/ と answer_key/ の第3ラウンドの表も更新
 ```
 - 入力は `docs/sound-upgrade/audio_studio_pc/D1.wav`〜`D4.wav`(PC で生成、44.1 kHz。48 kHz に変換して使う)。先に第1ラウンドの `build_all.sh` を 1 度通しておく。
+- 基準の S9 は、`audit_round3.py` が score2 から作り直す(warm → light の順に作る。`score.py` の乱数が 1 つの流れなので、light だけだと別の音になる)。5 本とも `make_round3.py` の同じ規則でミックスする。
 - 伏せ記号は `docs/sound-upgrade/answer_key/round3_key.json`(固定)。
 
 ## 4. 別の映像に使う時
