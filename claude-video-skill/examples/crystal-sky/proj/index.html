@@ -1,0 +1,623 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <script src="assets/gsap.min.js"></script>
+    <script type="importmap">
+      { "imports": { "three": "./assets/three/three.module.min.js", "three/addons/": "./assets/three/addons/" } }
+    </script>
+    <style>
+      @font-face { font-family: "CrystalTitle"; src: url("assets/fonts/shippori-mincho-eb-subset.woff2") format("woff2"); font-display: block; }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 1920px; height: 1080px; overflow: hidden; background: #070a18; }
+      #root { position: relative; width: 1920px; height: 1080px; background: #070a18; overflow: hidden; }
+      #gl { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; display: block; }
+      #shade { position: absolute; inset: 0; background: radial-gradient(ellipse 900px 420px at 50% 64%, rgba(14, 18, 44, 0.78), rgba(14, 18, 44, 0) 100%); opacity: 0; pointer-events: none; }
+      #title { position: absolute; left: 0; top: 600px; width: 1920px; text-align: center; font-family: "CrystalTitle", serif; font-size: 150px; line-height: 1; letter-spacing: 0.32em; padding-left: 0.32em; color: #fbf6ea; text-shadow: 0 0 3px rgba(8, 14, 40, 0.9), 0 0 18px rgba(150, 225, 255, 0.75), 0 0 60px rgba(90, 170, 255, 0.45), 0 4px 12px rgba(8, 14, 40, 0.8); }
+      #title .ch { display: inline-block; opacity: 0; }
+      #rule { position: absolute; left: 660px; top: 800px; width: 600px; height: 2px; background: linear-gradient(90deg, rgba(255, 236, 190, 0), rgba(255, 236, 190, 0.95) 50%, rgba(255, 236, 190, 0)); transform: scaleX(0); opacity: 0; }
+      #sub { position: absolute; left: 0; top: 828px; width: 1920px; text-align: center; font-family: "CrystalTitle", serif; font-size: 34px; letter-spacing: 0.9em; padding-left: 0.9em; color: #f3e6c4; opacity: 0; text-shadow: 0 0 3px rgba(8, 14, 40, 0.9), 0 0 14px rgba(255, 220, 150, 0.6); }
+      #fontwarm { position: absolute; left: -9999px; top: 0; font-family: "CrystalTitle"; font-size: 20px; color: #000; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="20" data-width="1920" data-height="1080">
+      <canvas id="gl"></canvas>
+      <div id="shade"></div>
+      <div id="title"><span class="ch">水</span><span class="ch">晶</span><span class="ch">の</span><span class="ch">空</span></div>
+      <div id="rule"></div>
+      <div id="sub">CRYSTAL SKY</div>
+      <div id="fontwarm">水晶の空CRYSTAL SKY</div>
+    </div>
+    <script>
+      // DOM 用 timeline: 10.000s の閃光とタイトルだけ。3D は hf-seek で描く(ここで3Dを描かない)。
+      window.__timelines = window.__timelines || {};
+      const tl = gsap.timeline({ paused: true });
+      // 10.000s(f300)の白い閃光は 3D 側(カメラ前の板)で描く。ここはタイトルの下の影だけ
+      tl.fromTo("#shade", { opacity: 0 }, { opacity: 1, duration: 0.8, ease: "power2.out" }, 17.4);
+      // タイトル: 17.5s から 1/4拍(0.156s)ずつ
+      document.querySelectorAll("#title .ch").forEach((el, i) => {
+        tl.fromTo(el, { opacity: 0, y: 26, filter: "blur(14px)" }, { opacity: 1, y: 0, filter: "blur(0px)", duration: 0.7, ease: "power3.out" }, 17.5 + i * 0.15625);
+      });
+      tl.fromTo("#rule", { opacity: 0, scaleX: 0 }, { opacity: 1, scaleX: 1, duration: 0.9, ease: "power3.out" }, 18.4);
+      tl.fromTo("#sub", { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 1.0, ease: "power2.out" }, 18.75);
+      tl.set({}, {}, 20);
+      window.__timelines["main"] = tl;
+    </script>
+    <script type="module">
+      import * as THREE from "three";
+      import { makePost } from "./assets/post.js";
+
+      const DUR = 20, W = 1920, H = 1080;
+      const mulberry32 = (a) => () => { a |= 0; a = (a + 0x6d2b79f5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+      const clamp = (x, a, b) => Math.min(b, Math.max(a, x)), lerp = (a, b, k) => a + (b - a) * k;
+      const smooth = (a, b, x) => { const k = clamp((x - a) / (b - a), 0, 1); return k * k * (3 - 2 * k); };
+      const ease3 = (a, b, x) => { const k = clamp((x - a) / (b - a), 0, 1); return k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2; };
+      const outC = (a, b, x) => { const k = clamp((x - a) / (b - a), 0, 1); return 1 - Math.pow(1 - k, 3); };
+      const hash = (n) => { const s = Math.sin(n * 127.1 + 311.7) * 43758.5453; return s - Math.floor(s); };
+      const vnoise = (x) => { const i = Math.floor(x), f = x - i, u = f * f * (3 - 2 * f); return lerp(hash(i), hash(i + 1), u) * 2 - 1; };
+      const shake = (t, f, seed) => vnoise(t * f + seed * 17.3) * 0.6 + vnoise(t * f * 2.3 + seed * 5.1) * 0.4;
+      // 3D の値ノイズ(島の岩肌)
+      const h3 = (x, y, z) => { const s = Math.sin(x * 127.1 + y * 311.7 + z * 74.7) * 43758.5453; return s - Math.floor(s); };
+      function n3(x, y, z) {
+        const xi = Math.floor(x), yi = Math.floor(y), zi = Math.floor(z), xf = x - xi, yf = y - yi, zf = z - zi;
+        const u = xf * xf * (3 - 2 * xf), v = yf * yf * (3 - 2 * yf), w = zf * zf * (3 - 2 * zf);
+        const c = (a, b, d) => h3(xi + a, yi + b, zi + d);
+        const x00 = lerp(c(0, 0, 0), c(1, 0, 0), u), x10 = lerp(c(0, 1, 0), c(1, 1, 0), u), x01 = lerp(c(0, 0, 1), c(1, 0, 1), u), x11 = lerp(c(0, 1, 1), c(1, 1, 1), u);
+        return lerp(lerp(x00, x10, v), lerp(x01, x11, v), w) * 2 - 1;
+      }
+      const fbm = (x, y, z) => n3(x, y, z) * 0.6 + n3(x * 2.1, y * 2.1, z * 2.1) * 0.3 + n3(x * 4.3, y * 4.3, z * 4.3) * 0.1;
+
+      const canvas = document.getElementById("gl");
+      const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: "high-performance", preserveDrawingBuffer: true });
+      renderer.setPixelRatio(1);
+      renderer.toneMapping = THREE.NeutralToneMapping;
+      renderer.toneMappingExposure = 1.0;
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+      const scene = new THREE.Scene();
+      scene.background = new THREE.Color("#070a18");
+      scene.fog = new THREE.FogExp2(0xb7a6c8, 0.0018);
+      const camera = new THREE.PerspectiveCamera(36, W / H, 0.5, 4000);
+      scene.add(camera);
+
+      // DoF + Bloom + 色補正 + GTAO(全カット)
+      const post = makePost(renderer, scene, camera, W, H, { quality: "fast", ao: true, aoRadius: 2.2, aoThickness: 4, aoScale: 1.6, aoAmt: 0.8 });
+      renderer.setSize(post.W, post.H, false);
+      post.bloom.strength = 0.55; post.bloom.radius = 0.6; post.bloom.threshold = 1.25;
+      // GTAO の法線パスから、雲・光の柱など(透明の効果物)を外す
+      { const ao = post.dof.ao, orig = ao._overrideVisibility.bind(ao);
+        ao._overrideVisibility = function () { orig(); const cache = this._visibilityCache; scene.traverse((o) => { if (o.userData.noAO && o.visible) { o.visible = false; cache.push(o); } }); }; }
+
+      // ---------- 色(夜明け k=0 → 金色の朝 k=1) ----------
+      const C = (h) => new THREE.Color(h);
+      const SKY = [
+        { zen: C("#16204a"), mid: C("#5a5fa8"), hor: C("#f0a6a2"), sun: C("#ffb98a"), fog: C("#b9a6c9"), cloudLit: C("#ffe2d6"), cloudSh: C("#6d6a9e") },
+        { zen: C("#24508f"), mid: C("#6d93cc"), hor: C("#f6c27e"), sun: C("#ffd79a"), fog: C("#cdb59a"), cloudLit: C("#fff0d6"), cloudSh: C("#7c7aa6") },
+      ];
+      const mixC = (a, b, k) => a.clone().lerp(b, k);
+      const sunDirAt = (elev, az) => new THREE.Vector3(Math.sin(az) * Math.cos(elev), Math.sin(elev), -Math.cos(az) * Math.cos(elev)).normalize();
+
+      // ---------- テクスチャ ----------
+      function cvs(w, h) { const c = document.createElement("canvas"); c.width = w; c.height = h; return [c, c.getContext("2d")]; }
+      function tex(c, srgb = true) { const t = new THREE.CanvasTexture(c); if (srgb) t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t; }
+      function discTex() {
+        const [c, g] = cvs(128, 128); const gr = g.createRadialGradient(64, 64, 0, 64, 64, 62);
+        gr.addColorStop(0, "rgba(255,255,255,1)"); gr.addColorStop(0.3, "rgba(255,255,255,.55)"); gr.addColorStop(1, "rgba(255,255,255,0)");
+        g.fillStyle = gr; g.fillRect(0, 0, 128, 128); return tex(c);
+      }
+      // 雲: 2x2 のアトラス(4種類の積雲の形)。下が平らで上がもくもく
+      function cloudAtlas() {
+        const N = 512, [c, g] = cvs(N, N); const r = mulberry32(4242);
+        for (let q = 0; q < 4; q++) {
+          const ox = (q % 2) * 256, oy = Math.floor(q / 2) * 256;
+          g.save(); g.beginPath(); g.rect(ox, oy, 256, 256); g.clip();
+          for (let i = 0; i < 70; i++) {
+            const a = r() * Math.PI * 2, rr = Math.sqrt(r()) * 70;
+            const x = ox + 128 + Math.cos(a) * rr * 1.15, y = oy + 140 + Math.sin(a) * rr * 0.75 - r() * 30;
+            const rad = 22 + r() * 46 * (1 - rr / 110);
+            if (y + rad * 0.5 > oy + 200) continue;
+            const gr = g.createRadialGradient(x, y, 0, x, y, rad);
+            gr.addColorStop(0, "rgba(255,255,255,.34)"); gr.addColorStop(0.55, "rgba(255,255,255,.2)"); gr.addColorStop(1, "rgba(255,255,255,0)");
+            g.fillStyle = gr; g.fillRect(x - rad, y - rad, rad * 2, rad * 2);
+          }
+          g.restore();
+        }
+        const t = tex(c, false); t.premultiplyAlpha = false; return t;
+      }
+      // 魔法陣(架空の記号。意味はない)。外側の帯と内側の図形を別のテクスチャにして逆回転させる
+      function glyph(g, cx, cy, s, r) {
+        g.beginPath();
+        const n = 2 + ((r() * 3) | 0);
+        for (let k = 0; k < n; k++) {
+          const kind = r();
+          if (kind < 0.45) { g.moveTo(cx + (r() - 0.5) * s, cy + (r() - 0.5) * s); g.lineTo(cx + (r() - 0.5) * s, cy + (r() - 0.5) * s); }
+          else if (kind < 0.75) { const rr = s * (0.12 + r() * 0.2); g.moveTo(cx + rr, cy); g.arc(cx + (r() - 0.5) * s * 0.3, cy + (r() - 0.5) * s * 0.3, rr, 0, Math.PI * (1 + r())); }
+          else { const y0 = cy + (r() - 0.5) * s; g.moveTo(cx - s * 0.45, y0); g.lineTo(cx + s * 0.45, y0); g.moveTo(cx, y0); g.lineTo(cx, y0 + (r() > 0.5 ? 1 : -1) * s * 0.4); }
+        }
+        g.stroke();
+      }
+      function circleTex(part) {
+        const N = 2048, [c, g] = cvs(N, N), R = N / 2, r = mulberry32(part === "outer" ? 8080 : 9090);
+        g.translate(R, R); g.strokeStyle = "#fff"; g.fillStyle = "#fff"; g.lineCap = "round"; g.lineJoin = "round";
+        const ring = (rr, w) => { g.lineWidth = w; g.beginPath(); g.arc(0, 0, rr * R, 0, Math.PI * 2); g.stroke(); };
+        if (part === "outer") {
+          ring(0.985, 10); ring(0.955, 4); ring(0.80, 6); ring(0.775, 3);
+          // 目盛り
+          g.lineWidth = 4; for (let i = 0; i < 96; i++) { const a = (i / 96) * Math.PI * 2, l = i % 8 === 0 ? 0.05 : 0.022; g.beginPath(); g.moveTo(Math.cos(a) * 0.955 * R, Math.sin(a) * 0.955 * R); g.lineTo(Math.cos(a) * (0.955 - l) * R, Math.sin(a) * (0.955 - l) * R); g.stroke(); }
+          // 架空の記号の帯
+          g.lineWidth = 6; const n = 40;
+          for (let i = 0; i < n; i++) { const a = (i / n) * Math.PI * 2; g.save(); g.rotate(a); g.translate(0, -0.865 * R); glyph(g, 0, 0, 0.075 * R, r); g.restore(); }
+          // 外に向く小さな菱形 8つ
+          for (let i = 0; i < 8; i++) { const a = (i / 8) * Math.PI * 2 + Math.PI / 8; g.save(); g.rotate(a); g.beginPath(); g.moveTo(0, -0.995 * R); g.lineTo(0.018 * R, -0.97 * R); g.lineTo(0, -0.945 * R); g.lineTo(-0.018 * R, -0.97 * R); g.closePath(); g.fill(); g.restore(); }
+        } else {
+          // 二つの正方形を重ねた八芒星
+          g.lineWidth = 7;
+          for (const off of [0, Math.PI / 4]) { g.beginPath(); for (let i = 0; i <= 4; i++) { const a = off + (i / 4) * Math.PI * 2; const x = Math.cos(a) * 0.74 * R, y = Math.sin(a) * 0.74 * R; i ? g.lineTo(x, y) : g.moveTo(x, y); } g.stroke(); }
+          ring(0.56, 6); ring(0.53, 2.5);
+          // 六角形(水晶の断面)と頂点を結ぶ線
+          g.lineWidth = 6; g.beginPath(); for (let i = 0; i <= 6; i++) { const a = (i / 6) * Math.PI * 2 + Math.PI / 6; const x = Math.cos(a) * 0.46 * R, y = Math.sin(a) * 0.46 * R; i ? g.lineTo(x, y) : g.moveTo(x, y); } g.stroke();
+          g.lineWidth = 3; for (let i = 0; i < 6; i++) { const a = (i / 6) * Math.PI * 2 + Math.PI / 6, b = a + Math.PI * 2 / 3; g.beginPath(); g.moveTo(Math.cos(a) * 0.46 * R, Math.sin(a) * 0.46 * R); g.lineTo(Math.cos(b) * 0.46 * R, Math.sin(b) * 0.46 * R); g.stroke(); }
+          ring(0.24, 5); ring(0.1, 4);
+          for (let i = 0; i < 12; i++) { const a = (i / 12) * Math.PI * 2; g.beginPath(); g.arc(Math.cos(a) * 0.645 * R, Math.sin(a) * 0.645 * R, 0.014 * R, 0, Math.PI * 2); g.fill(); }
+          // 内側にも記号を少し
+          g.lineWidth = 4; for (let i = 0; i < 12; i++) { const a = (i / 12) * Math.PI * 2 + 0.26; g.save(); g.rotate(a); g.translate(0, -0.35 * R); glyph(g, 0, 0, 0.06 * R, r); g.restore(); }
+        }
+        return tex(c, false);
+      }
+
+      // ---------- 空(シェーダー。カメラに追従する大きな球) ----------
+      const skyU = { uZen: { value: new THREE.Color() }, uMid: { value: new THREE.Color() }, uHor: { value: new THREE.Color() }, uSun: { value: new THREE.Color() }, uSunDir: { value: new THREE.Vector3(0, 0.1, -1) }, uSunK: { value: 1 }, uWhite: { value: 0 }, uFog: { value: new THREE.Color() } };
+      const skyMat = new THREE.ShaderMaterial({
+        uniforms: skyU, side: THREE.BackSide, depthWrite: false,
+        vertexShader: `varying vec3 vDir; void main(){ vDir = normalize(position); vec4 p = modelViewMatrix * vec4(position,1.0); gl_Position = projectionMatrix * p; }`,
+        fragmentShader: `varying vec3 vDir; uniform vec3 uZen,uMid,uHor,uSun,uSunDir,uFog; uniform float uSunK,uWhite;
+          void main(){ vec3 d = normalize(vDir); float h = d.y;
+            vec3 c = mix(uHor, uMid, smoothstep(0.0, 0.22, h)); c = mix(c, uZen, smoothstep(0.18, 0.75, h));
+            c = mix(c, uHor * 0.9, smoothstep(0.0, -0.08, h));
+            float s = max(dot(d, normalize(uSunDir)), 0.0);
+            c += uSun * (pow(s, 6.0) * 0.55 + pow(s, 48.0) * 1.4) * uSunK;
+            c += uSun * smoothstep(0.9994, 0.9997, s) * 22.0 * uSunK;
+            c = mix(c, uFog, uWhite);
+            gl_FragColor = vec4(c, 1.0); }`,
+      });
+      const sky = new THREE.Mesh(new THREE.SphereGeometry(2500, 48, 24), skyMat); sky.userData.noAO = true; sky.renderOrder = -10; sky.frustumCulled = false;
+
+      // ---------- 雲(ビルボードのインスタンス。毎フレーム奥から順に並べ替える) ----------
+      const cloudU = { uAtlas: { value: null }, uLit: { value: new THREE.Color() }, uSh: { value: new THREE.Color() }, uSunCol: { value: new THREE.Color() }, uSunDir: { value: new THREE.Vector3() }, uFogCol: { value: new THREE.Color() }, uFogD: { value: 0.0018 }, uNear: { value: 4 }, uOpacity: { value: 1 }, uGlowPos: { value: new THREE.Vector3() }, uGlow: { value: 0 }, uGlowCol: { value: new THREE.Color("#8fe6ff") } };
+      const cloudMat = new THREE.ShaderMaterial({
+        uniforms: cloudU, transparent: true, depthWrite: false, depthTest: true,
+        vertexShader: `attribute vec3 iPos; attribute vec3 iData; // x=scale y=rot z=var+shade
+          varying vec2 vUv; varying vec2 vAtl; varying float vDepth; varying float vToSun; varying float vShade; varying vec3 vW;
+          uniform vec3 uSunDir;
+          void main(){
+            vec4 mv = viewMatrix * vec4(iPos, 1.0);
+            float s = iData.x, r = iData.y; vec2 p = position.xy;
+            vec2 q = vec2(p.x * cos(r) - p.y * sin(r), p.x * sin(r) + p.y * cos(r));
+            mv.xy += q * s; mv.y += 0.0;
+            vUv = uv; float v = floor(iData.z); vShade = fract(iData.z);
+            vAtl = vec2(mod(v, 2.0), floor(v / 2.0)) * 0.5;
+            vDepth = -mv.z; vToSun = dot(normalize(iPos - cameraPosition), uSunDir); vW = iPos;
+            gl_Position = projectionMatrix * mv; }`,
+        fragmentShader: `uniform sampler2D uAtlas; uniform vec3 uLit,uSh,uSunCol,uFogCol,uGlowPos,uGlowCol; uniform float uFogD,uNear,uOpacity,uGlow;
+          varying vec2 vUv; varying vec2 vAtl; varying float vDepth; varying float vToSun; varying float vShade; varying vec3 vW;
+          void main(){
+            float a = texture2D(uAtlas, vAtl + vUv * 0.5).a;
+            a *= smoothstep(uNear * 0.4, uNear, vDepth) * uOpacity;
+            if (a < 0.004) discard;
+            float lit = smoothstep(0.15, 0.85, vUv.y) * 0.75 + vShade * 0.25;
+            vec3 col = mix(uSh, uLit, lit);
+            float edge = clamp(a * (1.0 - a) * 4.0, 0.0, 1.0);
+            col += uSunCol * edge * pow(max(vToSun, 0.0), 5.0) * 0.7;
+            float gd = length(vW.xz - uGlowPos.xz);
+            col += uGlowCol * uGlow * exp(-gd / 70.0) * (0.6 + 0.4 * lit);
+            float f = 1.0 - exp(-pow(vDepth * uFogD, 2.0));
+            col = mix(col, uFogCol, clamp(f, 0.0, 1.0));
+            gl_FragColor = vec4(col, a); }`,
+      });
+      let cloudMesh, cloudN = 0, cloudSrc;
+
+      // ---------- 光の柱・魔法陣・衝撃の輪(加算合成のシェーダー) ----------
+      const pillarMat = (core) => new THREE.ShaderMaterial({
+        uniforms: { uCol: { value: new THREE.Color(core ? "#ffffff" : "#9fe9ff") }, uInt: { value: 0 }, uTime: { value: 0 }, uCore: { value: core ? 1 : 0 } },
+        transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
+        vertexShader: `varying vec3 vN; varying vec3 vWP; varying float vY; void main(){ vY = position.y; vec4 w = modelMatrix * vec4(position,1.0); vWP = w.xyz; vN = normalize(mat3(modelMatrix) * normal); gl_Position = projectionMatrix * viewMatrix * w; }`,
+        fragmentShader: `uniform vec3 uCol; uniform float uInt,uTime,uCore; varying vec3 vN; varying vec3 vWP; varying float vY;
+          void main(){ vec3 v = normalize(cameraPosition - vWP); vec3 n = normalize(vec3(vN.x, 0.0, vN.z)); vec3 vh = normalize(vec3(v.x, 0.0, v.z));
+            float f = abs(dot(n, vh)); float core = pow(f, uCore > 0.5 ? 1.5 : 3.0);
+            float bands = 0.78 + 0.22 * sin(vWP.y * 0.22 - uTime * 16.0) * sin(vWP.y * 0.05 + uTime * 3.0);
+            float fade = smoothstep(1.0, 0.45, vY) * smoothstep(0.0, 0.004, vY);
+            gl_FragColor = vec4(uCol * uInt * (core + 0.08) * bands * fade, 1.0); }`,
+      });
+      const circleMat = (map, col) => new THREE.ShaderMaterial({
+        uniforms: { uMap: { value: map }, uCol: { value: new THREE.Color(col) }, uInt: { value: 0 }, uReveal: { value: 0 }, uRot: { value: 0 } },
+        transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
+        vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`,
+        fragmentShader: `uniform sampler2D uMap; uniform vec3 uCol; uniform float uInt,uReveal,uRot; varying vec2 vUv;
+          void main(){ vec2 p = vUv - 0.5; float c = cos(uRot), s = sin(uRot); vec2 q = vec2(p.x*c - p.y*s, p.x*s + p.y*c);
+            float m = texture2D(uMap, q + 0.5).r;
+            float ang = fract(atan(p.y, p.x) / 6.28318 + 0.25);
+            float rv = smoothstep(uReveal, uReveal - 0.015, ang);
+            float lead = exp(-abs(ang - uReveal) * 60.0) * step(uReveal, 0.999);
+            gl_FragColor = vec4(uCol * uInt * m * (rv + lead * 3.0), 1.0); }`,
+      });
+
+      // ---------- 形 ----------
+      function crystalGeo(r, body, tipT, tipB, seg = 6) {
+        const pts = [new THREE.Vector2(0, -body / 2 - tipB), new THREE.Vector2(r * 0.92, -body / 2), new THREE.Vector2(r, body / 2 - body * 0.1), new THREE.Vector2(r * 0.96, body / 2), new THREE.Vector2(0, body / 2 + tipT)];
+        const g = new THREE.LatheGeometry(pts, seg); g.computeVertexNormals(); return g;
+      }
+      function islandGeo(R, depth, seed) {
+        const g = new THREE.IcosahedronGeometry(1, 5), p = g.attributes.position, col = new Float32Array(p.count * 3);
+        const sx = seed * 3.7, grass = C("#5d8f5a"), grass2 = C("#86a861"), rimC = C("#8c7a68"), deep = C("#3a3348"), mid = C("#665566");
+        for (let i = 0; i < p.count; i++) {
+          let x = p.getX(i), y = p.getY(i), z = p.getZ(i);
+          const n = fbm(x * 2.2 + sx, y * 2.2, z * 2.2 - sx);
+          let X, Y, Z, c;
+          if (y > -0.05) {
+            const rr = Math.sqrt(x * x + z * z), k = 1 + n * 0.12;
+            X = x * k; Z = z * k; Y = (0.06 * (1 - rr * rr) + n * 0.025) * 1.0;
+            c = grass.clone().lerp(grass2, clamp(0.5 + n * 1.6, 0, 1));
+            if (rr > 0.93) c.lerp(rimC, 0.6);
+          } else {
+            const d = -y; const k = Math.pow(1 - d, 0.55) * (1 + n * 0.3);
+            const len = Math.sqrt(x * x + z * z) + 1e-6;
+            X = (x / len) * k; Z = (z / len) * k;
+            Y = -Math.pow(d, 1.25) * (depth / R) - Math.abs(n) * 0.25 * d;
+            const band = 0.5 + 0.5 * Math.sin(Y * R * 0.9 + n * 3);
+            c = rimC.clone().lerp(mid, smooth(0, 0.5, d)).lerp(deep, smooth(0.4, 1, d)).multiplyScalar(0.85 + band * 0.25);
+          }
+          p.setXYZ(i, X * R, Y * R, Z * R); col.set([c.r, c.g, c.b], i * 3);
+        }
+        g.setAttribute("color", new THREE.BufferAttribute(col, 3)); g.computeVertexNormals(); return g;
+      }
+
+      // ---------- 世界の配置 ----------
+      const CRY = new THREE.Vector3(0, 30, 0);
+      const ISL = [ // x, yTop, z, R, depth
+        [0, 12, 0, 16, 26], [56, 24, 12, 9, 14], [-45, 18, 30, 11, 16], [60, 8, -40, 13, 20], [-70, 34, -60, 8, 12], [28, 24, 205, 7, 11], [-40, 22, 185, 6, 9],
+        [95, 45, 20, 7, 10], [-110, 14, 90, 10, 15], [20, 55, -110, 9, 14], [130, 20, 140, 12, 18], [-150, 30, -10, 14, 20], [-20, 40, 110, 5, 8],
+      ];
+      const S = {};
+      const PATH_PTS = [[-40, 30, 240], [-20, 21, 178], [-4, 13, 122], [4, 13, 82], [8, 16, 52]].map((a) => new THREE.Vector3(...a));
+      const path = new THREE.CatmullRomCurve3(PATH_PTS, false, "centripetal");
+      const PL = path.getLength();
+      // 速度の形(5.0〜10.0s)を積分して距離の表にする(決定的)
+      const vRaw = (t) => t < 7.5 ? 20 + 35 * smooth(5, 7.5, t) : t < 8.75 ? 55 : t < 9.375 ? lerp(55, 12, smooth(8.75, 9.375, t)) : lerp(12, 1.5, smooth(9.375, 10, t));
+      const STEP = 0.002, SN = Math.round(5 / STEP), sTab = new Float32Array(SN + 1);
+      for (let i = 1; i <= SN; i++) sTab[i] = sTab[i - 1] + vRaw(5 + (i - 0.5) * STEP) * STEP;
+      const sAt = (t) => { const x = clamp((t - 5) / STEP, 0, SN), i = Math.min(Math.floor(x), SN - 1); return lerp(sTab[i], sTab[i + 1], x - i) / sTab[SN] * PL; };
+
+      function build() {
+        scene.add(sky);
+        const rnd = mulberry32(2026);
+        // 環境マップ(夜明け・朝の2つ)
+        const pmrem = new THREE.PMREMGenerator(renderer);
+        S.env = [0, 1].map((k) => {
+          const s = new THREE.Scene(); const m = skyMat.clone(); setSky(m.uniforms, k, sunDirAt(k ? 0.2 : 0.1, -0.22), 1, 0);
+          s.add(new THREE.Mesh(new THREE.SphereGeometry(100, 32, 16), m));
+          return pmrem.fromScene(s, 0.02).texture;
+        });
+        scene.environment = S.env[0]; scene.environmentIntensity = 0.8;
+
+        // 島
+        const islMat = new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.95, metalness: 0 });
+        S.islands = ISL.map(([x, y, z, R, d], i) => {
+          const m = new THREE.Mesh(islandGeo(R, d, i + 1), islMat); m.position.set(x, y, z); m.rotation.y = i * 1.3;
+          m.castShadow = i === 0; m.receiveShadow = true; scene.add(m); return m;
+        });
+        // 遠くの島(シルエット)
+        for (let i = 0; i < 14; i++) {
+          const a = rnd() * Math.PI * 2, dist = 260 + rnd() * 260, R = 8 + rnd() * 16;
+          const m = new THREE.Mesh(islandGeo(R, R * 1.5, 50 + i), islMat); m.position.set(Math.cos(a) * dist, 10 + rnd() * 70, Math.sin(a) * dist - 60); m.rotation.y = rnd() * 6; scene.add(m);
+        }
+        // 木(島の上)
+        const treeG = new THREE.ConeGeometry(1, 3.2, 6); treeG.translate(0, 1.6, 0);
+        const trees = []; ISL.forEach(([x, y, z, R], i) => { const n = i === 0 ? 0 : Math.round(R * 1.6); for (let k = 0; k < n; k++) { const a = rnd() * 6.28, rr = Math.sqrt(rnd()) * R * 0.78; trees.push([x + Math.cos(a) * rr, y + 0.3, z + Math.sin(a) * rr, 0.6 + rnd() * 1.1]); } });
+        // 祭壇の島は外周だけ
+        const tm = new THREE.InstancedMesh(treeG, new THREE.MeshStandardMaterial({ color: "#2f5f4f", flatShading: true, roughness: 0.9 }), trees.length);
+        const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), V = new THREE.Vector3(), Sv = new THREE.Vector3();
+        trees.forEach(([x, y, z, s], i) => { m4.compose(V.set(x, y, z), q.setFromEuler(e.set(0, rnd() * 6, 0)), Sv.set(s, s * (0.9 + rnd() * 0.5), s)); tm.setMatrixAt(i, m4); });
+        tm.castShadow = tm.receiveShadow = true; scene.add(tm);
+        // 祭壇: 石の円盤と立石 8本
+        const stone = new THREE.MeshStandardMaterial({ color: "#b8b0a6", roughness: 0.85, flatShading: true });
+        const plat = new THREE.Mesh(new THREE.CylinderGeometry(10, 10.6, 0.8, 48), stone); plat.position.set(0, 12.0, 0); plat.receiveShadow = plat.castShadow = true; scene.add(plat);
+        const rim = new THREE.Mesh(new THREE.TorusGeometry(10.1, 0.25, 6, 64), stone); rim.rotation.x = Math.PI / 2; rim.position.y = 12.42; rim.castShadow = true; scene.add(rim);
+        for (let i = 0; i < 8; i++) {
+          const a = (i / 8) * Math.PI * 2 + 0.2, h = 3 + (i % 3) * 0.7;
+          const mono = new THREE.Mesh(new THREE.BoxGeometry(1.1, h, 0.7), stone); mono.position.set(Math.cos(a) * 11.6, 12.2 + h / 2, Math.sin(a) * 11.6); mono.rotation.set((rnd() - 0.5) * 0.08, -a, (rnd() - 0.5) * 0.08);
+          mono.castShadow = mono.receiveShadow = true; scene.add(mono);
+        }
+        // 巨大な水晶(外殻=透ける物理材質、芯=発光、稜線=発光の線)
+        S.cry = new THREE.Group(); S.cry.position.copy(CRY); scene.add(S.cry);
+        const cg = crystalGeo(4.2, 15, 6.5, 5.0);
+        S.cryMat = new THREE.MeshPhysicalMaterial({ color: "#a8ecff", roughness: 0.06, metalness: 0.05, transparent: true, opacity: 0.62, iridescence: 0.9, iridescenceIOR: 1.5, clearcoat: 1, clearcoatRoughness: 0.05, flatShading: true, emissive: "#3fc7ff", emissiveIntensity: 0.35, envMapIntensity: 2.2 });
+        const shell = new THREE.Mesh(cg, S.cryMat); shell.castShadow = true; S.cry.add(shell);
+        S.coreMat = new THREE.MeshBasicMaterial({ color: new THREE.Color("#7fe6ff").multiplyScalar(2.5) });
+        const core = new THREE.Mesh(crystalGeo(1.8, 12, 4, 3.5), S.coreMat); S.cry.add(core);
+        S.edgeMat = new THREE.LineBasicMaterial({ color: new THREE.Color("#d9f7ff").multiplyScalar(2.2) });
+        S.cry.add(new THREE.LineSegments(new THREE.EdgesGeometry(cg, 20), S.edgeMat));
+        // 衛星の小さな水晶 7つ
+        S.sats = [];
+        const smallMat = new THREE.MeshPhysicalMaterial({ color: "#bdf2ff", roughness: 0.08, metalness: 0.05, flatShading: true, clearcoat: 1, iridescence: 0.8, emissive: "#46c8ff", emissiveIntensity: 0.9, envMapIntensity: 2 });
+        for (let i = 0; i < 7; i++) { const s = 0.6 + rnd() * 0.7; const m = new THREE.Mesh(crystalGeo(1.0 * s, 3.2 * s, 1.6 * s, 1.3 * s), smallMat); m.userData = { a: (i / 7) * 6.28 + rnd(), r: 9 + rnd() * 4, y: -8 + rnd() * 16, sp: 0.12 + rnd() * 0.1, tilt: (rnd() - 0.5) * 0.8 }; m.castShadow = true; scene.add(m); S.sats.push(m); }
+        // 島の上の小さな水晶の群れ
+        const clusterG = crystalGeo(0.7, 2.4, 1.2, 0.2); clusterG.translate(0, 1.2, 0);
+        const cl = []; ISL.forEach(([x, y, z, R], i) => { if (i === 0 || i % 2) return; for (let k = 0; k < 5; k++) { const a = rnd() * 6.28, rr = rnd() * R * 0.5; cl.push([x + Math.cos(a) * rr, y + 0.2, z + Math.sin(a) * rr, 0.7 + rnd() * 1.4]); } });
+        const cm = new THREE.InstancedMesh(clusterG, smallMat, cl.length);
+        cl.forEach(([x, y, z, s], i) => { m4.compose(V.set(x, y, z), q.setFromEuler(e.set((rnd() - 0.5) * 0.7, rnd() * 6, (rnd() - 0.5) * 0.7)), Sv.set(s, s, s)); cm.setMatrixAt(i, m4); });
+        scene.add(cm);
+        // 浮かぶ岩(飛翔の視差)
+        const rockG = new THREE.IcosahedronGeometry(1, 0), rockM = new THREE.MeshStandardMaterial({ color: "#8a7d80", flatShading: true, roughness: 0.95 });
+        S.rocks = new THREE.InstancedMesh(rockG, rockM, 150); S.rockData = [];
+        for (let i = 0; i < 150; i++) {
+          let p;
+          if (i < 45) { const u = rnd(), c0 = path.getPointAt(u); p = c0.clone().add(new THREE.Vector3((rnd() - 0.5) * 60, (rnd() - 0.5) * 30, (rnd() - 0.5) * 20)); const dv = p.clone().sub(c0); dv.z = 0; if (dv.length() < 18) p.copy(c0).add(dv.setLength(18 + rnd() * 8)); }
+          else { const isl = ISL[(rnd() * ISL.length) | 0]; const a = rnd() * 6.28, rr = isl[3] * (1.2 + rnd() * 1.4); p = new THREE.Vector3(isl[0] + Math.cos(a) * rr, isl[1] - 4 - rnd() * 12, isl[2] + Math.sin(a) * rr); }
+          if (p.distanceTo(V.set(79, 16, 34)) < 30 || p.distanceTo(V.set(227, 24, 187)) < 30) p.y -= 60;
+          S.rockData.push({ p, s: 0.4 + rnd() * rnd() * 3, ph: rnd() * 6.28, rx: rnd() * 6, ry: rnd() * 6 });
+        }
+        S.rocks.castShadow = true; scene.add(S.rocks);
+
+        // 雲: 雲海 + 地平の積雲 + 飛翔で突き抜ける雲の塊
+        const list = [];
+        for (let i = 0; i < 620; i++) { const x = (rnd() - 0.5) * 1400, z = (rnd() - 0.5) * 1400 - 100; list.push([x, -13 + rnd() * 9, z, 34 + rnd() * 40, rnd() * 6.28, ((rnd() * 4) | 0) + rnd() * 0.99]); }
+        for (let i = 0; i < 80; i++) { const a = rnd() * 6.28, d = 650 + rnd() * 450; list.push([Math.cos(a) * d, 10 + rnd() * 45, Math.sin(a) * d - 100, 140 + rnd() * 160, (rnd() - 0.5) * 0.4, ((rnd() * 4) | 0) + rnd() * 0.99]); }
+        const s0 = sAt(7.45), s1 = sAt(8.8);
+        for (let i = 0; i < 280; i++) {
+          const s = lerp(s0 - 4, s1 + 2, rnd()); const c = path.getPointAt(clamp(s / PL, 0, 1));
+          const a = rnd() * 6.28, rr = 3 + Math.pow(rnd(), 0.7) * 26;
+          list.push([c.x + Math.cos(a) * rr * 1.3, Math.max(-8, c.y + Math.sin(a) * rr * 0.8 - 4), c.z + (rnd() - 0.5) * 10, 16 + rnd() * 26, rnd() * 6.28, ((rnd() * 4) | 0) + rnd() * 0.99]);
+        }
+        // 雲の塊の下を雲海までつなぐ
+        for (let i = 0; i < 60; i++) { const s = lerp(s0 - 20, s1 + 6, rnd()); const c = path.getPointAt(clamp(s / PL, 0, 1)); list.push([c.x + (rnd() - 0.5) * 80, -8 + rnd() * 7, c.z + (rnd() - 0.5) * 30, 30 + rnd() * 30, rnd() * 6.28, ((rnd() * 4) | 0) + rnd() * 0.99]); }
+        cloudN = list.length; cloudSrc = list;
+        const ig = new THREE.InstancedBufferGeometry(); const base = new THREE.PlaneGeometry(1, 1);
+        ig.index = base.index; ig.setAttribute("position", base.attributes.position); ig.setAttribute("uv", base.attributes.uv);
+        ig.setAttribute("iPos", new THREE.InstancedBufferAttribute(new Float32Array(cloudN * 3), 3));
+        ig.setAttribute("iData", new THREE.InstancedBufferAttribute(new Float32Array(cloudN * 3), 3));
+        ig.instanceCount = cloudN;
+        cloudU.uAtlas.value = cloudAtlas();
+        cloudMesh = new THREE.Mesh(ig, cloudMat); cloudMesh.frustumCulled = false; cloudMesh.userData.noAO = true; cloudMesh.renderOrder = 2; scene.add(cloudMesh);
+
+        // 魔法陣(外帯・内図形)と光の柱・衝撃の輪
+        S.circO = new THREE.Mesh(new THREE.PlaneGeometry(19.6, 19.6), circleMat(circleTex("outer"), "#8fe8ff"));
+        S.circI = new THREE.Mesh(new THREE.PlaneGeometry(19.6, 19.6), circleMat(circleTex("inner"), "#c9f4ff"));
+        for (const m of [S.circO, S.circI]) { m.rotation.x = -Math.PI / 2; m.position.y = 12.45; m.userData.noAO = true; m.renderOrder = 3; scene.add(m); }
+        const cyl = new THREE.CylinderGeometry(1, 1, 1, 64, 1, true); cyl.translate(0, 0.5, 0);
+        S.pillar = new THREE.Mesh(cyl, pillarMat(false)); S.pillarCore = new THREE.Mesh(cyl, pillarMat(true));
+        for (const m of [S.pillar, S.pillarCore]) { m.position.y = 12.4; m.userData.noAO = true; m.renderOrder = 4; m.frustumCulled = false; scene.add(m); }
+        const ringMat = () => new THREE.MeshBasicMaterial({ color: new THREE.Color(0, 0, 0), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide });
+        S.shock = [0, 1].map(() => { const m = new THREE.Mesh(new THREE.RingGeometry(0.93, 1, 128), ringMat()); m.rotation.x = -Math.PI / 2; m.userData.noAO = true; m.renderOrder = 4; m.frustumCulled = false; scene.add(m); return m; });
+        S.lrings = [0, 1, 2, 3, 4, 5].map(() => { const m = new THREE.Mesh(new THREE.TorusGeometry(1, 0.012, 8, 160), ringMat()); m.rotation.x = Math.PI / 2; m.userData.noAO = true; m.renderOrder = 4; scene.add(m); return m; });
+
+        // 光の粒
+        const DISC = discTex();
+        const mk = (n, size) => { const g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.BufferAttribute(new Float32Array(n * 3), 3)); g.setAttribute("color", new THREE.BufferAttribute(new Float32Array(n * 3), 3)); const p = new THREE.Points(g, new THREE.PointsMaterial({ size, map: DISC, vertexColors: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending })); p.frustumCulled = false; p.renderOrder = 5; scene.add(p); return p; };
+        S.motes = mk(900, 0.9); S.burst = mk(500, 0.7);
+
+        // 光
+        S.sun = new THREE.DirectionalLight("#ffc9a0", 2.2); S.sun.castShadow = true;
+        S.sun.shadow.mapSize.set(2048, 2048); S.sun.shadow.bias = -0.0004; S.sun.shadow.normalBias = 0.05;
+        Object.assign(S.sun.shadow.camera, { left: -32, right: 32, top: 32, bottom: -32, near: 1, far: 400 });
+        scene.add(S.sun); scene.add(S.sun.target);
+        S.fill = new THREE.DirectionalLight("#9fb6ff", 0.55); S.fill.position.set(-60, 40, 200); scene.add(S.fill);
+        S.hemi = new THREE.HemisphereLight("#9aa6dc", "#8f7f99", 0.8); scene.add(S.hemi);
+        S.cryLight = new THREE.PointLight("#7fdcff", 0, 90, 1.6); S.cryLight.position.set(0, 16, 0); scene.add(S.cryLight);
+        S.circLight = new THREE.PointLight("#9feaff", 0, 70, 1.4); S.circLight.position.set(0, 14, 0); scene.add(S.circLight);
+
+        // 紋章(カメラの子。タイトルの上)
+        S.flash = new THREE.Mesh(new THREE.PlaneGeometry(4, 4), new THREE.MeshBasicMaterial({ color: new THREE.Color(3, 3.2, 3.4), transparent: true, opacity: 0, depthTest: false, depthWrite: false, fog: false }));
+        S.flash.position.z = -1; S.flash.renderOrder = 999; S.flash.userData.noAO = true; camera.add(S.flash);
+        S.em = new THREE.Group(); camera.add(S.em); S.emParts = [];
+        const emCry = new THREE.MeshPhysicalMaterial({ color: "#c4f3ff", roughness: 0.05, metalness: 0.1, flatShading: true, clearcoat: 1, iridescence: 1, iridescenceIOR: 1.6, emissive: "#55cfff", emissiveIntensity: 0.6, envMapIntensity: 2.6 });
+        S.emCry = emCry;
+        const gold = new THREE.MeshStandardMaterial({ color: "#e2bb63", metalness: 1, roughness: 0.22, emissive: "#ffcf7a", emissiveIntensity: 0.25, envMapIntensity: 1.8 });
+        S.emGold = gold;
+        const addPart = (mesh, home, rot) => { const r2 = mulberry32(700 + S.emParts.length * 13); const from = new THREE.Vector3((r2() - 0.5) * 9, (r2() - 0.5) * 5, -1 + r2() * 3); mesh.userData = { ring: !!mesh.geometry.parameters.tube, home, rot, from, fr: new THREE.Euler(r2() * 6, r2() * 6, r2() * 6), d: r2() * 0.35 }; S.em.add(mesh); S.emParts.push(mesh); };
+        addPart(new THREE.Mesh(crystalGeo(0.3, 0.95, 0.5, 0.42), emCry), new THREE.Vector3(0, 0, 0), new THREE.Euler(0, 0, 0));
+        S.emCoreMat = new THREE.MeshBasicMaterial({ color: new THREE.Color("#8fe9ff").multiplyScalar(1.5) });
+        S.em.add(Object.assign(new THREE.Mesh(crystalGeo(0.12, 0.75, 0.3, 0.25), S.emCoreMat), {}));
+        addPart(new THREE.Mesh(new THREE.TorusGeometry(0.78, 0.022, 10, 128), gold), new THREE.Vector3(0, 0, 0), new THREE.Euler(Math.PI / 2 - 0.25, 0, 0));
+        addPart(new THREE.Mesh(new THREE.TorusGeometry(1.0, 0.012, 8, 128), gold), new THREE.Vector3(0, 0, 0), new THREE.Euler(Math.PI / 2 + 0.2, 0.25, 0));
+        for (let i = 0; i < 8; i++) {
+          const a = (i / 8) * Math.PI * 2, L = i % 2 ? 0.34 : 0.55, rr = i % 2 ? 0.86 : 0.98;
+          const m = new THREE.Mesh(crystalGeo(0.07, L * 0.5, L * 0.35, 0.05), emCry);
+          addPart(m, new THREE.Vector3(Math.sin(a) * rr, Math.cos(a) * rr, 0), new THREE.Euler(0, 0, -a));
+        }
+        S.emLight = new THREE.PointLight("#fff0d8", 0, 12, 1.5); S.emLight.position.set(0.8, 1.6, -6.2); camera.add(S.emLight);
+        S.em.position.set(0, 0.92, -10); S.em.visible = false;
+
+        renderer.compile(scene, camera);
+      }
+
+      function setSky(u, k, sunDir, sunK, white) {
+        u.uZen.value.copy(mixC(SKY[0].zen, SKY[1].zen, k)); u.uMid.value.copy(mixC(SKY[0].mid, SKY[1].mid, k)); u.uHor.value.copy(mixC(SKY[0].hor, SKY[1].hor, k));
+        u.uSun.value.copy(mixC(SKY[0].sun, SKY[1].sun, k)); u.uSunDir.value.copy(sunDir); u.uSunK.value = sunK; u.uWhite.value = white; u.uFog.value.copy(mixC(SKY[0].fog, SKY[1].fog, k));
+      }
+
+      // 雲の並べ替え(奥 → 手前)。t には依存せずカメラ位置だけで決まる
+      const order = [], dist2 = new Float32Array(4096);
+      function updClouds(t) {
+        const cp = camera.position; const P = cloudMesh.geometry.attributes.iPos, D = cloudMesh.geometry.attributes.iData;
+        if (!order.length) for (let i = 0; i < cloudN; i++) order.push(i);
+        for (let i = 0; i < cloudN; i++) { const c = cloudSrc[i]; const dx = c[0] + t * 0.6 - cp.x, dy = c[1] - cp.y, dz = c[2] - cp.z; dist2[i] = dx * dx + dy * dy + dz * dz; }
+        order.sort((a, b) => dist2[b] - dist2[a] || a - b);
+        for (let j = 0; j < cloudN; j++) { const c = cloudSrc[order[j]]; P.setXYZ(j, c[0] + t * 0.6, c[1] + Math.sin(t * 0.2 + c[4]) * 0.4, c[2]); D.setXYZ(j, c[3], c[4] + t * 0.004, c[5]); }
+        P.needsUpdate = D.needsUpdate = true;
+      }
+
+      const V = new THREE.Vector3(), V2 = new THREE.Vector3(), M4 = new THREE.Matrix4(), Q = new THREE.Quaternion(), E = new THREE.Euler(), SC = new THREE.Vector3();
+      function look(px, py, pz, tx, ty, tz, fov = 36, roll = 0) {
+        camera.position.set(px, py, pz); camera.up.set(0, 1, 0); camera.lookAt(tx, ty, tz); if (roll) camera.rotateZ(roll);
+        if (camera.fov !== fov) { camera.fov = fov; camera.updateProjectionMatrix(); }
+      }
+
+      // ---------- 時刻 t の状態 ----------
+      function update(t) {
+        const G = post.vig.uniforms;
+        // 時間帯(15.0 のカットで金色の朝へ)
+        const gold = t < 15 ? 0 : 0.85 + 0.15 * smooth(15, 18, t);
+        const elev = t < 2.5 ? 0.075 : t < 15 ? 0.11 : 0.2;
+        const sunDir = sunDirAt(elev, -0.22);
+        // 2.5s の光の変化: 太陽が一段上がり、光量 +35%
+        const sunK = t < 2.5 ? 0.75 : t < 15 ? 1.0 : 1.15;
+        let white = 0, fogD = 0.0018, exposure = 1.0;
+        // 雲の中(7.5〜8.75)
+        const inCloud = smooth(7.42, 7.62, t) * (1 - smooth(8.62, 8.86, t));
+        white = inCloud * 0.92; fogD = lerp(0.0018, 0.11, inCloud);
+        setSky(skyU, gold, sunDir, sunK, white);
+        sky.position.copy(camera.position);
+        scene.environment = S.env[t < 15 ? 0 : 1];
+        const fogC = mixC(SKY[0].fog, SKY[1].fog, gold).lerp(C("#f1ecf6"), inCloud);
+        scene.fog.color.copy(fogC); scene.fog.density = t >= 15 ? fogD * 0.6 : fogD; scene.background.copy(fogC);
+        S.sun.position.copy(sunDir).multiplyScalar(220); S.sun.target.position.set(0, 12, 0);
+        S.sun.color.copy(mixC(SKY[0].sun, SKY[1].sun, gold)); S.sun.intensity = 2.4 * sunK;
+        S.hemi.intensity = 0.8 + 0.25 * gold; S.hemi.color.copy(mixC(C("#9aa6dc"), C("#b8c8ec"), gold)); S.hemi.groundColor.copy(mixC(C("#8f7f99"), C("#a08a7a"), gold));
+        S.fill.intensity = 0.55;
+        cloudU.uLit.value.copy(mixC(SKY[0].cloudLit, SKY[1].cloudLit, gold)); cloudU.uSh.value.copy(mixC(SKY[0].cloudSh, SKY[1].cloudSh, gold)).lerp(C("#a99cc4"), inCloud * 0.5);
+        cloudU.uSunCol.value.copy(mixC(SKY[0].sun, SKY[1].sun, gold)).multiplyScalar(sunK); cloudU.uSunDir.value.copy(sunDir);
+        cloudU.uFogCol.value.copy(fogC); cloudU.uFogD.value = lerp(t >= 15 ? 0.0008 : 0.0011, 0.016, inCloud); cloudU.uNear.value = 3;
+
+        // 水晶: ゆっくり回り、拍(0.625s)ごとに芯が脈打つ
+        S.cry.rotation.y = t * 0.12; S.cry.position.y = CRY.y + Math.sin(t * 0.8) * 0.5;
+        const beatPulse = Math.exp(-((t % 0.625) / 0.625) * 4);
+        let coreK = 2.2 + (t >= 2.5 && t < 10 ? 0.9 * beatPulse : 0.3 * beatPulse);
+        S.sats.forEach((m) => { const u = m.userData, a = u.a + t * u.sp; m.position.set(Math.cos(a) * u.r, CRY.y + u.y + Math.sin(t * 0.7 + u.a) * 0.8, Math.sin(a) * u.r); m.rotation.set(u.tilt, t * 0.4 + u.a, u.tilt * 0.5); });
+        // 岩
+        S.rockData.forEach((d, i) => { M4.compose(V.set(d.p.x, d.p.y + Math.sin(t * 0.6 + d.ph) * 0.4, d.p.z), Q.setFromEuler(E.set(d.rx + t * 0.05, d.ry + t * 0.08, 0)), SC.set(d.s, d.s * 0.8, d.s)); S.rocks.setMatrixAt(i, M4); });
+        S.rocks.instanceMatrix.needsUpdate = true;
+
+        // 魔法陣・柱・輪(既定は消灯)
+        let circRev = 0, circInt = 0, pillarH = 0, pillarInt = 0, circL = 0, cryL = 1.2;
+        const sinceHit = t - 10;
+        if (t >= 9.375 && t < 10) { const k = smooth(9.375, 9.99, t); circRev = k * 0.98; circInt = 0.9 + 0.6 * k; circL = 3 * k; }
+        if (sinceHit >= 0) {
+          circRev = 1; const fade = t < 15 ? 1 : 1 - 0.7 * smooth(15, 17.5, t);
+          circInt = (7 + 6 * Math.exp(-sinceHit * 3)) * fade;
+          const k = clamp(0.25 + (sinceHit / 0.5) * 0.75, 0, 1); pillarH = 900 * (1 - Math.pow(1 - k, 4));
+          pillarInt = (0.95 + 2.2 * Math.exp(-sinceHit * 2.5)) * (t < 15 ? 1 : 1 - 0.65 * smooth(15, 17.5, t));
+          circL = (30 + 160 * Math.exp(-sinceHit * 2.2)) * fade; cryL = 4 + 30 * Math.exp(-sinceHit * 2);
+          coreK = 4.5 + 6 * Math.exp(-sinceHit * 2.5);
+        }
+        S.circO.material.uniforms.uReveal.value = circRev; S.circI.material.uniforms.uReveal.value = circRev;
+        S.circO.material.uniforms.uInt.value = circInt; S.circI.material.uniforms.uInt.value = circInt * 0.85;
+        S.circO.material.uniforms.uRot.value = t * 0.18 + (sinceHit > 0 ? sinceHit * 0.25 : 0); S.circI.material.uniforms.uRot.value = -t * 0.26;
+        S.circO.visible = S.circI.visible = circInt > 0;
+        const pw = t < 15 ? 1 : lerp(1, 0.28, smooth(15, 17.5, t));
+        S.pillar.visible = S.pillarCore.visible = pillarH > 0;
+        S.pillar.scale.set(7.2 * pw, Math.max(pillarH, 0.01), 7.2 * pw); S.pillarCore.scale.set(2.2 * pw, Math.max(pillarH, 0.01), 2.2 * pw);
+        S.pillar.material.uniforms.uInt.value = pillarInt; S.pillarCore.material.uniforms.uInt.value = pillarInt * 1.8;
+        S.pillar.material.uniforms.uTime.value = t; S.pillarCore.material.uniforms.uTime.value = t;
+        S.circLight.intensity = circL; S.cryLight.intensity = cryL * 20;
+        S.coreMat.color.set("#7fe6ff").multiplyScalar(coreK); S.edgeMat.color.set("#d9f7ff").multiplyScalar(1.6 + coreK * 0.25);
+        S.cryMat.emissiveIntensity = 0.3 + (sinceHit >= 0 ? 0.6 : 0);
+        cloudU.uGlowPos.value.set(0, 0, 0); cloudU.uGlow.value = sinceHit >= 0 ? (0.25 + 1.4 * Math.exp(-sinceHit * 1.5)) * (t < 15 ? 1 : 0.4) : 0;
+        // 衝撃の輪
+        S.shock.forEach((m, i) => { const a = sinceHit - i * 0.12; if (a < 0 || a > 1.6) { m.visible = false; return; } m.visible = true; const r = lerp(10, i ? 140 : 230, 1 - Math.pow(1 - a / 1.6, 2.4)); m.scale.set(r, r, 1); m.position.y = i ? 1.0 : 12.5; m.material.color.set(i ? "#ffffff" : "#9feaff").multiplyScalar(4 * (1 - a / 1.6)); });
+        // 柱をのぼる光の輪
+        S.lrings.forEach((m, i) => { if (sinceHit < 0.2) { m.visible = false; return; } const yy = 12.5 + ((sinceHit * 22 + i * 26) % 160); m.visible = true; const r = 7.6 * pw + Math.sin(i * 2.1) * 1.2; m.scale.set(r, r, 1); m.position.y = yy; const k = (1 - (yy - 12.5) / 160) * (t < 15 ? 1 : 1 - smooth(15, 16.5, t)); m.material.color.set("#bff3ff").multiplyScalar(3.5 * k * clamp(sinceHit * 2, 0, 1)); });
+        // 噴き上がる粒
+        { const p = S.burst.geometry.attributes.position, c = S.burst.geometry.attributes.color; const r = mulberry32(31);
+          for (let i = 0; i < p.count; i++) { const a = r() * 6.28, rr = r() * 8, life = 1.2 + r() * 2.2, t0 = 10 + r() * 4.5, vy = 8 + r() * 30, sw = r() * 6.28; const age = t - t0;
+            if (age < 0 || age > life) { c.setXYZ(i, 0, 0, 0); p.setXYZ(i, 0, -999, 0); continue; }
+            const ang = a + age * 0.6; p.setXYZ(i, Math.cos(ang) * (rr + age * 1.5), 12.5 + vy * age, Math.sin(ang) * (rr + age * 1.5)); const k = (1 - age / life) * 2.6 * (t < 15 ? 1 : 0.4); c.setXYZ(i, 0.7 * k, 0.95 * k, 1.1 * k); }
+          p.needsUpdate = c.needsUpdate = true; }
+
+        // ===== カメラ(cue 表どおり) =====
+        let focus = 100, aper = 60, maxCoc = 12;
+        G.amt.value = 0.38; G.warm.value = 0.02; G.sat.value = 1.08; G.contrast.value = 0.18; G.fade.value = 1;
+        S.em.visible = false; S.emLight.intensity = 0;
+        // 10.000s(f300)に閃光が最大、f299 は 0。0.55s で引く
+        S.flash.material.opacity = t >= 10 ? 0.6 * Math.pow(1 - smooth(10, 10.55, t), 1.5) : 0; S.flash.visible = S.flash.material.opacity > 0;
+        if (t < 2.5) {
+          // C1a 雲海の夜明け(広)
+          const k = t / 2.5;
+          look(lerp(232, 222, k), lerp(23, 24.5, k) + shake(t, 0.5, 1) * 0.15, lerp(192, 182, k), 0, lerp(27, 28, k), 0, 26);
+          focus = camera.position.distanceTo(CRY); aper = 50; maxCoc = 10;
+          G.fade.value = smooth(0, 1.1, t); exposure = 0.95;
+        } else if (t < 5) {
+          // C1b 浮遊島の下から見上げる。ピントを島の底 → 水晶へ(3.75s まで)
+          const k = ease3(2.5, 5, t);
+          look(lerp(82, 77, k), lerp(15, 17, k), lerp(28, 40, k), 0, lerp(26, 28, k), 0, 38, 0);
+          const fNear = camera.position.distanceTo(V.set(56, 20, 12)), fFar = camera.position.distanceTo(CRY);
+          focus = lerp(fNear, fFar, ease3(2.75, 3.75, t)); aper = 150; maxCoc = 14;
+          exposure = 1.05;
+        } else if (t < 10) {
+          // C2〜C3 飛翔 → 雲の中 → 突き抜け → ため
+          const s = sAt(t), u = clamp(s / PL, 0, 1);
+          const p = path.getPointAt(u), ahead = path.getPointAt(Math.min(1, u + 0.1));
+          const w = 0.15 + 0.85 * smooth(6.2, 9.2, t);
+          V2.copy(ahead).lerp(V.set(0, 24, 0), w);
+          const spd = vRaw(t) / 55, sh = 0.08 * spd + inCloud * 0.12;
+          look(p.x + shake(t, 3, 2) * sh, p.y + shake(t, 3.4, 3) * sh, p.z, V2.x, V2.y, V2.z, lerp(38, 44, smooth(5, 7.5, t)) - 4 * smooth(8.75, 9.6, t), -0.07 * Math.sin(Math.PI * smooth(5, 7.5, t)) + shake(t, 1.2, 4) * 0.01);
+          focus = t < 8.6 ? 45 : camera.position.distanceTo(CRY); aper = t < 8.6 ? 110 : 90; maxCoc = 14;
+          exposure = 1.05 + inCloud * 0.08;
+          // ため(9.375〜10): 少し暗く
+          exposure *= lerp(1, 0.72, smooth(9.375, 9.97, t));
+        } else if (t < 12.5) {
+          // C4 山場: 祭壇を低く広く。揺れが 0.5s で減衰、後退しつつ見上げる
+          const a = t - 10, k = ease3(0, 2.5, a), sk = 0.7 * Math.exp(-a * 5);
+          look(lerp(11, 15, k) + shake(t, 18, 5) * sk, lerp(30, 27, k) + shake(t, 21, 6) * sk, lerp(32, 46, k), 0, lerp(19, 32, k), 0, lerp(52, 46, k));
+          focus = camera.position.distanceTo(V.set(0, 18, 0)); aper = 90; maxCoc = 14;
+          exposure = 1.0 + 0.3 * Math.exp(-a * 5);
+          G.contrast.value = 0.22; G.sat.value = 1.12;
+        } else if (t < 15) {
+          // C5 光の柱のまわりを回りながら上昇
+          const a = t - 12.5, k = ease3(0, 2.5, a) * 0.6 + (a / 2.5) * 0.4;
+          const ang = 0.7 + 1.0 * k, R = lerp(36, 30, k), y = lerp(18, 66, k);
+          look(Math.sin(ang) * R, y, Math.cos(ang) * R, 0, y + lerp(6, -10, k), 0, 46);
+          focus = R; aper = 80; maxCoc = 13;
+          exposure = 0.95;
+        } else {
+          // C6 金色の朝(引き)→ C7 タイトル(17.5〜)
+          const a = t - 15, k = Math.min(a, 4.0) / 4.0, drift = 1 - Math.pow(1 - k, 2);
+          look(lerp(-62, -70, drift), lerp(36, 40, drift), lerp(188, 206, drift), 0, 25, 0, 34);
+          const far = camera.position.distanceTo(CRY);
+          focus = lerp(far, 10, ease3(17.5, 18.1, t)); aper = 120; maxCoc = 13;
+          exposure = 0.86;
+          G.warm.value = 0.06; G.sat.value = 1.15; G.contrast.value = 0.26; G.amt.value = 0.5;
+          // タイトルの間は背景を落とす。最後 0.5s でわずかに暗く(黒にはしない)
+          G.fade.value = lerp(1, 0.66, smooth(17.4, 18.2, t)) * lerp(1, 0.86, smooth(19.5, 20, t));
+          // 紋章: 16.25 から破片が集まり、17.5 で組み上がってきらめく
+          if (t >= 16.0) {
+            S.em.visible = true;
+            S.emParts.forEach((m) => { const u = m.userData; const kk = outC(16.25 + u.d, 17.5, t);
+              if (u.ring) { m.position.copy(u.home); const sc = lerp(0.05, 1, kk); m.scale.setScalar(sc); } else m.position.copy(u.from).lerp(u.home, kk);
+              m.rotation.set(lerp(u.fr.x, u.rot.x, kk), lerp(u.fr.y, u.rot.y, kk), lerp(u.fr.z, u.rot.z, kk)); });
+            const after = Math.max(0, t - 17.5);
+            S.em.rotation.set(0.12, 0.65 * (1 - Math.exp(-after * 1.1)) - 0.3 * (1 - smooth(16.25, 17.5, t)), 0);
+            const gleam = t >= 17.5 ? Math.exp(-after * 3.2) : 0;
+            S.emCry.emissiveIntensity = 0.5 + 2.5 * gleam; S.emGold.emissiveIntensity = 0.25 + 1.2 * gleam;
+            S.emCoreMat.color.set("#8fe9ff").multiplyScalar(1.6 + 6 * gleam + 0.6 * smooth(16.25, 17.5, t));
+            S.emLight.intensity = 30 * smooth(16.25, 17.5, t) + 60 * gleam;
+          }
+        }
+        post.dof.aoFar = 60; post.dof.aoAmt = 0.8 * (1 - inCloud);
+        post.dof.focus = Math.max(focus, 1); post.dof.aper = aper; post.dof.maxCoc = maxCoc;
+        renderer.toneMappingExposure = exposure;
+        updClouds(t);
+        // 光の粒(全体にゆっくり漂う)
+        { const p = S.motes.geometry.attributes.position, c = S.motes.geometry.attributes.color; const r = mulberry32(77); const cc = mixC(C("#bfe9ff"), C("#ffe2b0"), gold);
+          for (let i = 0; i < p.count; i++) {
+            let x, y, z; const ph = r() * 6.28, sp = 0.3 + r() * 0.8, b = r();
+            if (i < 500) { const u = r(); const q = path.getPointAt(u); x = q.x + (r() - 0.5) * 60; y = q.y + (r() - 0.5) * 30; z = q.z + (r() - 0.5) * 40; }
+            else { const a = r() * 6.28, rr = 6 + r() * 60; x = Math.cos(a) * rr; y = 8 + r() * 60; z = Math.sin(a) * rr; if (i > 780) { x = -66 + (r() - 0.5) * 80; y = 20 + r() * 50; z = 150 + r() * 40; } }
+            p.setXYZ(i, x + Math.sin(t * 0.3 + ph) * 1.5, y + ((t * sp + ph * 3) % 12) - 6, z + Math.cos(t * 0.25 + ph) * 1.5);
+            const k = (0.25 + b * 1.1) * (0.6 + 0.4 * Math.sin(t * 2 + ph)); c.setXYZ(i, cc.r * k, cc.g * k, cc.b * k);
+          }
+          p.needsUpdate = c.needsUpdate = true; }
+      }
+
+      function renderAt(t) { update(clamp(t, 0, DUR - 1 / 30)); post.render(); }
+
+      window.__hf = window.__hf || {}; window.__hf.buildReady = window.__hf.buildReady || {};
+      let built = false;
+      const ready = (async () => { await document.fonts.load("100px CrystalTitle", "水晶の空"); await document.fonts.ready; build(); built = true; renderAt(window.__hfThreeTime || 0); })();
+      window.__hf.buildReady["three-scene"] = ready;
+      window.addEventListener("hf-seek", (e) => { if (built) renderAt(e.detail.time); else ready.then(() => renderAt(e.detail.time)); });
+    </script>
+  </body>
+</html>
