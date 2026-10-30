@@ -33,7 +33,8 @@
 - `hyperframes snapshot --at` に逆順・重複の時刻を渡した時、その順で seek されるか。
 - three の `examples/textures/waternormals.jpg` の個別ライセンス。
 - Mixamo の利用条件(Adobe の FAQ が 403 で開けなかった)。Sketchfab・LottieFiles・WCAG の原典は開いていない。
-- 外部の調査の「試験値」全般(fBm の段数、steps、Bloom の強さ、水晶の ior など)。どれもこの環境で比べていない。
+- 外部の調査の「試験値」全般(fBm の段数、steps、Bloom の強さ、水晶の ior など)。どれもこの環境で比べていない(実例2で崖の作り方・水面の distortionScale と size・光の筋の強さは試した。`README.md` §4b)。
+- `hyperframes snapshot --at` の逆順・飛ばしは、順に撮った物と全画素一致(HyperFrames CLI 0.8.220、実例2)。重複の時刻は未確認。作品が使う 0.8.217 では未確認。
 - ボリューム雲・Gerstner 水・transmission 水晶のソフトウェアGLでの速さ。
 
 ## 3. ライセンスの確認結果(2026-10-30)
