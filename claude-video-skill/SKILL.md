@@ -1,17 +1,18 @@
 ---
 name: video-with-claude-code
-description: コードで作る動画(HyperFrames・three.js・Canvas・ffmpeg)の横断スキル。3本柱は「映像の頼み方(数値で指示する指示書)」「音の付け方(無料の楽器音源・録音効果音・数値で直す)」「チェック(機械チェック・目視・独立した審査役)」。映像づくりの主は外部スキル video-by-reference。Use when making or finishing a code-rendered video, motion graphic, promo, loop or title film with Claude Code, including its sound (BGM, sound effects, mix, loudness). 動画を作る・仕上げる前に読む。
+description: コードで作る動画(HyperFrames・three.js・Canvas・ffmpeg)の横断スキル。3本柱は「映像の頼み方(数値で指示する指示書)」「音の付け方(無料の楽器音源・録音効果音・数値で直す)」「チェック(機械チェック・目視・独立した審査役)」。映像づくりの主は外部スキル video-by-reference(既定では未導入。入れ方は references/external-video-by-reference.md)。Use when making or finishing a code-rendered video, motion graphic, promo, loop or title film with Claude Code, including its sound (BGM, sound effects, mix, loudness). 動画を作る・仕上げる前に読む。
 ---
 
 # 動画づくり — 入口はこのファイルだけ
 
 他の資料と食い違ったら、**このファイルの §2 が正**。過去の本体と実験の記録は `archive/`(普段は読まない)。
+文中の `../docs/sound-upgrade/` は**リポジトリ直下の `../docs/sound-upgrade/`**(このフォルダの1つ上。`claude-video-skill/docs/` ではない)。
 
 ## 0. 試験で分かったこと(名前伏せ・利用者判定。どれも1回・1人)
 - **短い動画(15〜30秒)は、担当1人に通して作らせる**(`general-purpose` + `model: opus`、effort high)。自作の分業手順(設計→場面ごとの担当→結合)はスキルなしに負けたので外した。長尺で効くかは未検証。
-- **映像は外部スキル `video-by-reference` を主にする**(参照画像か参照動画つき)。スキルなし・自作より僅差で良かった。使い方: `references/external-video-by-reference.md`。
+- **映像は外部スキル `video-by-reference` を主にする**(参照画像か参照動画つき)。スキルなし・自作より僅差で良かった。使い方: `references/external-video-by-reference.md`。**未導入**: このリポジトリにも `~/.claude/skills/` にも入っておらず、スキル一覧には出ない。使う時は同じ文書の「入れ方」で入れるか、clone した `skills/video-by-reference/SKILL.md` を明示的に読ませる。入れられない時は §3b の2D側(`motion-prompt` など)か自作で作る。
 - **音はこのスキルのキットを足す**。外部スキルの合成音だけの版より「絶対良い」と判定された。
-- **効果音は Kenney の録音と earshot(MIT、コードで描画する効果音バンク)の併用が1位**(「ひとつずつ」15 秒、2026-10-28、1回・1人の判定): 併用版 > earshot だけの版 > 既存のキットの版(既存は「ダメではないが全体的に安っぽい」)。BGM は3本とも不評(判定は「途中途中無音になるところもあるし、BGMとしての繋がりが無くて聞き心地がよくなかった」。BGM ごと落とす窓が原因というのは見立て)。記録: `docs/sound-upgrade/RESULT_ROUND1.md`
+- **効果音は Kenney の録音と earshot(MIT、コードで描画する効果音バンク)の併用が1位**(「ひとつずつ」15 秒、2026-10-28、1回・1人の判定): 併用版 > earshot だけの版 > 既存のキットの版(既存は「ダメではないが全体的に安っぽい」)。BGM は3本とも不評(判定は「途中途中無音になるところもあるし、BGMとしての繋がりが無くて聞き心地がよくなかった」。BGM ごと落とす窓が原因というのは見立て)。記録: `../docs/sound-upgrade/RESULT_ROUND1.md`。**earshot の導入**(clone・venv・pip、約18MB+torch CPU版): `../docs/sound-upgrade/HOWTO.md` の冒頭と `EARSHOT_EVAL.md`。呼び出しは `sound-kit/earshot_cache.py`(earshot を入れた Python で動かす)。既定では未導入
 - **見せ場の1〜2場面は three.js の3Dにする価値がある**(同じ場面カードの2D版より3D版が選ばれた。トークン約1.5倍)。
 - 数値で指示し、定番の見た目を名指しで禁止すると、モデル任せの見た目が消える(外部の作例。`references/motion-lab.md` §0)。このスキルでの試作は `examples/hop-loop/`。
 
@@ -31,6 +32,7 @@ description: コードで作る動画(HyperFrames・three.js・Canvas・ffmpeg)�
 | 音の位置 | 打撃音の頂点は**絵の出来事の1コマ後**。打撃音は下地(BGM・環境音)より 3〜6 dB 上。スマホの帯域(200Hz〜6kHz)でも測る |
 | 音の素材 | 音楽は MIDI + 無料音源。足音・衝撃・ドア・布など実物の音は録音素材(CC0)。**短い打撃音・UI音・キーの音は合成でよい**(頂点の位置と大きさを測る)。目立つ純音のピン・サインのスイープは1本に2回まで。それ以外の合成は全体の3割以下 |
 | effort | 映像の通し制作・3D・キャラ・長い物語は high。短い2Dのループ・音の担当・調べものは medium(`video-opus`)から。2回外したら上げる |
+| 描画の枠組み | ①既存の作品・プロジェクトがあれば、その描き方を続ける(新しい枠組みに乗り換えない)②新規・空のフォルダで指定が無ければ **HyperFrames**(`npx hyperframes render` で MP4、`check` で検査)。`motion-prompt` の Canvas 2D 部品は、HyperFrames の中の `<canvas>` に、止めたタイムラインの時刻(`onUpdate` で `tl.time()`)から描く。rAF・タイマーで回さない ③HyperFrames が使えない時だけ、Canvas 2D の HTML 1枚+自前のコマ書き出し(`examples/hop-loop/`)。他スキルの既定(`hyperframes`「既定は HyperFrames」/`business-motion-film`「例だけで乗り換えない」/`motion-prompt`「空なら Canvas の HTML 1枚」)はこの順で読む。根拠: `references/pitfalls.md`「描画の枠組みの既定」 |
 | 確認 | 書き出す前にコマを止めて見る。数値の検査を通っても目視は省かない(数値で通っても見ると変な物はある) |
 
 ## 3. 映像の頼み方
@@ -52,16 +54,16 @@ description: コードで作る動画(HyperFrames・three.js・Canvas・ffmpeg)�
 ## 4. 音の付け方(映像ができたあと)
 1. 映像を先に完成させ、合図の時刻(cue sheet、コマ番号)を残してもらう。
 2. 音の担当1人(`video-opus`、約9万トークン・約7分)に、コンタクトシートと cue sheet から合図表を作らせる。
-3. 作り方: 音楽は `tools/midi_render.py`(`apt-get update && apt-get install -y fluidsynth musescore-general-soundfont-lossless`、`pip install pretty_midi mido`)、効果音は `tools/sfx_lib.py`(CC0、282個)、環境音はピンクノイズを帯域で絞る。短い打撃音を合成する時の作り方は `motion-lab.md` §8 と `examples/hop-loop/sound.py`。
+3. 作り方: 音楽は `tools/midi_render.py`(`apt-get update && apt-get install -y fluidsynth musescore-general-soundfont-lossless`、`pip install pretty_midi mido`)、効果音は `tools/sfx_lib.py`(CC0、281個。名前の一覧は `references/sfx-catalog.md`)、環境音はピンクノイズを帯域で絞る。短い打撃音を合成する時の作り方は `motion-lab.md` §8 と `examples/hop-loop/sound.py`。
 4. 設計ルール: `references/sound-palette.md`(場面ごとに楽器の系統・空間・帯域を変える/3層/静けさは効果音で2か所以上作り、BGM は1曲として切らない(密度・音域で静かにする。100 ms を 10 ms ずつずらした RMS の最小が中央値から -15 dB 以内、-40 dBFS 級に落とさない)/Jカット・Lカット)、名前の一覧は `references/sfx-catalog.md`。
-5. 結合と音量: `bash tools/assemble.sh`(映像は `-c:v copy`、2回通しの loudnorm、必要なら軽い圧縮)。
+5. 結合と音量: `bash tools/assemble.sh <dir> "<場面名…>" <音.wav> <out.mp4>`(場面が1本でも可。映像は30fpsにそろえて1回だけ再エンコード、コマ数は場面の合計どおり、音は映像の長さに合わせる。2回通しの loudnorm、必要なら軽い圧縮)。
 
 ### 4b. BGM の作り方(試験の結果、利用者判定。2026-10-29)
 - **BGM は切れ目なく1曲として流す**(静けさは効果音を減らして作る。BGM を -40 dBFS 級まで落とす窓は「途切れて聞こえる」と不評だった)。
 - **編成を絞る(シンプルなほど整う)**: 良かったのは、ピチカート+マリンバの軽い編成(MIDI)と、ミニマルなシンセのパッド+軽いパターン(AI 生成)。ピアノ+ベース+弦+シェイカー+キックのように中域の楽器を重ねると「ごちゃごちゃ」、ナイロンギター案(低域が重く、調が効果音と合わない音が多い)も「ごちゃごちゃ」と判定された。同じ和音の流れでも、編曲(楽器と重ね方)で聞こえ方が大きく変わる。
-- **作り方は2つを状況で選ぶ**: ①MIDI + FluidSynth(クラウドで完結、再現性が高い)②**Audio Studio(Stable Audio 3 小型音楽モデル、CPU)で生成**(利用者の PC で動く。1案 約40〜57秒。Windows の PC はクラウドにつなげないので、**PC の Claude Code に `docs/sound-upgrade/PC_AUDIO_STUDIO_TASK.md` を渡して生成 → 15秒の WAV を枝に上げてもらい、クラウド側で映像に付ける**。メモリ16GBでは、1案ずつ・毎回モデルを解放・他のアプリを減らす)。AI 生成は調(キー)が指定どおりにならず、曲としての終わりもない(フェードで終える)。15秒で生成すると終盤が無音になりやすいので、20秒で作って切る。
-- Stable Audio 3 のライセンス: 非商用(評価・試験を含む)は売上の上限も登録も不要。商用の目的(会社の内部業務を含む)は Stability AI への登録が必要で、関連会社を含む年商100万米ドル超では使えない。**販売・商用の動画に使う前に条件を確認する**(`docs/sound-upgrade/AUDIO_STUDIO_PLAN.md`、`NOTICES.md`)。
-- 結果と数字: `docs/sound-upgrade/RESULTS_SUMMARY.md`。
+- **作り方は2つを状況で選ぶ**: ①MIDI + FluidSynth(クラウドで完結、再現性が高い)②**Audio Studio(Stable Audio 3 小型音楽モデル、CPU)で生成**(利用者の PC で動く。1案 約40〜57秒。Windows の PC はクラウドにつなげないので、**PC の Claude Code に `../docs/sound-upgrade/PC_AUDIO_STUDIO_TASK.md` を渡して生成 → 15秒の WAV を枝に上げてもらい、クラウド側で映像に付ける**。メモリ16GBでは、1案ずつ・毎回モデルを解放・他のアプリを減らす)。AI 生成は調(キー)が指定どおりにならず、曲としての終わりもない(フェードで終える)。15秒で生成すると終盤が無音になりやすいので、20秒で作って切る。
+- Stable Audio 3 のライセンス: 非商用(評価・試験を含む)は売上の上限も登録も不要。商用の目的(会社の内部業務を含む)は Stability AI への登録が必要で、関連会社を含む年商100万米ドル超では使えない。**販売・商用の動画に使う前に条件を確認する**(`../docs/sound-upgrade/AUDIO_STUDIO_PLAN.md`、`NOTICES.md`)。
+- 結果と数字: `../docs/sound-upgrade/RESULTS_SUMMARY.md`。
 
 ### 4c. 回の重さで手順を変える(効率化。利用者と合意、2026-10-29)
 - **軽い回**(素材・音を差し替えるだけ): 制作担当が、既存の検査スクリプト(`sound-kit/projects/*/qa_round*.py` など)を走らせて自己点検するだけ。独立レビューなし。
@@ -73,10 +75,10 @@ description: コードで作る動画(HyperFrames・three.js・Canvas・ffmpeg)�
 
 ## 5. チェック
 1. 機械: `python3 tools/review_checks.py <final.mp4> [--holds holds.json]`(コマ数・黒コマ・静止・白フラッシュ・ラウドネス・無音)。
-2. 音: `python3 tools/audio_measure.py <final.mp4> --cues cues.json [--hits 打撃音だけ.wav --bed 下地だけ.wav]`(スマホの帯域・頂点のずれ・下地との差)。打撃音だけとミックスの両方で測る。映像の閃光との同期は `tools/sync_check.py`。
+2. 音: `python3 tools/audio_measure.py <final.mp4> --cues cues.json [--hits 打撃音だけ.wav --bed 下地だけ.wav]`(コマ→秒の fps は mp4 から自動。wav を測るときは `--fps 30` などを付ける)(スマホの帯域・頂点のずれ・下地との差)。打撃音だけとミックスの両方で測る。映像の閃光との同期は `tools/sync_check.py`。
 3. 目視: `tools/sheet.sh`(コンタクトシート)、`tools/strip.sh`(0.2秒刻み)、`?t=` で止めたコマ、前後2コマの比較(`motion-lab.md` §5)。
 4. **確認の流れ(利用者と合意、2026-10-28)**: ①制作担当が自己点検と機械的な検査(上の1〜3)②**完成版への独立レビュー1回**(制作に関わらない担当。渡すのは依頼書と完成した動画だけで、作り手の説明は渡さない。雛形: `references/review-gauntlet.md` §5)③修正後、**指摘箇所とその周辺だけ**を別の担当が再確認(1回)④追加のレビューは、大きな問題が残った場合に、負荷(トークン・時間)を説明して利用者に相談する(勝手に回数を増やさない)。練習用の動画は①だけでよい。実際に見た・聴いた物と、計測だけの物を区別して報告する。
-5. 落とし穴(HyperFrames の地雷・CDN・フォント・書き出しの中断・トークン節約): `references/pitfalls.md`。
+5. 落とし穴(HyperFrames の地雷・CDN・フォント・書き出しの中断・トークン節約・registry の無限ループ部品 grain-overlay・道具の修正記録): `references/pitfalls.md`(§8)。
 
 ## 6. 道具と資料の地図
 | 状態 | 道具・資料 |

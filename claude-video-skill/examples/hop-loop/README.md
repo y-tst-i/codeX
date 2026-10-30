@@ -10,7 +10,7 @@ python3 sound.py                                    # out/mix.wav(継ぎ目な�
 ffmpeg -framerate 60 -i out/frames/%04d.png -i out/mix_single.wav -c:v libx264 -profile:v high \
   -pix_fmt yuv420p -crf 16 -c:a aac -b:a 192k -shortest -movflags +faststart out/hop-loop.mp4
 python3 ../../tools/audio_measure.py out/hop-loop.mp4 --cues cues.json
-python3 ../../tools/audio_measure.py out/mix.wav --cues cues.json --hits out/hits.wav --bed out/bed.wav
+python3 ../../tools/audio_measure.py out/mix.wav --cues cues.json --hits out/hits.wav --bed out/bed.wav --fps 60   # wav には fps が無いので必須
 ```
 - `anim.html?t=2.5` で 2.5 秒のコマに止まる。そのまま開くと再生する。
 - 3回通しの確認用: `-stream_loop 2` で絵を3回、音は `out/mix_x3.wav`。
