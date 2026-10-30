@@ -1,0 +1,5 @@
+.hyperframes/
+out/
+assets/audio/*.wav
+node_modules/
+*.mp4

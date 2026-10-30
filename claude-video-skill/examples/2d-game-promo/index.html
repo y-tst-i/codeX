@@ -1,0 +1,506 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <script src="assets/gsap.min.js"></script>
+    <link rel="stylesheet" href="assets/fonts/fonts.css" />
+    <style>
+      :root {
+        --ground: #0d1028;
+        --ink: #f6eedf;
+        --font-display: "Unbounded", sans-serif;
+      }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: var(--ground); }
+      #root { position: relative; width: 100%; height: 100%; overflow: hidden; background: var(--ground); font-family: var(--font-display); }
+      #stage { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+      /* フォントの先読み(文字が数フレーム遅れて出るのを防ぐ。SKILL §12) */
+      #preload { position: absolute; left: -9999px; top: 0; color: var(--ink); font-size: 24px; }
+      #preload .en { font-family: "Unbounded"; font-weight: 900; }
+      #preload .hud { font-family: "Chakra Petch"; font-weight: 600; }
+      #preload .jp { font-family: "Noto Sans JP"; font-weight: 900; }
+      /* registry: grain-overlay(CSS keyframes)。無限ループは使わず 30 回(=15 s)に固定 */
+      @keyframes hf-grain-noise {
+        0%, 100% { transform: translate(0, 0); } 10% { transform: translate(-5%, -5%); } 20% { transform: translate(-10%, 5%); }
+        30% { transform: translate(5%, -10%); } 40% { transform: translate(-5%, 15%); } 50% { transform: translate(-10%, 5%); }
+        60% { transform: translate(15%, 0); } 70% { transform: translate(0, 10%); } 80% { transform: translate(-15%, 0); } 90% { transform: translate(10%, 5%); }
+      }
+      #grain-overlay { position: absolute; inset: 0; pointer-events: none; z-index: 10; overflow: hidden; }
+      #grain-overlay .grain-texture {
+        position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
+        background: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+        opacity: 0.07; animation: hf-grain-noise 0.5s steps(1) 30 both;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="15" data-width="1920" data-height="1080">
+      <canvas id="stage" class="clip" data-layout-allow-occlusion width="1920" height="1080" data-start="0" data-duration="15" data-track-index="0"></canvas>
+      <div id="grain-overlay" class="clip" data-start="0" data-duration="15" data-track-index="1"><div class="grain-texture"></div></div>
+      <div id="preload"><span class="en">LUMIWAKE 0123456789</span><span class="hud">SPD km/h 0123456789</span><span class="jp">届けろ、空の果てまで。</span></div>
+      <audio id="music" src="assets/audio/mix.wav" data-start="0" data-duration="15" data-track-index="2" data-volume="1"></audio>
+    </div>
+    <script>
+      // ============================================================
+      // LUMIWAKE 15s teaser — 全コマが時刻 t の純関数(draw(t))。
+      // GSAP の paused タイムラインが t を 0→15 で動かし、onUpdate で描く(seek 可能)。
+      // 動きの数値は motion-prompt のギャラリー要素から移植(各関数の上に出典の1行)。
+      // ============================================================
+      // Motion Prompt kit "motion" · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/
+      // (以下の補間・イージング関数は kit motion からそのまま移植)
+      const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+      const lerp = (a, b, x) => a + (b - a) * x;
+      const P = (t, a, b) => clamp((t - a) / (b - a));
+      const eIO = (x) => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
+      const eIOs = (x) => (x < 0.5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2);
+      const eOut = (x) => 1 - Math.pow(1 - x, 3);
+      const eOut5 = (x) => 1 - Math.pow(1 - x, 5);
+      const eIn = (x) => x * x * x;
+      const backOut = (x, s = 1.70158) => 1 + (s + 1) * Math.pow(x - 1, 3) + s * Math.pow(x - 1, 2);
+      const backIn = (x, s = 1.70158) => (s + 1) * x * x * x - s * x * x;
+      const spring = (t, w = 14, d = 7) => (t <= 0 ? 0 : 1 - Math.exp(-d * t) * Math.cos(w * t));
+      // ------------------------------------------------------------
+
+      const W = 1920, H = 1080, FPS = 30;
+      const C = { ink: "#0D1028", deep: "#161B3D", teal: "#1F4F5C", amber: "#FFB341", cream: "#F6EEDF", coral: "#FF6B57", dim: "#9A9CC4" };
+      const EN = '"Unbounded", sans-serif', JP = '"Noto Sans JP", sans-serif', HUD = '"Chakra Petch", monospace';
+      const S = 1920 / 539; // カード(539 px)→ 1920 の倍率
+
+      // seed 付き乱数(mulberry32)
+      function rng(seed) { let a = seed >>> 0; return () => { a |= 0; a = (a + 0x6d2b79f5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+      const mod = (a, n) => ((a % n) + n) % n;
+      function rr(k, x, y, w, h, r) { k.beginPath(); k.roundRect(x, y, w, h, r); }
+      function txt(k, s, x, y, font, col, align = "left", base = "alphabetic", ls = "0px") {
+        k.font = font; k.fillStyle = col; k.textAlign = align; k.textBaseline = base; k.letterSpacing = ls; k.fillText(s, x, y); k.letterSpacing = "0px";
+      }
+      function hexA(hex, a) { const n = parseInt(hex.slice(1), 16); return `rgba(${n >> 16},${(n >> 8) & 255},${n & 255},${a})`; }
+      function glow(k, x, y, r, col, a) { const g = k.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, hexA(col, a)); g.addColorStop(1, hexA(col, 0)); k.fillStyle = g; k.fillRect(x - r, y - r, r * 2, r * 2); }
+
+      // ---------- 世界(浮遊島の夜空)の下ごしらえ: 起動時に1回、seed 固定 ----------
+      const R = rng(7);
+      const STARS = Array.from({ length: 170 }, () => ({ x: R() * (W + 600), y: R() * H * 0.75, r: 0.8 + R() * 2.2, ph: R() * 6.28 }));
+      function mkIslands(n, span, y0, y1, w0, w1, seed) { const r = rng(seed); return Array.from({ length: n }, (_, i) => ({ x: (i / n) * span + r() * 120, y: lerp(y0, y1, r()), w: lerp(w0, w1, r()), seed: Math.floor(r() * 1e6) })); }
+      const SPAN = W + 900;
+      const L_FAR = mkIslands(7, SPAN, 470, 640, 150, 260, 11);
+      const L_MID = mkIslands(5, SPAN, 560, 760, 260, 420, 23);
+      const L_NEAR = mkIslands(3, SPAN, 760, 900, 420, 620, 37);
+
+      function island(k, x, y, w, col, seed, lights, lightA) {
+        const r = rng(seed), h = w * 0.62;
+        k.fillStyle = col; k.beginPath(); k.moveTo(x - w / 2, y);
+        const n = 7; // 下側のぎざぎざ(逆さの山)
+        for (let i = 1; i < n; i++) { const fx = i / n, dd = Math.sin(fx * Math.PI) * h * (0.55 + r() * 0.5); k.lineTo(x - w / 2 + fx * w, y + dd); }
+        k.lineTo(x + w / 2, y); k.closePath(); k.fill();
+        k.beginPath(); k.ellipse(x, y, w / 2, w * 0.06, 0, 0, 7); k.fill();
+        // 上の建物
+        const nb = 2 + Math.floor(r() * 3);
+        for (let i = 0; i < nb; i++) {
+          const bx = x - w * 0.32 + r() * w * 0.6, bw = w * (0.06 + r() * 0.08), bh = w * (0.12 + r() * 0.25);
+          k.fillStyle = col; k.fillRect(bx, y - bh, bw, bh + 2);
+          k.beginPath(); k.moveTo(bx - bw * 0.15, y - bh); k.lineTo(bx + bw / 2, y - bh - bw * 0.7); k.lineTo(bx + bw * 1.15, y - bh); k.fill();
+          if (lights) { const lx = bx + bw / 2, ly = y - bh * 0.55; glow(k, lx, ly, bw * 1.6, C.amber, 0.35 * lightA); k.fillStyle = hexA(C.amber, 0.9 * lightA); k.fillRect(lx - bw * 0.14, ly - bw * 0.18, bw * 0.28, bw * 0.36); }
+        }
+      }
+      function layer(k, list, camX, f, col, lights, lightA, scale = 1) {
+        for (const o of list) { const x = mod(o.x - camX * f, SPAN) - 450; island(k, x, o.y, o.w * scale, col, o.seed, lights, lightA); }
+      }
+
+      // 夜空(motion-prompt #016 Parallax の層の速さ 0.05 / 0.1 / 0.28 / 0.6 / 1.25 / 2.1 をそのまま使う)
+      // Motion Prompt #016 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#016
+      function drawSky(k, t, camX, warm = 0) {
+        k.fillStyle = C.ink; k.fillRect(0, 0, W, H);
+        glow(k, 960, 1050, 1250, C.teal, 0.55);
+        if (warm > 0) glow(k, 960, 1120, 1100, C.amber, 0.55 * warm);
+        for (const s of STARS) { const x = mod(s.x - camX * 0.05, W + 600) - 300, a = 0.45 + 0.4 * Math.sin(t * 2.2 + s.ph); k.fillStyle = hexA(C.cream, a * 0.8); k.fillRect(x, s.y, s.r, s.r); }
+        // 月(0.1)
+        const mx = 1530 - camX * 0.1; glow(k, mx, 210, 260, C.cream, 0.12); k.fillStyle = "#E9E1CF"; k.beginPath(); k.arc(mx, 210, 74, 0, 7); k.fill();
+        k.fillStyle = C.ink; k.beginPath(); k.arc(mx + 30, 196, 66, 0, 7); k.fill();
+        layer(k, L_FAR, camX, 0.28, "#1C2350", true, 0.6, 1);
+        layer(k, L_MID, camX, 0.6, "#232B5E", true, 1, 1);
+        // 雲の帯(1.25)
+        for (let i = 0; i < 6; i++) { const x = mod(i * 520 - camX * 1.25, SPAN) - 450; k.fillStyle = hexA("#3A4378", 0.35); k.beginPath(); k.ellipse(x, 905 + (i % 2) * 30, 380, 60, 0, 0, 7); k.fill(); }
+        layer(k, L_NEAR, camX, 1.25, "#141936", true, 0.8, 1);
+        // いちばん手前の暗い雲(2.1)
+        k.fillStyle = "#080A1C";
+        for (let i = 0; i < 7; i++) { const x = mod(i * 430 - camX * 2.1, SPAN) - 450; k.beginPath(); k.ellipse(x, 1080, 330, 120 + (i % 3) * 25, 0, 0, 7); k.fill(); }
+      }
+
+      // 配達人(グライダー+吊り下げたランタンの荷物)
+      function courier(k, x, y, ang, sc = 1, lamp = 1) {
+        k.save(); k.translate(x, y); k.rotate(ang); k.scale(sc, sc);
+        glow(k, 0, 34, 120, C.amber, 0.45 * lamp);
+        k.strokeStyle = hexA(C.cream, 0.7); k.lineWidth = 3; k.beginPath(); k.moveTo(-6, 4); k.lineTo(0, 30); k.moveTo(6, 4); k.lineTo(0, 30); k.stroke();
+        k.fillStyle = C.amber; rr(k, -11, 26, 22, 20, 5); k.fill();
+        k.fillStyle = "#FFF4D6"; rr(k, -6, 31, 12, 10, 3); k.fill();
+        k.fillStyle = C.cream; k.beginPath(); k.moveTo(-58, -6); k.quadraticCurveTo(0, -30, 62, -2); k.lineTo(10, 4); k.lineTo(-8, 4); k.closePath(); k.fill();
+        k.fillStyle = C.amber; k.beginPath(); k.moveTo(-58, -6); k.lineTo(-8, 4); k.lineTo(-30, 2); k.closePath(); k.fill();
+        k.fillStyle = "#2A2F5A"; k.beginPath(); k.arc(0, -2, 8, 0, 7); k.fill();
+        k.restore();
+      }
+
+      // マスクから出る見出し
+      // Motion Prompt #005 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#005
+      // 線 0.1–0.5 s(cubic in-out で中央から伸びる)、上段 0.35–1.0 s(下から quintic out)、下段 0.55–1.15 s(上から)。
+      // 退場は上段 1.7–2.05(backIn 1.2)、下段 1.75–2.05(cubic in)。不透明度は変えず、枠から出ることで隠れる。
+      function maskReveal(k, lu, o) {
+        const { x, ly, top, topFont, topCol, bot, botFont, botCol, lineW, topH, botH, rs, exitAt } = o;
+        const ex = exitAt == null ? 99 : exitAt;
+        const lg = eIO(P(lu, 0.1, 0.5)) * (1 - eIO(P(lu, ex + 0.35, ex + 0.6)));
+        const up = (1 - eOut5(P(lu, 0.35, 1.0))) * 120 * rs + backIn(P(lu, ex, ex + 0.35), 1.2) * -150 * rs;
+        k.save(); k.beginPath(); k.rect(x - 40, ly - topH - 6, W, topH); k.clip();
+        txt(k, top, x, ly - 22 * rs / 1.2 + up, topFont, topCol, "left", "alphabetic", "2px"); k.restore();
+        const dn = (1 - eOut5(P(lu, 0.55, 1.15))) * -60 * rs + eIn(P(lu, ex + 0.05, ex + 0.35)) * 70 * rs;
+        k.save(); k.beginPath(); k.rect(x - 40, ly + 6, W, botH); k.clip();
+        if (Array.isArray(bot)) bot.forEach((b, i) => txt(k, b[0], x, ly + b[2] + dn, b[1], b[3], "left", "alphabetic", b[4] || "0px"));
+        else txt(k, bot, x, ly + 52 + dn, botFont, botCol, "left", "alphabetic", "6px");
+        k.restore();
+        if (lg > 0.005) { k.fillStyle = C.amber; rr(k, x + lineW / 2 - (lineW / 2) * lg, ly - 4, lineW * lg, 8, 4); k.fill(); }
+      }
+
+      // ---------- S1 (0–2.0): 夜空の配達人 ----------
+      // Motion Prompt #126 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#126
+      // 路: x = 270 + 112θ − 150 sinθ, y = 106 − 74 cosθ(θ = −π→π、時間に比例)。向き = atan2(74 sinθ, 112 − 150 cosθ)。尾 24 本(θ 0.03 刻み)。
+      const pathXY = (th) => [(270 + 112 * th - 150 * Math.sin(th)) * S, 40 + (106 - 74 * Math.cos(th)) * S];
+      function drawS1(k, t) {
+        const camX = lerp(-120, 120, eIOs(P(t, 0, 2.4)));
+        const z = 1 + 0.04 * P(t, 0, 2.4);
+        k.save(); k.translate(960, 540); k.scale(z, z); k.translate(-960, -540);
+        drawSky(k, t, camX);
+        const th = -Math.PI + 2 * Math.PI * P(t, 0.15, 1.95);
+        // 予定路の点線(これから通る所だけ)
+        k.save(); k.setLineDash([7, 53]); k.lineCap = "round"; k.lineWidth = 7; k.strokeStyle = hexA(C.cream, 0.32); k.beginPath();
+        for (let a = th; a <= Math.PI; a += 0.02) { const [px, py] = pathXY(a); a === th ? k.moveTo(px, py) : k.lineTo(px, py); } k.stroke(); k.restore();
+        // 光の尾
+        if (t > 0.15 && t < 2.2) {
+          for (let i = 24; i >= 1; i--) { const a0 = th - i * 0.03, a1 = th - (i - 1) * 0.03; if (a1 < -Math.PI) continue; const [x0, y0] = pathXY(Math.max(a0, -Math.PI)), [x1, y1] = pathXY(a1); const f = 1 - i / 25; k.strokeStyle = hexA(C.amber, 0.75 * f); k.lineWidth = 3 + 26 * f; k.lineCap = "round"; k.beginPath(); k.moveTo(x0, y0 + 34); k.lineTo(x1, y1 + 34); k.stroke(); }
+          const [cx, cy] = pathXY(th); courier(k, cx, cy, Math.atan2(74 * Math.sin(th), 112 - 150 * Math.cos(th)), 1.25);
+        }
+        k.restore();
+        // 左下のコピー(#005、開始を 0.3 s 遅らせた)
+        maskReveal(k, t - 0.3, { x: 140, ly: 880, top: "届けろ、空の果てまで。", topFont: `900 112px ${JP}`, topCol: C.cream, topH: 150, bot: "DELIVER BEYOND THE SKY", botFont: `600 38px ${HUD}`, botCol: C.amber, botH: 70, lineW: 1180, rs: 1.25 });
+      }
+
+      // ---------- S2 (2.0–4.0): ゲーム画面の UI モック ----------
+      // Motion Prompt #001 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#001
+      // 大きさ 1 − e^(−6.5t)·cos(15t)(最大約 1.26)、回転 −0.35 rad → 0 を 1 − e^(−6t)·cos(11t)、バッジは +0.34 s 後に 1 − e^(−7t)·cos(17t)。
+      function pop(k, t0, t, cx, cy, fn) {
+        const tt = t - t0; if (tt <= 0) return;
+        const s = spring(tt, 15, 6.5), r = -0.35 * (1 - spring(tt, 11, 6));
+        k.save(); k.translate(cx, cy); k.rotate(r); k.scale(s, s); k.translate(-cx, -cy); fn(tt); k.restore();
+      }
+      const panel = (k, x, y, w, h) => { k.fillStyle = hexA("#0B0E24", 0.72); rr(k, x, y, w, h, 18); k.fill(); k.strokeStyle = hexA(C.cream, 0.28); k.lineWidth = 3; k.stroke(); };
+      // Motion Prompt #007 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#007
+      // 値 = round(目標 × (1 − (1 − p)^4))、桁幅一定・右寄せ、着地で 1 + 0.07·e^(−7t)·cos(15t) のはずみ。
+      const countUp = (p, target) => Math.round(target * (1 - Math.pow(1 - p, 4)));
+      const fmt = (n) => n.toLocaleString("en-US");
+      const GATES = [2.5, 3.0, 3.5];
+      function railY(x, camX) { return 600 + 70 * Math.sin((x + camX * 1.25) / 240); }
+      function drawS2(k, t) {
+        const u = t - 2, camX = 120 + u * 720;
+        // クラッシュズーム(cin camera-movement/crash-zoom-in: 1→2.4、expo.out 相当、0.28 s)— ランタンの位置を中心に
+        const cx = 700, cy = railY(700, camX) + 34;
+        const zp = P(t, 3.72, 4.0), z = 1 + 1.4 * (1 - Math.pow(2, -10 * zp)) / (1 - Math.pow(2, -10));
+        k.save(); k.translate(cx, cy); k.scale(z, z); k.translate(-cx, -cy);
+        drawSky(k, t, camX);
+        // 光のレール
+        for (let pass = 0; pass < 2; pass++) { k.strokeStyle = pass ? hexA("#FFE2A8", 0.9) : hexA(C.amber, 0.25); k.lineWidth = pass ? 5 : 26; k.beginPath(); for (let x = -40; x <= W + 40; x += 20) { const y = railY(x, camX); x === -40 ? k.moveTo(x, y) : k.lineTo(x, y); } k.stroke(); }
+        // ゲート(拍の上で配達人と重なる)
+        GATES.forEach((g, i) => {
+          const gx = 700 + (g - t) * 1700, gy = railY(gx, camX);
+          if (gx > -200 && gx < W + 200) { k.lineWidth = 12; k.strokeStyle = C.amber; k.beginPath(); k.ellipse(gx, gy, 46, 120, 0, 0, 7); k.stroke(); k.lineWidth = 4; k.strokeStyle = hexA("#FFF4D6", 0.9); k.beginPath(); k.ellipse(gx, gy, 34, 104, 0, 0, 7); k.stroke(); glow(k, gx, gy, 170, C.amber, 0.25); }
+          const tt = t - g; if (tt > 0 && tt < 0.6) { const q = eOut(tt / 0.6); k.strokeStyle = hexA(C.amber, 1 - q); k.lineWidth = 8 * (1 - q) + 1; k.beginPath(); k.arc(700, railY(700, camX), 60 + 160 * q, 0, 7); k.stroke(); txt(k, "+100", 760, railY(700, camX) - 90 - 70 * q, `600 46px ${HUD}`, hexA(C.amber, 1 - q * q), "left", "middle", "2px"); }
+        });
+        const ry = railY(700, camX), ang = Math.atan2(railY(712, camX) - railY(688, camX), 24);
+        courier(k, 700, ry - 6, ang, 1.5, 1);
+        k.restore();
+        if (z > 1.05) return; // ズーム中は HUD を外す(フレームの縁で切れるため)
+        // 画面の四隅の括弧(ゲーム画面の枠)— 2.00–2.30 で描く
+        const bq = eOut(P(t, 2.0, 2.3)); k.strokeStyle = hexA(C.cream, 0.55); k.lineWidth = 4;
+        [[40, 40, 1, 1], [W - 40, 40, -1, 1], [40, H - 40, 1, -1], [W - 40, H - 40, -1, -1]].forEach(([x, y, sx, sy]) => { k.beginPath(); k.moveTo(x, y + sy * 70 * bq); k.lineTo(x, y); k.lineTo(x + sx * 70 * bq, y); k.stroke(); });
+        // 左上: 配達数
+        pop(k, 2.1, t, 290, 130, () => { panel(k, 80, 70, 420, 120); k.fillStyle = C.amber; rr(k, 104, 98, 64, 64, 12); k.fill(); k.fillStyle = C.ink; k.fillRect(110, 124, 52, 6); k.fillRect(133, 104, 6, 52);
+          txt(k, "DELIVERY", 190, 112, `600 24px ${HUD}`, C.dim, "left", "middle", "4px"); const n = 3 + GATES.filter((g) => t > g + 0.05).length; txt(k, `${String(n).padStart(2, "0")} / 12`, 190, 152, `600 52px ${HUD}`, C.cream, "left", "middle", "2px"); });
+        // 右上: ミニマップ(+0.34 s 後に現在地のピン)
+        pop(k, 2.35, t, 1740, 200, (tt) => { k.fillStyle = hexA("#0B0E24", 0.72); k.beginPath(); k.arc(1740, 200, 125, 0, 7); k.fill(); k.strokeStyle = hexA(C.cream, 0.3); k.lineWidth = 3; k.stroke();
+          k.save(); k.beginPath(); k.arc(1740, 200, 122, 0, 7); k.clip(); const off = (t - 2) * 30; [[1680, 150, 26], [1790, 250, 34], [1810, 140, 20], [1700, 270, 18]].forEach(([x, y, r]) => { k.fillStyle = "#2E3770"; k.beginPath(); k.ellipse(x - off, y, r * 1.4, r, 0, 0, 7); k.fill(); });
+          k.setLineDash([6, 12]); k.strokeStyle = hexA(C.amber, 0.8); k.lineWidth = 4; k.beginPath(); k.moveTo(1740, 200); k.quadraticCurveTo(1790 - off, 120, 1830 - off, 160); k.stroke(); k.setLineDash([]); k.restore();
+          txt(k, "MAP", 1740, 352, `600 22px ${HUD}`, C.dim, "center", "middle", "5px");
+          const b = spring(tt - 0.34, 17, 7); if (b > 0) { k.save(); k.translate(1740, 200); k.scale(b, b); k.fillStyle = C.amber; k.beginPath(); k.moveTo(0, -18); k.lineTo(13, 14); k.lineTo(0, 7); k.lineTo(-13, 14); k.closePath(); k.fill(); k.restore(); } });
+        // 左下: 速度(#007)
+        pop(k, 2.6, t, 280, 950, () => { panel(k, 80, 880, 420, 140); txt(k, "SPD", 108, 916, `600 24px ${HUD}`, C.dim, "left", "middle", "4px");
+          const p = P(t, 2.6, 3.9), v = countUp(p, 842); k.font = `600 72px ${HUD}`; txt(k, String(v).padStart(4, "0"), 400, 968, `600 72px ${HUD}`, C.cream, "right", "alphabetic", "2px"); txt(k, "km/h", 412, 968, `600 26px ${HUD}`, C.dim, "left");
+          k.fillStyle = hexA(C.cream, 0.15); rr(k, 108, 990, 364, 10, 5); k.fill(); k.fillStyle = C.amber; rr(k, 108, 990, 364 * (v / 1000), 10, 5); k.fill(); });
+        // 右下: チェイン
+        pop(k, 2.85, t, 1650, 950, () => { panel(k, 1440, 880, 420, 140); txt(k, "CHAIN", 1468, 916, `600 24px ${HUD}`, C.dim, "left", "middle", "4px");
+          const n = 9 + GATES.filter((g) => t > g).length, last = [...GATES].reverse().find((g) => t > g), tb = last ? t - last : 9, sc = 1 + 0.07 * Math.exp(-7 * tb) * Math.cos(15 * tb) * 3;
+          k.save(); k.translate(1650, 975); k.scale(sc, sc); txt(k, `×${n}`, 0, 0, `600 76px ${HUD}`, C.amber, "center", "middle", "2px"); k.restore(); });
+        // 上中央: 目的地
+        pop(k, 3.1, t, 960, 100, () => { panel(k, 690, 66, 540, 70); const d = (2.4 - (t - 3.1) * 0.9).toFixed(1); txt(k, `目的地 灯台島  ${d} km`, 960, 103, `900 32px ${JP}`, C.cream, "center", "middle", "2px"); });
+      }
+
+      // ---------- 特徴の見出し(右側、3場面で同じ位置) ----------
+      function featureTitle(k, lu, idx, label, jp, en, desc, exitAt) {
+        maskReveal(k, lu, { x: 1120, ly: 560, top: jp, topFont: `900 100px ${JP}`, topCol: C.cream, topH: 140, lineW: 700, rs: 1.1, exitAt,
+          bot: [[en, `600 34px ${HUD}`, 52, C.amber, "5px"], [desc, `900 30px ${JP}`, 106, hexA(C.cream, 0.82), "2px"]], botH: 130 });
+        const a = eOut(P(lu, 0.2, 0.6)) * (1 - P(lu, exitAt ?? 99, (exitAt ?? 99) + 0.2));
+        txt(k, `${idx}`, 1120, 380, `900 54px ${EN}`, hexA(C.amber, a), "left", "alphabetic", "2px");
+        txt(k, label, 1250, 376, `600 26px ${HUD}`, hexA(C.cream, 0.7 * a), "left", "alphabetic", "6px");
+      }
+
+      // ---------- F1 (4.0–6.0): 光流ダッシュ ----------
+      // Motion Prompt #010 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#010
+      // 値 = 0.7 × (1 − e^(−4.6t)·cos(10.5t))(約 0.3 s 後に 25% 行き過ぎて戻る)。目標を超えた部分は差し色、目標に目盛り。
+      const SL = (() => { const r = rng(99); return Array.from({ length: 110 }, () => ({ a: r() * 6.283, o: r(), sp: 0.6 + r() * 1.2, len: 60 + r() * 260, w: 2 + r() * 5, c: r() < 0.25 })); })();
+      function drawF1(k, t) {
+        const u = t - 4, gx = 700, gy = 640, z = 1 + 0.03 * P(t, 4, 6);
+        k.save(); k.translate(gx, gy); k.scale(z, z); k.translate(-gx, -gy);
+        k.fillStyle = "#0E0F26"; k.fillRect(0, 0, W, H); glow(k, gx, gy, 900, C.amber, 0.22); glow(k, gx, gy, 420, C.coral, 0.12);
+        for (const s of SL) { const p = mod(s.o + u * s.sp, 1), r0 = 260 + p * 1300; k.strokeStyle = hexA(s.c ? C.amber : C.cream, 0.32 * (1 - p) + 0.05); k.lineWidth = s.w; k.beginPath(); k.moveTo(gx + Math.cos(s.a) * r0, gy + Math.sin(s.a) * r0); k.lineTo(gx + Math.cos(s.a) * (r0 + s.len), gy + Math.sin(s.a) * (r0 + s.len)); k.stroke(); }
+        const R0 = 330, SW = 64, tau = u - 0.1, v = tau > 0 ? 0.7 * (1 - Math.exp(-4.6 * tau) * Math.cos(10.5 * tau)) : 0;
+        k.lineCap = "butt"; k.lineWidth = SW; k.strokeStyle = "#232A55"; k.beginPath(); k.arc(gx, gy, R0, Math.PI, 2 * Math.PI); k.stroke();
+        const g = k.createLinearGradient(gx - R0, 0, gx + R0, 0); g.addColorStop(0, "#C9761B"); g.addColorStop(1, C.amber);
+        k.strokeStyle = g; k.beginPath(); k.arc(gx, gy, R0, Math.PI, Math.PI + Math.PI * Math.min(v, 0.7)); k.stroke();
+        if (v > 0.7) { k.strokeStyle = C.coral; k.beginPath(); k.arc(gx, gy, R0, Math.PI * 1.7, Math.PI + Math.PI * v); k.stroke(); }
+        for (let i = 0; i <= 20; i++) { const a = Math.PI + (Math.PI * i) / 20, r1 = R0 + SW / 2 + 14, r2 = r1 + (i % 5 ? 16 : 34); k.strokeStyle = hexA(C.cream, i % 5 ? 0.35 : 0.8); k.lineWidth = i % 5 ? 3 : 5; k.beginPath(); k.moveTo(gx + Math.cos(a) * r1, gy + Math.sin(a) * r1); k.lineTo(gx + Math.cos(a) * r2, gy + Math.sin(a) * r2); k.stroke(); }
+        const ta = Math.PI * 1.7; k.strokeStyle = "#FFE2A8"; k.lineWidth = 8; k.beginPath(); k.moveTo(gx + Math.cos(ta) * (R0 - 40), gy + Math.sin(ta) * (R0 - 40)); k.lineTo(gx + Math.cos(ta) * (R0 + 40), gy + Math.sin(ta) * (R0 + 40)); k.stroke();
+        const na = Math.PI + Math.PI * v; k.strokeStyle = C.cream; k.lineWidth = 14; k.lineCap = "round"; k.beginPath(); k.moveTo(gx, gy); k.lineTo(gx + Math.cos(na) * (R0 - 30), gy + Math.sin(na) * (R0 - 30)); k.stroke();
+        k.fillStyle = C.cream; k.beginPath(); k.arc(gx, gy, 30, 0, 7); k.fill(); glow(k, gx, gy, 90, C.amber, 0.6 * (1 - P(u, 0, 0.5)) + 0.2);
+        const p = P(t, 4.15, 5.35), n = countUp(p, 1280), tb = t - 5.35, sc = tb > 0 ? 1 + 0.07 * Math.exp(-7 * tb) * Math.cos(15 * tb) : 1;
+        k.save(); k.translate(gx, gy + 150); k.scale(sc, sc); txt(k, fmt(n), 70, 0, `900 104px ${EN}`, tb > 0 ? C.amber : C.cream, "right", "middle", "2px"); txt(k, "km/h", 92, 14, `600 36px ${HUD}`, C.dim, "left", "middle", "3px"); k.restore();
+        txt(k, "LIGHTSTREAM BOOST", gx, gy - 90, `600 26px ${HUD}`, hexA(C.cream, 0.6), "center", "middle", "6px");
+        k.restore();
+        featureTitle(k, t - 4.05, "01", "LIGHTSTREAM DASH", "光流ダッシュ", "RIDE THE LIGHTSTREAM", "光の気流に乗れば、配達は一瞬。");
+      }
+
+      // ---------- F2 (6.0–8.0): 毎回ちがう空路 ----------
+      const NODES = [[230, 820], [420, 560], [330, 300], [640, 420], [760, 720], [960, 260], [1000, 600]];
+      const ROUTE_OLD = [0, 2, 5, 6], ROUTE_NEW = [0, 1, 3, 4, 6];
+      function crPath(pts, steps = 18) { const out = []; for (let i = 0; i < pts.length - 1; i++) { const p0 = pts[Math.max(0, i - 1)], p1 = pts[i], p2 = pts[i + 1], p3 = pts[Math.min(pts.length - 1, i + 2)]; for (let s = 0; s < steps; s++) { const q = s / steps, q2 = q * q, q3 = q2 * q; out.push([0.5 * (2 * p1[0] + (-p0[0] + p2[0]) * q + (2 * p0[0] - 5 * p1[0] + 4 * p2[0] - p3[0]) * q2 + (-p0[0] + 3 * p1[0] - 3 * p2[0] + p3[0]) * q3), 0.5 * (2 * p1[1] + (-p0[1] + p2[1]) * q + (2 * p0[1] - 5 * p1[1] + 4 * p2[1] - p3[1]) * q2 + (-p0[1] + 3 * p1[1] - 3 * p2[1] + p3[1]) * q3)]); } } out.push(pts[pts.length - 1]); return out; }
+      const PATH_NEW = crPath(ROUTE_NEW.map((i) => NODES[i])), PATH_OLD = crPath(ROUTE_OLD.map((i) => NODES[i]));
+      // Motion Prompt #129 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#129
+      // 未確定の枠は A–Z(I, O 抜き)0–9 #$%&@? を 0.062 s ごとに入れ替え。左から確定。確定直後 0.22 s は黄→白、1 + 0.2·e^(−14t)。
+      const SCR = "ABCDEFGHJKLMNPQRSTUVWXYZ0123456789#$%&@?";
+      function scramble(k, word, t, t0, step, x, y, slotW, font, colLock, colNew) {
+        const tick = Math.floor(t / 0.062);
+        for (let i = 0; i < word.length; i++) {
+          const tl = t0 + step * i, cx = x + i * slotW, ch = word[i];
+          if (ch === " ") continue;
+          if (t < tl) { const r = rng(tick * 131 + i * 17 + 5)(); txt(k, SCR[Math.floor(r * SCR.length)], cx, y, font, hexA("#7FA8B8", 0.75), "center", "middle"); }
+          else { const tt = t - tl, sc = 1 + 0.2 * Math.exp(-14 * tt); k.save(); k.translate(cx, y); k.scale(sc, sc); txt(k, ch, 0, 0, font, tt < 0.22 ? colNew : colLock, "center", "middle"); k.restore(); }
+        }
+      }
+      // Motion Prompt #004 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#004
+      // trim path を cubic in-out で描く、先端に点(半径 12・中心 5)、矢じりを backOut 2.5 で開く、丸で囲む(上から時計回り)。
+      function drawPathPart(k, pts, a, b) { const n = pts.length - 1, i0 = Math.floor(a * n), i1 = Math.floor(b * n); k.beginPath(); k.moveTo(...pts[i0]); for (let i = i0 + 1; i <= i1; i++) k.lineTo(...pts[i]); k.stroke(); return pts[Math.min(n, i1)]; }
+      function drawF2(k, t) {
+        const u = t - 6; k.fillStyle = "#101935"; k.fillRect(0, 0, W, H); glow(k, 560, 540, 900, C.teal, 0.5);
+        const drift = u * 14; k.save(); k.translate(-drift, -drift * 0.4);
+        k.strokeStyle = hexA(C.cream, 0.07); k.lineWidth = 2; for (let x = -100; x < W + 200; x += 80) { k.beginPath(); k.moveTo(x, -100); k.lineTo(x, H + 100); k.stroke(); } for (let y = -100; y < H + 200; y += 80) { k.beginPath(); k.moveTo(-100, y); k.lineTo(W + 200, y); k.stroke(); }
+        k.strokeStyle = hexA(C.cream, 0.12); k.lineWidth = 3; k.beginPath(); k.arc(620, 540, 430, 0, 7); k.stroke(); k.beginPath(); k.arc(620, 540, 250, 0, 7); k.stroke();
+        // 前回の航路(点線)— 6.15–6.6 で消える
+        const oa = 1 - P(t, 6.15, 6.6); if (oa > 0) { k.setLineDash([10, 18]); k.strokeStyle = hexA(C.dim, 0.7 * oa); k.lineWidth = 6; drawPathPart(k, PATH_OLD, 0, 1); k.setLineDash([]); txt(k, "RUN 08", 980, 220, `600 28px ${HUD}`, hexA(C.dim, oa), "left", "middle", "4px"); }
+        // 島(ノード)が順に出る(#001)
+        NODES.forEach(([x, y], i) => pop(k, 6.15 + i * 0.07, t, x, y, () => { const r = rng(300 + i); k.fillStyle = "#2B356E"; k.beginPath(); for (let j = 0; j < 10; j++) { const a = (j / 10) * 6.283, rr2 = 46 * (0.75 + r() * 0.4); j ? k.lineTo(x + Math.cos(a) * rr2 * 1.3, y + Math.sin(a) * rr2) : k.moveTo(x + Math.cos(a) * rr2 * 1.3, y + Math.sin(a) * rr2); } k.closePath(); k.fill(); k.fillStyle = C.amber; k.beginPath(); k.arc(x, y, 9, 0, 7); k.fill(); glow(k, x, y, 40, C.amber, 0.4); }));
+        // 新しい航路
+        const pd = eIO(P(t, 6.45, 7.4));
+        if (pd > 0) { k.lineCap = "round"; k.strokeStyle = hexA(C.amber, 0.25); k.lineWidth = 34; drawPathPart(k, PATH_NEW, 0, pd); k.strokeStyle = C.amber; k.lineWidth = 12; const tip = drawPathPart(k, PATH_NEW, 0, pd);
+          if (pd < 1) { k.fillStyle = "#FFE2A8"; k.beginPath(); k.arc(tip[0], tip[1], 16, 0, 7); k.fill(); k.fillStyle = C.ink; k.beginPath(); k.arc(tip[0], tip[1], 6, 0, 7); k.fill(); } }
+        const ah = backOut(P(t, 7.35, 7.6), 2.5); if (ah > 0) { const [ex, ey] = NODES[6], [px, py] = PATH_NEW[PATH_NEW.length - 4], a = Math.atan2(ey - py, ex - px); k.save(); k.translate(ex, ey); k.rotate(a); k.strokeStyle = C.amber; k.lineWidth = 12; k.beginPath(); k.moveTo(-34 * ah, -26 * ah); k.lineTo(0, 0); k.lineTo(-34 * ah, 26 * ah); k.stroke(); k.restore(); }
+        const cq = eIO(P(t, 7.5, 7.9)); if (cq > 0) { k.strokeStyle = C.coral; k.lineWidth = 8; k.beginPath(); k.arc(NODES[6][0], NODES[6][1], 80, -Math.PI / 2, -Math.PI / 2 + cq * 6.283); k.stroke(); }
+        txt(k, "DEPOT", NODES[0][0], NODES[0][1] + 80, `600 24px ${HUD}`, hexA(C.cream, 0.75 * P(t, 6.2, 6.5)), "center", "middle", "4px");
+        txt(k, "GOAL", NODES[6][0], NODES[6][1] + 120, `600 26px ${HUD}`, hexA(C.coral, P(t, 7.6, 7.9)), "center", "middle", "5px");
+        k.restore();
+        // 左上: 航路の番号がスクランブルで確定(#129)
+        txt(k, "NEW ROUTE", 130, 130, `600 24px ${HUD}`, hexA(C.cream, 0.7), "left", "middle", "6px");
+        scramble(k, "RUN 09", t, 6.2, 0.18, 150, 196, 52, `600 64px ${HUD}`, C.cream, C.amber);
+        featureTitle(k, t - 6.15, "02", "ROGUELITE SKYWAYS", "毎回ちがう空路", "ROUTES REBUILT EVERY RUN", "島も嵐も、出発のたびに組み変わる。");
+      }
+
+      // ---------- F3 (8.0–9.75): 4人で協力配達 ----------
+      // Motion Prompt #002 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#002
+      // i 番目は 0.15 + 0.12·i s から 0.5 s で backOut (s = 2.6) で伸びる(下端固定)、点は +0.34 s に 1 − e^(−7t)·cos(16t)。
+      // 退場は 1.78 + 0.045·i s から cubic in で 0.26 s、点は 1.70 + 0.045·i s から 0.2 s。
+      const CREW = [["P1", "TOMO", "RUNNER", C.amber], ["P2", "RIN", "SCOUT", C.coral], ["P3", "KAI", "CARRIER", "#7FD1C4"], ["P4", "NAGI", "MEDIC", "#C9B6FF"]];
+      function drawF3(k, t) {
+        const u = t - 8; k.fillStyle = "#14132F"; k.fillRect(0, 0, W, H);
+        CREW.forEach((c, i) => { const x = 255 + i * 250; k.save(); k.globalAlpha = 0.16; const g = k.createLinearGradient(x, 0, x, 900); g.addColorStop(0, c[3]); g.addColorStop(1, hexA(C.ink, 0)); k.fillStyle = g; k.beginPath(); k.moveTo(x - 30, 0); k.lineTo(x + 30, 0); k.lineTo(x + 150, 900); k.lineTo(x - 150, 900); k.closePath(); k.fill(); k.restore(); });
+        k.fillStyle = hexA(C.cream, 0.08); k.fillRect(100, 902, 1000, 4);
+        CREW.forEach(([pn, name, role, col], i) => {
+          const x = 150 + i * 250, base = 900, cw = 210, chh = 400, st = 0.15 + 0.12 * i;
+          const grow = backOut(P(u, st, st + 0.5), 2.6) * (1 - eIn(P(u, 1.48 + 0.045 * i, 1.74 + 0.045 * i)));
+          if (grow <= 0.001) return;
+          k.save(); k.translate(x + cw / 2, base); k.scale(1, grow); k.translate(-(x + cw / 2), -base);
+          k.fillStyle = "#1F2148"; rr(k, x, base - chh, cw, chh, 22); k.fill(); k.strokeStyle = hexA(col, 0.9); k.lineWidth = 4; k.stroke();
+          k.fillStyle = col; rr(k, x, base - chh, cw, 56, [22, 22, 0, 0]); k.fill();
+          txt(k, pn, x + 20, base - chh + 38, `900 28px ${EN}`, C.ink, "left", "alphabetic");
+          // 頭(ヘルメットとバイザー)
+          const hx = x + cw / 2, hy = base - chh + 170; k.fillStyle = hexA(col, 0.25); k.beginPath(); k.arc(hx, hy, 70, 0, 7); k.fill();
+          k.fillStyle = C.cream; k.beginPath(); k.arc(hx, hy, 50, Math.PI, 0); k.lineTo(hx + 50, hy + 22); k.lineTo(hx - 50, hy + 22); k.closePath(); k.fill();
+          k.fillStyle = col; rr(k, hx - 40, hy - 8, 80, 22, 10); k.fill(); k.fillStyle = C.ink; k.fillRect(hx - 30, hy + 22, 60, 30);
+          txt(k, name, hx, base - 120, `900 40px ${EN}`, C.cream, "center", "alphabetic", "2px");
+          txt(k, role, hx, base - 76, `600 22px ${HUD}`, hexA(col, 1), "center", "alphabetic", "5px");
+          k.restore();
+          const ds = spring(u - st - 0.34, 16, 7) * (1 - P(u, 1.4 + 0.045 * i, 1.6 + 0.045 * i));
+          if (ds > 0) { k.save(); k.translate(x + cw - 10, base - chh * grow + 10); k.scale(ds, ds); k.fillStyle = C.amber; k.beginPath(); k.arc(0, 0, 26, 0, 7); k.fill(); k.strokeStyle = C.ink; k.lineWidth = 6; k.lineCap = "round"; k.beginPath(); k.moveTo(-10, 0); k.lineTo(-3, 8); k.lineTo(11, -8); k.stroke(); k.restore(); }
+        });
+        txt(k, "READY  4 / 4", 150, 970, `600 28px ${HUD}`, hexA(C.amber, P(u, 0.9, 1.1) * (1 - P(u, 1.45, 1.6))), "left", "middle", "6px");
+        featureTitle(k, t - 8.15, "03", "ONLINE CO-OP", "4人で協力配達", "UP TO 4 PLAYERS", "荷物をパスして、空をつなげ。", 1.3);
+      }
+
+      // ---------- ロゴ ----------
+      const LOGO = { cx: 960, cy: 520, size: 196 };
+      let logoCan = null;
+      function logoLayer(t, sweepP, sparkleT) {
+        // 文字をオフスクリーンに描き、光の帯は文字の内側だけ(source-atop)
+        const c = logoCan, k = c.getContext("2d"); k.setTransform(1, 0, 0, 1, 0, 0); k.clearRect(0, 0, c.width, c.height);
+        txt(k, "LUMIWAKE", c.width / 2, c.height / 2, `900 ${LOGO.size}px ${EN}`, C.cream, "center", "middle", "8px");
+        // Motion Prompt #022 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#022
+        // 幅 116 の帯(中央 0.72)+ 78 離れた幅 12 の帯(0.5)、0.42 rad 傾け、0.45–1.5 s に quadratic in-out で横切る(ここでは 2.6 倍)。
+        if (sweepP > 0 && sweepP < 1) {
+          k.globalCompositeOperation = "source-atop"; k.save(); k.translate(lerp(-340, c.width + 340, sweepP), c.height / 2); k.rotate(0.42);
+          const gr = k.createLinearGradient(-150, 0, 150, 0); gr.addColorStop(0, "rgba(255,179,65,0)"); gr.addColorStop(0.5, "rgba(255,236,190,.95)"); gr.addColorStop(1, "rgba(255,179,65,0)");
+          k.fillStyle = gr; k.fillRect(-150, -420, 300, 840); k.fillStyle = "rgba(255,226,168,.6)"; k.fillRect(203, -420, 31, 840); k.restore(); k.globalCompositeOperation = "source-over";
+        }
+        return c;
+      }
+      function drawLogo(k, t, cx, cy, sc, sweepP, sparkleT, sy = 1) {
+        const c = logoLayer(t, sweepP, sparkleT);
+        k.save(); k.translate(cx, cy); k.scale(sc * (2 - sy), sc * sy); k.drawImage(c, -c.width / 2, -c.height / 2); k.restore();
+        // ロゴ下の光の軌跡(配達人の飛行路の形を縮めた物)を #004 の要領で描く
+        const lp = eIO(P(t, 10.6, 11.2));
+        if (lp > 0) { k.save(); k.translate(cx, cy); k.scale(sc, sc); k.lineCap = "round"; k.strokeStyle = C.amber; k.lineWidth = 9; k.beginPath(); const N = 60, n = Math.floor(N * lp); for (let i = 0; i <= n; i++) { const q = i / N, x = lerp(-640, 640, q), y = 150 + 26 * Math.sin(q * Math.PI * 2.0 + 0.6) - 30 * q; i ? k.lineTo(x, y) : k.moveTo(x, y); } k.stroke(); k.restore(); }
+        if (sparkleT > 0 && sparkleT < 0.6) { const q = sparkleT / 0.6, s2 = Math.sin(Math.PI * q) * (1 + 0.2 * (1 - q)); k.save(); k.translate(cx + 640 * sc, cy - 90 * sc); k.rotate(q * 0.9); k.fillStyle = "#FFF4D6"; k.beginPath(); for (let i = 0; i < 8; i++) { const r = i % 2 ? 0.22 * 70 * s2 : 70 * s2, a = (i / 8) * 6.283 - Math.PI / 2; i ? k.lineTo(Math.cos(a) * r, Math.sin(a) * r) : k.moveTo(Math.cos(a) * r, Math.sin(a) * r); } k.closePath(); k.fill(); k.restore(); }
+      }
+
+      // ---------- Q (9.75–10.5) と T (10.5–13.0) ----------
+      // Motion Prompt #024 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#024
+      // 落下 0.32 s(cubic in、縦 1.12 倍に伸びる)→ 着地で 1.1 s 揺れ: x 15·e^(−5t)·sin(2π·5t), y 11·e^(−5t)·cos(2π·6.5t), 回転 0.02·e^(−5t)·sin(2π·5t+0.6)
+      // 着地後 0.3 s で縦に最大 22% 潰れて戻る(下端固定)、白い線6本と煙6つが 0.55 s で広がる。ここでは揺れの振幅を 2 倍。
+      function drawQT(k, t) {
+        const tI = 10.5, tau = t - tI;
+        let dx = 0, dy = 0, rot = 0;
+        if (tau > 0 && tau < 1.1) { const e = Math.exp(-5 * tau), ph = 2 * Math.PI * 5 * tau; dx = 30 * e * Math.sin(ph); dy = 22 * e * Math.cos(ph * 1.3); rot = 0.02 * e * Math.sin(ph + 0.6); }
+        k.save(); k.translate(960 + dx, 540 + dy); k.rotate(rot); k.translate(-960, -540);
+        if (tau < 0) { // 間: 暗い空と一つの灯り
+          const z = 1 + 0.03 * Math.sin((P(t, 9.75, 10.5) * Math.PI) / 2);
+          k.save(); k.translate(960, 540); k.scale(z, z); k.translate(-960, -540);
+          k.fillStyle = "#090B1F"; k.fillRect(-60, -60, W + 120, H + 120);
+          for (const s of STARS) { if (s.r < 1.6) continue; k.fillStyle = hexA(C.cream, 0.35); k.fillRect(mod(s.x, W), s.y, s.r, s.r); }
+          glow(k, 960, 600, 140, C.amber, 0.55); k.fillStyle = "#FFE2A8"; k.beginPath(); k.arc(960, 600, 7, 0, 7); k.fill();
+          k.restore();
+        } else {
+          const warm = 0.6 + 0.4 * Math.exp(-2.2 * tau);
+          k.save(); k.translate(960, 540); k.scale(1.06, 1.06); k.translate(-960, -540); drawSky(k, t, 40 + tau * 30, warm); k.restore();
+          // 着地の光の輪
+          if (tau < 0.7) { const q = eOut(tau / 0.7); k.strokeStyle = hexA("#FFE2A8", 0.7 * (1 - q)); k.lineWidth = 30 * (1 - q) + 2; k.beginPath(); k.ellipse(960, 640, 300 + 900 * q, 80 + 240 * q, 0, 0, 7); k.stroke(); }
+        }
+        // ロゴ: 落下 → 着地 → 潰れ
+        const lt = t; let ly = LOGO.cy, sy = 1;
+        if (t < 10.18) ly = null; else if (t < tI) { ly = lerp(-200, LOGO.cy, eIn(P(t, 10.18, tI))); sy = 1.12; }
+        else if (tau < 0.3) sy = 1 - 0.22 * Math.sin((tau / 0.3) * Math.PI);
+        if (ly != null) {
+          const end = P(t, 13.0, 13.55), sc = lerp(1, 0.62, eOut5(end)), cy2 = lerp(ly, 330, eOut5(end));
+          // 潰れは下端固定: 文字の下端 = cy + size*0.5
+          const base = cy2 + LOGO.size * 0.5 * sc; const cyS = base - LOGO.size * 0.5 * sc * sy;
+          drawLogo(k, t, LOGO.cx, cyS, sc, eIOs(P(t, 11.0, 12.05)), t - 11.93, sy);
+          // 衝撃の線と煙
+          if (tau > 0 && tau < 0.55) { const q = eOut(tau / 0.55), fy = LOGO.cy + 110; k.strokeStyle = "#FFF4D6"; k.lineCap = "round"; k.lineWidth = 16 * (1 - q);
+            for (let i = 0; i < 6; i++) { const s = i % 2 ? 1 : -1, j = Math.floor(i / 2), a = -0.12 - j * 0.34, r0 = 760 + 120 * q, r1 = r0 + 90; if (q < 0.97) { k.beginPath(); k.moveTo(960 + s * Math.cos(a) * r0, fy + Math.sin(a) * r0 * 0.5); k.lineTo(960 + s * Math.cos(a) * r1, fy + Math.sin(a) * r1 * 0.5); k.stroke(); } }
+            k.fillStyle = hexA("#C9C3E8", 0.5 * (1 - q)); for (let i = 0; i < 6; i++) { const s = i % 2 ? 1 : -1, d = 560 + q * (140 + i * 40); k.beginPath(); k.arc(960 + s * d, fy - q * (16 + i * 10), 26 + q * 30 - i * 2, 0, 7); k.fill(); } }
+        }
+        k.restore();
+        // ロゴの下: 読み(カタカナ)とキャッチコピー再掲
+        if (t >= 10.5 && t < 13.0) {
+          const a = eOut(P(t, 10.75, 11.1)); txt(k, "ルミウェイク", 960, 730, `900 34px ${JP}`, hexA(C.cream, 0.85 * a), "center", "middle", "22px");
+        }
+        if (t >= 11.3) {
+          const fade = 1 - P(t, 12.85, 13.05);
+          if (fade > 0) { k.save(); k.globalAlpha = fade; maskRevealCenter(k, t - 11.3); k.restore(); }
+        }
+        if (t >= 13.0) drawEnd(k, t);
+      }
+      function maskRevealCenter(k, lu) {
+        const ly = 860, lg = eIO(P(lu, 0.1, 0.5)), up = (1 - eOut5(P(lu, 0.35, 1.0))) * 80;
+        k.save(); k.beginPath(); k.rect(0, ly - 90, W, 84); k.clip(); txt(k, "届けろ、空の果てまで。", 960, ly - 22 + up, `900 58px ${JP}`, C.cream, "center", "alphabetic", "4px"); k.restore();
+        if (lg > 0.005) { k.fillStyle = C.amber; rr(k, 960 - 260 * lg, ly - 3, 520 * lg, 6, 3); k.fill(); }
+      }
+
+      // ---------- E (13.0–15.0): 発売情報 ----------
+      function drawEnd(k, t) {
+        const u = t - 13;
+        // 発売日(#129、10 文字なので 1 文字 0.07 s で確定)
+        scramble(k, "2027.03.18", t, 13.25, 0.07, 960 - 4.5 * 66, 640, 66, `600 104px ${HUD}`, C.cream, C.amber);
+        // 「発売予定」(#005 の要領、線は日付の下)
+        const lg = eIO(P(u, 0.55, 0.95)); if (lg > 0.005) { k.fillStyle = C.amber; rr(k, 960 - 330 * lg, 712, 660 * lg, 6, 3); k.fill(); }
+        const dn = (1 - eOut5(P(u, 0.75, 1.35))) * -70; k.save(); k.beginPath(); k.rect(0, 722, W, 90); k.clip(); txt(k, "発売予定", 960, 780 + dn, `900 52px ${JP}`, C.cream, "center", "alphabetic", "14px"); k.restore();
+        const pa = eOut(P(u, 1.0, 1.4)); txt(k, "PC  /  家庭用ゲーム機", 960, 860 + 20 * (1 - pa), `900 32px ${JP}`, hexA(C.cream, 0.85 * pa), "center", "middle", "6px");
+        const da = P(u, 1.1, 1.5); txt(k, "※ 架空のゲームのコンセプト映像です。実在の作品・団体とは関係ありません。", 960, 1010, `900 22px ${JP}`, hexA(C.dim, 0.9 * da), "center", "middle", "1px");
+      }
+
+      // ---------- 帯のトランジション(F1→F2) ----------
+      // Motion Prompt #018 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#018
+      // 4本の帯(端は 80 px 斜め → 3.562 倍)、遅れ 14%、各帯は区間の 58% を cubic in-out。覆い 0.62 s、全部覆った所で入れ替え、0.12 s 後に抜ける。
+      function bands(k, t) {
+        const p1 = P(t, 5.38, 6.0), p2 = P(t, 6.12, 6.75), N = 4, sk = 80 * S, cols = [C.amber, C.coral, C.cream, C.teal];
+        for (let i = 0; i < N; i++) {
+          const d = i * 0.14, e1 = eIO(clamp((p1 - d) / (1 - 0.42))), e2 = eIO(clamp((p2 - d) / (1 - 0.42)));
+          if (e1 <= 0 || e2 >= 1) continue;
+          const bh = H / N + 1, y = (i * H) / N, span = W + sk + 20, xa = -sk - 10 + e2 * span, xb = -sk - 10 + e1 * span;
+          k.fillStyle = cols[i]; k.beginPath(); k.moveTo(xa + sk, y); k.lineTo(xb + sk, y); k.lineTo(xb, y + bh); k.lineTo(xa, y + bh); k.closePath(); k.fill();
+        }
+      }
+
+      // ---------- 場面の振り分け ----------
+      function scene(k, t) {
+        if (t < 2.0) drawS1(k, t);
+        else if (t < 4.0) drawS2(k, t);
+        else if (t < 6.0) drawF1(k, t);
+        else if (t < 8.0) drawF2(k, t);
+        else if (t < 9.75) drawF3(k, t);
+        else drawQT(k, t);
+        if (t >= 5.38 && t <= 6.75) bands(k, t);
+      }
+
+      // Motion Prompt #043 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#043
+      // 0.8 s(1.6–2.4)。前半は出ていく絵を 0 → +0.45 rad、後半は入る絵を −0.45 → 0(quadratic in-out)、50% で入れ替え。
+      // ブレは ±1.6 コマに散らした 9 枚の平均。ここでは振れ角を横移動(0.45 rad = 画面幅 1.0 倍)に置き換え。
+      let off = null, acc = null;
+      function whip(k, t) {
+        const t0 = 1.6, t1 = 2.4, s = P(t, t0, t1), ds = 1 / FPS / (t1 - t0);
+        const ak = acc.getContext("2d"), ok = off.getContext("2d");
+        ak.setTransform(1, 0, 0, 1, 0, 0); ak.clearRect(0, 0, W, H);
+        for (let i = 0; i < 9; i++) {
+          const ss = clamp(s - ds * 1.6 + (i / 8) * ds * 3.2), tt = lerp(t0, t1, ss);
+          const yaw = ss < 0.5 ? eIOs(ss * 2) * 0.45 : -(1 - eIOs((ss - 0.5) * 2)) * 0.45;
+          ok.setTransform(1, 0, 0, 1, 0, 0); ok.clearRect(0, 0, W, H);
+          ok.save(); ok.translate((-yaw / 0.45) * W, 0); if (ss < 0.5) drawS1(ok, Math.min(tt, 1.999)); else drawS2(ok, Math.max(tt, 2.0)); ok.restore();
+          ak.globalAlpha = 1 / (i + 1); ak.drawImage(off, 0, 0);
+        }
+        ak.globalAlpha = 1; k.drawImage(acc, 0, 0);
+      }
+
+      const cv = document.getElementById("stage"), ctx = cv.getContext("2d");
+      function draw(t) {
+        ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.clearRect(0, 0, W, H);
+        if (t >= 1.6 && t < 2.4) whip(ctx, t); else scene(ctx, t);
+      }
+
+      const fontsReady = Promise.all([
+        document.fonts.load(`900 100px "Unbounded"`, "LUMIWAKE"),
+        document.fonts.load(`600 40px "Chakra Petch"`, "SPD 0123"),
+        document.fonts.load(`900 40px "Noto Sans JP"`, document.getElementById("preload").textContent + "光流ダッシュ毎回ちがう空路4人で協力配達ルミウェイク発売予定家庭用ゲーム機架空のゲームのコンセプト映像です実在作品団体とは関係ありません目的地灯台島気流に乗れば一瞬島も嵐出発たびに組み変わる荷物をパスしてつなげ"),
+      ]);
+      fontsReady.then(() => {
+        logoCan = document.createElement("canvas"); logoCan.width = 1700; logoCan.height = 420;
+        off = document.createElement("canvas"); off.width = W; off.height = H;
+        acc = document.createElement("canvas"); acc.width = W; acc.height = H;
+        const tl = gsap.timeline({ paused: true });
+        const clock = { t: 0 };
+        tl.to(clock, { t: 15, duration: 15, ease: "none", onUpdate: () => draw(clock.t) }, 0);
+        draw(0);
+        window.__timelines["main"] = tl;
+      });
+    </script>
+  </body>
+</html>

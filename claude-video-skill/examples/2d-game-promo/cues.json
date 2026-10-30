@@ -1,0 +1,14 @@
+{
+ "copy_line": 12,
+ "whip": 60,
+ "hud_first": 63,
+ "gate_2.5": 75,
+ "gate_3.0": 90,
+ "gate_3.5": 105,
+ "drop_F1": 120,
+ "swap_F2": 180,
+ "goal_circle": 225,
+ "cut_F3": 240,
+ "title_land": 315,
+ "date_lock": 416
+}
