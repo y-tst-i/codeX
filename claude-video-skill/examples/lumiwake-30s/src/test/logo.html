@@ -1,0 +1,13 @@
+<!doctype html><meta charset="utf-8"><body style="margin:0;background:#000">
+<canvas id="c" width="1920" height="1080"></canvas>
+<script src="../../../../tools/assets/scene-lib.js"></script><script src="../../../../tools/assets/depth.js"></script>
+<script src="../lib/paint.js"></script><script src="../lib/world.js"></script><script src="../lib/logo-glyphs.js"></script><script src="../lib/logo.js"></script>
+<script>
+const ctx=document.getElementById('c').getContext('2d');
+ctx.fillStyle='#fff'; ctx.fillRect(0,0,1920,540);
+LOGO.draw(ctx,960,300,1300,{mono:true});
+WORLD.sky(ctx,{}); ctx.fillStyle='#fff'; ctx.fillRect(0,0,1920,520);
+LOGO.draw(ctx,960,260,1300,{mono:true});
+LOGO.draw(ctx,960,800,1300,{});
+window.__ready=true;
+</script>

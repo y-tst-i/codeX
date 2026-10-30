@@ -1,0 +1,13 @@
+<!doctype html><meta charset="utf-8"><body style="margin:0;background:#000">
+<canvas id="c" width="1920" height="1080"></canvas>
+<script src="../../../../tools/assets/scene-lib.js"></script><script src="../../../../tools/assets/depth.js"></script>
+<script src="../lib/paint.js"></script><script src="../lib/world.js"></script><script src="../lib/courier.js"></script>
+<script>
+const q=new URLSearchParams(location.search); PAINT.mode.fx=q.get('fx')!=='0'; PAINT.mode.sil=q.get('sil')==='1';
+const ctx=document.getElementById('c').getContext('2d'), W=WORLD;
+W.sky(ctx);
+COURIER.drawCourier(ctx, 620, 820, 2.2, -0.08, {});
+COURIER.drawCourier(ctx, 1500, 700, 1.0, -0.25, {crouch:0.8, armF:0.8});
+COURIER.drawCourier(ctx, 1500, 1000, 0.5, 0, {});
+window.__ready=true;
+</script>
