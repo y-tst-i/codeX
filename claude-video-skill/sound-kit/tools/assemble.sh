@@ -4,9 +4,16 @@
 set -e
 dir=$1; order=$2; wav=$3; out=$4
 abs=$(cd "$dir" && pwd)   # 絶対パス・相対パスどちらで渡してもよい
-: > "$dir/list.txt"
-for s in $order; do echo "file '$abs/$s.mp4'" >> "$dir/list.txt"; done
-ffmpeg -y -loglevel error -f concat -safe 0 -i "$dir/list.txt" -c:v libx264 -preset slow -crf 14 -pix_fmt yuv420p -r 30 -an "$dir/video_only.mp4"
+# 連結は concat フィルタで行う(各場面を fps=30 にそろえてから繋ぐ)。以前の concat デマルチプレクサ + -r 30 は
+# 場面ごとに1コマ余分に足すことがあり、15秒30fps の1本で 451コマ、3場面で 227コマ(正しくは 225)になった。
+ins=(); fc=""; cat_in=""; n=0
+for s in $order; do
+  ins+=(-i "$abs/$s.mp4"); fc+="[$n:v]fps=30,setpts=PTS-STARTPTS[v$n];"; cat_in+="[v$n]"; n=$((n+1))
+done
+ffmpeg -y -loglevel error "${ins[@]}" -filter_complex "${fc}${cat_in}concat=n=$n:v=1:a=0[v]" -map "[v]" \
+  -c:v libx264 -preset slow -crf 14 -pix_fmt yuv420p -an "$dir/video_only.mp4"
+nf=$(ffprobe -v error -count_frames -select_streams v:0 -show_entries stream=nb_read_frames -of csv=p=0 "$dir/video_only.mp4")
+vdur=$(python3 -c "print($nf/30)")
 # loudnorm は1回通しだと短い動画(15秒など)で目標に届かない(STILLDUSK: -16.8 LUFS)。→ 2回通し: 1回目で測り、2回目で測定値を渡して直線補正。
 # それでもピーク(TP -2)が先に当たって届かない音(山と谷の差が大きい: ピーク-ラウドネス差 > 18 dB)は、軽い圧縮(ratio 2.5)を先にかけてから通す。
 # STILLDUSK の素材で -16.8(1回通し) → -15.1(2回通しのみ) → -14.4(2回+軽い圧縮)、幅(LRA)は 6.7→7.2 LU。圧縮を切る: COMP=0 assemble.sh ...
@@ -18,7 +25,9 @@ if [ "${COMP:-1}" = 1 ] && python3 -c "import sys;sys.exit(0 if float('$(j input
   src="$dir/soundtrack_comp.wav"; m=$(meas "$src")
 fi
 ffmpeg -y -loglevel error -i "$src" -af "loudnorm=I=-14:TP=-2:LRA=14:measured_I=$(j input_i):measured_LRA=$(j input_lra):measured_TP=$(j input_tp):measured_thresh=$(j input_thresh):offset=$(j target_offset):linear=true" -ar 48000 "$dir/soundtrack.wav"
-ffmpeg -y -loglevel error -i "$dir/video_only.mp4" -i "$dir/soundtrack.wav" -c:v copy -c:a aac -b:a 192k -ar 48000 -shortest -movflags +faststart "$out"
+# 音は映像の長さちょうどに詰める/足す(以前の -shortest は映像をコピーで切るため 449コマなど端数が欠けた)
+ffmpeg -y -loglevel error -i "$dir/video_only.mp4" -i "$dir/soundtrack.wav" -map 0:v -map 1:a -c:v copy \
+  -af "apad,atrim=end=$vdur" -c:a aac -b:a 192k -ar 48000 -movflags +faststart "$out"
 ffprobe -v error -count_frames -select_streams v:0 -show_entries stream=nb_read_frames,width,height,r_frame_rate -show_entries format=duration -of default=nw=1 "$out"
 # 共有用(30MB上限対策): 2パスで約25MB
 #   ffmpeg -y -i "$out" -c:v libx264 -preset slow -b:v 2350k -pass 1 -an -f null /dev/null

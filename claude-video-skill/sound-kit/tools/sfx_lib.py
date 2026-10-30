@@ -2,6 +2,8 @@
 """録音済みの効果音(CC0)の検索と読み込み。数式合成の効果音の代わりに使う(定番の合成音を避けるため)。
 CLI:  sfx_lib.py list            パックと種類ごとの件数
       sfx_lib.py find <語>        名前に語を含むものを一覧(長さ付き)  例: find footstep_wood / find glass / find door
+      sfx_lib.py catalog [--write FILE]  実在する全ファイル名の一覧(Markdown)。--write で FILE の自動生成の区間だけ書き換える
+                                  (references/sfx-catalog.md はこれで作る。手で書かない)
 Python: import sfx_lib as S; x = S.load("footstep_wood_002", sr=44100, gain=0.8)  # -> mono float32。I.mix(t, x, ...) などで重ねる
         S.pick("footstep_wood", seed=3)  # 同じ種類から seed で1つ選ぶ(足音を毎回変えるため)
 """
@@ -48,6 +50,36 @@ def pick(kind, seed=0):
     return c[int(seed) % len(c)]
 
 
+BEGIN = "<!-- BEGIN sfx-list: 自動生成(python3 tools/sfx_lib.py catalog --write references/sfx-catalog.md)。手で直さない -->"
+END = "<!-- END sfx-list -->"
+
+
+def catalog_md():
+    """実在するファイルから一覧を作る(manifest でなくフォルダを直接読む。番号の欠け(tick_000 が無い等)もそのまま出る)"""
+    its = build_manifest() if not os.path.exists(MANIFEST) else items()
+    on_disk = {(it["pack"], it["name"]) for it in its if os.path.exists(os.path.join(LIB, it["pack"], it["name"] + ".ogg"))}
+    missing = [it["name"] for it in its if (it["pack"], it["name"]) not in on_disk]
+    if missing: raise SystemExit(f"manifest.json にあるのにファイルが無い: {missing[:5]}… → build_manifest() で作り直す")
+    out = [BEGIN, f"全 {len(its)} 個。場所は `tools/assets/sfx-cc0/<パック>/<名前>.ogg`。`sfx_lib.load(\"名前\")` には拡張子なしの名前を渡す。", ""]
+    packs = {}
+    for it in its: packs.setdefault(it["pack"], {}).setdefault(it["kind"], []).append(it)
+    for pack in sorted(packs):
+        kinds = packs[pack]
+        out += [f"### {pack}({sum(len(v) for v in kinds.values())}個、`tools/assets/sfx-cc0/{pack}/`)", "", "| 種類 | 実在する名前(長さ 秒) |", "|---|---|"]
+        for kind in sorted(kinds):
+            out.append(f"| `{kind}` | " + ", ".join(f'`{it["name"]}` {it["dur"]:.2f}' for it in kinds[kind]) + " |")
+        out.append("")
+    out.append(END)
+    return "\n".join(out)
+
+
+def write_catalog(path_md):
+    s = open(path_md, encoding="utf8").read()
+    if BEGIN not in s or END not in s: raise SystemExit(f"{path_md} に区間の印(BEGIN/END sfx-list)が無い")
+    s = s[:s.index(BEGIN)] + catalog_md() + s[s.index(END) + len(END):]
+    open(path_md, "w", encoding="utf8").write(s)
+
+
 def main(a):
     if not a or a[0] == "list":
         import collections
@@ -57,6 +89,9 @@ def main(a):
         q = " ".join(a[1:]).lower()
         for it in items():
             if q in it["name"].lower() or q in it["kind"].lower(): print(f'{it["name"]:30s} {it["dur"]:5.2f}s  [{it["pack"]}]')
+    elif a[0] == "catalog":
+        if len(a) >= 3 and a[1] == "--write": write_catalog(a[2]); print(f"wrote {a[2]}")
+        else: print(catalog_md())
     else: print(__doc__)
 
 

@@ -14,7 +14,7 @@ pip install pretty_midi mido numpy scipy
 
 ## 2. 道具(このフォルダの `tools/`)
 - `midi_render.py` … MIDI を本物の楽器音で鳴らす(`render()`)、場面ごとの残響・帯域の加工(`scene_fx()`)。GM の音色番号の早見表がファイル冒頭にある。
-- `sfx_lib.py` … 録音済みの効果音(CC0、282個、`tools/assets/sfx-cc0/`)。`python3 tools/sfx_lib.py find <語>` で検索、`import sfx_lib as S; S.load("name", sr=44100)` で読み込み。
+- `sfx_lib.py` … 録音済みの効果音(CC0、281個、`tools/assets/sfx-cc0/`)。`python3 tools/sfx_lib.py find <語>` で検索、`import sfx_lib as S; S.load("name", sr=44100)` で読み込み。
 - `assemble.sh` … 場面の動画を連結して音を付け、-14 LUFS に整える(2回通しの loudnorm)。`sync_check.py` … 映像と音の同期を数値で確認。
 
 ## 3. 設計ルール(これが質を決める)

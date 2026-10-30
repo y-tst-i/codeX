@@ -76,3 +76,13 @@ lint が1件でもエラーだと layout/contrast 監査が走らず「0 samples
 - **帯域ノイズ(風・雨)は頂点が鋭く、リミッターを食う**。軽く丸める(tanh)と頂点と平均の差が縮む。
 - **測定用の stem は切らずに float で書き出す**(全体の音量を上げた後に ±1 で切ると、測定値が狂う)。
 - 雷のように「わざと絞った直後の一撃」は、下地より 6 dB を超えてよい(設計どおりなら注意は無視してよい)。
+
+## 8. 2D試験(2026-10-30)の指摘で直した道具と注意(枝 `claude/skill-tool-fixes`)
+各項目は手元で再現してから直した。検証の入力は合成した試験動画(15秒30fps 450コマ ほか)と `examples/hop-loop/` の音。
+- **`audio_measure.py` の fps**: 以前は `--fps` の既定が 60 で、30fps の動画では合図の時刻が半分になり、雑音の山を拾った(同じ試験音で前 +5.0/-9.6/+16.7 ms → 後 +0.06/+0.02/+0.08 ms)。今は mp4 なら動画の fps を自動で読み、出力に `fps 30` と出す。wav に `--cues` を使う時は `--fps` 必須(無ければ説明つきで止まる)。60fps の hop-loop では前後で値が一致。
+- **`assemble.sh` のコマ数**: concat デマルチプレクサ + `-r 30` が場面ごとに1コマ足し、`-shortest`(映像はコピー)が終わりを欠いた。15秒30fps の1本で 前 451→447コマ、3場面(60+90+75)で 前 227 → 後 は 450 と 225(正しい値)。今は concat フィルタ(各場面を fps=30 に)で繋ぎ、音を映像の長さちょうどに足す/切る。ラウドネスは前後とも -14.0 LUFS。
+- **`sheet.sh` の終了コード 2**: 再現せず(試験の動画そのものを含む15通りで 0)。念のため、画像ができたら 0、引数不足・作れなかった時は 1 を返すようにした。
+- **効果音の名前**: `references/sfx-catalog.md` の一覧は `python3 tools/sfx_lib.py catalog --write references/sfx-catalog.md` で生成する(手で書かない)。番号は欠けがある(`tick_000` は無い。`tick_001/002/004`)。全281個(以前の文書の 282・rpg-audio 52 は誤り)。
+- **registry の `grain-overlay` は無限ループ**(`animation: hf-grain-noise 0.5s steps(1) infinite`。upstream の `registry/components/grain-overlay/grain-overlay.html` で確認)。`hyperframes-keyframes` の「CSS は有限の回数」と食い違う。入れたら**プロジェクトに入った写しだけ**を直す: `infinite` を回数(尺 ÷ 0.5秒、15秒なら `30`)にし、`animation-fill-mode: both` を足す。直した後に `npx hyperframes check` と、離れた2コマの静止画で粒が動くことを確かめる。registry 本体は直さない。
+- **描画の枠組みの既定**(3つのスキルの食い違い): `SKILL.md` §2「描画の枠組み」の順(既存を続ける → 新規は HyperFrames → 使えない時だけ Canvas 1枚)で読む。根拠: HyperFrames の CLI(0.8.221)の `docs rendering` は HTML の合成を MP4 に書き出し、fps は既定 30(root の `data-fps` があればそれ)。Canvas 2D をタイムラインの `onUpdate` で `tl.time()` から描く最小の合成を `npx hyperframes render` で書き出し、四角の位置が 0.1/0.5/0.9 秒で 38/150/262 px(計算どおり)と確認した。つまり motion-prompt の Canvas 部品は HyperFrames の中でそのまま使える。
+- **スキルの版が2つある**: Skill ツールが読むのは `~/.claude/skills/video-with-claude-code/`(旧版 260行、分業を推奨)。リポジトリの `claude-video-skill/SKILL.md`(担当1人)とは別物。迷ったらリポジトリの方を正とする(旧版は自動で更新されない。入れ替えは利用者の判断)。
