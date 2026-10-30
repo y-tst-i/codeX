@@ -249,29 +249,152 @@
         const pts = [new THREE.Vector2(0, -body / 2 - tipB), new THREE.Vector2(r * 0.92, -body / 2), new THREE.Vector2(r, body / 2 - body * 0.1), new THREE.Vector2(r * 0.96, body / 2), new THREE.Vector2(0, body / 2 + tipT)];
         const g = new THREE.LatheGeometry(pts, seg); g.computeVertexNormals(); return g;
       }
-      function islandGeo(R, depth, seed) {
-        const g = new THREE.IcosahedronGeometry(1, 5), p = g.attributes.position, col = new Float32Array(p.count * 3);
-        const sx = seed * 3.7, grass = C("#5d8f5a"), grass2 = C("#86a861"), rimC = C("#8c7a68"), deep = C("#3a3348"), mid = C("#665566");
-        for (let i = 0; i < p.count; i++) {
-          let x = p.getX(i), y = p.getY(i), z = p.getZ(i);
-          const n = fbm(x * 2.2 + sx, y * 2.2, z * 2.2 - sx);
-          let X, Y, Z, c;
-          if (y > -0.05) {
-            const rr = Math.sqrt(x * x + z * z), k = 1 + n * 0.12;
-            X = x * k; Z = z * k; Y = (0.06 * (1 - rr * rr) + n * 0.025) * 1.0;
-            c = grass.clone().lerp(grass2, clamp(0.5 + n * 1.6, 0, 1));
-            if (rr > 0.93) c.lerp(rimC, 0.6);
-          } else {
-            const d = -y; const k = Math.pow(1 - d, 0.55) * (1 + n * 0.3);
-            const len = Math.sqrt(x * x + z * z) + 1e-6;
-            X = (x / len) * k; Z = (z / len) * k;
-            Y = -Math.pow(d, 1.25) * (depth / R) - Math.abs(n) * 0.25 * d;
-            const band = 0.5 + 0.5 * Math.sin(Y * R * 0.9 + n * 3);
-            c = rimC.clone().lerp(mid, smooth(0, 0.5, d)).lerp(deep, smooth(0.4, 1, d)).multiplyScalar(0.85 + band * 0.25);
-          }
-          p.setXYZ(i, X * R, Y * R, Z * R); col.set([c.r, c.g, c.b], i * 3);
+      // ---- 島(v2: 滑らかな面・細かい崖/地層/割れ目)。大きな形は v1 と同じ式、細部だけ足す ----
+      const ridge = (x, y, z) => 1 - Math.abs(n3(x, y, z));
+      // 頂点を共有する(インデックス付き)正二十面体球。共有しないと法線が面ごとになり角張って見える
+      const icoCache = {};
+      function icoIndexed(detail) {
+        if (icoCache[detail]) return icoCache[detail];
+        const g = new THREE.IcosahedronGeometry(1, detail), p = g.attributes.position.array, map = new Map(), pos = [], idx = new Uint32Array(p.length / 3);
+        for (let i = 0; i < p.length / 3; i++) {
+          const x = p[i * 3], y = p[i * 3 + 1], z = p[i * 3 + 2], key = Math.round(x * 1e5) + "," + Math.round(y * 1e5) + "," + Math.round(z * 1e5);
+          let j = map.get(key); if (j === undefined) { j = pos.length / 3; map.set(key, j); pos.push(x, y, z); } idx[i] = j;
         }
-        g.setAttribute("color", new THREE.BufferAttribute(col, 3)); g.computeVertexNormals(); return g;
+        g.dispose(); return (icoCache[detail] = { pos: new Float32Array(pos), idx });
+      }
+      const IC = { grass: C("#5d8f5a"), grass2: C("#86a861"), grassL: C("#9db86c"), grassD: C("#3f6e4a"), dirt: C("#7d6b55"), rockT: C("#8f878c"),
+        rimC: C("#8c7a68"), soil: C("#6a5243"), sand: C("#a08470"), mid: C("#665566"), deep: C("#3a3348"), moss: C("#5f7a55") };
+      // 島の1点(単位球の点 → 島の局所座標 / R)と色
+      function islandVert(x, y, z, R, depth, seed, flatR, out, c) {
+        const sx = seed * 3.7, so = seed * 7.13;
+        const n = fbm(x * 2.2 + sx, y * 2.2, z * 2.2 - sx);
+        if (y > -0.05) {
+          const rr = Math.sqrt(x * x + z * z);
+          const free = flatR ? smooth(flatR, flatR + 0.08, rr) : 1;            // 祭壇の下は v1 の高さのまま
+          const e = n3(x * 7 + so, y * 7, z * 7 - so) * 0.03 + n3(x * 19 + so, y * 19, z * 19) * 0.01; // 縁の欠け
+          const k = 1 + n * 0.12 + e;
+          const hills = (n3(x * 9 + so, y * 9, z * 9) * 0.008 + n3(x * 23, y * 23 + so, z * 23) * 0.003) * free;
+          const rk = Math.max(0, ridge(x * 6 - so, y * 6, z * 6 + so) - 0.8) / 0.2;  // 岩の出っ張り 0..1
+          const rock = rk * rk * 0.02 * free * smooth(0.15, 0.5, rr);
+          out[0] = x * k; out[2] = z * k;
+          out[1] = 0.06 * (1 - rr * rr) + n * 0.025 + hills + rock - smooth(0.9, 1.0, rr) * 0.012;
+          c.copy(IC.grass).lerp(IC.grass2, clamp(0.5 + n * 1.6, 0, 1));
+          const mead = n3(x * 5 + so, y * 5, z * 5 - so);
+          c.lerp(mead > 0 ? IC.grassL : IC.grassD, Math.min(Math.abs(mead) * 0.9, 0.45));
+          c.lerp(IC.dirt, smooth(0.35, 0.7, n3(x * 13 - so, y * 13, z * 13 + so)) * 0.45 * free);
+          c.lerp(IC.rockT, smooth(0.05, 0.45, rk) * free * smooth(0.15, 0.5, rr));
+          c.lerp(IC.grassD, smooth(0.84, 0.94, rr) * 0.45);                     // 草のふち(少し濃い)
+          c.lerp(IC.rimC, smooth(0.95, 1.0, rr) * 0.6);
+          return 1;
+        }
+        const d = -y, len = Math.sqrt(x * x + z * z) + 1e-6, ux = x / len, uz = z / len;
+        const k0 = Math.pow(1 - d, 0.55) * (1 + n * 0.3);
+        const Yb = -Math.pow(d, 1.25) * (depth / R) - Math.abs(n) * 0.25 * d, hy = Yb * R;
+        // 地層の段(1.7u ごと)・縦の崖のすじ・割れ目・細かい凹凸
+        const layer = hy / 1.7 + n * 2.0, fr = layer - Math.floor(layer), ledge = smooth(0.62, 0.9, fr);
+        const rv = ridge(ux * 3.2 + so, hy * 0.16, uz * 3.2 - so), rv2 = ridge(ux * 9 - so, hy * 0.45, uz * 9 + so);
+        const fine = n3(ux * 22, hy * 0.7, uz * 22) * 0.6 + n3(ux * 50 + so, hy * 1.6, uz * 50) * 0.4;
+        const crack = smooth(0.93, 0.985, ridge(ux * 2.4 - so, hy * 0.05 + so, uz * 2.4));
+        const k = k0 * (1 + (rv - 0.65) * 0.07 + (rv2 - 0.65) * 0.035 + fine * 0.018 - crack * 0.05 + (ledge - 0.5) * 0.03 * (1 - d * 0.6));
+        const drip = Math.pow(Math.max(0, n3(ux * 4 + so, 0.5, uz * 4 - so)), 2) * smooth(0.4, 0.9, d) * 0.9;  // 底の垂れ下がる岩
+        out[0] = ux * k; out[2] = uz * k; out[1] = Yb - drip * d * (depth / R) * 0.35 - fine * 0.006;
+        const band = 0.5 + 0.5 * Math.sin(Yb * R * 0.9 + n * 3);
+        c.copy(IC.rimC).lerp(IC.mid, smooth(0, 0.5, d)).lerp(IC.deep, smooth(0.4, 1, d)).multiplyScalar(0.85 + band * 0.25);
+        const li = Math.floor(layer), lh = hash(li * 1.37 + seed);
+        c.lerp(IC.sand, lh * 0.12 * (1 - smooth(0.3, 0.9, d))).multiplyScalar(0.92 + 0.14 * lh);   // 地層ごとの色
+        c.multiplyScalar((0.86 + 0.22 * rv) * (1 - 0.55 * crack) * (1 + 0.1 * ledge));
+        c.lerp(IC.moss, smooth(0.2, 0.6, n3(ux * 6 + so, hy * 0.3, uz * 6)) * 0.35 * (1 - smooth(0.15, 0.45, d)));
+        c.lerp(IC.soil, (1 - smooth(0.04, 0.12, d)) * 0.7);                     // 草の下の土
+        c.lerp(IC.grassD, 1 - smooth(0.0, 0.035 + 0.02 * n3(ux * 14, 0, uz * 14), d - 0.05)); // 縁から垂れる草
+        return 0;
+      }
+      function islandGeo(R, depth, seed, detail = 40, flatR = 0) {
+        const ico = icoIndexed(detail), N = ico.pos.length / 3, pos = new Float32Array(N * 3), col = new Float32Array(N * 3), o = [0, 0, 0], c = new THREE.Color();
+        const GS = 56, hg = new Float32Array(GS * GS).fill(-1e9);
+        for (let i = 0; i < N; i++) {
+          const top = islandVert(ico.pos[i * 3], ico.pos[i * 3 + 1], ico.pos[i * 3 + 2], R, depth, seed, flatR, o, c);
+          pos[i * 3] = o[0] * R; pos[i * 3 + 1] = o[1] * R; pos[i * 3 + 2] = o[2] * R; col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b;
+          if (top) { const gx = Math.floor((o[0] / 1.3 * 0.5 + 0.5) * GS), gz = Math.floor((o[2] / 1.3 * 0.5 + 0.5) * GS); if (gx >= 0 && gz >= 0 && gx < GS && gz < GS) hg[gz * GS + gx] = Math.max(hg[gz * GS + gx], o[1] * R); }
+        }
+        const g = new THREE.BufferGeometry();
+        g.setAttribute("position", new THREE.BufferAttribute(pos, 3)); g.setAttribute("color", new THREE.BufferAttribute(col, 3)); g.setIndex(new THREE.BufferAttribute(ico.idx, 1));
+        g.computeVertexNormals(); g.userData = { hg, GS, R }; return g;
+      }
+      // 島の上面の高さ(世界座標)。木や草むらを地面に置くため
+      const UPV = new THREE.Vector3(0, 1, 0), TV = new THREE.Vector3();
+      function topAt(m, wx, wz) {
+        const { hg, GS, R } = m.geometry.userData; TV.set(wx - m.position.x, 0, wz - m.position.z).applyAxisAngle(UPV, -m.rotation.y);
+        const gx = Math.floor((TV.x / R / 1.3 * 0.5 + 0.5) * GS), gz = Math.floor((TV.z / R / 1.3 * 0.5 + 0.5) * GS);
+        for (let rad = 0; rad < 3; rad++) { let best = -1e9; for (let a = -rad; a <= rad; a++) for (let b = -rad; b <= rad; b++) { const X = gx + a, Z = gz + b; if (X >= 0 && Z >= 0 && X < GS && Z < GS) best = Math.max(best, hg[Z * GS + X]); } if (best > -1e8) return m.position.y + best; }
+        return m.position.y + 0.3;
+      }
+      // 組み立て用: 頂点・色・インデックスを1つの形に足す
+      function Builder() { const P = [], Cc = [], I = []; return { add(pos, idx, f) { const b = P.length / 3, o = [0, 0, 0], c = new THREE.Color(); for (let i = 0; i < pos.length / 3; i++) { f(pos[i * 3], pos[i * 3 + 1], pos[i * 3 + 2], o, c); P.push(o[0], o[1], o[2]); Cc.push(c.r, c.g, c.b); } for (let j = 0; j < idx.length; j++) I.push(b + idx[j]); },
+        geo() { const g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.Float32BufferAttribute(P, 3)); g.setAttribute("color", new THREE.Float32BufferAttribute(Cc, 3)); g.setIndex(I); g.computeVertexNormals(); return g; } }; }
+      // 木: 幹 + 丸い葉の房を5つ重ねる(下は濃く、上は明るい)
+      function treeGeo() {
+        const B = Builder(), cy = new THREE.CylinderGeometry(0.09, 0.17, 1.5, 8, 4, true), ico = icoIndexed(3), dark = C("#22483b"), light = C("#4f7d55"), bark = C("#4a3a33");
+        B.add(cy.attributes.position.array, cy.index.array, (x, y, z, o, c) => { const w = 1 + n3(x * 9, y * 5, z * 9) * 0.15; o[0] = x * w + Math.sin(y * 2) * 0.04; o[1] = y + 0.75; o[2] = z * w; c.copy(bark); });
+        [[0, 1.55, 0, 0.85], [0.5, 1.3, 0.22, 0.62], [-0.42, 1.32, -0.3, 0.64], [0.08, 2.2, 0.05, 0.66], [-0.15, 1.9, 0.42, 0.55], [0.3, 1.95, -0.35, 0.5]].forEach(([bx, by, bz, br], q) => {
+          B.add(ico.pos, ico.idx, (x, y, z, o, c) => { const w = br * (1 + 0.16 * n3(x * 2.6 + q * 5, y * 2.6, z * 2.6) + 0.06 * n3(x * 7, y * 7 + q, z * 7)); o[0] = bx + x * w; o[1] = by + y * w * 0.86; o[2] = bz + z * w;
+            c.copy(dark).lerp(light, clamp(smooth(0.9, 2.8, o[1]) * 0.7 + (y * 0.5 + 0.5) * 0.45, 0, 1)); });
+        });
+        return B.geo();
+      }
+      // 草むら(低い丸い房)と小岩(滑らかで少し角のある形)
+      function bushGeo() { const B = Builder(), ico = icoIndexed(2), a = C("#4f8050"), b = C("#9fbd6e");
+        [[0, 0.25, 0, 0.55], [0.45, 0.18, 0.15, 0.4], [-0.35, 0.2, -0.2, 0.42]].forEach(([bx, by, bz, br], q) => B.add(ico.pos, ico.idx, (x, y, z, o, c) => { const w = br * (1 + 0.2 * n3(x * 3 + q * 4, y * 3, z * 3)); o[0] = bx + x * w; o[1] = by + y * w * 0.7; o[2] = bz + z * w; c.copy(a).lerp(b, clamp(y * 0.5 + 0.5, 0, 1)); }));
+        return B.geo(); }
+      function rockGeo(seed) { const B = Builder(), ico = icoIndexed(4), a = C("#6f6470"), b = C("#a3969a");
+        B.add(ico.pos, ico.idx, (x, y, z, o, c) => { const s = seed * 5.3, w = 1 + n3(x * 1.6 + s, y * 1.6, z * 1.6) * 0.28 + (ridge(x * 3.5, y * 3.5 + s, z * 3.5) - 0.6) * 0.12 + n3(x * 9, y * 9, z * 9 + s) * 0.03;
+          o[0] = x * w; o[1] = y * w; o[2] = z * w; c.copy(a).lerp(b, clamp(0.5 + y * 0.35 + n3(x * 4, y * 4, z * 4 + s) * 0.4, 0, 1)); });
+        return B.geo(); }
+      // 島の底から垂れ下がる根(先が細くなる管)
+      function rootsGeo(R, depth, seed, flatR, count) {
+        const r = mulberry32(9100 + seed), B = Builder(), o = [0, 0, 0], c = new THREE.Color(), SEG = 12, SIDES = 6, col = C("#5a463c"), tip = C("#7d6a55");
+        for (let k = 0; k < count; k++) {
+          const a = r() * 6.28, yy = -(0.07 + r() * 0.22), s = Math.sqrt(1 - yy * yy);
+          islandVert(Math.cos(a) * s, yy, Math.sin(a) * s, R, depth, seed, flatR, o, c);
+          const p0 = new THREE.Vector3(o[0] * R * 0.97, o[1] * R, o[2] * R * 0.97), L = (0.12 + r() * 0.28) * R, rad = (0.012 + r() * 0.018) * R, out = new THREE.Vector3(Math.cos(a), 0, Math.sin(a)), ph = r() * 6.28;
+          const pos = [], idx = [];
+          for (let i = 0; i <= SEG; i++) {
+            const u = i / SEG, cen = p0.clone().addScaledVector(out, Math.sin(u * 1.6) * L * 0.12 + Math.sin(u * 7 + ph) * L * 0.03).add(new THREE.Vector3(Math.sin(u * 5 + ph) * L * 0.04, -u * L, Math.cos(u * 4 + ph) * L * 0.04));
+            const rr = rad * Math.pow(1 - u * 0.92, 0.8);
+            for (let j = 0; j < SIDES; j++) { const t = (j / SIDES) * 6.28; pos.push(cen.x + Math.cos(t) * rr, cen.y, cen.z + Math.sin(t) * rr, u); }
+          }
+          for (let i = 0; i < SEG; i++) for (let j = 0; j < SIDES; j++) { const A = i * SIDES + j, Bq = i * SIDES + ((j + 1) % SIDES), Cq = A + SIDES, D = Bq + SIDES; idx.push(A, Cq, Bq, Bq, Cq, D); }
+          const p3 = []; for (let i = 0; i < pos.length; i += 4) p3.push(pos[i], pos[i + 1], pos[i + 2]);
+          const us = []; for (let i = 3; i < pos.length; i += 4) us.push(pos[i]); let vi = 0;
+          B.add(p3, idx, (x, y, z, oo, cc) => { oo[0] = x; oo[1] = y; oo[2] = z; cc.copy(col).lerp(tip, us[vi++]); });
+        }
+        return B.geo();
+      }
+      // シェーダーの微細な凹凸(高さノイズで法線を揺らす+色のむら)。画素より細かくなる遠景では自動で弱める
+      const MICRO_GLSL = `varying vec3 vMP; uniform float uMF, uMA, uMC;
+        float mh(vec3 p){ return fract(sin(dot(p, vec3(127.1, 311.7, 74.7))) * 43758.5453); }
+        float mn(vec3 x){ vec3 i = floor(x), f = fract(x); f = f * f * (3.0 - 2.0 * f);
+          return mix(mix(mix(mh(i), mh(i + vec3(1,0,0)), f.x), mix(mh(i + vec3(0,1,0)), mh(i + vec3(1,1,0)), f.x), f.y),
+                     mix(mix(mh(i + vec3(0,0,1)), mh(i + vec3(1,0,1)), f.x), mix(mh(i + vec3(0,1,1)), mh(i + vec3(1,1,1)), f.x), f.y), f.z); }
+        float mNoise(vec3 p){ return mn(p) * 0.5 + mn(p * 2.03 + 7.1) * 0.3 + mn(p * 4.11 + 3.7) * 0.2; }
+`;
+      function addMicro(mat, freq, amp, colAmt) {
+        mat.onBeforeCompile = (sh) => {
+          sh.uniforms.uMF = { value: freq }; sh.uniforms.uMA = { value: amp }; sh.uniforms.uMC = { value: colAmt };
+          sh.vertexShader = "varying vec3 vMP;\n" + sh.vertexShader.replace("#include <begin_vertex>", "#include <begin_vertex>\nvMP = position;");
+          sh.fragmentShader = MICRO_GLSL + sh.fragmentShader
+            .replace("#include <color_fragment>", `#include <color_fragment>
+              vec3 mSX = dFdx(-vViewPosition), mSY = dFdy(-vViewPosition);
+              float mFade = smoothstep(0.55, 0.12, max(length(mSX), length(mSY)) * uMF * 2.0);
+              float mH = mNoise(vMP * uMF);
+              diffuseColor.rgb *= 1.0 + (mH - 0.5) * 2.0 * uMC * (0.35 + 0.65 * mFade);`)
+            .replace("#include <normal_fragment_maps>", `#include <normal_fragment_maps>
+              { vec2 dh = vec2(dFdx(mH), dFdy(mH)) * uMA * mFade;
+                vec3 r1 = cross(mSY, normal), r2 = cross(normal, mSX); float det = dot(mSX, r1) * faceDirection;
+                vec3 nn = abs(det) * normal - sign(det) * (dh.x * r1 + dh.y * r2); float L = length(nn);
+                if (mFade > 0.0 && abs(det) > 1e-12 && L > 1e-12) normal = nn / L; }`);
+        };
+        mat.customProgramCacheKey = () => "micro" + freq + "_" + amp + "_" + colAmt;
+        return mat;
       }
 
       // ---------- 世界の配置 ----------
@@ -303,24 +426,45 @@
         scene.environment = S.env[0]; scene.environmentIntensity = 0.8;
 
         // 島
-        const islMat = new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.95, metalness: 0 });
+        // v2: 滑らかな面(flatShading なし)+ 細かい凹凸のシェーダー。近景の島ほど細かく分割
+        const islMat = addMicro(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.93, metalness: 0 }), 1.1, 0.16, 0.1);
+        const DETAIL = [96, 88, 56, 56, 40, 80, 80, 40, 56, 40, 48, 40, 64];   // 0 祭壇・1 C1b の手前・5/6 飛翔と引きの手前
+        const rootMat = addMicro(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95 }), 3, 0.05, 0.12);
         S.islands = ISL.map(([x, y, z, R, d], i) => {
-          const m = new THREE.Mesh(islandGeo(R, d, i + 1), islMat); m.position.set(x, y, z); m.rotation.y = i * 1.3;
-          m.castShadow = i === 0; m.receiveShadow = true; scene.add(m); return m;
+          const fl = i === 0 ? 0.76 : 0;
+          const m = new THREE.Mesh(islandGeo(R, d, i + 1, DETAIL[i], fl), islMat); m.position.set(x, y, z); m.rotation.y = i * 1.3;
+          m.castShadow = i === 0; m.receiveShadow = true; scene.add(m);
+          const rt = new THREE.Mesh(rootsGeo(R, d, i + 1, fl, Math.round(R * 1.6)), rootMat); m.add(rt);
+          m.updateMatrixWorld(true); return m;
         });
-        // 遠くの島(シルエット)
+        // 遠くの島(シルエット。軽い分割)
         for (let i = 0; i < 14; i++) {
           const a = rnd() * Math.PI * 2, dist = 260 + rnd() * 260, R = 8 + rnd() * 16;
-          const m = new THREE.Mesh(islandGeo(R, R * 1.5, 50 + i), islMat); m.position.set(Math.cos(a) * dist, 10 + rnd() * 70, Math.sin(a) * dist - 60); m.rotation.y = rnd() * 6; scene.add(m);
+          const m = new THREE.Mesh(islandGeo(R, R * 1.5, 50 + i, 14), islMat); m.position.set(Math.cos(a) * dist, 10 + rnd() * 70, Math.sin(a) * dist - 60); m.rotation.y = rnd() * 6; scene.add(m);
         }
-        // 木(島の上)
-        const treeG = new THREE.ConeGeometry(1, 3.2, 6); treeG.translate(0, 1.6, 0);
-        const trees = []; ISL.forEach(([x, y, z, R], i) => { const n = i === 0 ? 0 : Math.round(R * 1.6); for (let k = 0; k < n; k++) { const a = rnd() * 6.28, rr = Math.sqrt(rnd()) * R * 0.78; trees.push([x + Math.cos(a) * rr, y + 0.3, z + Math.sin(a) * rr, 0.6 + rnd() * 1.1]); } });
+        // 木(島の上)。v2: 丸い葉の房を重ねた形。高さは島の上面に合わせる(配置の乱数列は v1 と同じ)
+        const treeG = treeGeo();
+        const trees = []; ISL.forEach(([x, y, z, R], i) => { const n = i === 0 ? 0 : Math.round(R * 1.6); for (let k = 0; k < n; k++) { const a = rnd() * 6.28, rr = Math.sqrt(rnd()) * R * 0.78; const wx = x + Math.cos(a) * rr, wz = z + Math.sin(a) * rr; trees.push([wx, topAt(S.islands[i], wx, wz) - 0.12, wz, 0.6 + rnd() * 1.1]); } });
         // 祭壇の島は外周だけ
-        const tm = new THREE.InstancedMesh(treeG, new THREE.MeshStandardMaterial({ color: "#2f5f4f", flatShading: true, roughness: 0.9 }), trees.length);
+        const treeMat = addMicro(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9 }), 3.2, 0.05, 0.12);
+        const tm = new THREE.InstancedMesh(treeG, treeMat, trees.length);
         const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), V = new THREE.Vector3(), Sv = new THREE.Vector3();
-        trees.forEach(([x, y, z, s], i) => { m4.compose(V.set(x, y, z), q.setFromEuler(e.set(0, rnd() * 6, 0)), Sv.set(s, s * (0.9 + rnd() * 0.5), s)); tm.setMatrixAt(i, m4); });
+        const rc = mulberry32(3131), tc = new THREE.Color();
+        trees.forEach(([x, y, z, s], i) => { m4.compose(V.set(x, y, z), q.setFromEuler(e.set(0, rnd() * 6, 0)), Sv.set(s, s * (0.9 + rnd() * 0.5), s)); tm.setMatrixAt(i, m4); const v = 0.82 + rc() * 0.36; tc.setRGB(v * (0.94 + rc() * 0.12), v, v * (0.92 + rc() * 0.1)); tm.setColorAt(i, tc); });
         tm.castShadow = tm.receiveShadow = true; scene.add(tm);
+        // 草むらと小岩(島の上面の差し色。別の乱数列)
+        { const rb = mulberry32(5150), bush = [], stones = [];
+          ISL.forEach(([x, y, z, R], i) => {
+            const nb = Math.round(R * 3), ns = Math.round(R * 0.9);
+            for (let k = 0; k < nb + ns; k++) {
+              const a = rb() * 6.28, rr = i === 0 ? R * (0.79 + rb() * 0.11) : Math.sqrt(rb()) * R * 0.85, wx = x + Math.cos(a) * rr, wz = z + Math.sin(a) * rr;
+              (k < nb ? bush : stones).push([wx, topAt(S.islands[i], wx, wz) - 0.08, wz, k < nb ? 0.5 + rb() * 0.9 : 0.25 + rb() * 0.55, rb() * 6.28]);
+            }
+          });
+          const bm = new THREE.InstancedMesh(bushGeo(), treeMat, bush.length), sm = new THREE.InstancedMesh(rockGeo(3), addMicro(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9 }), 4, 0.04, 0.12), stones.length);
+          bush.forEach(([x, y, z, s, r], i) => { m4.compose(V.set(x, y, z), q.setFromEuler(e.set(0, r, 0)), Sv.set(s, s, s)); bm.setMatrixAt(i, m4); const v = 0.85 + rb() * 0.3; bm.setColorAt(i, tc.setRGB(v, v * (0.97 + rb() * 0.06), v * 0.95)); });
+          stones.forEach(([x, y, z, s, r], i) => { m4.compose(V.set(x, y, z), q.setFromEuler(e.set(rb() * 0.6, r, rb() * 0.6)), Sv.set(s, s * 0.7, s)); sm.setMatrixAt(i, m4); });
+          bm.castShadow = bm.receiveShadow = sm.castShadow = sm.receiveShadow = true; scene.add(bm); scene.add(sm); }
         // 祭壇: 石の円盤と立石 8本
         const stone = new THREE.MeshStandardMaterial({ color: "#b8b0a6", roughness: 0.85, flatShading: true });
         const plat = new THREE.Mesh(new THREE.CylinderGeometry(10, 10.6, 0.8, 48), stone); plat.position.set(0, 12.0, 0); plat.receiveShadow = plat.castShadow = true; scene.add(plat);
@@ -350,7 +494,8 @@
         cl.forEach(([x, y, z, s], i) => { m4.compose(V.set(x, y, z), q.setFromEuler(e.set((rnd() - 0.5) * 0.7, rnd() * 6, (rnd() - 0.5) * 0.7)), Sv.set(s, s, s)); cm.setMatrixAt(i, m4); });
         scene.add(cm);
         // 浮かぶ岩(飛翔の視差)
-        const rockG = new THREE.IcosahedronGeometry(1, 0), rockM = new THREE.MeshStandardMaterial({ color: "#8a7d80", flatShading: true, roughness: 0.95 });
+        // v2: 滑らかな岩(色は v1 の #8a7d80 前後)
+        const rockG = rockGeo(11), rockM = addMicro(new THREE.MeshStandardMaterial({ vertexColors: true, color: "#ece4e8", roughness: 0.95 }), 2.6, 0.05, 0.12);
         S.rocks = new THREE.InstancedMesh(rockG, rockM, 150); S.rockData = [];
         for (let i = 0; i < 150; i++) {
           let p;
