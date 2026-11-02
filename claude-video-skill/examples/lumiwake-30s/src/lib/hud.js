@@ -7,7 +7,7 @@ const HUD = (() => {
     ctx.fillStyle = `rgba(8,14,28,${a})`; ctx.fill(); ctx.strokeStyle = css(edge, 0.55); ctx.lineWidth = 2; ctx.stroke(); ctx.restore();
   };
   const text = (ctx, s, x, y, { font = "HUD", size = 32, weight = 400, col = "#f4ead2", align = "left", base = "alphabetic", stroke = 0, strokeCol = W.C.ink, track = 0 } = {}) => {
-    ctx.save(); ctx.font = `${weight} ${size}px ${font}`; ctx.textAlign = align; ctx.textBaseline = base; if (track) ctx.letterSpacing = track + "px"; if (font === "HUD") ctx.wordSpacing = -Math.round(size * 0.35) + "px";
+    ctx.save(); ctx.font = `${weight} ${size}px ${font}`; ctx.textAlign = align; ctx.textBaseline = base; if (track) ctx.letterSpacing = track + "px"; if (font === "HUD") ctx.wordSpacing = Math.round(size * (window.HUD_WS ?? -0.35)) + "px";
     if (stroke) { ctx.lineJoin = "round"; ctx.strokeStyle = strokeCol; ctx.lineWidth = stroke; ctx.strokeText(s, x, y); }
     ctx.fillStyle = col; ctx.fillText(s, x, y); ctx.restore();
   };

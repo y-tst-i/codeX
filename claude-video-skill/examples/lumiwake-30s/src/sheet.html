@@ -1,0 +1,68 @@
+<!doctype html><meta charset="utf-8">
+<!-- キャラクターシート。?sheet=designs(3案×3姿勢+シルエット+540px)/ ?sheet=motion&d=A(別時刻の二次運動と姿勢補間の確認) -->
+<link rel="stylesheet" href="../assets/fonts/jp.css">
+<style>@font-face{font-family:HUD;src:url('../assets/fonts/hud.otf')} body{margin:0;background:#000}</style>
+<body><canvas id="c" width="2400" height="1680"></canvas>
+<script src="../../../tools/assets/scene-lib.js"></script><script src="../../../tools/assets/depth.js"></script>
+<script src="lib/paint.js"></script><script src="lib/world.js"></script><script src="lib/courier2.js"></script><script src="lib/hud.js"></script>
+<script>
+(async () => {
+  const q = new URLSearchParams(location.search), cv = document.getElementById("c"), ctx = cv.getContext("2d"), P = PAINT, W = WORLD, C2 = COURIER2;
+  await Promise.all(["700 26px JPG", "500 26px JPG"].map((f) => document.fonts.load(f, "案ミオの灯りシルエット縮小姿勢飛行回避届ける時刻補間")));
+  await document.fonts.ready;
+  const bg = (x, y, w, h, withStream = true) => {
+    ctx.save(); ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip();
+    ctx.translate(x, y); // 背景だけ局所座標(shade を使わない物のみ)
+    const g = ctx.createLinearGradient(0, 0, 0, h); g.addColorStop(0, "#0b1426"); g.addColorStop(0.55, "#16304a"); g.addColorStop(1, "#2b5a66"); ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+    ctx.restore();
+  };
+  const cloudsAt = (x, y, w, h) => { ctx.save(); ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip(); W.cloudBank(ctx, { seed: 5, x0: x - 40, x1: x + w + 40, yb: y + h * 0.86, hgt: 60, d: 0.62, under: 200 }); ctx.restore(); };
+  const streamAt = (x, y, w, h, by) => { ctx.save(); ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip(); W.stream(ctx, [[x - 60, by + 40], [x + w * 0.5, by + 22], [x + w + 60, by + 4]], { width: 34, t: 0.3, sparks: 50 }); ctx.restore(); };
+  const label = (s, x, y, o = {}) => HUD.text(ctx, s, x, y, Object.assign({ font: "JPG", weight: 700, size: 30, col: "#f4ead2", stroke: 6, strokeCol: "rgba(8,12,26,0.9)" }, o));
+  const POSEROT = { ride: -0.14, dodge: -0.34, deliver: 0.0 };
+  const names = { ride: "①光の気流に乗る飛行", dodge: "②危険をかわす回避", deliver: "③着地・荷物を差し出す" };
+  const feats = { A: "特徴: 手の提灯+額の大ゴーグル+象牙のケープ(3頭身)", B: "特徴: 頭より大きい背負い灯り箱+配達帽(4頭身)", C: "特徴: 頭の上の灯り+朱の燕尾コート(3.5頭身)" };
+  ctx.fillStyle = "#0a0f1c"; ctx.fillRect(0, 0, 2400, 1680);
+
+  if (q.get("sheet") === "designs") {
+    for (let r = 0; r < 3; r++) {
+      const d = "ABC"[r], y0 = 60 + r * 540, D = C2.DESIGNS[d];
+      label(D.name + "    " + feats[d], 20, y0 - 14, { size: 30 });
+      ["ride", "dodge", "deliver"].forEach((pn, i) => {
+        const x0 = i * 530; bg(x0, y0, 530, 500); P.mode.sil = false;
+        cloudsAt(x0, y0, 530, 500); streamAt(x0, y0, 530, 500, y0 + 400);
+        ctx.save(); ctx.beginPath(); ctx.rect(x0, y0, 530, 500); ctx.clip();
+        C2.draw(ctx, x0 + 262, y0 + 395, 1.08, POSEROT[pn], pn, d, { t: 0.25 });
+        ctx.restore(); label(names[pn], x0 + 12, y0 + 38, { size: 24 });
+      });
+      // 540px(縮小): 左3セルをそのまま半分に(右下)
+      ctx.save(); ctx.imageSmoothingQuality = "high"; ctx.drawImage(cv, 0, y0, 1590, 500, 1590 + 5, y0 + 250, 795, 250); ctx.restore();
+      label("540px 縮小(半分)", 1600, y0 + 280, { size: 20 });
+      // シルエット(右上)
+      ctx.fillStyle = "#e8e6e1"; ctx.fillRect(1595, y0, 800, 248);
+      P.mode.sil = true;
+      ctx.save(); ctx.beginPath(); ctx.rect(1595, y0, 800, 248); ctx.clip();
+      ["ride", "dodge", "deliver"].forEach((pn, i) => C2.draw(ctx, 1595 + 133 + i * 267, y0 + 205, 0.58, POSEROT[pn], pn, d, { t: 0.25 }));
+      ctx.restore(); P.mode.sil = false;
+      label("シルエットのみ", 1605, y0 + 34, { size: 20, col: "#222", stroke: 0 });
+    }
+  } else { // motion
+    const d = q.get("d") || "A", D = C2.DESIGNS[d];
+    label(D.name + " 動かしたときの確認(上: 別時刻 t=0,0.1,0.2,0.3 秒の二次運動 / 下: 姿勢補間 ride→dodge→deliver)", 20, 40, { size: 28 });
+    for (let i = 0; i < 4; i++) {
+      const x0 = i * 600, y0 = 60; bg(x0, y0, 600, 700); cloudsAt(x0, y0, 600, 700); streamAt(x0, y0, 600, 700, y0 + 590);
+      ctx.save(); ctx.beginPath(); ctx.rect(x0, y0, 600, 700); ctx.clip();
+      C2.draw(ctx, x0 + 300, y0 + 560, 1.2, -0.14, "ride", d, { t: i * 0.1 }); ctx.restore(); label("t=" + (i * 0.1).toFixed(1) + "s", x0 + 12, y0 + 36, { size: 24 });
+    }
+    const ks = [0, 0.33, 0.66, 1, 1.5, 2];
+    ks.forEach((k, i) => {
+      const x0 = i * 400, y0 = 800; bg(x0, y0, 400, 740); cloudsAt(x0, y0, 400, 740); streamAt(x0, y0, 400, 740, y0 + 590);
+      const pose = k <= 1 ? C2.poseMix("ride", "dodge", k) : C2.poseMix("dodge", "deliver", k - 1 > 1 ? 1 : (k - 1) * 1);
+      ctx.save(); ctx.beginPath(); ctx.rect(x0, y0, 400, 740); ctx.clip();
+      C2.draw(ctx, x0 + 200, y0 + 580, 0.82, lerp3(k), pose, d, { t: 0.5 }); ctx.restore(); label(k <= 1 ? "ride→dodge " + k.toFixed(2) : "dodge→deliver " + Math.min(1, k - 1).toFixed(2), x0 + 10, y0 + 34, { size: 20 });
+    });
+    function lerp3(k) { return k <= 1 ? -0.14 + (-0.34 + 0.14) * k : -0.34 + 0.34 * Math.min(1, k - 1); }
+  }
+  window.__ready = true;
+})();
+</script>

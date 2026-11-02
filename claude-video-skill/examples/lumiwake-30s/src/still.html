@@ -4,13 +4,13 @@
 <style>@font-face{font-family:HUD;src:url('../assets/fonts/hud.otf')} body{margin:0;background:#000}</style>
 <body><canvas id="c" width="1920" height="1080"></canvas>
 <script src="../../../tools/assets/scene-lib.js"></script><script src="../../../tools/assets/depth.js"></script>
-<script src="lib/paint.js"></script><script src="lib/world.js"></script><script src="lib/courier.js"></script>
+<script src="lib/paint.js"></script><script src="lib/world.js"></script><script src="lib/courier.js"></script><script src="lib/courier2.js"></script>
 <script src="lib/hud.js"></script><script src="lib/logo-glyphs.js"></script><script src="lib/logo.js"></script>
 <script src="stills/sf1.js"></script><script src="stills/sf2.js"></script><script src="stills/sf3.js"></script>
 <script>
 (async () => {
   const q = new URLSearchParams(location.search);
-  PAINT.mode.fx = q.get("fx") !== "0"; PAINT.mode.sil = q.get("sil") === "1";
+  PAINT.mode.fx = q.get("fx") !== "0"; window.CHAR_OLD = q.get("char") === "old"; if (q.get("hudws") !== null) window.HUD_WS = parseFloat(q.get("hudws")); PAINT.mode.sil = q.get("sil") === "1";
   await Promise.all(["32px HUD", "700 26px JPG", "500 26px JPG", "900 40px JPM"].map((f) => document.fonts.load(f, "灯台島まで嵐を抜けて、灯りを届けろ。届けた灯りが空の道ルミウェイク架空発売予定0123456789")));
   await document.fonts.ready;
   const ctx = document.getElementById("c").getContext("2d");
