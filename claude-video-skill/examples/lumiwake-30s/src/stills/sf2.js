@@ -45,7 +45,8 @@ STILLS["2"] = function (ctx, t) {
     ctx.lineWidth = 2; ctx.strokeStyle = "rgba(255,240,210,0.5)"; ctx.beginPath(); ctx.arc(at[0] - 90, at[1] - 30, 330, 0, 7); ctx.stroke(); ctx.restore();
     P.glow(ctx, at[0] - 90, at[1] - 30, 300, C.amber, 0.35);
   }
-  const me = COURIER.drawCourier(ctx, at[0], at[1] - 4, 1.5, ang, { lean: 0.6, crouch: 0.95, armF: 0.9, armB: 0.6, scarfT: t + 0.3, scarfLen: 1.15 });
+  const me = window.CHAR_OLD ? COURIER.drawCourier(ctx, at[0], at[1] - 4, 1.5, ang, { lean: 0.6, crouch: 0.95, armF: 0.9, armB: 0.6, scarfT: t + 0.3, scarfLen: 1.15 })
+    : COURIER2.draw(ctx, at[0], at[1] - 18, 1.85, ang * 0.9, Object.assign({}, COURIER2.POSES.ride, { lean: 0.5, crouch: 0.85, fx: 84, bx: -84, handF: [1.55, -0.55], expr: 0 }), "A", { t: t + 0.3, windLift: 0.45 });
   // 手前: 渦に吸い上げられる岩のかけら(ぼかし=手前の被写界深度)
   P.layer(ctx, (g) => {
     for (const [x, y, w, sd] of [[260, 1010, 300, 31], [1760, 1040, 300, 33], [1500, 60, 150, 35]]) W.island(g, { seed: sd, cx: x, top: y, w, depthH: w * 0.7, d: 0.05, town: false, falls: false, roots: false, lamp: 0, skyCol: "#1c1838", L: [-0.6, -0.8], lightSide: { col: "#bfe9ff", w: 4, L: [-0.8, -0.5], a: 0.7 } });

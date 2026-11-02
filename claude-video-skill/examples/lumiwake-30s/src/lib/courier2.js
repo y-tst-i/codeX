@@ -8,7 +8,7 @@
 // 局所座標: 原点=板の中心、右向き、y は下。足は板の上面 FT_Y に載る。単位は s=1 で人物の高さ約 260〜300px。
 const COURIER2 = (() => {
   const P = PAINT, W = WORLD, { css, mix, lerp, clamp, shade, glow } = P;
-  const FT_Y = -24;
+  const FT_Y = -25; // 板の上面。靴底はここに接する(めり込まない)
   const SKIN = { base: "#f3cba8", hi: "#fff0dd", sh: "#c27a6a" };
 
   // ---- 3案の体と衣装 ----
@@ -27,7 +27,7 @@ const COURIER2 = (() => {
   // ---- 姿勢(単位: 腕の長さ・脚の長さに対する比、または px) ----
   const POSES = {
     ride:    { crouch: 0.62, lean: 0.42, hipX: -16, fx: 70, bx: -70, handF: [1.55, -0.2], handB: [-0.95, 0.85], tilt: -0.04, expr: 0, swing: 0.3 },
-    dodge:   { crouch: 0.92, lean: -0.32, hipX: -34, fx: 46, bx: -86, handF: [0.85, -1.35], handB: [-1.2, -0.6], tilt: 0.22, expr: 1, swing: 0.9 },
+    dodge:   { crouch: 0.92, lean: -0.3, hipX: -34, fx: 46, bx: -86, handF: [1.35, -0.55], handB: [-1.25, 0.15], tilt: 0.22, expr: 1, swing: 0.9 },
     deliver: { crouch: 0.28, lean: 0.14, hipX: -8, fx: 66, bx: -54, handF: [1.7, 0.05], handB: [1.45, 0.3], tilt: -0.02, expr: 2, swing: 0.15, offer: 1 },
   };
   const poseMix = (a, b, k) => { const o = {}, A = typeof a === "string" ? POSES[a] : a, B = typeof b === "string" ? POSES[b] : b; for (const key in A) o[key] = Array.isArray(A[key]) ? A[key].map((v, i) => lerp(v, B[key][i], k)) : lerp(A[key], B[key] ?? A[key], k); return o; };
@@ -75,7 +75,7 @@ const COURIER2 = (() => {
     const rim = (k = 1) => ({ rimCol: css(W.C.amber), rim: 4.5 * s * k, rimA: 0.9 * lampK });
     const limb = (g, pts, wf) => P.ribbonPath(g, P.sampleSpline(pts, 12), wf);
     const strokeLocal = (fn, force) => { if (sil && !force) return; ctx.save(); T(ctx); fn(ctx); ctx.restore(); };
-    const wLimb = D.limbW, ang0 = Math.PI + clamp(-p.lean * 0.5, -0.4, 0.4); // 風は後ろ(-x)から。体が前に傾くほどなびきは寝る
+    const wLimb = D.limbW, ang0 = Math.PI + (opts.windLift ?? 0.3) + clamp(-p.lean * 0.25, -0.2, 0.2); // 風は後ろ(-x)から。体が前に傾くほどなびきは寝る
 
     // 0) 二次運動の鎖(後ろ側): 先に計算する
     const nk = [J.neck[0] + 2, J.neck[1] + 8];
@@ -84,10 +84,17 @@ const COURIER2 = (() => {
     const ribbon = (g, pts, w0, w1) => limb(g, pts, (u) => lerp(w0, w1, u) * (1 + 0.12 * Math.sin(u * 13 - t * 9)));
 
     // 1) 後ろ側の二次運動(ケープ・コートの裾)
-    if (D.cape) {
-      const base = [J.sh[0] - 6, J.sh[1] + 2], c1 = chain(base, ang0 + 0.12, [52, 52, 50, 46, 40], t, { amp: 0.3, w: 8, lag: 0.6, droop: 0.2 }), c2 = chain([base[0], base[1] + 34], ang0 + 0.3, [46, 46, 42, 36], t, { amp: 0.3, w: 8, lag: 0.6, ph: 0.8, droop: 0.28 });
-      part((g) => ribbon(g, c2, 62, 14), { ...pal(D.cape, 0.7), shCol: css(mix(D.cape[2], "#101830", 0.2)) });
-      part((g) => ribbon(g, c1, 76, 20), { ...pal(D.cape) });
+    if (D.cape) { // ケープ: 3枚の面(奥・中・手前)を位相をずらして重ね、折れ線の陰で厚みを出す
+      const base = [J.sh[0] - 4, J.sh[1] + 4];
+      const c1 = chain(base, ang0 + 0.1, [50, 50, 48, 44, 38], t, { amp: 0.3, w: 8, lag: 0.6, droop: 0.15 }), c2 = chain([base[0], base[1] + 30], ang0 + 0.28, [44, 44, 40, 34], t, { amp: 0.3, w: 8, lag: 0.6, ph: 0.8, droop: 0.24 }), c3 = chain([base[0] + 2, base[1] + 14], ang0 + 0.19, [46, 46, 44, 38, 30], t, { amp: 0.32, w: 8, lag: 0.65, ph: 1.7, droop: 0.2 });
+      const wfn = (w0, w1) => (u) => lerp(w0, w1, u) * (1 + 0.12 * Math.sin(u * 13 - t * 9));
+      part((g) => ribbon(g, c2, 54, 12), { ...pal(D.cape, 0.7), shCol: css(mix(D.cape[2], "#101830", 0.3)) });
+      part((g) => ribbon(g, c1, 62, 18), { ...pal(D.cape) });
+      part((g) => ribbon(g, c3, 48, 12), { ...pal(D.cape, 1.2), hiA: 1 });
+      const folds = (pts, w0, w1, fr, col, lw) => strokeLocal((g) => { const sm = P.sampleSpline(pts, 10), wf = wfn(w0, w1), L = sm[sm.length - 1][2] || 1; g.strokeStyle = col; g.lineWidth = lw; g.lineCap = "round"; g.lineJoin = "round"; for (const f of fr) { g.beginPath(); let first = true; for (let i = 0; i < sm.length; i++) { const u = sm[i][2] / L; if (u < 0.08 || u > 0.92) continue; const a0 = sm[Math.max(0, i - 1)], b0 = sm[Math.min(sm.length - 1, i + 1)]; let tx = b0[0] - a0[0], ty = b0[1] - a0[1]; const tn = Math.hypot(tx, ty) || 1; tx /= tn; ty /= tn; const w = wf(u) * f * (1 + 0.15 * Math.sin(u * 9 + f * 7)); const X = sm[i][0] - ty * w, Y = sm[i][1] + tx * w; first ? g.moveTo(X, Y) : g.lineTo(X, Y); first = false; } g.stroke(); } });
+      folds(c1, 62, 18, [-0.26, 0.08, 0.3], css(D.cape[2], 0.5), 3);
+      folds(c3, 48, 12, [-0.2, 0.22], css(D.cape[2], 0.4), 2.5);
+      folds(c1, 62, 18, [-0.4], css("#ffffff", 0.55), 2); // 縁の光
     }
     if (design === "C") { // 燕尾コートの裾(腰から2枚)
       const tails = [0, 1].map((i) => chain([J.hip[0] - 6, J.hip[1] + 2 + i * 10], ang0 + 0.4 + i * 0.22, [40, 40, 38, 34], t, { amp: 0.32, w: 8.5, lag: 0.7, ph: i * 1.1, droop: 0.3 }));
@@ -104,7 +111,7 @@ const COURIER2 = (() => {
     // 3) 後ろの腕(手は握り)
     const armW = (u) => lerp(wLimb * 1.15, wLimb * 0.8, u);
     part((g) => limb(g, J.aB, armW), { ...pal(D.coat, 0.8), ...rim(0.5) });
-    part((g) => mitten(g, J.aB[1], J.aB[2], D.hand), { ...pal(D.glove, 0.6) });
+    part((g) => mitten(g, J.aB[1], J.aB[2], D.hand), { ...pal(D.glove, 0.6) }); strokeLocal((g) => fingerLines(g, J.aB[1], J.aB[2], D.hand, css(D.glove[2], 0.8), false));
     // 4) 後ろの脚と靴
     const legW = (u) => lerp(wLimb * 1.35, wLimb * 0.95, u) * (1 + 0.12 * Math.sin(u * Math.PI));
     part((g) => limb(g, J.legB, legW), { ...pal(D.pants, 0.7), ...rim(0.4) });
@@ -120,6 +127,7 @@ const COURIER2 = (() => {
       g.strokeStyle = css(D.pants[2], 0.9); g.lineWidth = 7; g.lineCap = "round"; g.beginPath(); const b0 = [lerp(J.hip[0], J.sh[0], 0.12), lerp(J.hip[1], J.sh[1], 0.12)]; g.moveTo(b0[0] - torsoW * 0.42, b0[1]); g.lineTo(b0[0] + torsoW * 0.42, b0[1]); g.stroke();
       g.fillStyle = css(W.C.amber); g.beginPath(); g.arc(b0[0] + 4, b0[1], 5, 0, 7); g.fill();
     });
+    if (D.cape) part((g) => g.ellipse(J.sh[0] - 4, J.sh[1] - 4, 34, 20, -0.5, 0, 7), { ...pal(D.cape, 0.9), ...rim(0.3) }); // ケープの襟
     // 7) 前の脚と靴
     part((g) => limb(g, J.legF, legW), { ...pal(D.pants, 1) });
     part((g) => boot(g, J.legF[2], D.boot), { ...pal(D.boots, 0.9) });
@@ -132,7 +140,7 @@ const COURIER2 = (() => {
     part((g) => limb(g, J.aF, armW), { ...pal(D.coat, 1) });
     let held = null;
     if (design === "A") held = heldLantern(part, strokeLocal, J, p, D, t, s, wp, pal, rim);
-    part((g) => mitten(g, J.aF[1], J.aF[2], D.hand * 1.05), { ...pal(D.glove, 0.9) });
+    part((g) => mitten(g, J.aF[1], J.aF[2], D.hand * 1.05, design === "A"), { ...pal(D.glove, 0.9) }); strokeLocal((g) => fingerLines(g, J.aF[1], J.aF[2], D.hand * 1.05, css(D.glove[2], 0.8), design === "A"));
     if (p.offer && design !== "A") { // 差し出す小包(両手の間)
       const hm = [(J.aF[2][0] + J.aB[2][0]) / 2 + 12, (J.aF[2][1] + J.aB[2][1]) / 2 - 6];
       part((g) => g.roundRect(hm[0] - 22, hm[1] - 20, 44, 40, 8), { base: css("#9a6a44"), hiCol: css("#e0a577"), hi: 5 * s, hiA: 0.8, shCol: css("#3a2018"), sh: 8 * s, shA: 0.9 });
@@ -148,12 +156,22 @@ const COURIER2 = (() => {
   }
 
   // ---- 部品の形 ----
-  function mitten(g, elbow, hand, r) { // 手袋: 前腕の向きに沿った丸いミトン+親指
-    const a = Math.atan2(hand[1] - elbow[1], hand[0] - elbow[0]), c = Math.cos(a), sn = Math.sin(a), hx = hand[0] + c * r * 0.6, hy = hand[1] + sn * r * 0.6;
-    g.ellipse(hx, hy, r * 1.05, r * 0.85, a, 0, 7);
-    g.moveTo(hx - sn * r * 0.2 + c * r * 0.3, hy + c * r * 0.2 + sn * r * 0.3); g.ellipse(hx - sn * r * 0.75 + c * r * 0.15, hy + c * r * 0.75 + sn * r * 0.15, r * 0.5, r * 0.34, a + 0.9, 0, 7);
+  const ell = (g, cx, cy, rx, ry, rot) => { g.moveTo(cx + rx * Math.cos(rot), cy + rx * Math.sin(rot)); g.ellipse(cx, cy, rx, ry, rot, 0, Math.PI * 2); };
+  function mitten(g, elbow, hand, r, grip) { // 手: 手のひら+指3本+親指。grip=true は棒を握る(指を曲げて並べる)
+    const a = Math.atan2(hand[1] - elbow[1], hand[0] - elbow[0]), c = Math.cos(a), sn = Math.sin(a), px = hand[0] + c * r * 0.5, py = hand[1] + sn * r * 0.5;
+    ell(g, px, py, r * 0.95, r * 0.8, a);
+    for (let i = -1; i <= 1; i++) {
+      const off = i * r * 0.5, fx = px + c * r * 0.75 - sn * off, fy = py + sn * r * 0.75 + c * off;
+      if (grip) ell(g, fx, fy, r * 0.42, r * 0.3, a + 0.2 * i); else ell(g, fx + c * r * 0.28, fy + sn * r * 0.28, r * 0.62, r * 0.27, a + 0.16 * i);
+    }
+    ell(g, px - sn * r * 0.78 + c * r * 0.1, py + c * r * 0.78 + sn * r * 0.1, r * 0.5, r * 0.3, a - 0.9);
   }
-  function boot(g, f, k) { const x = f[0], y = f[1], H = 30 * k, Ln = 38 * k; g.moveTo(x - 20 * k, y - H); g.lineTo(x + 10 * k, y - H - 2); g.quadraticCurveTo(x + 16 * k, y - H * 0.5, x + 22 * k, y - 14); g.quadraticCurveTo(x + Ln + 14 * k, y - 14, x + Ln + 12 * k, y - 2); g.quadraticCurveTo(x + Ln, y + 5, x + 10 * k, y + 5); g.lineTo(x - 26 * k, y + 5); g.quadraticCurveTo(x - 32 * k, y - 10, x - 20 * k, y - H); g.closePath(); }
+  function fingerLines(g, elbow, hand, r, col, grip) { // 指の境目の細い線
+    const a = Math.atan2(hand[1] - elbow[1], hand[0] - elbow[0]), c = Math.cos(a), sn = Math.sin(a), px = hand[0] + c * r * 0.5, py = hand[1] + sn * r * 0.5;
+    g.strokeStyle = col; g.lineWidth = 1.8; g.lineCap = "round";
+    for (const i of [-0.5, 0.5]) { const off = i * r * 0.5, x0 = px + c * r * 0.5 - sn * off, y0 = py + sn * r * 0.5 + c * off, L = grip ? r * 0.55 : r * 0.95; g.beginPath(); g.moveTo(x0, y0); g.lineTo(x0 + c * L, y0 + sn * L); g.stroke(); }
+  }
+  function boot(g, f, k) { const x = f[0], y = f[1], H = 30 * k, Ln = 38 * k; g.moveTo(x - 20 * k, y - H); g.lineTo(x + 10 * k, y - H - 2); g.quadraticCurveTo(x + 16 * k, y - H * 0.5, x + 22 * k, y - 14); g.quadraticCurveTo(x + Ln + 14 * k, y - 14, x + Ln + 12 * k, y - 3); g.quadraticCurveTo(x + Ln, y + 1, x + 10 * k, y + 1); g.lineTo(x - 26 * k, y + 1); g.quadraticCurveTo(x - 32 * k, y - 10, x - 20 * k, y - H); g.closePath(); }
   function smallPack(part, pal, J, D) { const x = J.sh[0] - 36, y = J.sh[1] + 10; part((g) => g.roundRect(x - 26, y - 26, 52, 62, 12), { base: css("#8a5a3a"), hiCol: css("#d19a6e"), hi: 6, hiA: 0.8, shCol: css("#2e1d18"), sh: 12, shA: 0.9 }); }
   function bigPack(part, strokeLocal, pal, rim, J, p, s, t, D, wp) { // 巨大な灯り箱: 頭より大きい。窓が光り、上に小さな旗
     const ang = p.lean * 0.8, cx = J.sh[0] - 62 - 8 * Math.sin(p.lean), cy = J.sh[1] + 18, w = 118, h = 150, rr = (g, ox, oy, ww, hh, r) => { g.save(); g.translate(cx, cy); g.rotate(ang); g.roundRect(ox - ww / 2, oy - hh / 2 + 0, ww, hh, r); g.restore(); };
@@ -190,8 +208,11 @@ const COURIER2 = (() => {
     // 帽子・装備(案ごと)
     if (design === "A") { // 大きな丸ゴーグルを額に上げる+革ベルト
       part((g) => { g.moveTo(hx - R * 1.0, hy - R * 0.55); g.quadraticCurveTo(hx, hy - R * 1.12, hx + R * 1.0, hy - R * 0.62); g.lineTo(hx + R * 1.0, hy - R * 0.45); g.quadraticCurveTo(hx, hy - R * 0.95, hx - R * 1.0, hy - R * 0.36); g.closePath(); }, { base: css("#5a3a28"), hiCol: css("#c0875a"), hi: 3 * s, hiA: 0.8, shCol: "#1c0f0a", sh: 5 * s, shA: 0.8 });
-      part((g) => g.arc(hx + R * 0.42, hy - R * 0.78, R * 0.42, 0, 7), { base: css("#c98b3a"), hiCol: "#ffe2a0", hi: 5 * s, hiA: 0.9, shCol: "#5a3612", sh: 7 * s, shA: 0.9 });
-      part((g) => g.arc(hx + R * 0.45, hy - R * 0.8, R * 0.3, 0, 7), { base: css("#bfeeff"), hiCol: "#ffffff", hi: 4 * s, hiA: 1, shCol: "#2a6a8a", sh: 5 * s, shA: 0.9, silColor: "#0d0d0d" });
+      // ゴーグル: 540px でも見えるよう大きく(半径 0.52R)、濃い縁取り+太い真鍮の縁+白い反射の面を大きく
+      part((g) => g.arc(hx + R * 0.4, hy - R * 0.84, R * 0.56, 0, 7), { base: css("#3a2412"), hiCol: css("#6a4a2c"), hi: 3 * s, hiA: 0.8 });
+      part((g) => g.arc(hx + R * 0.4, hy - R * 0.84, R * 0.5, 0, 7), { base: css("#d9a24a"), hiCol: "#fff0b8", hi: 5 * s, hiA: 0.95, shCol: "#7a4a12", sh: 7 * s, shA: 0.9 });
+      part((g) => g.arc(hx + R * 0.41, hy - R * 0.85, R * 0.38, 0, 7), { base: css("#dff6ff"), hiCol: "#ffffff", hi: 9 * s, hiA: 1, shCol: "#4a9ac0", sh: 6 * s, shA: 0.9, silColor: "#0d0d0d" });
+      strokeLocal((g) => { g.fillStyle = "rgba(255,255,255,0.95)"; g.beginPath(); g.ellipse(hx + R * 0.3, hy - R * 0.97, R * 0.14, R * 0.08, -0.5, 0, 7); g.fill(); });
     } else if (design === "B") { // 配達帽(つば付きの制帽。琥珀の灯りのバッジ)
       part((g) => { g.moveTo(hx - R * 1.05, hy - R * 0.35); g.bezierCurveTo(hx - R * 1.0, hy - R * 1.45, hx + R * 0.9, hy - R * 1.5, hx + R * 1.05, hy - R * 0.5); g.lineTo(hx + R * 1.75, hy - R * 0.42); g.quadraticCurveTo(hx + R * 1.85, hy - R * 0.28, hx + R * 1.6, hy - R * 0.25); g.lineTo(hx - R * 1.0, hy - R * 0.05); g.closePath(); }, { base: css("#33417a"), hiCol: css("#7f93d8"), hi: 7 * s, hiA: 0.85, shCol: css("#10163a"), sh: 12 * s, shA: 0.9, ...rim(0.6) });
       part((g) => { g.moveTo(hx + R * 0.2, hy - R * 1.0); g.lineTo(hx + R * 0.5, hy - R * 0.85); g.lineTo(hx + R * 0.2, hy - R * 0.5); g.lineTo(hx - R * 0.1, hy - R * 0.85); g.closePath(); }, { base: css(W.C.amberHot), hiCol: "#fff", hi: 3 * s, hiA: 1, silColor: "#0d0d0d" });
@@ -211,8 +232,8 @@ const COURIER2 = (() => {
       g.fillStyle = ink; g.beginPath(); g.ellipse(ex, ey, R * 0.2 * er, R * 0.3 * er, 0.05, 0, 7); g.fill();
       const gi = g.createLinearGradient(0, ey - R * 0.3, 0, ey + R * 0.3); gi.addColorStop(0.45, "rgba(255,170,70,0)"); gi.addColorStop(1, "rgba(255,190,90,0.9)"); g.fillStyle = gi; g.beginPath(); g.ellipse(ex, ey, R * 0.2 * er, R * 0.3 * er, 0.05, 0, 7); g.fill();
       g.fillStyle = "#fff"; g.beginPath(); g.arc(ex + R * 0.07, ey - R * 0.13 * er, R * 0.085, 0, 7); g.fill(); g.beginPath(); g.arc(ex - R * 0.06, ey + R * 0.1, R * 0.04, 0, 7); g.fill();
-      g.strokeStyle = ink; g.lineCap = "round"; g.lineWidth = R * 0.075; g.beginPath(); // まゆ
-      if (e === 0) { g.moveTo(ex - R * 0.25, ey - R * 0.42); g.lineTo(ex + R * 0.3, ey - R * 0.5); } else if (e === 1) { g.moveTo(ex - R * 0.22, ey - R * 0.55); g.quadraticCurveTo(ex + R * 0.05, ey - R * 0.7, ex + R * 0.3, ey - R * 0.55); } else { g.moveTo(ex - R * 0.25, ey - R * 0.5); g.quadraticCurveTo(ex + R * 0.05, ey - R * 0.6, ex + R * 0.3, ey - R * 0.46); }
+      g.strokeStyle = ink; g.lineCap = "round"; g.lineWidth = R * 0.045; g.beginPath(); // まゆ(細く、後ろ端をやや下げる=きりっ)
+      if (e === 0) { g.moveTo(ex - R * 0.24, ey - R * 0.5); g.quadraticCurveTo(ex + R * 0.02, ey - R * 0.58, ex + R * 0.28, ey - R * 0.54); } else if (e === 1) { g.moveTo(ex - R * 0.22, ey - R * 0.55); g.quadraticCurveTo(ex + R * 0.05, ey - R * 0.7, ex + R * 0.3, ey - R * 0.55); } else { g.moveTo(ex - R * 0.25, ey - R * 0.5); g.quadraticCurveTo(ex + R * 0.05, ey - R * 0.6, ex + R * 0.3, ey - R * 0.46); }
       g.stroke();
       g.lineWidth = R * 0.06; g.beginPath(); g.moveTo(hx + R * 1.08, hy + R * 0.08); g.lineTo(hx + R * 0.92, hy + R * 0.2); g.stroke(); // 鼻
       g.lineWidth = R * 0.065; g.beginPath(); // 口

@@ -3,7 +3,7 @@
 var STILLS = STILLS || {};
 STILLS["1"] = function (ctx, t) {
   const P = PAINT, W = WORLD, C = W.C;
-  const streamPts = [[-160, 1030], [380, 915], [820, 800], [1240, 640], [1640, 470], [2120, 300]];
+  const streamPts = [[-160, 1010], [380, 935], [820, 835], [1240, 710], [1640, 560], [2120, 390]];
   ctx.save();
   // カメラ: 少し傾ける(ダッチ 3°)。角が空かないよう 1.06 倍
   ctx.translate(960, 540); ctx.rotate(-0.05); ctx.scale(1.06, 1.06); ctx.translate(-960, -540);
@@ -35,9 +35,9 @@ STILLS["1"] = function (ctx, t) {
   // 配達人: 気流の上(x≈1080)に乗せ、気流の傾きに合わせる
   let k = 0; while (k < samp.length - 2 && samp[k][0] < 1080) k++;
   const ang = Math.atan2(samp[k + 1][1] - samp[k - 1][1], samp[k + 1][0] - samp[k - 1][0]);
-  // 配達人: 第2版(案A)が既定。?char=old で第1版(比較用)
+  // 配達人: 案A(提灯のミオ)。?char=old で第1版(比較用)
   if (window.CHAR_OLD) COURIER.drawCourier(ctx, samp[k][0], samp[k][1] - 6, 1.45, ang, { lean: 0.5, crouch: 0.7, armF: 0.15, scarfT: t, lampGlow: 1 });
-  else COURIER2.draw(ctx, samp[k][0], samp[k][1] - 16, 1.6, ang * 0.85, Object.assign({}, COURIER2.POSES.ride, { lean: 0.72, crouch: 0.55, fx: 80, bx: -84, handF: [1.7, -0.25] }), "A", { t });
+  else COURIER2.draw(ctx, samp[k][0], samp[k][1] - 15, 1.7, ang * 0.9, Object.assign({}, COURIER2.POSES.ride, { lean: 0.34, crouch: 0.55, fx: 82, bx: -80, handF: [1.6, -0.35] }), "A", { t, windLift: 0.42 });
   // 手前: 暗い岩(右下、d=0。画面の枠になる)と、手前の雲のもや(ぼかし)
   W.island(ctx, { seed: 21, cx: 1820, top: 960, w: 620, depthH: 300, d: 0.0, town: false, falls: false, lamp: 0, L: [0.6, -0.8], lightSide: { col: C.amber, w: 5, L: [-0.9, -0.3], a: 0.7 } });
   P.layer(ctx, (g) => W.cloudBank(g, { seed: 9, x0: -300, x1: 700, yb: 1110, hgt: 150, d: 0.25, under: 100 }), { blur: 10, a: 0.9 });
