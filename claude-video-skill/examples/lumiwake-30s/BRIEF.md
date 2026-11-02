@@ -64,7 +64,7 @@
 | HUD: PARCEL / 灯台島まで / 1.2 km / LUMI / NEAR MISS / PERFECT / +150 / +800 / STREAK ×12 / DELIVERED | Vectura(英数字)、Noto Sans JP 700(和文) | 各ショット |
 
 ## 6. 書体とライセンス
-- ゆうたONE パック(英字のみ): ロゴ=Y1FullmoonMarch、HUD=Y1Vectura。利用者がフォロー済みで商用条件を満たす(利用者の申告)。**フォントファイルはリポジトリに入れない**(`assets/fonts/` は .gitignore)。ロゴは字形をパスにして加工した物(`src/lib/logo-glyphs.js` は8字の輪郭データ。フォントファイルではない)。原型を保ったロゴの商標登録はしない。
+- ゆうたONE パック(英字のみ): ロゴ=Y1FullmoonMarch、HUD=Y1Vectura。利用者がフォロー済みで商用条件を満たす(利用者の申告)。**フォントファイルはリポジトリに入れない**(`assets/fonts/` は .gitignore)。ロゴは字形をパスにして加工した物。字形の輪郭データ(`src/lib/logo-glyphs.js`)もフォント由来なので**リポジトリに入れない**(`.gitignore` 済み。`src/tools/glyph_paths.py` で、手元のフォントから作り直す)。原型を保ったロゴの商標登録はしない。
 - 和文: Zen Old Mincho、Noto Sans JP(どちらも SIL OFL 1.1、`@fontsource` の npm パッケージ 5.3.1 から取得)。`src/jp_text.txt` の字だけにサブセット化(`src/tools/subset_jp.py`)。サブセットもリポジトリには入れず、`src/tools/setup_fonts.sh` で作り直す。
 
 ## 7. 第2段階への申し送り(まだ実装しない)

@@ -2,3 +2,6 @@
 assets/fonts/
 # 作業用の書き出し
 out/
+
+# ロゴの字形パス(ゆうたONE の輪郭データ)。フォント由来のデータなのでリポジトリに入れない。src/tools/glyph_paths.py で作り直す
+src/lib/logo-glyphs.js
