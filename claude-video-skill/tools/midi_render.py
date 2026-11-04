@@ -4,6 +4,8 @@
     apt-get update && apt-get install -y fluidsynth musescore-general-soundfont-lossless   # 音源 MuseScore General (MIT・一部CC0)
     (代わりに fluid-soundfont-gm でも可。無ければ自動で FluidR3 にフォールバック)
     pip install pretty_midi mido
+    Windows: fluidsynth の公式リリース(Windows 版 zip)を展開し、環境変数 FLUIDSYNTH に fluidsynth.exe のパス、
+             SF2 にサウンドフォント(.sf2)のパスを入れる(PATH に頼らない)。手順: references/windows-setup.md
 
 使い方(Python):
     import pretty_midi as pm, midi_render as M
@@ -23,7 +25,7 @@ GM 早見表(program 番号。0始まり):
   民族  105 バンジョー / 107 琴 / 108 カリンバ / 116 太鼓(タイコ) / 117 メロディックタム
   効果  119 リバースシンバル / 120 ギターフレットノイズ / 121 ブレスノイズ / 122 海辺 / 123 鳥のさえずり / 124 電話 / 125 ヘリ / 126 拍手
 """
-import os, subprocess, tempfile
+import os, shutil, subprocess, tempfile
 import numpy as np
 import scipy.io.wavfile as wavfile
 from scipy.signal import butter, sosfilt, fftconvolve
@@ -37,6 +39,20 @@ def _default_sf2():
 
 
 SF2 = os.environ.get("SF2", _default_sf2())
+
+
+def _fluidsynth():
+    # 環境変数 FLUIDSYNTH(fluidsynth.exe などのパス)→ PATH の fluidsynth の順に探す
+    p = os.environ.get("FLUIDSYNTH")
+    if p:
+        if os.path.isfile(p) or shutil.which(p):
+            return p
+        raise FileNotFoundError(f"環境変数 FLUIDSYNTH={p} が見つかりません(references/windows-setup.md)")
+    p = shutil.which("fluidsynth")
+    if p:
+        return p
+    raise FileNotFoundError("fluidsynth が見つかりません。apt-get install fluidsynth か、"
+                            "環境変数 FLUIDSYNTH に実行ファイルのパスを入れてください(references/windows-setup.md)")
 SR = 44100
 
 
@@ -45,7 +61,7 @@ def render(pm_obj, tail=1.5, sr=SR, sf2=SF2, gain=0.8):
     with tempfile.TemporaryDirectory() as d:
         mid, wav = os.path.join(d, "a.mid"), os.path.join(d, "a.wav")
         pm_obj.write(mid)
-        subprocess.run(["fluidsynth", "-ni", "-r", str(sr), "-g", str(gain), "-R", "0", "-C", "0", "-F", wav, sf2, mid],
+        subprocess.run([_fluidsynth(), "-ni", "-r", str(sr), "-g", str(gain), "-R", "0", "-C", "0", "-F", wav, sf2, mid],
                        check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         s, x = wavfile.read(wav)
     x = x.astype(np.float32) / 32768.0

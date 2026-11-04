@@ -24,13 +24,13 @@ def build_manifest():
             out = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", os.path.join(d, f)], capture_output=True, text=True).stdout.strip()
             name = f[:-4]; kind = re.sub(r"[_]?\d+$", "", name)
             items.append({"name": name, "pack": pack, "kind": kind, "dur": round(float(out or 0), 3)})
-    json.dump(items, open(MANIFEST, "w"), ensure_ascii=False, indent=0)
+    json.dump(items, open(MANIFEST, "w", encoding="utf8"), ensure_ascii=False, indent=0)
     return items
 
 
 def items():
     if not os.path.exists(MANIFEST): return build_manifest()
-    return json.load(open(MANIFEST))
+    return json.load(open(MANIFEST, encoding="utf8"))
 
 
 def path(name):

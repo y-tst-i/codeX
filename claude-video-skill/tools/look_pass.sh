@@ -7,13 +7,15 @@
 set -e
 in=$1; out=$2; p=${3:-cinematic}; SS=${SS:-0}; T=${T:-}   # 試し: SS=5.5 T=1 look_pass.sh ... で一部だけ
 case $p in
+  # S は整数のみ(下で bash の算術 $((S*2)) を使う。bc は Git Bash に無いため使わない)
   soft)      B=0.35; S=18; G=4;  V="PI/7"; H=0.0 ;;
   cinematic) B=0.55; S=28; G=8;  V="PI/5"; H=0.25 ;;
   heavy)     B=0.75; S=40; G=12; V="PI/4"; H=0.4 ;;
+  *) echo "look_pass.sh: preset は soft|cinematic|heavy" >&2; exit 1 ;;
 esac
 fc="[0:v]format=gbrp,split=3[a][b][c];
 [b]eq=brightness=-0.22:contrast=1.7:saturation=1.1,gblur=sigma=$S[bl];
-[c]eq=brightness=-0.3:contrast=1.9,gblur=sigma=$(echo "$S*2" | bc),colorchannelmixer=rr=1.0:gg=0.45:bb=0.2[ha];
+[c]eq=brightness=-0.3:contrast=1.9,gblur=sigma=$((S*2)),colorchannelmixer=rr=1.0:gg=0.45:bb=0.2[ha];
 [a][bl]blend=all_mode=screen:all_opacity=$B[x1];
 [x1][ha]blend=all_mode=screen:all_opacity=$H[x2];
 [x2]eq=contrast=1.05:saturation=1.08,noise=alls=$G:allf=t,vignette=$V:mode=forward,format=yuv420p[v]"

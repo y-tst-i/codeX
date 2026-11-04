@@ -5,7 +5,9 @@
 #   PUBLISH=1  git の中の compare_round2/(動画・BGM だけの音声)と answer_key/ANSWER_KEY_ROUND2.md も更新する
 set -e
 cd "$(dirname "$0")"
-PY=${PY:-$HOME/earshot_env/bin/python}
+# python: PY → PYTHON → $HOME/earshot_env の python(Linux は bin/python、Windows の venv は Scripts/python.exe)
+if [ -z "${PY:-}" ]; then PY=${PYTHON:-$HOME/earshot_env/bin/python}
+  [ -e "$PY" ] || [ ! -e "$HOME/earshot_env/Scripts/python.exe" ] || PY=$HOME/earshot_env/Scripts/python.exe; fi
 export EARSHOT_HOME=${EARSHOT_HOME:-$HOME/earshot_env/home}
 P=""; [ "${PUBLISH:-0}" = 1 ] && P="--publish"
 E=""; [ "${LISTEN:-0}" = 1 ] && E="--earshot"

@@ -3,8 +3,10 @@
 set -e
 cd "$(dirname "$0")"
 T=../../tools
+. "$T/env.sh"; need_py   # 動く python を $PY に(Windows の Store スタブを避ける)
 ls out/chunks/c{0..7}.mkv >/dev/null
-printf "file '%s'\n" $(for c in 0 1 2 3 4 5 6 7; do echo "$PWD/out/chunks/c$c.mkv"; done) > out/chunks/list.txt
+# 一覧の中は list.txt からの相対パス(Windows の Git Bash では $PWD が /c/... になり、ffmpeg が読めないため)
+printf "file '%s'\n" $(for c in 0 1 2 3 4 5 6 7; do echo "c$c.mkv"; done) > out/chunks/list.txt
 ffmpeg -v error -y -f concat -safe 0 -i out/chunks/list.txt -c copy out/master_ffv1.mkv
 # 1ループの MP4(先頭と末尾 96 サンプルにフェードした音)。粒は seed 付き(allf=t は時間方向に変わるが、ffmpeg の乱数は決定的)
 ffmpeg -v error -y -i out/master_ffv1.mkv -i out/mix_single.wav -vf "noise=c0s=3:allf=t,format=yuv420p" -c:v libx264 -profile:v high -preset slow -crf 14 -r 60 \
@@ -14,7 +16,7 @@ ffmpeg -v error -y -stream_loop 2 -i out/master_ffv1.mkv -i out/mix_x3.wav -vf "
   -c:a aac -b:a 192k -ar 48000 -shortest -movflags +faststart out/island7-lab_x3.mp4
 # X 用 GIF: 24fps・720px・全体で1つのパレット。コマの長さは 1/100 秒単位なので 4,4,4,4,4,5… に並ぶ(全体 8.00 秒)
 ffmpeg -v error -y -i out/master_ffv1.mkv -vf "fps=24,scale=720:-1:flags=lanczos,split[a][b];[a]palettegen=stats_mode=diff[p];[b][p]paletteuse=dither=bayer:bayer_scale=5:diff_mode=rectangle" -loop 0 out/island7-lab.gif
-python3 - <<'EOF'
+py_run - <<'EOF'
 from PIL import Image
 im = Image.open('out/island7-lab.gif'); d = []
 try:
@@ -24,5 +26,5 @@ from collections import Counter
 print(f'GIF: {len(d)} コマ、合計 {sum(d) / 1000:.2f} 秒、コマの長さ {dict(Counter(d))} ms')
 EOF
 ls -la out/island7-lab.mp4 out/island7-lab_x3.mp4 out/island7-lab.gif
-echo '--- 音(MP4 をデコードして測る)'; python3 $T/audio_measure.py out/island7-lab.mp4 --cues cues.json
-echo '--- 機械チェック(3回通し)'; python3 $T/review_checks.py out/island7-lab_x3.mp4
+echo '--- 音(MP4 をデコードして測る)'; py_run $T/audio_measure.py out/island7-lab.mp4 --cues cues.json
+echo '--- 機械チェック(3回通し)'; py_run $T/review_checks.py out/island7-lab_x3.mp4

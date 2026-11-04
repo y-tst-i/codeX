@@ -87,6 +87,7 @@ description: コードで作る動画(HyperFrames・three.js・Canvas・ffmpeg)�
 | **使って動いた**(効果の比較はまだ) | `audio_measure.py`・`motion-lab.md` の型(`examples/hop-loop/`)/`sync_check.py`/`sheet.sh`・`strip.sh`/`video-opus`(`tools/install_agent.sh`、次のセッションから効く) |
 | **未検証** | 映画の技法辞書(`references/cinematic/`・`cin.py`)/スタイル辞書(`references/styles/`・`style.py`)/2D の質感部品(`depth-and-texture.md`)/人型部品(`character-acting.md`・`puppet.js`)/仕上げ(`look_pass.sh`)/審査役の型 |
 | 記録 | `references/case-notes.md`(他人の作例)/`references/prompt-templates.md`(雛形 A〜F)/`NOTICES.md`(ライセンス)/`archive/`(旧本体 `handbook.md` と旧版。実験の数字・ナレーションの設計・検討中の道具 ArtCraft) |
+| Windows(ローカル PC) | `references/windows-setup.md`(Git Bash での準備、環境変数 `PYTHON` / `FLUIDSYNTH` の指定、python の探し方 `tools/env.sh`、注意点) |
 
 ## 7. 未確定(正直に)
 - §0 の判定はどれも1回・1人。effort の medium と high の優劣も確定していない(`archive/handbook.md` §16-7c)。

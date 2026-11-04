@@ -13,14 +13,16 @@ done
 ffmpeg -y -loglevel error "${ins[@]}" -filter_complex "${fc}${cat_in}concat=n=$n:v=1:a=0[v]" -map "[v]" \
   -c:v libx264 -preset slow -crf 14 -pix_fmt yuv420p -an "$dir/video_only.mp4"
 nf=$(ffprobe -v error -count_frames -select_streams v:0 -show_entries stream=nb_read_frames -of csv=p=0 "$dir/video_only.mp4")
-vdur=$(python3 -c "print($nf/30)")
+# 計算と JSON の読み取りは awk / sed(Windows の Git Bash でも動く。python3 は Store のスタブのことがあるので使わない)
+vdur=$(awk -v n="$nf" 'BEGIN{printf "%.17g", n/30}')
 # loudnorm は1回通しだと短い動画(15秒など)で目標に届かない(STILLDUSK: -16.8 LUFS)。→ 2回通し: 1回目で測り、2回目で測定値を渡して直線補正。
 # それでもピーク(TP -2)が先に当たって届かない音(山と谷の差が大きい: ピーク-ラウドネス差 > 18 dB)は、軽い圧縮(ratio 2.5)を先にかけてから通す。
 # STILLDUSK の素材で -16.8(1回通し) → -15.1(2回通しのみ) → -14.4(2回+軽い圧縮)、幅(LRA)は 6.7→7.2 LU。圧縮を切る: COMP=0 assemble.sh ...
 meas() { ffmpeg -hide_banner -nostats -i "$1" -af "loudnorm=I=-14:TP=-2:LRA=14:print_format=json" -f null - 2>&1 | sed -n '/^{/,/^}/p'; }
-j() { echo "$m" | python3 -c "import sys,json;print(json.load(sys.stdin)['$1'])"; }
+j() { v=$(printf '%s\n' "$m" | sed -n "s/^[[:space:]]*\"$1\"[[:space:]]*:[[:space:]]*\"\([^\"]*\)\".*/\1/p" | head -n 1)
+      [ -n "$v" ] || { echo "assemble.sh: loudnorm の測定値 $1 が読めません" >&2; exit 1; }; echo "$v"; }
 src="$wav"; m=$(meas "$src")
-if [ "${COMP:-1}" = 1 ] && python3 -c "import sys;sys.exit(0 if float('$(j input_tp)')-float('$(j input_i)')>18 else 1)"; then
+if [ "${COMP:-1}" = 1 ] && awk -v tp="$(j input_tp)" -v i="$(j input_i)" 'BEGIN{exit !(tp-i>18)}'; then
   ffmpeg -y -loglevel error -i "$wav" -af "acompressor=threshold=-22dB:ratio=2.5:attack=10:release=200:makeup=1" "$dir/soundtrack_comp.wav"
   src="$dir/soundtrack_comp.wav"; m=$(meas "$src")
 fi

@@ -1,0 +1,2 @@
+# bash スクリプトは Windows で取り出しても LF のまま(CRLF になると Git Bash で $'\r': command not found)
+*.sh text eol=lf

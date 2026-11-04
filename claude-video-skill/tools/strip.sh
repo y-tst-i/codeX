@@ -20,6 +20,12 @@ fontfile=""
 for f in /usr/share/fonts/truetype/dejavu/DejaVuSans.ttf /usr/share/fonts/dejavu/DejaVuSans.ttf; do
   [ -f "$f" ] && fontfile="$f" && break
 done
+# Windows(Git Bash): ffmpeg は Windows のパスで読む。フィルタ内の「:」は \: に、全体を '' で囲む(2段の解釈を通すため)
+if [ -z "$fontfile" ]; then
+  for f in arial.ttf segoeui.ttf; do
+    [ -f "/c/Windows/Fonts/$f" ] && fontfile="'C\\:/Windows/Fonts/$f'" && break
+  done
+fi
 label=""
 if [ -n "$fontfile" ]; then
   # 各コマの左上に、その時刻(秒)を焼き込む。pts は -ss 後の相対時間なので開始秒を足す

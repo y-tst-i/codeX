@@ -7,7 +7,9 @@
 #              (記号の表 answer_key/round3_key.json が無い時に新しく引くのも PUBLISH=1 の時だけ)
 set -e
 cd "$(dirname "$0")"
-PY=${PY:-$HOME/earshot_env/bin/python}
+# python: PY → PYTHON → $HOME/earshot_env の python(Linux は bin/python、Windows の venv は Scripts/python.exe)
+if [ -z "${PY:-}" ]; then PY=${PYTHON:-$HOME/earshot_env/bin/python}
+  [ -e "$PY" ] || [ ! -e "$HOME/earshot_env/Scripts/python.exe" ] || PY=$HOME/earshot_env/Scripts/python.exe; fi
 export EARSHOT_HOME=${EARSHOT_HOME:-$HOME/earshot_env/home}
 P=""; [ "${PUBLISH:-0}" = 1 ] && P="--publish"
 E=""; [ "${LISTEN:-0}" = 1 ] && E="--earshot"
