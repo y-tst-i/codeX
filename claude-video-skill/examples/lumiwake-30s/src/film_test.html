@@ -1,0 +1,21 @@
+<!doctype html><meta charset="utf-8">
+<!-- 開発用: 1コマずつ描く。?fx=0 効果なし、?hs=N ヒットストップのコマ数。window.__draw(f) で任意のコマ。 -->
+<link rel="stylesheet" href="../assets/fonts/jp.css">
+<style>@font-face{font-family:HUD;src:url('../assets/fonts/hud.otf')} body{margin:0;background:#000}</style>
+<body><canvas id="c" width="1920" height="1080"></canvas>
+<script src="../../../tools/assets/scene-lib.js"></script><script src="../../../tools/assets/depth.js"></script>
+<script src="lib/paint.js"></script><script src="lib/world.js"></script><script src="lib/spirit.js"></script><script src="lib/hud.js"></script><script src="lib/logo-glyphs.js"></script><script src="lib/logo.js"></script>
+<script src="film/film.js"></script>
+<script>
+(async () => {
+  const q = new URLSearchParams(location.search); PAINT.mode.fx = q.get("fx") !== "0"; PAINT.mode.sil = q.get("sil") === "1";
+  await Promise.all(["32px HUD", "700 26px JPG", "500 26px JPG", "900 40px JPM"].map((f) => document.fonts.load(f, "灯台島まで嵐を抜けて、灯りを届けろ。届けた灯りが空の道になる架空発売予定0123456789")));
+  await document.fonts.ready;
+  const ctx = document.getElementById("c").getContext("2d");
+  if (q.get("hs")) FILM.setHitstop(parseInt(q.get("hs")));
+  FILM.init();
+  window.__draw = (f) => FILM.renderAt(ctx, f);
+  window.__bakeMs = FILM.bakeMs;
+  window.__ready = true;
+})();
+</script>

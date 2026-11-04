@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <link rel="stylesheet" href="assets/fonts/jp.css" />
+    <style>
+      @font-face { font-family: HUD; src: url("assets/fonts/hud.otf"); }
+      html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: #050812; }
+      #c { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; }
+    </style>
+    <script src="assets/gsap.min.js"></script>
+  </head>
+  <body>
+    <!-- 映像は 1 枚の canvas。全コマが時刻 t(コマ番号 = round(t*30))の純関数。台帳は audio/cues.json -->
+    <div id="root" data-composition-id="main" data-start="0" data-duration="30" data-width="1920" data-height="1080" data-fps="30">
+      <canvas id="c" class="clip" width="1920" height="1080" data-start="0" data-duration="30" data-track-index="0" data-layout-allow-overlap data-layout-allow-overflow></canvas>
+    </div>
+    <script src="assets/film.js"></script>
+    <script>
+      (function () {
+        const tl = gsap.timeline({ paused: true });
+        tl.to({}, { duration: 30 }, 0); // 時計役。描画は hf-seek で時刻から
+        const ctx = document.getElementById("c").getContext("2d");
+        window.__hf = window.__hf || {}; window.__hf.buildReady = window.__hf.buildReady || {};
+        const ready = (async () => {
+          await Promise.all(["32px HUD", "700 26px JPG", "500 26px JPG", "900 40px JPM"].map((f) => document.fonts.load(f, "灯台島まで嵐を抜けて、灯りを届けろ。届けた灯りが空の道になる架空発売予定0123456789")));
+          await document.fonts.ready;
+          FILM.init();
+          FILM.renderAt(ctx, 0);
+        })();
+        window.__hf.buildReady["film"] = ready;
+        window.addEventListener("hf-seek", (e) => { const t = e.detail.time, p = ready.then(() => FILM.renderAt(ctx, Math.round(t * 30))); if (e.detail.waitUntil) e.detail.waitUntil(p); });
+        window.__timelines = window.__timelines || {};
+        window.__timelines["main"] = tl;
+      })();
+    </script>
+  </body>
+</html>

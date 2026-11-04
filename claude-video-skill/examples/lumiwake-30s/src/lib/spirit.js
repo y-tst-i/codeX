@@ -28,14 +28,14 @@ const SPIRIT = (() => {
   // draw(ctx, x, y, s, rotExtra, pose, design("P"|"Q"), opts{t, lift, trail})
   function draw(ctx, x, y, s, rotExtra, poseIn, design = "P", opts = {}) {
     const p = typeof poseIn === "string" ? POSES[poseIn] : poseIn, t = opts.t || 0, sil = P.mode.sil, rot = (rotExtra || 0) + p.rot, lift = opts.lift ?? 0.25;
-    const L = rotV([0.5, -0.85], -rot), boxR = 330 * s, box = [x - boxR, y - boxR * 0.85, boxR * 2, boxR * 1.7];
+    const L = rotV([0.5, -0.85], -rot), boxR = 175 * s, box = [x - boxR, y - boxR * 0.95, boxR * 2, boxR * 1.9];
     const T = (g) => { g.translate(x, y); g.rotate(rot); g.scale(s, s); };
     const TB = (g) => { g.translate(x, y); g.rotate(rot); g.scale(s * p.sx, s * p.sy); }; // 体だけつぶし・伸ばし
     const wp = (lx, ly) => { const c = Math.cos(rot), sn = Math.sin(rot); return [x + (lx * c - ly * sn) * s, y + (lx * sn + ly * c) * s]; };
     const bp = (lx, ly) => [lx * p.sx, ly * p.sy];
     const part = (fn, o, tf = T) => shade(ctx, (g) => { g.save(); tf(g); g.beginPath(); fn(g); g.restore(); }, Object.assign({ box, L, blur: 2.2 * s, silColor: "#0d0d0d" }, o));
     const local = (fn, tf = T) => { ctx.save(); tf(ctx); fn(ctx); ctx.restore(); };
-    const outline = (fn, tf = T, w = 7) => { if (sil) return; local((g) => { g.beginPath(); fn(g); g.strokeStyle = INK; g.lineWidth = w; g.lineJoin = "round"; g.stroke(); }, tf); };
+    const outline = (fn, tf = T, w = 7) => { if (sil) return; w = Math.max(w, 4.6 / s); local((g) => { g.beginPath(); fn(g); g.strokeStyle = INK; g.lineWidth = w; g.lineJoin = "round"; g.stroke(); }, tf); };
     const gl = p.glow;
     const center = wp(0, 0);
 
@@ -46,19 +46,20 @@ const SPIRIT = (() => {
     const trW = (u) => R * s * 1.15 * (1 - u) ** 1.1 * (1 + 0.1 * Math.sin(u * 14 - t * 10));
     if (!sil) {
       P.bloom(ctx, (g) => { P.ribbonPath(g, trS, (u) => trW(u) * 1.8); g.fillStyle = css(W.C.amberDeep); g.fill(); }, { blur: 30, a: 0.55 });
-      P.ribbonPath(ctx, trS, trW); const g1 = ctx.createLinearGradient(trS[0][0], trS[0][1], trS[trS.length - 1][0], trS[trS.length - 1][1]); g1.addColorStop(0, css(W.C.amberHot, 0.95)); g1.addColorStop(0.35, css(W.C.amber, 0.7)); g1.addColorStop(1, css(W.C.amberDeep, 0)); ctx.fillStyle = g1; ctx.fill();
-      P.ribbonPath(ctx, trS, (u) => trW(u) * 0.3); ctx.fillStyle = "rgba(255,252,240,0.75)"; ctx.fill();
+      P.ribbonPath(ctx, trS, trW); const g1 = ctx.createLinearGradient(trS[0][0], trS[0][1], trS[trS.length - 1][0], trS[trS.length - 1][1]); g1.addColorStop(0, css(W.C.amberHot, 0.97)); g1.addColorStop(0.35, css("#ffd27a", 0.8)); g1.addColorStop(1, css(W.C.amberDeep, 0)); ctx.fillStyle = g1; ctx.fill(); ctx.strokeStyle = "rgba(14,18,38,0.6)"; ctx.lineWidth = Math.max(3, 1.6 * s); ctx.lineJoin = "round"; ctx.stroke(); P.ribbonPath(ctx, trS, trW); ctx.fillStyle = g1; ctx.fill();
+      P.ribbonPath(ctx, trS, (u) => trW(u) * 0.42); ctx.fillStyle = "rgba(255,253,245,0.9)"; ctx.fill();
     } else { P.ribbonPath(ctx, trS, (u) => trW(u) * 0.5); ctx.fillStyle = "#8a8a8a"; ctx.fill(); }
 
     // ---- 2) 羽(奥)と羽(手前)。葉の形。P=淡い青緑 / Q=淡い桃 ----
-    const wingRoot = bp(-0.15 * R, -0.45 * R), wcol = design === "P" ? ["#62cfc4", "#d8fff8", "#1f6f86"] : ["#ff9fa4", "#ffe3de", "#a8374a"];
-    const leaf = (g, root, ang, len, wid) => { const f = (u, v) => [root[0] + Math.cos(ang) * u - Math.sin(ang) * v, root[1] + Math.sin(ang) * u + Math.cos(ang) * v]; g.moveTo(...f(0, 0)); g.bezierCurveTo(...f(len * 0.2, -wid * 1.15), ...f(len * 0.8, -wid * 0.95), ...f(len, 0)); g.bezierCurveTo(...f(len * 0.8, wid * 0.75), ...f(len * 0.25, wid * 0.85), ...f(0, 0)); g.closePath(); };
-    const flap = (ph) => -2.25 + p.wing + p.flap * Math.sin(14 * t + ph);
-    const wLen = (design === "P" ? 2.0 : 1.7) * R, wWid = (design === "P" ? 0.5 : 0.7) * R;
+    const wingRoot = bp(-0.15 * R, -0.45 * R), wcol = design === "P" ? ["#4fc7b8", "#eafff6", "#1f6f86"] : ["#ff9fa4", "#ffe3de", "#a8374a"];
+    const leaf = (g, root, ang, len, wid) => { const f = (u, v) => [root[0] + Math.cos(ang) * u - Math.sin(ang) * v, root[1] + Math.sin(ang) * u + Math.cos(ang) * v]; g.moveTo(...f(0, 0)); g.bezierCurveTo(...f(len * 0.1, -wid * 1.5), ...f(len * 0.85, -wid * 1.25), ...f(len, 0)); g.bezierCurveTo(...f(len * 0.85, wid * 1.0), ...f(len * 0.1, wid * 1.1), ...f(0, 0)); g.closePath(); };
+    const flap = (ph) => -1.95 + p.wing + p.flap * 0.55 * Math.sin(12 * t + ph);
+    const wLen = (design === "P" ? 1.75 : 1.7) * R, wWid = (design === "P" ? 0.52 : 0.7) * R;
     const wing = (ph, back) => {
       const ang = flap(ph); ctx.save(); ctx.globalAlpha = back ? 0.7 : 0.9;
       outline((g) => leaf(g, wingRoot, ang, wLen, wWid), T, 5);
-      part((g) => leaf(g, wingRoot, ang, wLen, wWid), { base: css(mix(wcol[0], "#7aa0c0", back ? 0.35 : 0)), hiCol: css(wcol[1]), hi: 8 * s, hiA: 0.9, shCol: css(wcol[2]), sh: 14 * s, shA: 0.7, rimCol: css(W.C.amber), rim: 3.5 * s, rimA: 0.85 * gl, rimL: rotV([-0.7, 0.4], -rot) });
+      const wt = wp(wingRoot[0] + Math.cos(ang) * wLen, wingRoot[1] + Math.sin(ang) * wLen), wr = wp(wingRoot[0], wingRoot[1]);
+      part((g) => leaf(g, wingRoot, ang, wLen, wWid), { base: (g) => { const q = g.createLinearGradient(wr[0], wr[1], wt[0], wt[1]); q.addColorStop(0, css(wcol[1])); q.addColorStop(0.55, css(mix(wcol[0], "#7aa0c0", back ? 0.3 : 0))); q.addColorStop(1, css(mix(wcol[0], wcol[2], 0.35))); return q; }, hiCol: css(wcol[1]), hi: 8 * s, hiA: 0.9, shCol: css(wcol[2]), sh: 14 * s, shA: 0.7, rimCol: css(W.C.amber), rim: 3.5 * s, rimA: 0.85 * gl, rimL: rotV([-0.7, 0.4], -rot) });
       ctx.restore();
       if (!sil) local((g) => { g.strokeStyle = css(wcol[2], 0.55); g.lineWidth = 1.6; for (const v of [-0.45, 0, 0.45]) { g.beginPath(); const f = (u, vv) => [wingRoot[0] + Math.cos(ang) * u - Math.sin(ang) * vv, wingRoot[1] + Math.sin(ang) * u + Math.cos(ang) * vv]; g.moveTo(...f(wLen * 0.1, 0)); g.quadraticCurveTo(...f(wLen * 0.55, wWid * v * 1.2), ...f(wLen * 0.9, wWid * v * 0.25)); g.stroke(); } });
     };
@@ -107,9 +108,9 @@ const SPIRIT = (() => {
     // ---- 6) 手前の羽 ----
     wing(0, false);
     // ---- 7) 荷物: 体の下から吊る(offer では前へ差し出す)。P=箱 / Q=ふろしき包み ----
-    const anchor = bp(0.15 * R, 0.9 * R), pc = chain(anchor, p.pAng, [0.42 * R, 0.42 * R], t, { amp: 0.4 * p.swing + 0.08, w: 5.5, lag: 0.9, ph: 0.4, droop: 0 }), box0 = pc[2];
+    const anchor = bp(0.15 * R, 0.9 * R), pc = chain(anchor, p.pAng, [0.36 * R, 0.4 * R], t, { amp: 0.4 * p.swing + 0.08, w: 5.5, lag: 0.9, ph: 0.4, droop: 0 }), box0 = pc[2];
     local((g) => { g.strokeStyle = sil ? "#0d0d0d" : css("#d4473a"); g.lineWidth = sil ? 5 : 3; g.lineCap = "round"; g.beginPath(); g.moveTo(pc[0][0], pc[0][1]); g.lineTo(pc[1][0], pc[1][1]); g.lineTo(pc[2][0], pc[2][1]); g.stroke(); });
-    const bw = 0.56 * R;
+    const bw = 0.92 * R;
     if (design === "P") {
       outline((g) => g.roundRect(box0[0] - bw / 2, box0[1] - bw / 2, bw, bw, 7), T, 6);
       part((g) => g.roundRect(box0[0] - bw / 2, box0[1] - bw / 2, bw, bw, 7), { base: css("#9a6a44"), hiCol: css("#e0a577"), hi: 5 * s, hiA: 0.85, shCol: css("#3a2018"), sh: 8 * s, shA: 0.9 });
