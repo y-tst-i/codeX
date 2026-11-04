@@ -1,0 +1,61 @@
+<!doctype html><meta charset="utf-8">
+<!-- キャラクターシート。?sheet=designs(3案×3姿勢+シルエット+540px)/ ?sheet=motion&d=A(別時刻の二次運動と姿勢補間の確認) -->
+<link rel="stylesheet" href="../assets/fonts/jp.css">
+<style>@font-face{font-family:HUD;src:url('../assets/fonts/hud.otf')} body{margin:0;background:#000}</style>
+<body><canvas id="c" width="2400" height="1200"></canvas>
+<script src="../../../tools/assets/scene-lib.js"></script><script src="../../../tools/assets/depth.js"></script>
+<script src="lib/paint.js"></script><script src="lib/world.js"></script><script src="lib/spirit.js"></script><script src="lib/hud.js"></script>
+<script>
+(async () => {
+  const q = new URLSearchParams(location.search), cv = document.getElementById("c"), ctx = cv.getContext("2d"), P = PAINT, W = WORLD, SP = SPIRIT;
+  await Promise.all(["700 26px JPG", "500 26px JPG"].map((f) => document.fonts.load(f, "案ミオの灯りシルエット縮小姿勢飛行回避届ける時刻補間")));
+  await document.fonts.ready;
+  const bg = (x, y, w, h, withStream = true) => {
+    ctx.save(); ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip();
+    ctx.translate(x, y); // 背景だけ局所座標(shade を使わない物のみ)
+    const g = ctx.createLinearGradient(0, 0, 0, h); g.addColorStop(0, "#0b1426"); g.addColorStop(0.55, "#16304a"); g.addColorStop(1, "#2b5a66"); ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+    ctx.restore();
+  };
+  const cloudsAt = (x, y, w, h) => { ctx.save(); ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip(); W.cloudBank(ctx, { seed: 5, x0: x - 40, x1: x + w + 40, yb: y + h * 0.86, hgt: 60, d: 0.62, under: 200 }); ctx.restore(); };
+  const streamAt = (x, y, w, h, by) => { ctx.save(); ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip(); W.stream(ctx, [[x - 60, by + 40], [x + w * 0.5, by + 22], [x + w + 60, by + 4]], { width: 34, t: 0.3, sparks: 50 }); ctx.restore(); };
+  const label = (s, x, y, o = {}) => HUD.text(ctx, s, x, y, Object.assign({ font: "JPG", weight: 700, size: 30, col: "#f4ead2", stroke: 6, strokeCol: "rgba(8,12,26,0.9)" }, o));
+  const names = { fly: "①光の気流に乗る飛行", dodge: "②危険をかわす回避", offer: "③荷物を差し出す" };
+  const DN = { P: "P ともしび(炎のしずく+青緑の葉の羽+朱の房+吊り箱)", Q: "Q 提灯ちゃん(提灯の体+桃色の羽+ふたと輪+ふろしき包み)" };
+  const ROT = { fly: 0.0, dodge: 0.0, offer: 0.0 };
+  ctx.fillStyle = "#0a0f1c"; ctx.fillRect(0, 0, 2400, 1200);
+  if (q.get("sheet") === "designs") {
+    for (let r = 0; r < 2; r++) {
+      const d = "PQ"[r], y0 = 60 + r * 540;
+      label(DN[d], 20, y0 - 14, { size: 30 });
+      ["fly", "dodge", "offer"].forEach((pn, i) => {
+        const x0 = i * 530; bg(x0, y0, 530, 500); P.mode.sil = false;
+        cloudsAt(x0, y0, 530, 500); streamAt(x0, y0, 530, 500, y0 + 420);
+        ctx.save(); ctx.beginPath(); ctx.rect(x0, y0, 530, 500); ctx.clip();
+        SP.draw(ctx, x0 + 300, y0 + 250, 1.55, ROT[pn], pn, d, { t: 0.25 });
+        ctx.restore(); label(names[pn], x0 + 12, y0 + 38, { size: 24 });
+      });
+      ctx.save(); ctx.imageSmoothingQuality = "high"; ctx.drawImage(cv, 0, y0, 1590, 500, 1590 + 5, y0 + 250, 795, 250); ctx.restore();
+      label("540px 縮小(半分)", 1600, y0 + 280, { size: 20 });
+      ctx.fillStyle = "#e8e6e1"; ctx.fillRect(1595, y0, 800, 248); P.mode.sil = true;
+      ctx.save(); ctx.beginPath(); ctx.rect(1595, y0, 800, 248); ctx.clip();
+      ["fly", "dodge", "offer"].forEach((pn, i) => SP.draw(ctx, 1595 + 170 + i * 267, y0 + 125, 0.8, ROT[pn], pn, d, { t: 0.25 }));
+      ctx.restore(); P.mode.sil = false;
+      label("シルエットのみ", 1605, y0 + 34, { size: 20, col: "#222", stroke: 0 });
+    }
+  } else { // motion
+    const d = q.get("d") || "P";
+    label(DN[d] + " 動かしたときの確認(上: t=0,0.1,0.2,0.3 秒 / 下: 姿勢補間 fly→dodge→offer)", 20, 40, { size: 26 });
+    for (let i = 0; i < 4; i++) {
+      const x0 = i * 600, y0 = 60; bg(x0, y0, 600, 480); cloudsAt(x0, y0, 600, 480); streamAt(x0, y0, 600, 480, y0 + 400);
+      ctx.save(); ctx.beginPath(); ctx.rect(x0, y0, 600, 480); ctx.clip(); SP.draw(ctx, x0 + 330, y0 + 240, 1.7, 0, "fly", d, { t: i * 0.1 }); ctx.restore(); label("t=" + (i * 0.1).toFixed(1) + "s", x0 + 12, y0 + 36, { size: 24 });
+    }
+    [0, 0.5, 1, 1.5, 2].forEach((k, i) => {
+      const x0 = i * 480, y0 = 580; bg(x0, y0, 480, 560); cloudsAt(x0, y0, 480, 560); streamAt(x0, y0, 480, 560, y0 + 480);
+      const pose = k <= 1 ? SP.poseMix("fly", "dodge", k) : SP.poseMix("dodge", "offer", k - 1);
+      ctx.save(); ctx.beginPath(); ctx.rect(x0, y0, 480, 560); ctx.clip(); SP.draw(ctx, x0 + 270, y0 + 280, 1.4, 0, pose, d, { t: 0.5 }); ctx.restore();
+      label(k <= 1 ? "fly→dodge " + k.toFixed(1) : "dodge→offer " + (k - 1).toFixed(1), x0 + 10, y0 + 34, { size: 22 });
+    });
+  }
+  window.__ready = true;
+})();
+</script>
