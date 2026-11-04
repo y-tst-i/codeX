@@ -5,3 +5,7 @@ out/
 
 # ロゴの字形パス(ゆうたONE の輪郭データ)。フォント由来のデータなのでリポジトリに入れない。src/tools/glyph_paths.py で作り直す
 src/lib/logo-glyphs.js
+
+# 音声ファイルはリポジトリに入れない(曲は Suno の無料プラン。README の権利の注意を参照)
+audio/*.mp3
+audio/*.wav

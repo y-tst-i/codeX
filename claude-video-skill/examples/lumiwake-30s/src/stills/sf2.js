@@ -45,7 +45,8 @@ STILLS["2"] = function (ctx, t) {
     ctx.lineWidth = 2; ctx.strokeStyle = "rgba(255,240,210,0.5)"; ctx.beginPath(); ctx.arc(at[0] - 90, at[1] - 30, 330, 0, 7); ctx.stroke(); ctx.restore();
     P.glow(ctx, at[0] - 90, at[1] - 30, 300, C.amber, 0.35);
   }
-  const me = window.CHAR_OLD ? COURIER.drawCourier(ctx, at[0], at[1] - 4, 1.5, ang, { lean: 0.6, crouch: 0.95, armF: 0.9, armB: 0.6, scarfT: t + 0.3, scarfLen: 1.15 })
+  const me = window.CHAR === "spirit" ? SPIRIT.draw(ctx, at[0] + 10, at[1] - 140, 2.2, ang, Object.assign({}, SPIRIT.POSES.fly, { expr: 2, flap: 0.6, glow: 1.25, tail: 1.25 }), window.SPIRIT_DESIGN, { t: t + 0.3, lift: 0.0 })
+    : window.CHAR_OLD ? COURIER.drawCourier(ctx, at[0], at[1] - 4, 1.5, ang, { lean: 0.6, crouch: 0.95, armF: 0.9, armB: 0.6, scarfT: t + 0.3, scarfLen: 1.15 })
     : COURIER2.draw(ctx, at[0], at[1] - 18, 1.85, ang * 0.9, Object.assign({}, COURIER2.POSES.ride, { lean: 0.5, crouch: 0.85, fx: 84, bx: -84, handF: [1.55, -0.55], expr: 0 }), "A", { t: t + 0.3, windLift: 0.45 });
   // 手前: 渦に吸い上げられる岩のかけら(ぼかし=手前の被写界深度)
   P.layer(ctx, (g) => {

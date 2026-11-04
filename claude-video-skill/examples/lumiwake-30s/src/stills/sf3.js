@@ -27,7 +27,8 @@ STILLS["3"] = function (ctx, t) {
   const L = LOGO.draw(ctx, 960, 400, 1280, { t });
   // スウッシュの先端に小さな配達人
   const e = L.swooshEnd, s2 = L.swS, n = s2.length, ang = Math.atan2(s2[n - 1][1] - s2[n - 4][1], s2[n - 1][0] - s2[n - 4][0]);
-  if (window.CHAR_OLD) COURIER.drawCourier(ctx, e[0] - 30 * Math.cos(ang), e[1] - 30 * Math.sin(ang) - 3, 0.3, ang, { lean: 0.5, crouch: 0.7, scarfT: t });
+  if (window.CHAR === "spirit") SPIRIT.draw(ctx, e[0] - 40 * Math.cos(ang), e[1] - 40 * Math.sin(ang) - 34, 0.82, ang, "offer", window.SPIRIT_DESIGN, { t, lift: 0.0 });
+  else if (window.CHAR_OLD) COURIER.drawCourier(ctx, e[0] - 30 * Math.cos(ang), e[1] - 30 * Math.sin(ang) - 3, 0.3, ang, { lean: 0.5, crouch: 0.7, scarfT: t });
   else COURIER2.draw(ctx, e[0] - 46 * Math.cos(ang), e[1] - 46 * Math.sin(ang) - 12, 0.42, ang * 0.8, Object.assign({}, COURIER2.POSES.ride, { lean: 0.4, crouch: 0.5 }), "A", { t, windLift: 0.35 });
   // コピーと注記(和文)
   if (!P.mode.sil) {
