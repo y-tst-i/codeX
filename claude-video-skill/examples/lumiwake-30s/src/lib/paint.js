@@ -21,7 +21,7 @@ const PAINT = (() => {
     let c = pool[name];
     if (!c) { c = pool[name] = document.createElement("canvas"); }
     if (c.width !== w || c.height !== h) { c.width = w; c.height = h; }
-    const g = c.getContext("2d"); g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.globalCompositeOperation = "source-over"; g.filter = "none"; g.clearRect(0, 0, w, h);
+    const g = c.getContext("2d"); if (g.reset) g.reset(); /* 線の端・破線などの描画状態も初期化(前の使用の持ち越しで絵が変わるのを防ぐ。決定性) */ g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.globalCompositeOperation = "source-over"; g.filter = "none"; g.clearRect(0, 0, w, h);
     return [c, g];
   }
 

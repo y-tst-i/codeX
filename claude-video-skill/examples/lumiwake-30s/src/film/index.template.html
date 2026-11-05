@@ -24,7 +24,7 @@
         const ctx = document.getElementById("c").getContext("2d");
         window.__hf = window.__hf || {}; window.__hf.buildReady = window.__hf.buildReady || {};
         const ready = (async () => {
-          await Promise.all(["32px HUD", "700 26px JPG", "500 26px JPG", "900 40px JPM"].map((f) => document.fonts.load(f, "灯台島まで嵐を抜けて、灯りを届けろ。届けた灯りが空の道になる架空発売予定0123456789")));
+          await Promise.all(["32px HUD", "700 26px JPG", "500 26px JPG", "900 40px JPM"].map((f) => document.fonts.load(f, "灯台島まで嵐を抜けて、灯りを届けろ。届けた灯りが、空の道になる。※架空のゲームのコンセプト映像です。発売の予定はありません。0123456789.,:+-×/%!?km")));
           await document.fonts.ready;
           FILM.init();
           FILM.renderAt(ctx, 0);

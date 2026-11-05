@@ -1,0 +1,29 @@
+[
+ {
+  "name": "lightning_crack",
+  "picture_frame": 435,
+  "peak_time_s": 14.5333,
+  "peak_frame_after_picture": 1,
+  "music_band_rms_db": -22.1,
+  "sfx_gain": 2.454,
+  "sfx_above_music_db": 2.0
+ },
+ {
+  "name": "glass_bell",
+  "picture_frame": 610,
+  "peak_time_s": 20.3667,
+  "peak_frame_after_picture": 1,
+  "music_band_rms_db": -20.1,
+  "sfx_gain": 0.39,
+  "sfx_above_music_db": 1.5
+ },
+ {
+  "name": "lantern_low",
+  "picture_frame": 723,
+  "peak_time_s": 24.1333,
+  "peak_frame_after_picture": 1,
+  "music_band_rms_db": -18.7,
+  "sfx_gain": 0.913,
+  "sfx_above_music_db": 2.0
+ }
+]
