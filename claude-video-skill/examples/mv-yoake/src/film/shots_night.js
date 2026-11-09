@@ -56,7 +56,7 @@
   const lay = () => Y.once("s2lay", () => ({ A: Y.layout("MIN", colA.s, SZ, { vertical: true, lead: 1.04 }), B: Y.layout("MIN", colB.s, SZ, { vertical: true, lead: 1.04 }) }));
   const starts1 = () => charStarts(PH1); // 暗 闇 の 数 だ け
   function s2text(ctx, f) {
-    const L = lay(), st = starts1(), TR = 20;
+    const L = lay(), st = starts1(), TR = 14;
     const gone = smooth(P(f, A.unravel, A.unravel + 14)); // 274 から光の粒にほどける
     const alpha = 1 - gone; if (alpha <= 0.002) { for (let i = 0; i < 6; i++) TYPE.mark(PH1, i, 0); return; }
     // 予告(刻まれた薄い輪郭)は列の最初の字の 8 コマ前から

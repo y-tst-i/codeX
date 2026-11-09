@@ -101,7 +101,7 @@
       const tt = (f - t.slam) / 30, s0 = f < t.slam ? lerp(3.4, 1, eIn(P(f, t.slam - 5, t.slam))) : 1;
       const a = f < t.slam - 5 ? 0 : clamp((f - (t.slam - 5)) / 2), dx = tt > 0 ? 30 * Math.exp(-9 * tt) * Math.sin(38 * tt) : 0, sq = tt > 0 ? 1 - 0.2 * Math.exp(-11 * tt) : 1;
       if (a > 0) TYPE.circuit(g, L.b, 150, 320, 380, f, { ph: "_6", alpha: a, scale: s0, dx, sq, seed: 4 });
-      for (let i = 0; i < 3; i++) TYPE.mark(PH5, 4 + i, a);
+      for (let i = 0; i < 3; i++) TYPE.mark(PH5, 4 + i, a * (s0 < 1.6 ? 1 : 0.25)); // 3.4 倍の間は画面からはみ出して読めない
       // 着地の衝撃の輪(字の足元から)
       if (tt > 0 && tt < 0.5) { const q = eOut(tt / 0.5); g.save(); g.globalCompositeOperation = "lighter"; g.strokeStyle = css(C.mint, 0.7 * (1 - q)); g.lineWidth = 10 * (1 - q); g.beginPath(); g.ellipse(150 + L.b.w / 2, 320 + 360, 300 + 500 * q, 40 + 70 * q, 0, 0, 7); g.stroke(); g.restore(); }
     }
@@ -175,7 +175,7 @@
     if (out < 1) {
       const fi = Math.floor(f / 3);
       L.a.items.forEach((it, i) => {
-        const on = f - (stA[i] - 2); let a = on < 0 ? 0 : on < 6 ? [0, 0.8, 0.15, 0.9, 0.5, 1][on] : 0.62 + 0.38 * hash(fi, i * 13 + 5);
+        const on = f - (stA[i] - 2); let a = on < 0 ? 0 : on < 6 ? [0, 0.8, 0.15, 0.9, 0.5, 1][on] : 0.8 + 0.2 * hash(fi, i * 13 + 5);
         a *= 1 - smooth(out); TYPE.mark(PH7, i, a); if (a <= 0.01) return;
         const cs = Y.contours(it, oxA, oyA, 150);
         g.save(); g.globalAlpha = a;
@@ -258,7 +258,7 @@
       if (a > 0) { const bk = g.createRadialGradient(W / 2, oyA + 110, 40, W / 2, oyA + 110, 900); bk.addColorStop(0, "rgba(0,5,5,0.6)"); bk.addColorStop(1, "rgba(0,0,0,0)"); g.save(); g.setTransform(1, 0, 0, 0.35, 0, (oyA + 110) * 0.65); g.fillStyle = bk; g.fillRect(0, -1200, W, 4000); g.restore();
         for (let k = 4; k >= 1; k--) if (f < t.a || exit > 0) { const v = f < t.a ? 380 * eIn(P(f, t.a - 5, t.a)) : -500 * exit; dela(g, L.a, oxA + xo - v * k * 0.18, oyA, 220, a * 0.18); }
         dela(g, L.a, oxA + xo, oyA, 220, a, { per }); }
-      markAll(PH9, 5, a);
+      markAll(PH9, 5, f < t.a - 1 ? 0 : a); // 語頭の 2 コマ前までは画面の外(左)
     }
     // 「止まれない」: 逆の軸(縦)から。上から落ちて語頭で着地、つぶれて戻る。着地直後に #023 グリッチ(0.14 秒 × 2 段、明るさは変えない)
     const oxB = W - 420, oyB = 70;
@@ -266,7 +266,7 @@
       const tt = (f - t.b) / 30, exit = P(f, t.bEnd, t.bEnd + 8);
       const y = f < t.b ? lerp(-1300, 0, eIn(P(f, t.b - 5, t.b))) : 0, sq = tt > 0 && tt < 0.3 ? 1 - 0.18 * Math.sin((tt / 0.3) * Math.PI) : 1;
       const a = (f < t.b - 5 ? 0 : 1) * (1 - smooth(exit));
-      markAll(PH10, 5, a);
+      markAll(PH10, 5, f < t.b - 1 ? 0 : a); // 語頭の 2 コマ前までは画面の外(上)
       if (a > 0) {
         const [tc, tg] = Y.wbuf("s8b"); tg.translate(oxB + 100, oyB + 1000); tg.scale(2 - sq, sq); tg.translate(-oxB - 100, -oyB - 1000);
         dela(tg, L.b, oxB, oyB + y, 200, 1, { face: ["#ffe4ee", "#ff8ab4"], rim: C.rose, glowA: 0.55 });
@@ -301,7 +301,7 @@
     const zs = 20, wi = 0.45 * (1 - eIOs(P(f, B.S9, B.S9 + WHIP))); // 前のショットのホイップを受ける
     return cam3({ x: 0.3, y: 1.25, z: zs - d, yaw: -wi, pitch: 0.035, f: (560 * d) / 3.2, cx: W / 2, cy: 640 });
   }
-  const s9lay = () => Y.once("s9lay", () => ({ a: Y.layout("MIN", "まだ、光は", 128, { vertical: true, lead: 1.06 }), b: Y.layout("MIN", "消えない", 128, { vertical: true, lead: 1.06 }) }));
+  const s9lay = () => Y.once("s9lay", () => ({ a: Y.layout("MIN", "まだ、光は", 150, { vertical: true, lead: 1.06 }), b: Y.layout("MIN", "消えない", 150, { vertical: true, lead: 1.06 }) }));
   function drawS9(g, f) {
     const t = T9(), k = brkF(), c = camS9(f), CTy = CITY.get(11), L = s9lay(), ff = Math.min(f, k.brk);
     // 灯りが奥から順に落ちていき、1302 で街は真っ暗になる
@@ -320,12 +320,12 @@
     const st = charStarts(PH11), sq = f >= k.squeeze && f < t.end ? 0.45 : 1;
     const rise = 1 + 0.6 * smooth(P(f, k.brk, k.squeeze));
     const al = st.map((s) => TYPE.fadeIn(f, s - 2, 5, 0));
-    const colX = [1470, 1290], oy = 150;
+    const colX = [1450, 1250], oy = 120;
     { const gg = g.createRadialGradient(1380, 470, 40, 1380, 470, 520); gg.addColorStop(0, `rgba(0,3,4,${0.55 * (1 - dark)})`); gg.addColorStop(1, "rgba(0,0,0,0)"); g.fillStyle = gg; g.fillRect(800, 0, 1120, H); }
-    TYPE.glass(g, L.a, colX[0], oy, 128, al.slice(0, 5), { ph: "_9a", faceTop: "#e8fff9", faceBot: "#8fe8d4", rim: C.white, glowA: 0.45 * rise * sq, inner: 0, shadow: 0.5 });
-    TYPE.glass(g, L.b, colX[1], oy + 128 * 1.06 * 1.5, 128, al.slice(5), { ph: "_9b", faceTop: "#e8fff9", faceBot: "#8fe8d4", rim: C.white, glowA: 0.45 * rise * sq, inner: 0, shadow: 0.5 });
+    TYPE.glass(g, L.a, colX[0], oy, 150, al.slice(0, 5), { ph: "_9a", faceTop: "#e8fff9", faceBot: "#8fe8d4", rim: C.white, glowA: 0.45 * rise * sq, inner: 0, shadow: 0.5 });
+    TYPE.glass(g, L.b, colX[1], oy + 150 * 1.06, 150, al.slice(5), { ph: "_9b", faceTop: "#e8fff9", faceBot: "#8fe8d4", rim: C.white, glowA: 0.45 * rise * sq, inner: 0, shadow: 0.5 });
     al.forEach((a, i) => TYPE.mark(PH11, i, a));
-    if (dark > 0) for (const [x, y] of [[colX[0] + 64, oy + 330], [colX[1] + 64, oy + 470]]) Y.glow(g, x, y, 340, C.mint, 0.18 * dark * rise * sq);
+    if (dark > 0) for (const [x, y] of [[colX[0] + 75, oy + 400], [colX[1] + 75, oy + 480]]) Y.glow(g, x, y, 340, C.mint, 0.18 * dark * rise * sq);
     K.dust(g, 23, ff, { n: 60, col: "#a6fff0", a: 0.35 * (1 - 0.5 * dark), drift: [0.05, -0.15] });
     const fx = { bloom: { thr: 0.55, a: 0.8, streak: 0.4 }, grade: { ca: 2.0, vig: 0.5 + 0.1 * dark, grain: 10, toe: [3, 9, 10] } };
     const wk = 1 - P(f, B.S9, B.S9 + WHIP); if (wk > 0) fx.dirBlur = [260 * eIOs(wk), 0, 8];

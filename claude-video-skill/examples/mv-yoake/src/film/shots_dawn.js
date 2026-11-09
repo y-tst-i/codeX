@@ -33,7 +33,7 @@
     { const gg = g.createLinearGradient(0, hy, 0, H); gg.addColorStop(0, css(mix("#3a2050", "#f2a08c", k))); gg.addColorStop(0.12, css(mix("#24143a", "#9a4f74", k))); gg.addColorStop(0.5, css(mix("#120a20", "#3a1f40", k))); gg.addColorStop(1, "#140a1a"); g.fillStyle = gg; g.fillRect(0, hy, W, H - hy + 400); }
     // チップの長い影(太陽を背に手前へ)
     const sxAt = (Z) => ((sunX - W / 2) * Z) / c.f + c.x, lane = (ch) => Math.abs(ch.X - sxAt(ch.Z)) > 0.9 + ch.w / 2 + 0.04 * ch.Z;
-    if (k > 0.05) { g.save(); g.fillStyle = `rgba(25,8,28,${0.45 * k})`; for (const ch of CT.chips) { if (ch.Z < c.z + 1.4 || ch.Z > c.z + 60 || !lane(ch)) continue; const dir = (ch.X - sxAt(ch.Z)) * 0.08, Lz = ch.h * 5.5, Pp = (x, z) => pj(c, x, 0, z); const a = Pp(ch.X - ch.w / 2, ch.Z - ch.d / 2), b = Pp(ch.X + ch.w / 2, ch.Z - ch.d / 2), d2 = Pp(ch.X + ch.w / 2 + dir * Lz, ch.Z - ch.d / 2 - Lz), e = Pp(ch.X - ch.w / 2 + dir * Lz, ch.Z - ch.d / 2 - Lz); if ([a, b, d2, e].some((q) => q[2] < 0.3)) continue; g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.lineTo(d2[0], d2[1]); g.lineTo(e[0], e[1]); g.closePath(); g.fill(); } g.restore(); }
+    if (k > 0.05) { g.save(); g.fillStyle = `rgba(25,8,28,${0.45 * k})`; for (const ch of CT.chips) { if (ch.Z < c.z + 1.4 || ch.Z > c.z + 60 || !lane(ch) || (ch.Z < c.z + 22 && Math.abs(ch.X - c.x) < 10)) continue; const dir = (ch.X - sxAt(ch.Z)) * 0.08, Lz = ch.h * 5.5, Pp = (x, z) => pj(c, x, 0, z); const a = Pp(ch.X - ch.w / 2, ch.Z - ch.d / 2), b = Pp(ch.X + ch.w / 2, ch.Z - ch.d / 2), d2 = Pp(ch.X + ch.w / 2 + dir * Lz, ch.Z - ch.d / 2 - Lz), e = Pp(ch.X - ch.w / 2 + dir * Lz, ch.Z - ch.d / 2 - Lz); if ([a, b, d2, e].some((q) => q[2] < 0.3)) continue; g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.lineTo(d2[0], d2[1]); g.lineTo(e[0], e[1]); g.closePath(); g.fill(); } g.restore(); }
     // 照り返しの道(盤の上の光の道。横はやわらかく、手前ほど広く薄い)
     if (K.st.fx && rise > 0 || pre > 0.3) { const [c2, g2] = Y.wbuf("refl", W, Math.max(1, Math.round(H - hy))); const rg = g2.createLinearGradient(0, 0, 0, H - hy); rg.addColorStop(0, css("#fff0d8", 0.85 * Math.max(rise * 1.4, pre * 0.4))); rg.addColorStop(0.35, css("#ffb48a", 0.3 * k)); rg.addColorStop(1, css("#ff8a7a", 0)); g2.fillStyle = rg; g2.beginPath(); g2.moveTo(sunX - 50, 0); g2.lineTo(sunX + 50, 0); g2.lineTo(sunX + 380, H - hy); g2.lineTo(sunX - 380, H - hy); g2.closePath(); g2.fill(); g.save(); g.globalCompositeOperation = "screen"; if (K.st.fx) g.filter = "blur(30px)"; g.drawImage(c2, 0, hy); g.restore(); }
     const sunSignals = (gx) => {
@@ -46,16 +46,16 @@
     };
     CITY.traces(g, c, CT, { fogCol: css(mix("#3a2050", "#f0a08a", k)), fogD: 30, wire: css(mix("#2a3a4a", "#6a3458", k)), wireHi: css(mix(C.verdHi, "#ffb894", k)), maxD: 140, pourCol: "#2a1430", litFn: () => false });
     sunSignals(g);
-    CITY.chips(g, c, CT, f, { chipTop: css(mix("#121a2a", "#2c1532", k)), chipSide: css(mix("#060a12", "#170a1c", k)), fogCol: css(mix("#3a2050", "#f0a08a", k)), fogD: 30, rimCol: css(mix(C.verdHi, "#ffd9b0", k)), rimA: 0.55 + 0.4 * k, sideLight: css(mix("#1d3a46", "#5a2a44", k)), winCol: "#ffe0c0", lit: (ch) => 0.4 * (1 - k) * (0.6 + 0.4 * hash(ch.seed, 10)), maxD: 140, roofLights: 1 - k, filter: (ch) => lane(ch) && CITY.dist(c, ch.X, ch.Z) > 9 });
+    CITY.chips(g, c, CT, f, { chipTop: css(mix("#121a2a", "#2c1532", k)), chipSide: css(mix("#060a12", "#170a1c", k)), fogCol: css(mix("#3a2050", "#f0a08a", k)), fogD: 30, rimCol: css(mix(C.verdHi, "#ffd9b0", k)), rimA: 0.55 + 0.4 * k, sideLight: css(mix("#1d3a46", "#5a2a44", k)), winCol: "#ffe0c0", lit: (ch) => 0.4 * (1 - k) * (0.6 + 0.4 * hash(ch.seed, 10)), maxD: 140, roofLights: 1 - k, filter: (ch) => lane(ch) && !(ch.Z < c.z + 22 && Math.abs(ch.X - c.x) < 10) });
     // 照り返しの道の上のきらめき(配線の金属の艶。数コマごとに場所が変わる)
     if (rise > 0 && K.st.fx) { const fi = Math.floor(f / 3); g.save(); g.globalCompositeOperation = "lighter"; for (let i = 0; i < 40; i++) { const Z = c.z + 2 + hash(fi, i) * 30, X = sxAt(Z) + (hash(fi, i + 99) - 0.5) * (0.5 + Z * 0.05), q = pj(c, X, 0, Z); if (q[2] < 0.3) continue; const s = clamp(12 / q[2], 1, 4); g.fillStyle = css("#fff6e6", 0.7 * rise); g.fillRect(q[0] - s * 3, q[1] - 0.5, s * 6, 1.2); g.fillRect(q[0] - 0.5, q[1] - s * 1.5, 1.2, s * 3); } g.restore(); }
     // 前ボケ: 手前の大きなチップ2つ(ぼかし、上の縁に朝の光)
     { const [lc, lg] = Y.wbuf("fg10"); for (const [x0, y0, w0, h0] of [[-120, 900, 620, 260], [1500, 950, 560, 200]]) { lg.fillStyle = "#0e0612"; lg.beginPath(); lg.roundRect(x0, y0, w0, h0 + 200, 18); lg.fill(); lg.strokeStyle = css("#ffc8a0", 0.85 * k + 0.2); lg.lineWidth = 3; lg.beginPath(); lg.moveTo(x0 + 18, y0); lg.lineTo(x0 + w0 - 18, y0); lg.stroke(); for (let i = 0; i < 9; i++) { lg.fillStyle = css("#4a2a3a", 0.9); lg.fillRect(x0 + 30 + i * (w0 - 60) / 9, y0 - 14, 16, 14); } }
       g.save(); if (K.st.fx) g.filter = "blur(7px)"; g.drawImage(lc, 0, 0); g.restore(); }
     // 文字
-    if (f < t.end + 10) {
-      const size = 168, L = Y.once("t10lay", () => Y.layout("MIN", PH, size, { track: 0.07 })), ox = (W - L.w) / 2, oy = 210, st = charStarts(PH), TR = 10;
-      const out = smooth(P(f, t.end, t.end + 9)), pr = st.map((s) => clamp((f - s) / TR));
+    if (f < t.end + 13) {
+      const size = 168, L = Y.once("t10lay", () => Y.layout("MIN", PH, size, { track: 0.07 })), ox = (W - L.w) / 2, oy = 210, st = charStarts(PH), TR = 8;
+      const out = smooth(P(f, t.end + 4, t.end + 12)), pr = st.map((s) => clamp((f - s) / TR));
       if (K.st.fx) { const hg = g.createRadialGradient(W / 2, oy + size / 2, 50, W / 2, oy + size / 2, 700); hg.addColorStop(0, `rgba(255,240,220,${0.35 * k * (1 - out)})`); hg.addColorStop(1, "rgba(255,240,220,0)"); g.fillStyle = hg; g.fillRect(0, 0, W, hy); }
       g.save(); if (out > 0 && K.st.fx) g.filter = `blur(${out * 10}px)`;
       L.items.forEach((it, i) => {
@@ -68,8 +68,8 @@
       g.restore();
     } else for (let i = 0; i < 5; i++) TYPE.mark(PH, i, 0);
     // 題(終わりの画): 字ごとに 3 コマずつ 0.3→1+わずかなぼかし(motion.md)、下に1本の光の線が引かれる(#004)、英字の副題
-    if (f >= t.end) {
-      const s1 = 112, L1 = Y.once("titlelay", () => Y.layout("MIN", "夜明けの回路", s1, { track: 0.16 })), ox = (W - L1.w) / 2, oy = 290, t0 = t.end + 3;
+    if (f >= t.end + 6) {
+      const s1 = 112, L1 = Y.once("titlelay", () => Y.layout("MIN", "夜明けの回路", s1, { track: 0.16 })), ox = (W - L1.w) / 2, oy = 290, t0 = t.end + 6;
       L1.items.forEach((it, i) => { const a = TYPE.fadeIn(f, t0 + i * 3, 5), b = 6 * (1 - a); if (a <= 0) return; g.save(); g.globalAlpha = lerp(0.3, 1, a) * smooth(P(f, t0 + i * 3, t0 + i * 3 + 2)); if (b > 0.3 && K.st.fx) g.filter = `blur(${b}px)`; K.textPath(g, { items: [it] }, ox, oy, s1); g.fillStyle = C.plum; g.fill("nonzero"); g.restore(); });
       const ln = eIO(P(f, t0 + 10, t0 + 32)); if (ln > 0) { const y = oy + s1 * 1.32, pts = [[ox, y], [ox + L1.w * 0.62, y], [ox + L1.w * 0.62 + 30, y + 30], [ox + L1.w, y + 30]], tot = L1.w * 0.62 + 42.4 + L1.w * 0.38 - 30; const seg = CITY.sub(pts, 0, tot * ln); g.save(); g.strokeStyle = css("#fff3dc", 0.95); g.lineWidth = 3; g.beginPath(); seg.forEach((p, i) => (i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1]))); g.stroke(); g.restore(); const hd = seg[seg.length - 1]; if (ln < 1) Y.glow(g, hd[0], hd[1], 30, "#fff3dc", 0.9); }
       const ea = smooth(P(f, t0 + 18, t0 + 28)); if (ea > 0) { g.save(); g.globalAlpha = ea; g.font = "700 34px KAKU"; g.fillStyle = css(C.plum, 0.88); g.textAlign = "center"; g.letterSpacing = "14px"; g.fillText("YOAKE NO KAIRO", W / 2 + 7, oy + s1 * 1.32 + 92); g.restore(); }
@@ -82,17 +82,17 @@
     const t = T();
     drawDawn(g, f);
     // 1340: 「消えない」の光が外へ広がり、円の内側に朝の世界が開く(円の外は前のショットの最後のコマ)
-    const ir = eOut5(P(f, t.hit, t.hit + 20));
+    const ir = eOut(P(f, t.hit, t.hit + 24));
     if (ir < 1) {
       const [sc, sg] = Y.wbuf("s9last"); CHORUS.drawS9(sg, t.hit - 1);
-      const cx = 1380, cy = 470, R = 30 + 2300 * ir;
+      const cx = 1350, cy = 520, R = 30 + 2300 * ir;
       g.save(); g.beginPath(); g.rect(0, 0, W, H); g.moveTo(cx + R, cy); g.arc(cx, cy, R, 0, Math.PI * 2, true); g.closePath(); g.clip("evenodd"); g.drawImage(sc, 0, 0); g.restore();
       g.save(); g.globalCompositeOperation = "lighter"; g.strokeStyle = css("#ffd0e0", 0.9 * (1 - ir)); g.lineWidth = 6 + 30 * (1 - ir); g.beginPath(); g.arc(cx, cy, R, 0, 7); g.stroke(); g.strokeStyle = css(C.white, 0.95 * (1 - ir)); g.lineWidth = 3; g.stroke(); g.restore();
-      Y.glow(g, cx, cy, 500 * (1 - ir) + 100, "#ffd0e0", 0.6 * (1 - ir));
+      Y.glow(g, cx, cy, 420 * (1 - ir) + 80, "#ffd0e0", 0.35 * (1 - ir));
     }
     const dh = f - t.hit;
     const fx = { bloom: { thr: 0.8, a: 0.42, streak: 0.3, streakCol: "#ffd0a0" }, grade: { ca: 1.4, vig: 0.32, grain: 9, toe: [10, 6, 12], shoulder: 0.94 } };
-    fx.exposure = dh >= 0 ? 0.42 * Math.exp(-dh / 5) : 0;
+    fx.exposure = dh >= 0 ? 0.32 * Math.exp(-dh / 5) : 0;
     fx.chroma = dh >= 0 && dh < 8 ? 6 * Math.exp(-dh / 3) : 0;
     fx.fade = eIOs(P(f, N - 12, N - 1)); // #187 フェードアウト(quadratic in-out)
     return fx;
