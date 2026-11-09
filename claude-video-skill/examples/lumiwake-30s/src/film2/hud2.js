@@ -94,7 +94,7 @@ const HUD2 = (() => {
   function pop(ctx, x, y, big, small, f, f0, { size = 84, hold = 40, out = 8, rot = -0.06, col = HOT, subCol = "#ffffff", glowCol = AMB, subSize = 0.6, slam = false } = {}) {
     const dt = (f - f0) / 30; if (f < f0 || f > f0 + hold + out) return;
     const ex = backIn(K2.P(f, f0 + hold, f0 + hold + out), 2.2);
-    let sc = slam ? 1 + 0.6 * Math.max(0, 1 - dt * 7.5) ** 2 - 0.12 * Math.max(0, decay(dt - 0.13, 15, 6.5)) * (dt > 0.13 ? 1 : 0) : spring(dt, 15, 6.5);
+    let sc = slam ? 1 + 0.4 * Math.max(0, 1 - dt * 7.5) ** 2 - 0.12 * Math.max(0, decay(dt - 0.13, 15, 6.5)) * (dt > 0.13 ? 1 : 0) : spring(dt, 15, 6.5);
     sc *= 1 - ex; if (sc <= 0.01) return;
     const r = rot - 0.35 * (1 - spring(dt, 11, 6)) * (slam ? 0.2 : 1);
     ctx.save(); ctx.translate(x, y); ctx.rotate(r); ctx.scale(sc, sc);

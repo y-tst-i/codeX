@@ -134,9 +134,9 @@ const SA = (() => {
     // 嵐の壁(右と上)。ゆっくり近づく(拡大・左へ)と、中の無音の稲光(局所の光)
     const app = K2.P(f, 90, 227), sa = PL.storm2("s2a", { seed: 7, rx: 900, ry: 420, swirl: 2.0, arms: 6, inner: 0.25 }), sb = PL.storm2("s2b", { seed: 13, rx: 620, ry: 300, swirl: 1.6, inner: 0.15 });
     const saI = blurK ? blurred("s2aB", sa.c, 8) : sa.c, sbI = blurK ? blurred("s2bB", sb.c, 8) : sb.c;
-    g.save(); camApply(g, cam, [0.3, 0.3]); const k1 = 1 + 0.12 * app; g.translate(820 - 60 * app, -240); g.scale(k1, k1); g.rotate(0.03 * app); g.drawImage(saI, -sa.cx, -sa.cy); g.restore();
-    g.save(); camApply(g, cam, [0.36, 0.36]); const k2 = 1 + 0.16 * app; g.translate(-120 - 40 * app, -520); g.scale(k2, k2); g.drawImage(sbI, -sb.cx, -sb.cy); g.restore();
-    for (const [f0, wx, wy, pp] of [[126, 760, -200, 0.3], [127, 900, -120, 0.3], [157, -80, -470, 0.36], [205, 700, -150, 0.3]]) {
+    g.save(); camApply(g, cam, [0.3, 0.3]); const k1 = 1 + 0.22 * app; g.translate(820 - 60 * app, -240); g.scale(k1, k1); g.rotate(0.07 * app); g.drawImage(saI, -sa.cx, -sa.cy); g.restore();
+    g.save(); camApply(g, cam, [0.36, 0.36]); const k2 = 1 + 0.26 * app; g.translate(-120 - 40 * app, -520); g.scale(k2, k2); g.drawImage(sbI, -sb.cx, -sb.cy); g.restore();
+    for (const [f0, wx, wy, pp] of [[104, 1100, -320, 0.3], [126, 760, -200, 0.3], [127, 900, -120, 0.3], [143, 1300, -60, 0.3], [157, -80, -470, 0.36], [171, 620, -260, 0.3], [192, 1000, -200, 0.3], [205, 700, -150, 0.3]]) {
       const d = f - f0; if (d < 0 || d > 3) continue; const k = [1, 0.4, 0.7, 0.15][d];
       const [qx, qy] = toScreen(cam, pp, wx, wy); glow(g, qx, qy, 420, "#8fc8ff", 0.32 * k); glow(g, qx, qy, 140, "#dff4ff", 0.4 * k);
     }
@@ -152,14 +152,14 @@ const SA = (() => {
     const t = f / 30;
     if (f < 180) {
       // カメラ: 上へ振った動きの続き(90〜110 で減速して止まる)→ ゆっくり寄る(110〜179)
-      const up = 300 * (1 - expoOut(K2.P(f, 90, 112))), z = 1 + 0.08 * eIO(K2.P(f, 108, 180));
-      const cam = { x: 40 * eIO(K2.P(f, 100, 180)), y: up, z, r: -0.012 };
+      const up = 300 * (1 - expoOut(K2.P(f, 90, 112))), z = 1 + 0.16 * eIO(K2.P(f, 104, 180));
+      const cam = { x: 150 * eIO(K2.P(f, 96, 180)), y: up - 40 * eIO(K2.P(f, 104, 180)), z, r: -0.012 - 0.02 * eIO(K2.P(f, 104, 180)) };
       s2back(g, f, cam);
       // 精: 左から中央へ、低く。灯りを落とす(lum 0.55)
-      const u = K2.P(f, 92, 180), wx = lerp(-760, 40, eIOs(u)), wy = 300 + 18 * Math.sin(t * 3.1);
+      const u = K2.P(f, 92, 180), wx = lerp(-760, 40, eIOs(u)), wy = 220 + 18 * Math.sin(t * 3.1);
       const [px, py, zz] = toScreen(cam, [0.85, 0.85], wx, wy);
-      SPIRIT2.draw(g, px, py, 0.56 * zz, -0.06, "glide", { t, lum: 0.55, tailLen: 1.4, lift: 0.1 });
-      layerImg(g, PL.wisp("s2", { seed: 19, w: 1700, hgt: 170, blur: 18, dark: 0.55 }), cam, [1.7, 1.5], -1500 - 260 * t * 0.5, 330);
+      SPIRIT2.draw(g, px, py, 0.7 * zz, -0.06, "glide", { t, lum: 0.55, tailLen: 1.4, lift: 0.1 });
+      layerImg(g, PL.wisp("s2", { seed: 19, w: 1700, hgt: 170, blur: 18, dark: 0.55 }), cam, [1.7, 1.5], -900 - 420 * (t - 3), 330); layerImg(g, PL.wisp("s2", { seed: 19, w: 1700, hgt: 170, blur: 18, dark: 0.55 }), cam, [2.3, 1.8], 1500 - 700 * (t - 3), 420);
       rain(g, f, { n: 110, a: 0.13, ang: 1.95, speed: 2400 });
       motes(g, f, { n: 18, seed: 44, ox: t * 120, oy: -t * 20, size: [2, 5], a: 0.25, col: "#cfe6ff" });
       return {
@@ -221,11 +221,11 @@ const SA = (() => {
     const [sx, sy] = spirit34(f);
     // 縦はなめらかに追う(前後の気流の高さの平均)
     let my = 0; for (let k = -4; k <= 4; k++) my += spirit34(Math.min(430, Math.max(227, f + k * 3)))[1]; my /= 9;
-    const z = f < 300 ? lerp(1.5, 1.32, expoOut(K2.P(f, 227, 236))) * (1 - 0.0 * f) : 1, zz = keys(f, [[227, 1.5], [236, 1.32], [272, 1.3], [326, 0.8], [403, 0.8], [407, 0.86], [420, 0.84]], eIOs);
+    const zz = keys(f, [[227, 1.5], [236, 1.32], [272, 1.3], [326, 0.8], [348, 0.84], [372, 1.02], [394, 0.9], [403, 0.86], [407, 0.92], [420, 0.9]], eIOs);
     // 精の画面上の位置(横): S3 は 820、S4 で 600 → 1120 へ進み、加速で 1380 まで先行してからカメラが追いつく
     const scrX = keys(f, [[227, 820], [290, 820], [326, 600], [396, 1060], [402, 1010], [409, 1380], [419, 1180]], eIOs);
-    const scrY = keys(f, [[227, 470], [300, 520], [330, 600]], eIOs);
-    const r = keys(f, [[227, -0.12], [270, -0.1], [326, 0]], eIOs);
+    const scrY = keys(f, [[227, 470], [300, 520], [330, 600], [362, 470], [392, 640], [420, 560]], eIOs);
+    const r = keys(f, [[227, -0.12], [270, -0.1], [326, 0], [352, 0.07], [378, -0.06], [400, 0.0]], eIOs);
     return { x: sx + (960 - scrX) / zz, y: lerp(sy, my, K2.P(f, 280, 330)) + (540 - scrY) / zz, z: zz, r };
   }
   const PICK_AT = [299, 331, 351, 370, 383];
@@ -285,7 +285,7 @@ const SA = (() => {
       for (const [x, y] of [[5200, 300], [8600, 420]]) layerImg(g, IB, cam, [1.35, 1.2], x - I.cx, y - I.top); }
     // 手前の雲(ぼけ)と粒
     const wsp = PL.wisp("s34", { seed: 9, w: 1600, hgt: 160, blur: 18, dark: 0.3 });
-    for (let k = 0; k < 4; k++) layerImg(g, wsp, cam, [1.6, 1.4], 1200 + k * 2600, 1180);
+    for (let k = 0; k < 4; k++) layerImg(g, wsp, cam, [1.6, 1.4], 1200 + k * 2600, 1320);
     motes(g, f, { n: 50, seed: 12, ox: cam.x * 1.3, oy: cam.y * 1.3, streak: 30 + 0.06 * spd, ang: sa, size: [2, 8], a: 0.5 });
     if (boostK > 0.05) W.speedLines(g, { n: 90, seed: 21 + (f % 4), cx: px, cy: py, r0: 260, r1: 1500, a: 0.35 * boostK, col: "#fff1d6" });
     const lb = f < 233 ? 1 - eOut(K2.P(f, 227, 233)) : 0;
@@ -296,11 +296,11 @@ const SA = (() => {
         HUD2.draw(o, f);
         PICK_AT.forEach((pf, i) => {
           const [ox, oy] = spirit34(pf), [qx, qy] = toScreen(cam34(pf), 1, ox, oy);
-          HUD2.pop(o, qx + 70, qy - 90, "+30", null, f, pf, { size: 54, hold: 14, out: 6, rot: -0.04 });
+          HUD2.pop(o, qx + 80, qy - 110, "+30", null, f, pf, { size: 66, hold: 14, out: 6, rot: -0.04 });
           // 光の粒がゲージへ飛ぶ(8 コマ、弧を描く)
           const dt = f - pf; if (dt >= 0 && dt <= 8) { const u = eIOs(dt / 8), tx = 184 + 66 * i + 33, ty = 992, mx = lerp(qx, tx, u), my = lerp(qy, ty, u) - Math.sin(u * Math.PI) * 160; glow(o, mx, my, 50, C.amber, 0.7); glow(o, mx, my, 16, "#ffffff", 0.95); }
         });
-        HUD2.pop(o, 1250, 330, "NEAR MISS", "+150  ×7", f, 409, { size: 92, hold: 26, out: 8, subSize: 0.55 });
+        HUD2.pop(o, 1250, 330, "NEAR MISS", "+150  ×7", f, 409, { size: 92, hold: 14, out: 6, subSize: 0.55 });
       },
     };
   };

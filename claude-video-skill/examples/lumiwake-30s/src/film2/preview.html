@@ -11,7 +11,7 @@
 <script>
 (async () => {
   const q = new URLSearchParams(location.search);
-  if (q.get("fx") === "0") PAINT.mode.fx = false;
+  if (q.get("fx") === "0") PAINT.mode.fx = false; if (q.get("hs")) window.HS = Number(q.get("hs"));
   await FILM2.init();
   window.__ctx = document.getElementById("c").getContext("2d");
   window.__ready = true;

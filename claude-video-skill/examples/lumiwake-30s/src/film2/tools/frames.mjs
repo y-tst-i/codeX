@@ -10,7 +10,8 @@ const b = await chromium.launch({ executablePath: process.env.CHROME_PATH || fin
 const page = await b.newPage({ viewport: { width: 1920, height: 1080 } });
 page.on("console", (m) => { if (["error", "warning"].includes(m.type())) console.log("[page]", m.text()); });
 page.on("pageerror", (e) => { console.log("[pageerror]", e.message); process.exit(1); });
-await page.goto("file://" + path.join(here, "..", "preview.html") + (flag("--fx0") ? "?fx=0" : ""));
+const qs = [flag("--fx0") ? "fx=0" : "", val("--hs") ? "hs=" + val("--hs") : ""].filter(Boolean).join("&");
+await page.goto("file://" + path.join(here, "..", "preview.html") + (qs ? "?" + qs : ""));
 await page.waitForFunction(() => window.__ready === true, null, { timeout: 300000 });
 const parse = (s) => s.split(",").flatMap((x) => { if (x.includes("-")) { const [a, c, st] = x.split(/[-:]/).map(Number); const o = []; for (let f = a; f <= c; f += st || 1) o.push(f); return o; } return [Number(x)]; });
 if (flag("--hash")) {
