@@ -233,7 +233,7 @@ const SB = (() => {
         // STREAK の大きな数字(617 で出る → 643 の ×12 で止まって弾む → 688〜700 で隅の HUD へ縮む)
         if (f >= 617 && f < 700) {
           const [n, at] = HUD2.streakAt(f), dt = (f - at) / 30, fin = n === 12, mv = eIOs(K2.P(f, 688, 700));
-          const x = lerp(1560, 1830, mv), y = lerp(560, 230, mv), sc = lerp(1, 0.36, mv) * spring((f - 617) / 30 + 2 / 30, 15, 6.5) * (1 + (fin ? 0.32 : 0.16) * decay(dt, 15, 7));
+          const x = lerp(1560, 1830, mv), y = lerp(560, 230, mv), sc = lerp(1, 0.36, mv) * (1 + (fin ? 0.32 : 0.2) * decay(dt, 15, 7)); // 617 で満寸+弾みで出る(当たりのコマで最大の変化)
           o.save(); o.translate(x, y); o.scale(sc, sc); o.globalAlpha = 1 - 0.6 * mv;
           glow(o, 0, -40, 320, C.amber, 0.25 + (fin ? 0.25 * Math.exp(-dt * 3) : 0));
           HUD.text(o, "STREAK", 0, -150, { size: 40, col: "#dff3f6", align: "center", track: 6, stroke: 8 });

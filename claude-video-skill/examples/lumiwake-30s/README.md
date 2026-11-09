@@ -25,3 +25,12 @@ python3 -I tools/sync_check.py ../audio/cues.json ../audio/sync_map.json ../SYNC
 - 音: `python3 -I src/tools/make_audio.py <曲.mp3> <出力.wav> --report <json>`(曲+効果音3発。後で ffmpeg の loudnorm 2回通し)。曲の調の推定は `src/tools/estimate_key.py`。
 - 検査: `tools/review_checks.py`、`src/tools/measure_sync.py`(映像のヒットと曲のアクセント・効果音の実測 → `SYNC_MEASURED.md`)。
 - mp4・音声・フォント・`logo-glyphs.js` はコミットしない。成果物の mp4 は scratchpad の `film2d/lumiwake_30s_v1.mp4`。
+
+## 初稿 v2(別の担当・Opus・effort high が、同じ設計から作り直した版。品質比較の試験)
+- 前の実装(`src/film/`・v1 の動画)は読まずに、設計(BRIEF・SHOTS・SYNC_TABLE・`audio/cues.json`)、部品(`src/lib/` の paint・world・hud・logo)、静止画の約束(`frames/sf1〜3`・`spirit_sheet.png`)だけを使って新しく組んだ。新しいファイルは全部 `src/film2/`。
+- 実装: `src/film2/film2.js`(`FILM2.renderAt(ctx, f)`。作業 canvas は毎コマ reset、全コマがコマ番号 f の純関数)、`shots_a.js`(S1〜S4)、`shots_b.js`(S5〜S8)、`spirit2.js`(主役の作り直し: 葉3枚の翼・1.3R の小包・朱と白金の尾)、`plates.js`(背景を一度だけ焼く)、`hud2.js`(HUD の値と動き)、`core.js`(緩急・ばね・カメラ・気流・はじけ)。
+- 動きの多くは Motion Prompt のギャラリーの数値を移植(ショットと番号の対応は各ファイルの先頭。#001 #002 #003 #005 #007 #024 #026 #029 #032 #034 #035 #036 #038 #040 #046 #121 #129 #176 #183 #184 ほか)。
+- 開発用の描画: `node src/film2/tools/frames.mjs <出力> 0,22,227`(preview.html でコマを JPEG に)、`--hash 5,227,840` で順・逆・飛ばしの順に描いて画素の hash を比べる(決定性)、`--fx0` 効果を切った版、`--hs 1|2|4` ヒットストップのコマ数を変える。
+- HyperFrames: `bash src/film2/tools/build_hf.sh <フォルダ>`(生成物・git 管理外)→ `bash src/film2/tools/render_segments.sh <フォルダ> <区間フォルダ>`(5秒×6区間、できた区間は飛ばして再開)→ `bash src/film2/tools/assemble.sh <区間フォルダ> <final_B.wav> <出力.mp4>`(900コマにつなぎ、音を AAC 256k 48kHz で付ける。音は作り直さない)。
+- 検査: `tools/review_checks.py`、`python3 -I src/film2/tools/measure_sync2.py <mp4> audio/cues.json audio/sync_map.json SYNC_MEASURED_V2.md`(映像のヒットのコマと曲のアクセント・効果音の頂点)、`bash src/film2/tools/sheets.sh <mp4> <出力>`(コンタクトシート・540px・カット境界)。
+- 成果物の mp4 は scratchpad の `film2d/lumiwake_30s_v2_opus.mp4`(リポジトリには入れない)。自己点検は `REVIEW_STAGE1.md` の「追加5」。
