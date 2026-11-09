@@ -3,3 +3,4 @@ src/lib/glyphs.js
 out/
 audio/*.mp3
 audio/*.wav
+src/film/data.gen.js

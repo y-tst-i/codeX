@@ -1,0 +1,18 @@
+<!doctype html><meta charset="utf-8">
+<!-- 開発用の描画ページ(HyperFrames の外で、コマを指定して描く)。tools/frames.mjs から使う。?fx=0 で効果なし -->
+<link rel="stylesheet" href="../../assets/fonts/jp.css">
+<style>body{margin:0;background:#000}</style>
+<body><canvas id="c" width="1920" height="1080"></canvas>
+<script src="../../../../tools/assets/scene-lib.js"></script><script src="../../../../tools/assets/depth.js"></script>
+<script src="../lib/paint.js"></script><script src="../lib/glyphs.js"></script><script src="../lib/kairo.js"></script>
+<script src="data.gen.js"></script><script src="core.js"></script><script src="city.js"></script><script src="type.js"></script>
+<script src="film.js"></script><script src="shots_night.js"></script><script src="shots_chorus.js"></script><script src="shots_dawn.js"></script>
+<script>
+(async () => {
+  const q = new URLSearchParams(location.search);
+  if (q.get("fx") === "0") { PAINT.mode.fx = false; KAIRO.st.fx = false; }
+  await FILM.init();
+  window.__ctx = document.getElementById("c").getContext("2d");
+  window.__ready = true;
+})();
+</script>
