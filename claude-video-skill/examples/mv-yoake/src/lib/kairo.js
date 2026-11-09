@@ -10,10 +10,10 @@ const KAIRO = (() => {
   // ---- 色(美術方向 B「光跡と黎明」。LUMIWAKE の紺〜琥珀とは別: 緑青の金属 × 燐光のミント × 朱 × 薔薇〜桃の朝) ----
   const C = {
     ink: "#020506", deep: "#06161a", fog: "#0c2a2e", slate: "#12302f",
-    verd: "#2f6a62", verdHi: "#5fa497", verdDk: "#143532",          // 緑青(酸化した銅)。消えている配線
+    verd: "#265a54", verdHi: "#5a9a8e", verdDk: "#143532",          // 緑青(酸化した銅)。消えている配線
     mint: "#8cffe0", mintDeep: "#1fd6b0", white: "#f4fffb",          // 燐光(灯っている配線・光の線)
     fire: "#ff5a36", rose: "#ff4f8b",                                // 朱(火)、薔薇(声)
-    dawn: ["#120f2a", "#3a2560", "#8a3f7c", "#e4677a", "#ffa47e", "#ffd9a6", "#fff6e6"], // 夜明けの空(上→地平)
+    dawn: ["#120f2a", "#3a2560", "#8a3f7c", "#e4677a", "#ff9c76", "#ffc48e", "#ffd7a2"], // 夜明けの空(上→地平)
     plum: "#2a1438",
   };
 
@@ -23,34 +23,49 @@ const KAIRO = (() => {
 
   // ---- 配線の生成(基板の配線らしく 0/45/90 度で曲がる。seed 付き) ----
   // 返り値: traces[{pts:[[X,Z],...], len, w, kind}], vias[[X,Z,r]], chips[{X,Z,w,d,h}]
-  function board(seed, { xr = 70, z0 = 1.2, z1 = 140, n = 520, chipsN = 70, grid = 0.5 } = {}) {
+  function board(seed, { xr = 70, z0 = 1.2, z1 = 140, n = 520, chipsN = 70, bundles = 0.55, chipZ0 = 3.2 } = {}) {
     const r = mulberry32(seed), traces = [], vias = [], chips = [];
     const dirs = [[0, 1], [1, 1], [1, 0], [1, -1], [0, -1], [-1, -1], [-1, 0], [-1, 1]].map(([a, b]) => { const l = Math.hypot(a, b); return [a / l, b / l]; });
     // 奥ほど密度を下げすぎないよう、Z は対数で配る
     const zAt = (u) => z0 * Math.pow(z1 / z0, u);
     for (let i = 0; i < chipsN; i++) {
-      const Z = zAt(Math.pow(r(), 0.8) * 0.92 + 0.04), X = (r() * 2 - 1) * xr * (0.25 + 0.75 * Z / z1 + 0.2);
-      chips.push({ X, Z, w: 0.6 + r() * 2.6, d: 0.6 + r() * 2.2, h: 0.12 + Math.pow(r(), 2.2) * 1.6, seed: (r() * 1e6) | 0 });
+      const Z = Math.max(chipZ0, zAt(Math.pow(r(), 0.75) * 0.9 + 0.06)), X = (r() * 2 - 1) * xr * (0.12 + 0.88 * Z / z1);
+      const big = r() < 0.12;
+      chips.push({ X, Z, w: (0.35 + r() * 1.3) * (big ? 2 : 1), d: (0.3 + r() * 1.1) * (big ? 1.6 : 1), h: 0.04 + Math.pow(r(), 2.5) * (big ? 1.1 : 0.45), seed: (r() * 1e6) | 0 });
     }
-    for (let i = 0; i < n; i++) {
-      const u = Math.pow(r(), 0.9);
-      let Z = zAt(u), X = (r() * 2 - 1) * xr * (0.15 + 0.85 * u);
-      const sc = 0.3 + Z * 0.06; // 遠くほど配線の一区間が長い(画面上で見える長さをそろえる)
-      let di = r() < 0.6 ? (r() < 0.5 ? 0 : 4) : ((r() * 8) | 0);
-      const pts = [[X, Z]]; let len = 0;
-      const steps = 3 + ((r() * 7) | 0);
+    let made = 0;
+    while (made < n) {
+      const u = Math.pow(r(), 0.85);
+      let Z = zAt(u), X = (r() * 2 - 1) * xr * (0.1 + 0.9 * u);
+      const sc = 0.22 + Z * 0.05; // 遠くほど一区間を長く(画面で見える長さをそろえる)
+      let di = r() < 0.55 ? (r() < 0.5 ? 0 : 4) : ((r() * 8) | 0);
+      const c = [[X, Z]];
+      const steps = 2 + ((r() * 6) | 0);
       for (let s = 0; s < steps; s++) {
-        const l = (grid + r() * 6) * sc, d = dirs[di];
-        const nx = X + d[0] * l, nz = Z + d[1] * l;
-        if (nz < z0 * 0.8) break;
-        len += l; X = nx; Z = nz; pts.push([X, Z]);
-        di = (di + (r() < 0.5 ? 1 : 7) * (r() < 0.75 ? 1 : 0) + 8) % 8; // 45 度ずつ曲がる(ときどき直進)
+        const l = (0.3 + r() * 2.6) * sc, d = dirs[di];
+        X += d[0] * l; Z += d[1] * l; if (Z < z0 * 0.7) break; c.push([X, Z]);
+        di = (di + (r() < 0.5 ? 1 : 7) * (r() < 0.7 ? 1 : 0) + 8) % 8;
       }
-      if (pts.length < 2) continue;
-      const w = (0.03 + r() * 0.07) * (r() < 0.12 ? 2.6 : 1);
-      traces.push({ pts, len, w, seed: (r() * 1e6) | 0 });
-      if (r() < 0.55) vias.push([pts[0][0], pts[0][1], w * 1.9]);
-      if (r() < 0.55) vias.push([X, Z, w * 1.9]);
+      if (c.length < 2) continue;
+      // 束(平行な配線)。中心線を法線方向にずらす(角は留め継ぎ)
+      const k = r() < bundles ? 3 + ((r() * 6) | 0) : 1, w = (0.012 + r() * 0.018) * sc * 2.2, gap = w * (2.4 + r() * 1.2);
+      for (let j = 0; j < k; j++) {
+        const off = (j - (k - 1) / 2) * gap, pts = [];
+        for (let i = 0; i < c.length; i++) {
+          const a = c[Math.max(0, i - 1)], b = c[Math.min(c.length - 1, i + 1)], p0 = c[i];
+          let n1 = [0, 0], cnt = 0;
+          const seg = (p, q) => { const dx = q[0] - p[0], dz = q[1] - p[1], l = Math.hypot(dx, dz) || 1; return [-dz / l, dx / l]; };
+          if (i > 0) { const s1 = seg(c[i - 1], p0); n1[0] += s1[0]; n1[1] += s1[1]; cnt++; }
+          if (i < c.length - 1) { const s2 = seg(p0, c[i + 1]); n1[0] += s2[0]; n1[1] += s2[1]; cnt++; }
+          const nl = Math.hypot(n1[0], n1[1]) || 1, nx = n1[0] / nl, nz = n1[1] / nl;
+          const miter = cnt === 2 ? 1 / Math.max(0.5, (nx * seg(c[i - 1], p0)[0] + nz * seg(c[i - 1], p0)[1])) : 1;
+          pts.push([p0[0] + nx * off * miter, p0[1] + nz * off * miter]);
+        }
+        let len = 0; for (let i = 1; i < pts.length; i++) len += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
+        traces.push({ pts, len, w, seed: (r() * 1e6) | 0 }); made++;
+        if (r() < 0.35) vias.push([pts[0][0], pts[0][1], w * 1.7]);
+        if (r() < 0.35) vias.push([pts[pts.length - 1][0], pts[pts.length - 1][1], w * 1.7]);
+      }
     }
     return { traces, vias, chips };
   }
@@ -77,7 +92,7 @@ const KAIRO = (() => {
 
   // ---- 盤を描く ----
   // light(Z): 盤の明るさ(0..1)、tint: 配線の色の上書き(夜明けの照り返し)
-  function drawBoard(ctx, B, cam, { fogCol = C.fog, fogD = 55, wire = C.verd, wireHi = C.verdHi, skyRefl = null, minPx = 0.7, near = 2.2, chipTop = "#0e2422", chipSide = "#050c0d", windows = 0.0, windowCol = C.mint, dawn = 0 } = {}) {
+  function drawBoard(ctx, B, cam, { fogCol = C.fog, fogD = 55, wire = C.verd, wireHi = C.verdHi, skyRefl = null, minPx = 0.7, near = 2.2, chipTop = "#0e2422", chipSide = "#050c0d", windows = 0.0, windowCol = C.mint, dawn = 0, chipFog = 1, afterTraces = null, chipFilter = null } = {}) {
     const fogA = (Z) => 1 - Math.exp(-Z / fogD);
     // 配線(奥から手前へ)
     const tr = B.traces.slice().sort((a, b) => b.pts[0][1] - a.pts[0][1]);
@@ -97,11 +112,12 @@ const KAIRO = (() => {
       ctx.fillStyle = css(mix(wireHi, fogCol, k), 0.9 * (1 - k * 0.8)); ctx.beginPath(); ctx.ellipse(q[0], q[1], r, r * Math.min(1, cam.h / Z * 1.5 + 0.25), 0, 0, 7); ctx.fill();
       ctx.fillStyle = css(C.ink, 0.9 * (1 - k)); ctx.beginPath(); ctx.ellipse(q[0], q[1], r * 0.45, r * 0.45 * Math.min(1, cam.h / Z * 1.5 + 0.25), 0, 0, 7); ctx.fill();
     }
+    if (afterTraces) { ctx.save(); afterTraces(ctx); ctx.restore(); }
     // チップ(建物のように立つ箱)。奥から
-    const ch = B.chips.slice().sort((a, b) => b.Z - a.Z);
+    const ch = B.chips.filter((c) => !chipFilter || chipFilter(c)).sort((a, b) => b.Z - a.Z);
     for (const c of ch) {
       if (c.Z - c.d / 2 < cam.z0) continue;
-      const k = fogA(c.Z);
+      const k = fogA(c.Z) * chipFog;
       const x0 = c.X - c.w / 2, x1 = c.X + c.w / 2, zf = c.Z - c.d / 2, zb = c.Z + c.d / 2;
       const P = (x, z, y) => proj(cam, x, z, y);
       // 上面
@@ -113,10 +129,23 @@ const KAIRO = (() => {
       poly([P(x0 - 0.15, zf - 0.1, 0), P(x1 + 0.15, zf - 0.1, 0), P(x1 + 0.3, zb + 0.4, 0), P(x0 - 0.3, zb + 0.4, 0)], css(C.ink, 0.5 * (1 - k)));
       poly(side, css(mix(chipSide, fogCol, k)));
       poly(front, css(mix(dawn ? mix(chipSide, "#3a1f2e", dawn) : chipSide, fogCol, k)));
-      poly(top, css(mix(dawn ? mix(chipTop, "#c9796e", dawn * 0.6) : chipTop, fogCol, k)));
-      // 上面の縁の光(空の照り返し)
-      ctx.strokeStyle = css(mix(dawn ? "#ffc9a0" : wireHi, fogCol, k), (0.55 - k * 0.4) * (dawn ? 1 : 0.6)); ctx.lineWidth = Math.max(0.6, 0.02 * cam.F / c.Z);
-      ctx.beginPath(); ctx.moveTo(top[0][0], top[0][1]); ctx.lineTo(top[1][0], top[1][1]); ctx.stroke();
+      { const tc = mix(chipTop, fogCol, k), gt = ctx.createLinearGradient(0, top[0][1], 0, top[2][1]);
+        gt.addColorStop(0, css(tc)); gt.addColorStop(1, css(mix(tc, dawn ? "#ff9f86" : wireHi, (dawn ? 0.45 : 0.22) * (1 - k * 0.7)))); poly(top, gt); }
+      // 上面の奥の縁の光(地平の空の照り返し・逆光のリム)
+      ctx.strokeStyle = css(mix(dawn ? "#ffd9b0" : wireHi, fogCol, k * 0.6), (0.75 - k * 0.4) * (dawn ? 1 : 0.55)); ctx.lineWidth = Math.max(0.8, 0.025 * cam.F / c.Z);
+      ctx.beginPath(); ctx.moveTo(top[3][0], top[3][1]); ctx.lineTo(top[2][0], top[2][1]); ctx.stroke();
+      // 足(ピン): 手前と奥の長い辺に並ぶ小さな金属の脚。近いチップだけ
+      if (c.Z < 22) {
+        const np = Math.max(3, Math.round(c.w * 7)), pl = 0.07, pw = c.w / np * 0.45;
+        ctx.fillStyle = css(mix(dawn ? "#c98f86" : "#5e8f88", fogCol, k), 0.9 * (1 - k));
+        for (let i = 0; i < np; i++) {
+          const x = lerp(x0, x1, (i + 0.5) / np);
+          for (const [za, zb2] of [[zf - pl, zf], [zb, zb + pl]]) {
+            const q = [P(x - pw / 2, za, 0.012), P(x + pw / 2, za, 0.012), P(x + pw / 2, zb2, 0.02), P(x - pw / 2, zb2, 0.02)];
+            ctx.beginPath(); q.forEach((p2, j) => (j ? ctx.lineTo(p2[0], p2[1]) : ctx.moveTo(p2[0], p2[1]))); ctx.closePath(); ctx.fill();
+          }
+        }
+      }
       // 窓(小さな灯り。眠らない街)
       if (windows > 0) {
         const r = mulberry32(c.seed); const nx = Math.max(1, Math.round(c.w * 3)), ny = Math.max(1, Math.round(c.h * 4));
@@ -204,19 +233,24 @@ const KAIRO = (() => {
 
   // ---- 効果 ----
   // 明るい所だけを縮めてぼかし、足す(ブルーム)。横長に伸ばした光(アナモルフィックの筋)も
-  function bloom(ctx, { thr = 0.55, a = 0.9, streak = 0.35, streakCol = null, src = null } = {}) {
+  function bloom(ctx, { thr = 0.55, a = 0.9, streak = 0.35, streakCol = null, knee = 1.6, src = null } = {}) {
     if (!st.fx) return;
-    const s = src || ctx.canvas;
-    const [c1, g1] = PAINT.buf("bl1", W / 4, H / 4);
-    g1.filter = `brightness(${0.6 / thr}) contrast(${1 + thr * 2.2}) saturate(1.3)`; g1.drawImage(s, 0, 0, W / 4, H / 4); g1.filter = "none";
-    // 閾値の代わり: 暗い所を引く
-    g1.globalCompositeOperation = "multiply"; g1.drawImage(c1, 0, 0); g1.globalCompositeOperation = "source-over";
-    const [c2, g2] = PAINT.buf("bl2", W / 4, H / 4); g2.filter = "blur(6px)"; g2.drawImage(c1, 0, 0); g2.filter = "blur(18px)"; g2.globalAlpha = 0.9; g2.drawImage(c1, 0, 0);
+    const s = src || ctx.canvas, w = W / 4, h = H / 4;
+    // 1/4 に縮めて、明るさが thr を超えた分だけを残す(本当の閾値。画素で処理)
+    const [c1, g1] = PAINT.buf("bl1", w, h); g1.drawImage(s, 0, 0, w, h);
+    const im = g1.getImageData(0, 0, w, h), d = im.data;
+    for (let i = 0; i < d.length; i += 4) {
+      const l = (0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2]) / 255, k = l > thr ? Math.pow((l - thr) / (1 - thr), knee) / (l || 1) : 0;
+      d[i] *= k; d[i + 1] *= k; d[i + 2] *= k;
+    }
+    g1.putImageData(im, 0, 0);
+    const [c2, g2] = PAINT.buf("bl2", w, h); g2.filter = "blur(4px)"; g2.drawImage(c1, 0, 0); g2.filter = "blur(16px)"; g2.globalCompositeOperation = "lighter"; g2.drawImage(c1, 0, 0); g2.filter = "blur(40px)"; g2.drawImage(c1, 0, 0);
     ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.globalAlpha = a; ctx.imageSmoothingQuality = "high"; ctx.drawImage(c2, 0, 0, W, H);
     if (streak > 0) {
-      const [c3, g3] = PAINT.buf("bl3", 48, H / 4); g3.imageSmoothingQuality = "high"; g3.drawImage(c1, 0, 0, 48, H / 4);
-      if (streakCol) { g3.globalCompositeOperation = "source-atop"; g3.fillStyle = streakCol; g3.globalAlpha = 0.65; g3.fillRect(0, 0, 48, H / 4); }
-      ctx.globalAlpha = streak; ctx.filter = "blur(2px)"; ctx.drawImage(c3, 0, 0, W, H);
+      // 横に長い筋: 横だけ強く縮めてから戻す
+      const [c3, g3] = PAINT.buf("bl3", 40, h); g3.imageSmoothingQuality = "high"; g3.drawImage(c1, 0, 0, 40, h);
+      if (streakCol) { g3.globalCompositeOperation = "multiply"; g3.fillStyle = streakCol; g3.fillRect(0, 0, 40, h); }
+      ctx.globalAlpha = streak; ctx.filter = "blur(1.5px)"; ctx.drawImage(c3, 0, 0, W, H);
     }
     ctx.restore();
   }

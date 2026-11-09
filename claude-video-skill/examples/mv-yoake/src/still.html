@@ -1,0 +1,23 @@
+<!doctype html><meta charset="utf-8">
+<!-- スタイルフレームの描画ページ。?sf=1|2|3|4 &f=コマ番号(省略時は各フレームの既定) &fx=0(効果なし) -->
+<link rel="stylesheet" href="../assets/fonts/jp.css">
+<style>body{margin:0;background:#000}</style>
+<body><canvas id="c" width="1920" height="1080"></canvas>
+<script src="../../../tools/assets/scene-lib.js"></script><script src="../../../tools/assets/depth.js"></script>
+<script src="lib/paint.js"></script><script src="lib/glyphs.js"></script><script src="lib/kairo.js"></script>
+<script src="stills/sf.js"></script>
+<script>
+(async () => {
+  const q = new URLSearchParams(location.search);
+  const fx = q.get("fx") !== "0"; KAIRO.st.fx = fx; PAINT.mode.fx = fx;
+  // 使う全文字を先に読み込む(分割フォントの遅延読み込みで、最初のコマだけ代用書体になるのを防ぐ)
+  const all = "暗闇の数だけ輝きは増すひとつ、またひとつ繋がってく夜明けの回路に火を灯して消えかけた声を光に変えて止まらない止まれないまだ、光は消えない夜が明けるYOAKENOKAIRO";
+  await Promise.all(["900 40px MIN", "400 40px DELA", "700 34px KAKU"].map((f) => document.fonts.load(f, all)));
+  await document.fonts.ready;
+  const n = q.get("sf") || "1", f = q.has("f") ? parseInt(q.get("f")) : STILLS.defaultFrame[n];
+  const ctx = document.getElementById("c").getContext("2d");
+  ctx.fillStyle = "#000"; ctx.fillRect(0, 0, 1920, 1080);
+  STILLS[n](ctx, f);
+  window.__ready = true;
+})();
+</script>
