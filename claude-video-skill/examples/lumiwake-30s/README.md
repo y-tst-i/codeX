@@ -34,3 +34,4 @@ python3 -I tools/sync_check.py ../audio/cues.json ../audio/sync_map.json ../SYNC
 - HyperFrames: `bash src/film2/tools/build_hf.sh <フォルダ>`(生成物・git 管理外)→ `bash src/film2/tools/render_segments.sh <フォルダ> <区間フォルダ>`(5秒×6区間、できた区間は飛ばして再開)→ `bash src/film2/tools/assemble.sh <区間フォルダ> <final_B.wav> <出力.mp4>`(900コマにつなぎ、音を AAC 256k 48kHz で付ける。音は作り直さない)。
 - 検査: `tools/review_checks.py`、`python3 -I src/film2/tools/measure_sync2.py <mp4> audio/cues.json audio/sync_map.json SYNC_MEASURED_V2.md`(映像のヒットのコマと曲のアクセント・効果音の頂点)、`bash src/film2/tools/sheets.sh <mp4> <出力>`(コンタクトシート・540px・カット境界)。
 - 成果物の mp4 は scratchpad の `film2d/lumiwake_30s_v2_opus.mp4`(リポジトリには入れない)。自己点検は `REVIEW_STAGE1.md` の「追加5」。
+- v2 の確認画像: `frames/film2_contact_v2.jpg`(0.5秒刻み)、`film2_check540_v2.jpg`(540px)、`film2_boundaries_v2.jpg`(カット境界±1)、`film2_fxoff_v2.jpg`(効果を切った版)、`film2_hitstop_1_2_4.jpg`(ヒットストップの比較)、`film2_compare_v1_v2.jpg`(v1 と同じ時刻の比較)。同期の実測は `SYNC_MEASURED_V2.md`。
