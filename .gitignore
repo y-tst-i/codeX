@@ -49,3 +49,7 @@ temp/
 # Python のキャッシュ
 __pycache__/
 *.pyc
+
+# Python が自動で作るキャッシュ(実行のたびに変わるので入れない)
+__pycache__/
+*.pyc
