@@ -1,0 +1,19 @@
+<!doctype html><meta charset="utf-8">
+<!-- 開発用の描画ページ(HyperFrames の外で、コマを指定して描く)。tools/frames.mjs から使う。 -->
+<link rel="stylesheet" href="../../assets/fonts/jp.css">
+<style>@font-face{font-family:HUD;src:url('../../assets/fonts/hud.otf')} body{margin:0;background:#000}</style>
+<body><canvas id="c" width="1920" height="1080"></canvas>
+<script src="../../../../tools/assets/scene-lib.js"></script><script src="../../../../tools/assets/depth.js"></script>
+<script src="../lib/paint.js"></script><script src="../lib/world.js"></script><script src="../lib/hud.js"></script>
+<script src="../lib/logo-glyphs.js"></script><script src="../lib/logo.js"></script>
+<script src="core.js"></script><script src="spirit2.js"></script><script src="plates.js"></script><script src="hud2.js"></script>
+<script src="film2.js"></script><script src="shots_a.js"></script><script src="shots_b.js"></script>
+<script>
+(async () => {
+  const q = new URLSearchParams(location.search);
+  if (q.get("fx") === "0") PAINT.mode.fx = false;
+  await FILM2.init();
+  window.__ctx = document.getElementById("c").getContext("2d");
+  window.__ready = true;
+})();
+</script>
