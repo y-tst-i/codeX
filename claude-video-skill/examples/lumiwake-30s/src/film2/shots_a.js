@@ -268,9 +268,10 @@ const SA = (() => {
     const ign = f < 245 ? 1 - K2.P(f, 227, 245) : 0;
     SPIRIT2.draw(g, px, py, 1.75 * cam.z, sa + cam.r - 0.18 * wind + 0.08 * launch, pose, { t, lum: 1 + 0.6 * ign, tailLen: 1 + 0.9 * boostK + 0.4 * ign, smear: launch > 0.2 ? [-140 * launch, 0] : null });
     // 粒を拾う(はじけ #003)
-    PICK_AT.forEach((pf) => { const dt = (f - pf) / 30; if (dt >= 0 && dt < 0.8) { const [ox, oy] = spirit34(pf), [qx, qy] = toScreen(cam, 1, ox, oy); burst(g, qx, qy, dt, { scale: 0.75 * cam.z, n: 10 }); } });
+    PICK_AT.forEach((pf) => { const dt = (f - pf) / 30; if (dt >= 0 && dt < 0.8) { const [ox, oy] = spirit34(pf), [qx, qy] = toScreen(cam, 1, ox, oy); burst(g, qx, qy, dt, { scale: 0.75 * cam.z, n: 10 }); const k = [1, 0.5, 0.2][f - pf] || 0; if (k) { glow(g, qx, qy, 300, C.amberHot, 0.6 * k); glow(g, qx, qy, 90, "#ffffff", 0.9 * k); } } });
     // 227 点火のはじけ、240 灯りの輪、253 光の粒
     if (f >= 227 && f < 252) { burst(g, px, py, (f - 227) / 30, { scale: 2.2 }); g.save(); g.globalCompositeOperation = "lighter"; const r = rng(71), k = 1 - K2.P(f, 227, 245); for (let i = 0; i < 16; i++) { const a = r() * 6.28; g.strokeStyle = css(C.amber, 0.22 * k); g.lineWidth = 8 + r() * 24; g.beginPath(); g.moveTo(px, py); g.lineTo(px + Math.cos(a) * 1600, py + Math.sin(a) * 1600); g.stroke(); } g.restore(); }
+    if (f >= 240 && f < 243) glow(g, px, py, 420, C.amberHot, [0.5, 0.25, 0.1][f - 240]);
     if (f >= 240 && f < 262) { const dt = (f - 240) / 30; g.save(); g.strokeStyle = `rgba(255,250,235,${0.8 * (1 - dt / 0.7)})`; g.lineWidth = 8 * (1 - dt / 0.7) + 1; g.beginPath(); g.arc(px, py, 120 + 520 * eOut5(dt / 0.7), 0, 7); g.stroke(); g.restore(); }
     if (f >= 253 && f < 275) { const dt = (f - 253) / 30, r = rng(83); g.save(); g.globalCompositeOperation = "lighter"; for (let i = 0; i < 40; i++) { const a = -Math.PI / 2 + (r() - 0.5) * 2.6, v = 300 + r() * 700, x = px + Math.cos(a) * v * dt - 120, y = py + 120 + Math.sin(a) * v * dt + 600 * dt * dt; glow(g, x, y, 10 + r() * 14, r() < 0.5 ? C.amberHot : "#ffffff", 0.8 * (1 - dt / 0.73)); } g.restore(); }
     // 409 のニアミス: 上から嵐の腕と稲妻が精の真上をかすめる
@@ -290,7 +291,7 @@ const SA = (() => {
     if (boostK > 0.05) W.speedLines(g, { n: 90, seed: 21 + (f % 4), cx: px, cy: py, r0: 260, r1: 1500, a: 0.35 * boostK, col: "#fff1d6" });
     const lb = f < 233 ? 1 - eOut(K2.P(f, 227, 233)) : 0;
     return {
-      letterbox: lb, exposure: [0.4, 0.2, 0.08][f - 227] || 0, zoomBlur: f < 234 ? [0.1 * (1 - K2.P(f, 227, 234)), px, py] : boostK > 0.2 ? [0.07 * boostK, px, py] : null,
+      letterbox: lb, exposure: ([0.4, 0.2, 0.08][f - 227] || 0) + ([0.22, 0.1][f - 403] || 0), zoomBlur: f < 234 ? [0.1 * (1 - K2.P(f, 227, 234)), px, py] : boostK > 0.2 ? [0.07 * boostK, px, py] : null,
       grade: { tint: ["#ffb060", 0.08, "soft-light"] }, bloom: { a: 0.6, a2: 0.4 },
       overlay: (o) => {
         HUD2.draw(o, f);
@@ -301,6 +302,7 @@ const SA = (() => {
           const dt = f - pf; if (dt >= 0 && dt <= 8) { const u = eIOs(dt / 8), tx = 184 + 66 * i + 33, ty = 992, mx = lerp(qx, tx, u), my = lerp(qy, ty, u) - Math.sin(u * Math.PI) * 160; glow(o, mx, my, 50, C.amber, 0.7); glow(o, mx, my, 16, "#ffffff", 0.95); }
         });
         HUD2.pop(o, 1250, 330, "NEAR MISS", "+150  ×7", f, 409, { size: 92, hold: 14, out: 6, subSize: 0.55 });
+        if (f >= 409 && f < 412) glow(o, 1250, 300, 520, C.amber, [0.4, 0.2, 0.08][f - 409]);
       },
     };
   };

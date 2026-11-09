@@ -50,7 +50,7 @@ const SB = (() => {
     const xs = []; for (let x = Math.floor((cam.x - 1600) / 300) * 300; x <= cam.x + 1800; x += 300) xs.push([x, 330 + 60 * Math.sin(x / 400)]);
     g.save(); camApply(g, cam, 1); stream(g, streamPath(xs, 12), { width: 26, flow: t * 1100, seed: 8, taper: [1, 1], streaks: 40, a: 0.55 + 0.3 * Math.sin(t * 13) * 0.3 }); g.restore();
     // 嵐の腕: 左上から(429 予兆・435 被弾)、右上から(455 の二撃目で払う)
-    const lit1 = f < 429 ? 0 : f < 435 ? K2.P(f, 429, 435) : Math.max(0, 1 - (f - 435) / 10);
+    const lit1 = f < 429 ? 0 : f < 435 ? [1, 0.45, 0.7, 0.4, 0.75, 0.9][f - 429] : Math.max(0, 1 - (f - 435) / 10);
     g.save(); camApply(g, { ...cam, x: 0, y: 0 }, 0); // 画面座標(カメラの揺れ・傾きだけ受ける)
     g.translate(-960, -540);
     tendril(g, [-120, -220], 0.85 + 0.1 * Math.sin(t * 1.7), 1250, t, { width: 280, lit: lit1, seed: 3 + Math.floor(f / 2) });
@@ -144,9 +144,10 @@ const SB = (() => {
     };
     // 奥の門(まだ精より奥)→ 精 → 手前を通り過ぎた門
     GATES.forEach((gf, i) => { if (f < gf) gateDraw(gf, i); });
+    GATES.forEach((gf) => { if (f >= gf && f < gf + 20) burst(g, sp[0], sp[1], (f - gf) / 30, { scale: 1.1 }); });
     const pose = SPIRIT2.poseMix("fly", "dodge", 0.25 + 0.15 * Math.sin(t * 3));
     SPIRIT2.draw(g, sp[0], sp[1], sp[2], -0.32 + 0.1 * Math.sin(t * 2.3), pose, { t, tailLen: 1.5, lift: 0.4 });
-    GATES.forEach((gf, i) => { if (f >= gf) gateDraw(gf, i); if (f >= gf && f < gf + 20) burst(g, sp[0], sp[1], (f - gf) / 30, { scale: 1.35 }); });
+    GATES.forEach((gf, i) => { if (f >= gf) gateDraw(gf, i); });
     g.restore();
     motes(g, f, { n: 40, seed: 52, ox: t * 900, oy: t * 300, streak: 90, ang: Math.atan2(540 - VP[1], 960 - VP[0]), size: [2, 7], a: 0.45 });
     const cut = f < 509 ? [0.12, 0.05][f - 507] : 0;
@@ -232,7 +233,7 @@ const SB = (() => {
         // STREAK の大きな数字(617 で出る → 643 の ×12 で止まって弾む → 688〜700 で隅の HUD へ縮む)
         if (f >= 617 && f < 700) {
           const [n, at] = HUD2.streakAt(f), dt = (f - at) / 30, fin = n === 12, mv = eIOs(K2.P(f, 688, 700));
-          const x = lerp(1560, 1830, mv), y = lerp(560, 230, mv), sc = lerp(1, 0.36, mv) * spring((f - 617) / 30, 15, 6.5) * (1 + (fin ? 0.32 : 0.16) * decay(dt, 15, 7));
+          const x = lerp(1560, 1830, mv), y = lerp(560, 230, mv), sc = lerp(1, 0.36, mv) * spring((f - 617) / 30 + 2 / 30, 15, 6.5) * (1 + (fin ? 0.32 : 0.16) * decay(dt, 15, 7));
           o.save(); o.translate(x, y); o.scale(sc, sc); o.globalAlpha = 1 - 0.6 * mv;
           glow(o, 0, -40, 320, C.amber, 0.25 + (fin ? 0.25 * Math.exp(-dt * 3) : 0));
           HUD.text(o, "STREAK", 0, -150, { size: 40, col: "#dff3f6", align: "center", track: 6, stroke: 8 });
@@ -334,8 +335,8 @@ const SB = (() => {
           const a = eOut(K2.P(f, 810, 820)), dy = 8 * (1 - a);
           const q = o.createLinearGradient(0, 900, 0, 1080); q.addColorStop(0, "rgba(4,6,16,0)"); q.addColorStop(1, `rgba(4,6,16,${0.75 * a})`); o.fillStyle = q; o.fillRect(0, 880, 1920, 200);
           o.save(); o.globalAlpha = a;
-          HUD.text(o, "※架空のゲームのコンセプト映像です。", 960, 990 + dy, { font: "JPG", weight: 700, size: 46, col: "#f2ead8", align: "center", stroke: 8, strokeCol: "rgba(6,10,24,0.85)" });
-          HUD.text(o, "発売の予定はありません。", 960, 1050 + dy, { font: "JPG", weight: 500, size: 40, col: "#d8e6e8", align: "center", stroke: 7, strokeCol: "rgba(6,10,24,0.85)" });
+          HUD.text(o, "※架空のゲームのコンセプト映像です。", 960, 984 + dy, { font: "JPG", weight: 700, size: 54, col: "#f2ead8", align: "center", stroke: 8, strokeCol: "rgba(6,10,24,0.85)" });
+          HUD.text(o, "発売の予定はありません。", 960, 1048 + dy, { font: "JPG", weight: 500, size: 44, col: "#d8e6e8", align: "center", stroke: 7, strokeCol: "rgba(6,10,24,0.85)" });
           o.restore();
         }
       },
