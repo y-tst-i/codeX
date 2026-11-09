@@ -131,6 +131,13 @@ const KAIRO = (() => {
       poly(front, css(mix(dawn ? mix(chipSide, "#3a1f2e", dawn) : chipSide, fogCol, k)));
       { const tc = mix(chipTop, fogCol, k), gt = ctx.createLinearGradient(0, top[0][1], 0, top[2][1]);
         gt.addColorStop(0, css(tc)); gt.addColorStop(1, css(mix(tc, dawn ? "#ff9f86" : wireHi, (dawn ? 0.45 : 0.22) * (1 - k * 0.7)))); poly(top, gt); }
+      // 上面の刻印(シルク印刷の細い枠と1番ピンの点)。近いチップだけ
+      if (c.Z < 16) {
+        const ins = 0.18, q = [P(lerp(x0, x1, ins), lerp(zf, zb, ins), c.h), P(lerp(x0, x1, 1 - ins), lerp(zf, zb, ins), c.h), P(lerp(x0, x1, 1 - ins), lerp(zf, zb, 1 - ins), c.h), P(lerp(x0, x1, ins), lerp(zf, zb, 1 - ins), c.h)];
+        ctx.strokeStyle = css(dawn ? "#ffd8c0" : "#9fd6cc", 0.22 * (1 - k)); ctx.lineWidth = Math.max(0.6, 0.012 * cam.F / c.Z);
+        ctx.beginPath(); q.forEach((p2, j) => (j ? ctx.lineTo(p2[0], p2[1]) : ctx.moveTo(p2[0], p2[1]))); ctx.closePath(); ctx.stroke();
+        const d0 = P(lerp(x0, x1, ins + 0.08), lerp(zf, zb, ins + 0.12), c.h); ctx.fillStyle = css(dawn ? "#ffd8c0" : "#9fd6cc", 0.35 * (1 - k)); ctx.beginPath(); ctx.arc(d0[0], d0[1], Math.max(0.8, 0.02 * cam.F / c.Z), 0, 7); ctx.fill();
+      }
       // 上面の奥の縁の光(地平の空の照り返し・逆光のリム)
       ctx.strokeStyle = css(mix(dawn ? "#ffd9b0" : wireHi, fogCol, k * 0.6), (0.75 - k * 0.4) * (dawn ? 1 : 0.55)); ctx.lineWidth = Math.max(0.8, 0.025 * cam.F / c.Z);
       ctx.beginPath(); ctx.moveTo(top[3][0], top[3][1]); ctx.lineTo(top[2][0], top[2][1]); ctx.stroke();

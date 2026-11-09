@@ -85,7 +85,7 @@ const STILLS = (() => {
     // 盤の艶(もやを映す広い照り)
     if (K.st.fx) { const g = ctx.createRadialGradient(W * 0.42, hy + 60, 20, W * 0.42, hy + 60, 900); g.addColorStop(0, css("#2a6a66", 0.22)); g.addColorStop(1, css("#000", 0)); ctx.save(); ctx.setTransform(1, 0, 0, 0.35, 0, (hy + 60) * 0.65); ctx.globalCompositeOperation = "lighter"; ctx.fillStyle = g; ctx.fillRect(0, 0, W, H * 4); ctx.restore(); }
     pylons(ctx, hy, 23, 14, f);
-    K.drawBoard(ctx, B, cam, { fogD: 38, windows: 0.22, windowCol: "#bafff0", afterTraces: (c) => ambientSignals(c, B, cam, f, { n: 34, seed: 9, a: 0.85 }) });
+    K.drawBoard(ctx, B, cam, { fogD: 38, windows: 0.3, windowCol: "#bafff0", afterTraces: (c) => ambientSignals(c, B, cam, f, { n: 52, seed: 9, a: 0.85 }) });
     // 文字: 縦書き2列「暗闇の」「数だけ」(右から左)
     const size = 150, LA = K.layout("MIN", "暗闇の", size, { vertical: true, lead: 1.04 }), LB = K.layout("MIN", "数だけ", size, { vertical: true, lead: 1.04 });
     const xA = 1560, xB = 1370, y0 = 150;
@@ -103,7 +103,12 @@ const STILLS = (() => {
     const noEnd = [xA + size * 0.62, y0 + size * 2.9];
     ctx.save(); ctx.lineCap = "round"; ctx.strokeStyle = css(C.mint, 0.95); ctx.lineWidth = 2.4;
     ctx.beginPath(); ctx.moveTo(tip[0], tip[1]); ctx.lineTo(tip[0], noEnd[1] + 30); ctx.lineTo(noEnd[0], noEnd[1]); ctx.stroke(); ctx.restore();
-    if (K.st.fx) { PAINT.glow(ctx, tip[0], tip[1], 90, C.mint, 0.5); }
+    if (K.st.fx) {
+      PAINT.glow(ctx, tip[0], tip[1], 90, C.mint, 0.5);
+      // 光の柱の淡い幕(上へ薄れる)
+      const gs = ctx.createLinearGradient(0, noEnd[1], 0, tip[1]); gs.addColorStop(0, css(C.mint, 0)); gs.addColorStop(1, css(C.mint, 0.16));
+      ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.filter = "blur(10px)"; ctx.fillStyle = gs; ctx.fillRect(tip[0] - 26, noEnd[1], 52, tip[1] - noEnd[1]); ctx.restore();
+    }
     // 字ごとの開始(歌の語頭のコマ。lyric_timeline: 暗141 闇160 の192 数215 だけ238)
     const pA = charProg(f, [141, 160, 192], 22), pB = charProg(f, [215, 238, 246], 22);
     litText(ctx, LA, xA, y0, size, pA, { lineW: 3.2 });
