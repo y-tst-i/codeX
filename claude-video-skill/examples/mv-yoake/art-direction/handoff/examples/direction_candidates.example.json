@@ -1,0 +1,52 @@
+{
+  "project": "yoake-art-direction-probe",
+  "brief": "回路の細い信号が暗闇に朝をもたらす。絵として魅力的なMVを作る",
+  "size": [1920, 1080],
+  "candidates": [
+    {
+      "id": "A",
+      "name": "エディトリアル・光の版画",
+      "expression_mode": "editorial-2d",
+      "concept": "字形と少数の光線を都市の記憶として使う",
+      "visual_metaphor": "線が文字を通して街へ伝播する",
+      "focal_subject": "文字と斜めの細い発光線",
+      "design_grammar": "大きな余白、版画の面、緊張する斜線、制限色",
+      "color_script": "冷たい黒緑→淡いシアン→少量の温色",
+      "typography": "日本語を一つの形状として設計し余白を作る",
+      "motion_signature": "長い静止の後の直線的な変形",
+      "asset_plan": "自作SVG/Canvas中心。外部素材は権利台帳に記録",
+      "anti_patterns": ["ビル群の箱配置", "粒子やBloomだけで豪華にする"],
+      "risk": "過度にポスター風で時間的展開が弱くなる"
+    },
+    {
+      "id": "B",
+      "name": "絵画的2.5D都市",
+      "expression_mode": "illustrated-2p5d",
+      "concept": "街の細部に最初の夜明けが染みていく",
+      "visual_metaphor": "架線の一点に宿る光が空へ伸びる",
+      "focal_subject": "特徴的な建築物と光の起点",
+      "design_grammar": "近景建築・遠景シルエット・空気遠近・手描きの輪郭",
+      "color_script": "濃紺→紫→薄い橙",
+      "typography": "建物の視線導線に沿う簡潔な歌詞配置",
+      "motion_signature": "控えめなパララックスと質感を変える光",
+      "asset_plan": "許可されたイラスト・自作背景または許諾済画像素材を分層",
+      "anti_patterns": ["均一な窓グリッド", "写真をズームするだけ"],
+      "risk": "素材の権利と背景レイヤーの分離に負荷がかかる"
+    },
+    {
+      "id": "C",
+      "name": "文字が都市に変わる",
+      "expression_mode": "typography-led",
+      "concept": "歌詞の字画が道・回路・地平線になる",
+      "visual_metaphor": "文字の線そのものが進路を作る",
+      "focal_subject": "変形する日本語文字と道筋",
+      "design_grammar": "極端なスケール対比、静と動、硬質な縁、暗い余白",
+      "color_script": "白黒+シアン→小さな桃色→暁色",
+      "typography": "歌詞を図形として描き形の連続性を重視",
+      "motion_signature": "マスク、字画の接続、意味のあるSVG変形",
+      "asset_plan": "オリジナルSVG/GSAP・商用条件確認済みフォント",
+      "anti_patterns": ["文字の上に無関係な背景を貼る", "同じ書体だけを回転させる"],
+      "risk": "抽象化しすぎて歌詞が読みにくくなる"
+    }
+  ]
+}
