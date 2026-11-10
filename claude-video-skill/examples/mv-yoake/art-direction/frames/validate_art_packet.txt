@@ -1,0 +1,5 @@
+{
+  "status": "STRUCTURE_PASS_ART_NOT_TESTED",
+  "errors": [],
+  "warnings": []
+}
