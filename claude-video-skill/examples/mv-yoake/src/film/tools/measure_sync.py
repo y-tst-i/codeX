@@ -20,11 +20,11 @@ ACC = {
     755: ((360, 520, 1560, 720), "pos", "中心の光のひび"), 769: (FULL, "pos", "山1: 回路がはじけ黒帯が開く"), 812: ((1500, 120, 1900, 420), "pos", "「火」が灯る"),
     845: ((1350, 0, 1920, 520), "pos", "火の粉"), 1123: ((200, 560, 1720, 1080), "pos", "路面が一斉に灯る"), 1340: (FULL, "pos", "山2: 字の光が広がり朝が開く"), 1415: ((880, 440, 1500, 760), "pos", "地平に太陽の縁"),
 }
-# 主な語頭: 領域、測り方
+# 主な語頭: 領域、測り方(、測る窓の終わり)。「火を灯して」は字が暗く出て 812 の強いアクセントで灯る(灯る方は上の表)ので、字が出るのを 811 までで測る
 VOC = {
     "暗": ((1500, 100, 1760, 300), "pos"), "闇": ((1500, 260, 1760, 460), "pos"), "数": ((1300, 100, 1560, 300), "pos"), "輝きは増す": ((300, 100, 1620, 330), "pos"),
     "ひとつ、またひとつ": ((300, 600, 1400, 950), "pos"), "繋がってく": ((350, 200, 1600, 800), "pos"), "夜明けの": ((600, 440, 1320, 640), "pos"), "回路に": ((100, 280, 1300, 760), "hit"),
-    "火を灯して": ((1550, 150, 1850, 420), "pos"), "消えかけた声を": ((300, 220, 1620, 440), "pos"), "光に変えて": ((300, 220, 1620, 460), "pos"), "止まらない": ((200, 120, 1720, 420), "hit"),
+    "火を灯して": ((1630, 196, 1766, 330), "pos", 811), "消えかけた声を": ((300, 220, 1620, 440), "pos"), "光に変えて": ((300, 220, 1620, 460), "pos"), "止まらない": ((200, 120, 1720, 420), "hit"),
     "止まれない": ((1450, 40, 1820, 1080), "hit"), "まだ、": ((1430, 100, 1640, 560), "pos"), "光は": ((1430, 560, 1640, 900), "pos"), "消えない": ((1230, 260, 1440, 940), "pos"),
     "夜": ((560, 190, 820, 400), "pos"), "が明ける": ((780, 190, 1380, 400), "pos"),
 }
@@ -42,12 +42,13 @@ for L in lt["lines"]:
         starts.setdefault(p["text"], (p["start"], p["confidence"]))
         for w in p.get("words", []): starts[w["text"]] = (w["start"], w["confidence"])
 vrows = []; vbad = 0
-for name, (roi, mode) in VOC.items():
+for name, spec in VOC.items():
+    roi, mode = spec[0], spec[1]; until = spec[2] if len(spec) > 2 else None
     on, conf = starts[name]
     if mode == "hit":  # 叩きつけ: 着地の衝撃のコマ(変化が最大のコマ)。許容 ±1
         c = [(score(roi, k, "abs") - score(roi, k - 1, "abs") if k > 1 else 0, k) for k in range(max(2, on - 3), min(nf, on + 4))]; mx, got = max(c); lag = got - on; ok = abs(lag) <= 1
     else:
-        c = [(score(roi, k, mode), k) for k in range(max(1, on - 6), min(nf, on + 7))]; mx = max(v for v, _ in c)
+        c = [(score(roi, k, mode), k) for k in range(max(1, on - 6), min(nf, (until + 1) if until else on + 7))]; mx = max(v for v, _ in c)
         got = next(k for v, k in c if v >= 0.35 * mx); lag = got - on; ok = -3 <= lag <= 1
     vbad += not ok
     vrows.append((name, conf, on, got, lag, ok, mx))
