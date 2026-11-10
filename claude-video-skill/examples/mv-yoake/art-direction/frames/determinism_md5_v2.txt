@@ -1,0 +1,17 @@
+# 案A+C(v2)の決定性: 2つの node プロセス(r1 = 8→16→40 の順、r2 = 40→16→8 の逆順)で描いた PNG の md5。r1 と r2 の6枚が全部一致(diff で確認)。A2_8s_look.png = style_ac_08s_look.png など
+## r1
+74dc0baa3d9b349cc7919475808152f4  A2_16s_clean.png
+0d3c731f0d36eae5c067732407fd7835  A2_16s_look.png
+c36c8faed1af7dbe284e80d9e9022d3e  A2_40s_clean.png
+dac5ec0aeb74311489c92ee6e5172d58  A2_40s_look.png
+a85c5f4af32ab23cd423914a894e2c80  A2_8s_clean.png
+d493d5526705e22549f240f21b17d480  A2_8s_look.png
+## r2(逆順。末尾2行は v2 のコードで v1 の値 win=0&sky=0&sun=0 を描いた物 = style_a_08s_{look,clean}.png / determinism_md5.txt の A_look・A_clean と同じ md5)
+74dc0baa3d9b349cc7919475808152f4  A2_16s_clean.png
+0d3c731f0d36eae5c067732407fd7835  A2_16s_look.png
+c36c8faed1af7dbe284e80d9e9022d3e  A2_40s_clean.png
+dac5ec0aeb74311489c92ee6e5172d58  A2_40s_look.png
+a85c5f4af32ab23cd423914a894e2c80  A2_8s_clean.png
+d493d5526705e22549f240f21b17d480  A2_8s_look.png
+e813959c3a081fbb04392dfa3b9ae773  v1_path_8s_clean.png
+d797854556e5be1356b2497b03dce4f2  v1_path_8s_look.png
