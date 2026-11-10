@@ -56,7 +56,8 @@
     "frames/style_a_08s_clean.png",
     "frames/style_a_08s_look.png"
    ],
-   "source": "src/cand_a.js"
+   "source": "src/cand_a.js",
+   "status": "adopted-as-base(A+C の土台)"
   },
   {
    "id": "B",
@@ -89,7 +90,8 @@
     "frames/style_b_08s_clean.png",
     "frames/style_b_08s_look.png"
    ],
-   "source": "src/cand_b.js"
+   "source": "src/cand_b.js",
+   "status": "rejected(利用者の判定)"
   },
   {
    "id": "C",
@@ -121,7 +123,56 @@
     "frames/style_c_08s_clean.png",
     "frames/style_c_08s_look.png"
    ],
-   "source": "src/cand_c.js"
+   "source": "src/cand_c.js",
+   "status": "absorbed-element(字の中の日=色版の使い道として A+C に取り込み。単独では不採用)"
+  },
+  {
+   "id": "AC",
+   "status": "adopted(美術は未承認)",
+   "name": "彫って灯す+字の中の日(木版画、色版は窓と字の中の日だけ)",
+   "expression_mode": "editorial-print-2d",
+   "concept": "夜は彫る前の黒い版木。光は刀で暗闇を彫り取った跡にだけ生まれ、色(琥珀)は燃える物=灯る窓と、字の中の『日』にだけ刷られる",
+   "visual_metaphor": "彫る量=光の量。暗=日+音、闇=門+音 の『日』が暗闇の中の太陽として灯り、1本の彫りの線が窓へ灯をつなぐ",
+   "focal_subject": "8秒: 彫った縦書きと字の中の日、線、窓 / 16秒: 坂の町の2つの窓と、窓をつなぐ線 / 40秒: 巨大な『まだ、』と燃え残りの読点",
+   "design_grammar": "案A と同じ(黒=彫り残し、紙=彫り、刀の跡は入り鈍く抜きで細る、町は意味のある輪郭+光の側だけの刀の縁)。追加: 色版は1枚に1〜3か所、字の一部に刷る時は字形の部品(日・火・読点)だけ。空の筋は横長の楕円で地平に沿わせ、立ち上がる所と高い所は間引く。家は白い枠で囲まず、光の側の縁だけ彫る",
+   "color_script": "8秒: 彫り 9.3%・色版 0.60%(窓+暗の日偏+闇の中の日) → 16秒: 8.4%・0.77%(窓2つ) → 28秒(計画): 約38%・約4%(火、灯の火) → 40秒: 4.8%・0.06%(読点だけ。最も黒い) → 49秒(計画): 約78%・2版目の薔薇色。8/16/40 は実測、28/49 は計画。frames/color_shape_script_v2.png",
+   "typography": "Shippori Mincho B1 800 を刀の面(折れ線)にして彫る。8秒 縦1列(170/122px)、16秒 横組み2段(124px、斜面に沿って段)、40秒 縦1列(262px、読点は縦組みの位置に移す)",
+   "typeface_reason": "明朝体は木版の彫りから生まれた。日・火の部品が字形の中で独立した輪郭を持ち、色版を部品単位で刷れる",
+   "eye_path": "8秒: 暗の日(琥珀) → 闇の日 → 字の列 → ビア → 土手の線 → 窓 / 16秒: ひとつ、→ 窓1 → 線 → またひとつ → 窓2 → 彫りかけの線 / 40秒: まだ → 読点(琥珀) → 線 → 屋根のビア",
+   "motion_signature": "彫って現れる・刷る・版ずれの3つだけ。日の色版は字が読めてから刷る",
+   "asset_plan": "コードのみ(Canvas 2D の彫りのマスク→刷りの画素処理。src/cand_a2.js)。外部素材なし。書体 OFL-1.1(@fontsource/shippori-mincho-b1 5.3.0、リポジトリに入れない)",
+   "anti_patterns": [
+    "箱を並べた街",
+    "同じ間隔の窓の格子",
+    "白い枠で囲んだ家(箱に見える)",
+    "光る線・グロー・ブルーム",
+    "同心円の的・レコードの溝に見える空",
+    "色版を飾りに使う・1枚に4か所以上",
+    "字全体を色で塗る(字の読みが崩れる)"
+   ],
+   "risk": "16秒の彫りの割合(8.4%)が8秒(9.3%)より低く、『彫るほど明るい』の段階が16秒で一度下がる。40秒は look で町の輪郭が細く、540px で暗い虚空に字が浮く絵に近づく。28/49秒は計画の模式図だけで未描画",
+   "self_critique": "自己審査。8秒は2つの局所改修(窓・空)で改善が目で分かる。16秒は家の描き方を1回作り直した(白い枠で囲む→光の側の縁だけ)。40秒は町の見せ方を2回作り直した(遠い細線→近い町の縁だけ→空を細い線の中間調子にして町を黒い塊に)",
+   "engine_cost_rights": {
+    "engine": "Canvas 2D",
+    "cost": "低〜中(1枚 約1.5秒で描画)",
+    "rights": "外部素材なし。書体 OFL-1.1"
+   },
+   "styleframes": [
+    "frames/style_ac_08s_clean.png",
+    "frames/style_ac_08s_look.png",
+    "frames/style_ac_16s_clean.png",
+    "frames/style_ac_16s_look.png",
+    "frames/style_ac_40s_clean.png",
+    "frames/style_ac_40s_look.png"
+   ],
+   "source": "src/cand_a2.js(page: src/styleframes_v2.html)",
+   "review": "ART_REVIEW_v2.md"
   }
- ]
+ ],
+ "decision": {
+  "date": "2026-11-10",
+  "by": "利用者(ChatGPT の意見を貼って示した方針を利用者が採用)",
+  "result": "A(木版画)を主軸に採用し、C の『字の中の日』を限定した色版として取り込む。B は不採用",
+  "art_status": "TECH_PASS_ART_PENDING(美術の合否は利用者の承認待ち。ART_PASS ではない)"
+ }
 }
