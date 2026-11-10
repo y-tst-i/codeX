@@ -1,0 +1,19 @@
+<!doctype html><meta charset="utf-8">
+<!-- 開発用: 6秒試作の1コマを描く。?f=<曲のコマ番号>|end &v=look|clean。書き出し: node ../tools/render_v2.mjs "pilot6s/dev.html?f=200" out.png
+     本番の書き出しは HyperFrames(tools/build_hf.sh)。window.__stats に計測値 -->
+<style>body{margin:0;background:#000}</style>
+<body><canvas id="c" width="1920" height="1080"></canvas>
+<script src="../gen/glyphs.js"></script>
+<script src="../common.js"></script>
+<script src="gen/timing.gen.js"></script>
+<script src="pilot6s.js"></script>
+<script>
+(() => {
+  const q = new URLSearchParams(location.search), f = q.get("f") || "end";
+  const ctx = document.getElementById("c").getContext("2d", { willReadFrequently: true });
+  ctx.fillStyle = "#000"; ctx.fillRect(0, 0, 1920, 1080);
+  window.__stats = PILOT6S.draw(ctx, f === "end" ? Infinity : +f, { look: (q.get("v") || "look") === "look" });
+  window.__stats.E = PILOT6S.E; window.__stats.letters = PILOT6S.letterRects();
+  window.__ready = true;
+})();
+</script>
