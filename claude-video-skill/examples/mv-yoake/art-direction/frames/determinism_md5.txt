@@ -1,0 +1,7 @@
+e813959c3a081fbb04392dfa3b9ae773  A_clean.png
+d797854556e5be1356b2497b03dce4f2  A_look.png
+3ad12d90c5d6ec8b75b1bd779e4ae105  B_clean.png
+cdeadee1ebd254f88bd09768c6278a71  B_look.png
+c420c21d3730d4080e10451a0cfef11a  C_clean.png
+7a934e5296defcd1c38c95ba80ec3783  C_look.png
+# 2つの node プロセスで、描く順を逆にして2回描いた PNG の md5(r1 と r2 が全部一致)。A_clean.png = style_a_08s_clean.png など

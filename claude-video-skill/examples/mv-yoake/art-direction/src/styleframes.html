@@ -1,0 +1,20 @@
+<!doctype html><meta charset="utf-8">
+<!-- スタイルフレームの描画ページ。?c=A|B|C &v=clean|look。1920×1080。
+     字は gen/glyphs.js(glyph_lines.py で作る字形の点列。git に入れない)から描くので、フォントの読み込み待ちが絵に出ない。 -->
+<style>body{margin:0;background:#000}</style>
+<body><canvas id="c" width="1920" height="1080"></canvas>
+<script src="gen/glyphs.js"></script>
+<script src="common.js"></script>
+<script src="cand_a.js"></script>
+<script src="cand_b.js"></script>
+<script src="cand_c.js"></script>
+<script>
+(() => {
+  const q = new URLSearchParams(location.search);
+  const cand = q.get("c") || "A", look = (q.get("v") || "look") === "look";
+  const ctx = document.getElementById("c").getContext("2d", { willReadFrequently: true });
+  ctx.fillStyle = "#000"; ctx.fillRect(0, 0, 1920, 1080);
+  ({ A: CAND_A, B: CAND_B, C: CAND_C })[cand](ctx, { look });
+  window.__ready = true;
+})();
+</script>
