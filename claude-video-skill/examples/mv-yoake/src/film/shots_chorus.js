@@ -121,14 +121,15 @@
         g.translate(fx0, cy); g.scale(sc, sc); g.translate(-fx0, -cy);
         K.textPath(g, { items: [it] }, o3[0], o3[1], s3); g.lineJoin = "round"; g.strokeStyle = "rgba(20,4,2,0.85)"; g.lineWidth = 6; g.stroke();
         const gr = g.createLinearGradient(0, o3[1] + it.y - s3 * 0.9, 0, o3[1] + it.y + s3 * 0.1);
-        gr.addColorStop(0, css(mix("#4a140c", "#ffe7c4", lit))); gr.addColorStop(0.5, css(mix("#2a0a06", "#ff9a58", lit))); gr.addColorStop(1, css(mix("#1a0605", "#e2361e", lit)));
+        gr.addColorStop(0, css(mix("#a8402a", "#ffe7c4", lit))); gr.addColorStop(0.5, css(mix("#6a1e10", "#ff9a58", lit))); gr.addColorStop(1, css(mix("#3a0c06", "#e2361e", lit)));
         g.fillStyle = gr; g.fill("nonzero"); g.strokeStyle = css(lit > 0.5 ? "#fff0d8" : C.fire, 0.85); g.lineWidth = 1.8; g.stroke(); g.restore();
       });
+      { const dt = (f - t.embers) / 30; if (dt >= 0 && dt < 0.8) { const q = eOut5(clamp(dt / 0.6)); g.save(); g.globalCompositeOperation = "lighter"; g.strokeStyle = css("#ffcf8a", 0.9 * (1 - q)); g.lineWidth = 16 * 1.6 * (1 - q); g.beginPath(); g.arc(fx0, fy0, (44 + 46 * q) * 1.6, 0, 7); g.stroke(); g.restore(); Y.glow(g, fx0, fy0, 260, C.fire, 0.6 * Math.exp(-dt * 30 / 5)); } }
       // 845: 火の粉(#015: 初速 横 ±190 px/s・上 250〜400 px/s、重力 470 px/s²、寿命 1.5 秒)。#003 の点も
       const r = rng(845), dtE = (f - t.embers) / 30;
       g.save(); g.globalCompositeOperation = "lighter";
       for (let i = 0; i < 84; i++) {
-        const vx = (r() * 2 - 1) * 190 * 1.6, vy = -(250 + r() * 150) * 1.7, life = 0.8 + r() * 0.7, d = r() * 0.15, tt = dtE - d, s = 1.4 + r() * 2.6, col = r() < 0.5 ? "#ffcf8a" : C.fire;
+        const vx = (r() * 2 - 1) * 190 * 1.6, vy = -(250 + r() * 150) * 1.7, life = 0.8 + r() * 0.7, d = r() * 0.05, tt = dtE - d, s = 1.4 + r() * 2.6, col = r() < 0.5 ? "#ffcf8a" : C.fire;
         if (tt < 0 || tt > life) continue; const x = fx0 + vx * tt, y = fy0 - 20 + vy * tt + 0.5 * 470 * tt * tt, al = (tt < 0.06 ? tt / 0.06 : 1) * (tt > life * 0.7 ? 1 - (tt - life * 0.7) / (life * 0.3) : 1);
         g.fillStyle = css(col, al); g.beginPath(); g.ellipse(x, y, s, s * 2.4, Math.atan2(vy + 470 * tt, vx) + Math.PI / 2, 0, 7); g.fill();
       }
@@ -197,8 +198,8 @@
     }
     // 「光に変えて」: 左から来る光の線が字の輪郭に集まる(#012 形の変化: 点の対応で補間、backOut s=1.6、行き過ぎ少し)。集まった字はガラスの字になる
     const stB = charStarts(PH8), oxB = (W - L.b.w) / 2, oyB = 250;
-    const pB = Y.once("s7ptsB", () => TYPE.samplePts(L.b, oxB, oyB, 176, 6)), r2 = rng(938), DUR = 14;
-    const prog = stB.map((s) => clamp((f - (s - 9)) / DUR));
+    const pB = Y.once("s7ptsB", () => TYPE.samplePts(L.b, oxB, oyB, 176, 6)), r2 = rng(938), DUR = 12;
+    const prog = stB.map((s) => clamp((f - (s - 6)) / DUR));
     if (prog[0] > 0) {
       g.save(); g.globalCompositeOperation = "lighter"; g.lineCap = "round";
       for (const p of pB) { const k = prog[p[2]], sx0 = -200 - r2() * 900, wob = (r2() - 0.5) * 160; if (k <= 0 || k >= 1) continue; const e = Y.backOut(k, 1.6), x = lerp(sx0, p[0], e), y = lerp(p[1] + wob, p[1], eOut(k)), tl = 160 * (1 - k); g.strokeStyle = css(r2() < 0.3 ? C.white : C.mint, 0.85); g.lineWidth = 2; g.beginPath(); g.moveTo(x - tl, y); g.lineTo(x, y); g.stroke(); }

@@ -84,6 +84,9 @@
     TYPE.traced(ctx, { items: L.B.items }, colB.x, colB.y, SZ, pB, { ph: "_B", lineW: 3.2, alpha: alpha * preB });
     ctx.restore();
     for (let i = 0; i < 3; i++) TYPE.mark(PH1, 3 + i, alpha * preB * (pB[i] > 0 ? 0.5 + 0.5 * smooth(pB[i]) : 0.12));
+    // 274: ほどける瞬間に字が一度だけ強く光る(そのコマが頂点)
+    const un = f >= A.unravel ? Math.exp(-(f - A.unravel) / 4) : 0;
+    if (un > 0.01) for (const [LL, col] of [[L.A, colA], [L.B, colB]]) for (let i = 0; i < LL.items.length; i++) { const b = Y.charBox(LL, i, col.x, col.y, SZ); Y.glow(ctx, b.cx, b.cy, 150, C.mint, 0.75 * un); Y.glow(ctx, b.cx, b.cy, 50, C.white, 0.6 * un); }
     if (pulse > 0.01) for (let i = 0; i < 2; i++) { const b = Y.charBox(L.A, i, colA.x, colA.y, SZ); Y.glow(ctx, b.cx, b.cy, 140, C.mint, 0.5 * pulse * alpha); }
   }
   // 189: 「暗闇」の輪郭から光の粒が落ちる(#015 パーティクル: 重力 470 px/s²、寿命 1.5 秒、後半 30% で消える)
@@ -105,7 +108,7 @@
     const pts = Y.once("s2all", () => TYPE.samplePts({ items: [...lay().A.items] }, colA.x, colA.y, SZ, 7).concat(TYPE.samplePts({ items: [...lay().B.items] }, colB.x, colB.y, SZ, 7))), r = rng(274);
     ctx.save(); ctx.globalCompositeOperation = "lighter";
     for (const p of pts) {
-      const d = r() * 0.25, tt = t - d, life = 0.7 + r() * 0.6; if (tt < 0 || tt > life) continue;
+      const d = r() * 0.12, tt = t - d, life = 0.7 + r() * 0.6; if (tt < 0 || tt > life) continue;
       const x = p[0] + (r() - 0.5) * 90 * tt - 40 * tt * tt, y = p[1] - (60 + r() * 220) * tt * tt * 1.6, a = 1 - tt / life;
       ctx.fillStyle = css(r() < 0.25 ? C.white : C.mint, a); ctx.fillRect(x - 1, y - 1, 2.2, 2.2);
     }

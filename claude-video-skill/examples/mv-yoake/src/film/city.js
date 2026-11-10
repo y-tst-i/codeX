@@ -205,7 +205,7 @@ const CITY = (() => {
   // ---- チップ(建物) ----
   // st: chipTop, chipSide, fogCol, fogD, rimCol, rimA, winCol, lit(chip) → 0..1 の灯りの割合, dawn(0..1), maxD, filter
   function chipsDraw(ctx, c, CT, f, st) {
-    const { chipTop = "#0e2422", chipSide = "#050c0d", fogCol = C.fog, fogD = 45, rimCol = C.verdHi, rimA = 0.55, winCol = "#bafff0", lit = () => 0.3, maxD = 120, filter = null, roofLights = 1, sideLight = "#1d4a46" } = st;
+    const { chipTop = "#0e2422", chipSide = "#050c0d", fogCol = C.fog, fogD = 45, rimCol = C.verdHi, rimA = 0.55, winCol = "#bafff0", lit = () => 0.3, maxD = 120, filter = null, roofLights = 1, sideLight = "#1d4a46", edgeA = 0.18 } = st;
     const list = [];
     for (const ch of CT.chips) {
       if (filter && !filter(ch)) continue; const d = dist(c, ch.X, ch.Z); if (d > maxD) continue;
@@ -255,7 +255,7 @@ const CITY = (() => {
           }
         }
         // 縦の角の細い光(面の端)
-        if (k < 0.85) { ctx.strokeStyle = css(rimCol, 0.18 * (1 - k)); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(top[a][0], top[a][1]); ctx.lineTo(bot[a][0], bot[a][1]); ctx.stroke(); }
+        if (k < 0.85) { ctx.strokeStyle = css(rimCol, edgeA * (1 - k)); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(top[a][0], top[a][1]); ctx.lineTo(bot[a][0], bot[a][1]); ctx.stroke(); }
       }
       // 上面(屋上)
       if (c.y > h) {
