@@ -1,0 +1,19 @@
+# v4(53秒ボード v2)の決定性: 1回目(board53/v2/ の PNG、f の昇順・look→clean)と、2回目(別の node プロセスで f の降順・clean→look)の md5 が18枚とも一致(diff で確認)。
+4bc8b907a9f8949dd62cdb5eaa8675fa  style_ac_f0060_clean.png
+bf647e69f3463316b4287c3a0b94e249  style_ac_f0060_look.png
+b46973f776581d524c7cfa52ed7a22af  style_ac_f0370_clean.png
+c5b46ee6d93e5f8fe113192600383464  style_ac_f0370_look.png
+ea6f3dec473c42b4f89914341d183f26  style_ac_f0740_clean.png
+dcbd34ed5df49aaa0bfd3a55ae1fda50  style_ac_f0740_look.png
+4586127da8df376105b07d3a89833c3b  style_ac_f0840_clean.png
+549428a474c3105145050548603e603c  style_ac_f0840_look.png
+3eeb558832fbd9779933501041b06866  style_ac_f1080_clean.png
+657ab7cd3405fba19558f5f976121fcb  style_ac_f1080_look.png
+13b4ce691c9caeb6d3d03899fb8f879e  style_ac_f1380_clean.png
+ae3fecb46aaf8ac7c5197f7eeb3c61f2  style_ac_f1380_look.png
+e2c86c95057fced2b9f3afe313a024b6  style_ac_f1430_clean.png
+b4534f92be73871473a47176c5829415  style_ac_f1430_look.png
+e20bf29a5c64bff61fde0fcf584a1403  style_ac_f1470_clean.png
+7b086245ab09afad3151393549bb00d2  style_ac_f1470_look.png
+0d8d88f90c7e7797e0ca58ba863fead5  style_ac_f1560_clean.png
+69d6fe5541fa18dfa8e271c91f045b76  style_ac_f1560_look.png
