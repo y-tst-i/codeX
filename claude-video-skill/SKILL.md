@@ -15,6 +15,8 @@ description: コードで作る動画(HyperFrames・three.js・Canvas・ffmpeg)�
 - **効果音は Kenney の録音と earshot(MIT、コードで描画する効果音バンク)の併用が1位**(「ひとつずつ」15 秒、2026-10-28、1回・1人の判定): 併用版 > earshot だけの版 > 既存のキットの版(既存は「ダメではないが全体的に安っぽい」)。BGM は3本とも不評(判定は「途中途中無音になるところもあるし、BGMとしての繋がりが無くて聞き心地がよくなかった」。BGM ごと落とす窓が原因というのは見立て)。記録: `../docs/sound-upgrade/RESULT_ROUND1.md`。**earshot の導入**(clone・venv・pip、約18MB+torch CPU版): `../docs/sound-upgrade/HOWTO.md` の冒頭と `EARSHOT_EVAL.md`。呼び出しは `sound-kit/earshot_cache.py`(earshot を入れた Python で動かす)。既定では未導入
 - **見せ場の1〜2場面は three.js の3Dにする価値がある**(同じ場面カードの2D版より3D版が選ばれた。トークン約1.5倍)。
 - 数値で指示し、定番の見た目を名指しで禁止すると、モデル任せの見た目が消える(外部の作例。`references/motion-lab.md` §0)。このスキルでの試作は `examples/hop-loop/`。
+- **通しの2D映像(LUMIWAKE 30秒)は、同じ設計・同じ音で実装担当だけを変えた名前伏せの比較で、Opus 5.5 / high が Sonnet 5.5 / medium に「絶対」と選ばれた**(2026-11-09、1回・1人。モデルと effort は同時に変えたので分離できない)。
+- **コードで描く人型キャラは映像全体の質を下げる**(利用者判定)。主役は非人型(光・図形・文字)に。**静止画(スタイルフレーム)を先に承認してからアニメーション**に進む。詳細は `references/lessons-2026-11.md`。
 
 ## 1. 守ること
 - 無料の道具のみ。有料サービスは利用者の承認を取る。
@@ -31,7 +33,7 @@ description: コードで作る動画(HyperFrames・three.js・Canvas・ffmpeg)�
 | 音量 | 全体 **-14 LUFS**(±1)。真のピークは **WAV で -2 dBTP 以下、MP4(AAC後)で -1 dBTP 以下**(AAC で約1dB上がる)。`tools/assemble.sh` はこの値で作る |
 | 音の位置 | 打撃音の頂点は**絵の出来事の1コマ後**。打撃音は下地(BGM・環境音)より 3〜6 dB 上。スマホの帯域(200Hz〜6kHz)でも測る |
 | 音の素材 | 音楽は MIDI + 無料音源。足音・衝撃・ドア・布など実物の音は録音素材(CC0)。**短い打撃音・UI音・キーの音は合成でよい**(頂点の位置と大きさを測る)。目立つ純音のピン・サインのスイープは1本に2回まで。それ以外の合成は全体の3割以下 |
-| effort | 映像の通し制作・3D・キャラ・長い物語は high。短い2Dのループ・音の担当・調べものは medium(`video-opus`)から。2回外したら上げる |
+| effort | **通しの映像制作は Opus 5.5 / high を前提**(名前伏せの比較で選ばれた。`references/lessons-2026-11.md` §1)。起動時に `model` と `effort` を明示し、起動直後に記録で確かめる。**止めた担当を再開すると Sonnet / medium に変わることがある**ので、再開のたびに確かめる。短い2Dのループ・音の担当・調べものは medium(`video-opus`)から。2回外したら上げる |
 | 描画の枠組み | ①既存の作品・プロジェクトがあれば、その描き方を続ける(新しい枠組みに乗り換えない)②新規・空のフォルダで指定が無ければ **HyperFrames**(`npx hyperframes render` で MP4、`check` で検査)。`motion-prompt` の Canvas 2D 部品は、HyperFrames の中の `<canvas>` に、止めたタイムラインの時刻(`onUpdate` で `tl.time()`)から描く。rAF・タイマーで回さない ③HyperFrames が使えない時だけ、Canvas 2D の HTML 1枚+自前のコマ書き出し(`examples/hop-loop/`)。他スキルの既定(`hyperframes`「既定は HyperFrames」/`business-motion-film`「例だけで乗り換えない」/`motion-prompt`「空なら Canvas の HTML 1枚」)はこの順で読む。根拠: `references/pitfalls.md`「描画の枠組みの既定」 |
 | 確認 | 書き出す前にコマを止めて見る。数値の検査を通っても目視は省かない(数値で通っても見ると変な物はある) |
 
@@ -86,9 +88,10 @@ description: コードで作る動画(HyperFrames・three.js・Canvas・ffmpeg)�
 | **試験で効いた** | 外部スキル `video-by-reference`/音のキット(`midi_render.py`・`sfx_lib.py`・`sound-palette.md`)(他の AI・Codex に渡すなら、音の道具だけを切り出した **`sound-kit/`**。`BRIEF.md` を読ませる)/three.js の見せ場(`new_scene_three.sh`・`three-3d.md`)/`assemble.sh` の2回通し(-16.8 → -14.4 LUFS)/`review_checks.py` |
 | **使って動いた**(効果の比較はまだ) | `audio_measure.py`・`motion-lab.md` の型(`examples/hop-loop/`)/`sync_check.py`/`sheet.sh`・`strip.sh`/`video-opus`(`tools/install_agent.sh`、次のセッションから効く) |
 | **未検証** | 映画の技法辞書(`references/cinematic/`・`cin.py`)/スタイル辞書(`references/styles/`・`style.py`)/2D の質感部品(`depth-and-texture.md`)/人型部品(`character-acting.md`・`puppet.js`)/3D の品質基準の試験値(`3d-quality/`。既定値・ライセンスは一次情報で確認済み、試験値は未検証)/仕上げ(`look_pass.sh`)/審査役の型 |
+| **2026-11 の教訓**(担当の運用・音ハメ・歌詞時刻・人型・Suno・Windows・未解決) | `references/lessons-2026-11.md`(試作の `tools/mix_sfx_over_song.py`) |
 | 記録 | `references/case-notes.md`(他人の作例)/`references/prompt-templates.md`(雛形 A〜F)/`NOTICES.md`(ライセンス)/`archive/`(旧本体 `handbook.md` と旧版。実験の数字・ナレーションの設計・検討中の道具 ArtCraft) |
 
 ## 7. 未確定(正直に)
-- §0 の判定はどれも1回・1人。effort の medium と high の優劣も確定していない(`archive/handbook.md` §16-7c)。
+- §0 の判定はどれも1回・1人。effort だけの優劣は確定していない(`archive/handbook.md` §16-7c。通しの映像では Opus 5.5 / high が選ばれたが、モデルと同時に変えた比較)。絵の「ポリゴンくささ」(コード描画の質感)は未解決(`references/lessons-2026-11.md` §4b)。
 - 長尺(1分超)で分業が効くか、§6 の未検証の道具が効くかは試していない。
 - 実例・試験の記録は作業用の枝 `claude/anime-ad` の `anime-ad/` にある(`main` には無い)。
