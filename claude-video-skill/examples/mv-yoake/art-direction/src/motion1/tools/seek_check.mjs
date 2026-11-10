@@ -1,12 +1,12 @@
 // 決定性の検査(6秒試作の seek_check.mjs を写して、区間の長さと曲のコマ番号をページから読むようにした): HyperFrames のプロジェクト(index.html)をブラウザで開き、全コマを
 //   A 順(gsap のタイムラインを tl.seek(t, false))/ B 逆順(hf-seek の出来事)/ C 飛ばし(固定シードの並べ替え、tl.seek)/ D 飛ばし2(別の並べ替え、hf-seek)
 // の4通りで描き、canvas の画素の hash を比べる。さらに HyperFrames の実レンダリング(--format png-sequence)の PNG を同じページで読み、同じ hash になるかを見る。
-// 使い方: node seek_check.mjs <HFプロジェクト> <png-sequence のフォルダ|-> <out.json>
+// 使い方: node seek_check.mjs <HFプロジェクト> <png-sequence のフォルダ|-> <out.json> [PNG の1枚目の区間内コマ番号(既定 0。--start で一部だけ書き出した時)]
 // gsap の tl.seek(t) は既定で onUpdate を止める(suppressEvents)ので、必ず tl.seek(t, false) で回す(6秒試作の落とし穴)
 import path from "node:path"; import fs from "node:fs";
 function findChrome() { const root = "/opt/pw-browsers"; const d = fs.readdirSync(root).filter((n) => /^chromium-\d+$/.test(n)).sort().pop(); const sub = fs.readdirSync(path.join(root, d)).find((n) => n.startsWith("chrome-linux")); return path.join(root, d, sub, "chrome"); }
 const { chromium } = await import(process.env.PLAYWRIGHT_MODULE || "/opt/node22/lib/node_modules/playwright/index.mjs");
-const [hf, seq, out] = process.argv.slice(2);
+const [hf, seq, out, pngFirst0] = process.argv.slice(2); const pngFirst = +(pngFirst0 || 0);
 const b = await chromium.launch({ executablePath: process.env.CHROME_PATH || findChrome(), args: ["--allow-file-access-from-files"] });
 const page = await b.newPage({ viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 });
 page.on("pageerror", (e) => { console.log("[pageerror]", e.message); process.exit(1); });
@@ -26,9 +26,9 @@ let seqBad = 0, seqN = 0;
 const files = seq && seq !== "-" ? fs.readdirSync(seq).filter((n) => n.endsWith(".png")).sort() : [];
 for (const f of idx) {
   const hs = Object.keys(runs).map((k) => H[k][f]), same = hs.every((x) => x === hs[0]); bad += !same;
-  let hseq = null;
-  if (files.length === N) {
-    hseq = await page.evaluate(async (url) => { const im = new Image(); im.src = url; await im.decode(); const c = document.createElement("canvas"); c.width = 1920; c.height = 1080; c.getContext("2d").drawImage(im, 0, 0); return window.__hash(c); }, "file://" + path.resolve(seq, files[f]));
+  let hseq = null; const fi = f - pngFirst;
+  if (fi >= 0 && fi < files.length) {
+    hseq = await page.evaluate(async (url) => { const im = new Image(); im.src = url; await im.decode(); const c = document.createElement("canvas"); c.width = 1920; c.height = 1080; c.getContext("2d").drawImage(im, 0, 0); return window.__hash(c); }, "file://" + path.resolve(seq, files[fi]));
     seqN++; if (hseq !== hs[0]) seqBad++;
   }
   rows.push({ frame: f, song: SONG0 + f, hashes: hs, same, hf_render_png: hseq, hf_match: hseq === null ? null : hseq === hs[0] });

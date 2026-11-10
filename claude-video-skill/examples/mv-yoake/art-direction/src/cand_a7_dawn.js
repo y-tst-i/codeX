@@ -5,7 +5,8 @@
 //     空はアクセントごとに押して地平から上へ彫り取る(彫り取ると、町・櫓・給水塔の影が空から立ち上がる)。
 //   ・信号: 溝(道の形)は最初から全部彫ってある。琥珀は「届いた所まで」だけ刷る(アクセントごとに押して進む)。1402 で地平の鉄塔に届き、そのコマで太陽の縁を刷る。
 //   ・太陽: v6 は f で滑らかに昇っていた(版が動く=カメラの動きに近い)。v7 は昇る位置をアクセントごとの「刷り直し」で段に上げる(1402 縁 → 1415 → 1425)。B・C の太陽は動かさない。
-//   ・B: 字(夜が・明・ける)は墨の文字版をばれんで刷る(夜 1431、が 1456、明 は 1456〜 の最強 1462、け・る は推定)。電線の琥珀は 明 を刷った後に日の中へ届く(1481)。
+//   ・B: 字(夜が・明・ける)は墨の文字版をばれんで刷る(夜 1431、が 1456、明 は 1456〜 の最強 1462、け・る は推定)。電線の琥珀は 明 を刷った後に日の中へ届き(1481)、
+//     そのコマで 明 の「日」の2つの穴に琥珀を二度摺りする(濃くなる=字の中の日に灯が入る)。その後、日の光が水に広がる(水の墨の線を横の刀でさらう)。
 //     夜の名残の雲は、横の刀で少しずつさらわれて細る(間を埋める)。
 //   ・C: 最初の窓(S2 の煉瓦の建物)に琥珀を刷り、信号が窓 → 丘 → 櫓 → 電線 → 地平の鉄塔まで通る(1557 で届く)。題箋は最初から白い札(色版を刷らない所)で、
 //     1538 に題を墨で刷る。1562 以後は終わりの余韻(静止。holds_partB.json に理由つきで登録)。
@@ -107,8 +108,8 @@ const A7_DAWN = (() => {
   const SIG_A = [[812, H + 30], [748, 950], [688, slopeA(688) + 22], [lxA(TB_A, 1) + 2, slopeA(lxA(TB_A, 1)) + 4], [lxA(TT_A + 60, 1), TT_A + 60]].concat(WIRE_A.slice(1)).concat([[PX_A + 16, PYL_A.b - 30], [PX_A + 22, PYL_A.b - 2]]);
   const timesA = () => {
     const c0 = 1340, E = { c0, hit: strongest(c0 - 2, c0 + 2), end: word("夜") - 1 };
-    E.carve = accIn(E.hit + 5, E.hit + 66).map((x) => x.frame30); // 空を押して彫るアクセント(1349〜1406)
     E.arrive = 1402; // 信号が鉄塔に届くコマ(統括の指定。前後のアクセント 1397・1406 の間)
+    E.carve = accIn(E.hit + 5, E.arrive - 1).map((x) => x.frame30); // 空を押して彫るアクセント(1349〜1397)
     E.sigPush = accIn(E.hit + 5, E.arrive - 4).map((x) => x.frame30);
     E.sunSteps = [E.arrive].concat(accIn(E.arrive + 8, E.end - 3).sort((a, b) => b.strength - a.strength).slice(0, 2).map((x) => x.frame30).sort((a, b) => a - b));
     return E;
@@ -120,7 +121,7 @@ const A7_DAWN = (() => {
     const wp = pushProg([[E.hit + 9, 0.2, 6]].concat(E.carve.slice(2).map((s, i, a) => [s + 2, Math.min(1, 0.2 + 0.8 * (i + 1) / a.length), 7])));
     const step = E.sunSteps.filter((s) => f >= s).length, rise = step === 0 ? -1 : [0.12, 0.3, 0.45][step - 1], sunOn = rise >= 0;
     const SY = HZ + SR * (1 - 0.62 * Math.max(0, rise)), honey = f >= E.arrive;
-    const ycut = lerp(HZ + 10, -230, cp), FRONT = 190;
+    const ycut = lerp(HZ + 10, -70, cp), FRONT = 190; // v7: 上の端を -230 → -70(押すたびに空が最後まで彫り進むように)
     g.fillStyle = "#fff"; g.fillRect(0, ycut, W, HZ - ycut + 12);
     // 前線の丸刀の跡(v7): v6 は前線の位置 t で刀の長さと太さが変わり、隣のコマで彫った所が墨に戻った(ちらつき)。
     // v7 は刀の形を最後の形(t=1 の長さ・太さ)に固定し、刃先を押し進めるだけにした(t が刀の出るしきい値を越えてから、t の進みの 1.5 倍で彫り切る)。前線を過ぎても描き続ける
@@ -150,10 +151,10 @@ const A7_DAWN = (() => {
     ink(g, WIRE_A, 15, 10650, { entry: 0.01, exit: 0.02, jit: 0.3 });
     ink(g, wire([TX_A + 20, TT_A + 92], [W + 30, 330], 140), 2.2, 10651);
     // 光の縁: 太陽の縁を刷ったコマから太くなる(彫り足す)。影の中の白い刀
-    const rimW = sunOn ? 4.2 : 2.2;
+    const lit = MO.prog(E.arrive, 26), rimW = lerp(2.2, 4.2, lit); // v7: 太陽の縁を刷ったコマから 26 コマで、光の縁を太く彫り足す(段で太らせず、間を埋める)
     rim(g, fac, 10700, (a, b) => b[0] > a[0] + 3 && b[1] > a[1] + 1, rimW, ycut); rim(g, chim, 10720, (a, b) => b[1] > a[1] + 20, rimW * 0.8, ycut); rim(g, tank, 10730, (a, b) => b[0] > a[0] + 3 || b[1] > a[1] + 20, rimW * 0.8, ycut);
     { const P = []; for (let x = 400; x <= 1060; x += 10) P.push([x, slopeA(x) + 6 * Math.sin(x * 0.02) + 2]); g.fillStyle = "#fff"; cut(g, P, rimW, 10710, { entry: 0.05, exit: 0.4, jit: 0.6 }); }
-    g.fillStyle = "#fff"; for (const [x0, y0, l, w, sd] of [[262, 612, 70, 2.6, 1], [240, 668, 96, 3.2, 2], [280, 724, 58, 2.2, 3], [206, 790, 120, 3.6, 4], [300, 846, 40, 2.0, 5], [110, 600, 52, 1.8, 6], [150, 900, 140, 2.8, 7]]) cut(g, [[x0, y0], [x0 + l, y0 + 2]], w * (sunOn ? 1.1 : 0.8), 10740 + sd, { entry: 0.2, exit: 0.5, jit: 0.5 });
+    g.fillStyle = "#fff"; for (const [x0, y0, l, w, sd] of [[262, 612, 70, 2.6, 1], [240, 668, 96, 3.2, 2], [280, 724, 58, 2.2, 3], [206, 790, 120, 3.6, 4], [300, 846, 40, 2.0, 5], [110, 600, 52, 1.8, 6], [150, 900, 140, 2.8, 7]]) cut(g, [[x0, y0], [x0 + l, y0 + 2]], w * lerp(0.8, 1.1, lit), 10740 + sd, { entry: 0.2, exit: 0.5, jit: 0.5 });
     for (const [y, sd] of [[214, 1], [396, 2]]) { const hw = lerp(37, 24, (560 - y) / 508); cut(g, [[268 - hw + 4, y], [268 + hw - 2, y - 1]], 2.4, 10760 + sd, { entry: 0.3, exit: 0.3, jit: 0.3 }); }
     // 信号の溝: 道の形は最初から全部彫ってある(紙)。琥珀は届いた所まで(アクセントごとに押して進む)
     const SLfull = polyLen(SIG_A), sA = pushProg([[E.hit, 0.06, 3]].concat(E.sigPush.map((s, i) => [s, 0.06 + 0.94 * (i + 1) / (E.sigPush.length + 1), 5])).concat([[E.arrive - 3, 1, 4]]));
@@ -167,7 +168,7 @@ const A7_DAWN = (() => {
     plates.push({ c: am, color: C.AMBER, kind: "flat", shift: [-3, 2] });
     // 版ずれ: 衝撃のコマで墨の版だけが紙と色版から 14px、次のコマで 6px ずれ、その次で合う
     const ks = f === E.hit ? [-14, 8] : f === E.hit + 1 ? [-6, 3] : null;
-    return fin(ctx, m, plates, o, [], { comp: "A", events: E, carve_sky: +cp.toFixed(3), carve_water: +wp.toFixed(3), sun_step: step, sun_rise: rise, signal: +sA.toFixed(3), signal_px: Math.round(sA * SLfull), signal_len_px: Math.round(SL), key_shift: ks }, { sheet: 1, keyShift: ks });
+    return fin(ctx, m, plates, o, [], { comp: "A", events: E, mbox: { sun: [SX - SR, HZ - 120, SX + SR, HZ + 6], sky: [0, 0, W, HZ], pylon: [PX_A - 40, PYL_A.t - 20, PX_A + 40, PYL_A.b + 10] }, carve_sky: +cp.toFixed(3), carve_water: +wp.toFixed(3), sun_step: step, sun_rise: rise, signal: +sA.toFixed(3), signal_px: Math.round(sA * SLfull), signal_len_px: Math.round(SL), key_shift: ks }, { sheet: 1, keyShift: ks });
   }
 
   // =====================================================================
@@ -186,12 +187,14 @@ const A7_DAWN = (() => {
     const MX0 = SC[0] - 0.268 * EM, MB = SC[1] + 0.455 * EM, M = A6.letter("SMB", "明", MX0, MB, EM);
     const T1 = setH("SMB", "夜が", 150, 820, 150, 0.1), T2 = setH("SMB", "ける", 1290, 820, 150, 0.1);
     g.fillStyle = "#fff"; g.fillRect(0, 0, W, H);
-    // 夜の名残の雲: 墨の帯。横の刀で少しずつさらって細くする(帯ごとに 6 本、c0+4〜信号が届いた後)
+    // 夜の名残の雲: 墨の帯。横の刀で少しずつさらって細くする(帯ごとに 10 本、c0+4〜明 の手前。夜→が の間を埋める)
     const clouds = [haze(-40, 900, 60, 34, 11001), haze(1100, 1700, 104, 22, 11002)];
-    clouds.forEach((cl, ci) => { for (const P of cl) fill(g, P); const bb = bbox([[].concat(...cl)]); g.save(); g.beginPath(); for (const P of cl) poly(g, P); g.clip(); g.fillStyle = "#fff"; for (let k = 0; k < 6; k++) { const R = PR(11, 60 + ci, k), y = lerp(bb[1], bb[3], 0.12 + 0.76 * R()), x0 = lerp(bb[0], bb[2], 0.6 * R()), len = (bb[2] - bb[0]) * (0.25 + 0.4 * R()); cutT(g, [[x0, y], [x0 + len * 0.5, y + (R() - 0.5) * 3], [x0 + len, y + (R() - 0.5) * 2]], 3 + 7 * R(), 11050 + ci * 10 + k, { entry: 0.2, exit: 0.4, jit: 0.8 }, lerp(E.cloud[0], E.cloud[1], (k + ci * 0.5) / 6.5), 6); } g.restore(); });
+    clouds.forEach((cl, ci) => { for (const P of cl) fill(g, P); const bb = bbox([[].concat(...cl)]); g.save(); g.beginPath(); for (const P of cl) poly(g, P); g.clip(); g.fillStyle = "#fff"; for (let k = 0; k < 10; k++) { const R = PR(11, 60 + ci, k), y = lerp(bb[1], bb[3], 0.12 + 0.76 * R()), x0 = lerp(bb[0], bb[2], 0.6 * R()), len = (bb[2] - bb[0]) * (0.25 + 0.4 * R()); cutT(g, [[x0, y], [x0 + len * 0.5, y + (R() - 0.5) * 3], [x0 + len, y + (R() - 0.5) * 2]], 5 + 9 * R(), 11050 + ci * 10 + k, { entry: 0.2, exit: 0.4, jit: 0.8 }, lerp(E.cloud[0], E.mei - 2, (k + ci * 0.5) / 10.5), 6); } g.restore(); });
     for (let x = -20, k = 0; x < W + 20; k++) { const R = PR(11, 1, k), w = 20 + 60 * R(), h = 6 + 26 * R() * (x > 1100 ? 1.4 : 1), ch = R() < 0.14; const P = R() < 0.5 ? [[x, HZ + 6], [x, HZ - h], [x + w * 0.5, HZ - h - 8 - 8 * R()], [x + w, HZ - h], [x + w, HZ + 6]] : [[x, HZ + 6], [x, HZ - h], [x + w, HZ - h - 4 * (R() - 0.5)], [x + w, HZ + 6]]; fill(g, chipEdge(P, 11100 + k, { big: 0.2 })); if (ch) fill(g, [[x + w * 0.6, HZ - h + 2], [x + w * 0.6 + 2, HZ - h - 40 - 30 * R()], [x + w * 0.6 + 9, HZ - h - 40 - 30 * R()], [x + w * 0.6 + 11, HZ - h + 2]]); x += w + (R() < 0.3 ? 18 * R() : -2); }
     g.fillStyle = "#000"; g.fillRect(-10, HZ + 2, W + 20, 12);
     waterInk(g, 11, HZ + 20, H + 10, -20, W + 20, SC[0], (x) => x < 1440);
+    // v7: 明 を刷った後、日の光が水に広がる: 太陽の真下から外へ、水の墨の線を横の刀でさらう(墨→紙。明 の後〜信号が届いた後)
+    g.fillStyle = "#fff"; for (let k = 0; k < 26; k++) { const R = PR(11, 70, k), y = HZ + 22 + 150 * Math.pow(R(), 0.8), half = 70 + 220 * ((y - HZ) / 170), cx = SC[0] + (R() - 0.5) * 2 * half * 0.8, len = 40 + 150 * R(), d0 = Math.abs(cx - SC[0]) / (half + 1); cutT(g, [[cx - len / 2, y], [cx, y + (R() - 0.5) * 2], [cx + len / 2, y + (R() - 0.5) * 2]], 2 + 5 * R() * (1 - 0.5 * d0), 11080 + k, { entry: 0.2, exit: 0.4, jit: 0.6 }, E.mei + 8 + 40 * d0 + 6 * R(), 4); }
     fill(g, chipEdge([[1420, H + 20], [1452, 984], [1600, 962], [1940, 950], [1940, H + 20]], 11300, { big: 0.3 }));
     const chim = chimney(1810, H + 20, 36, 132, 86, 11310); fill(g, chim);
     const tank = waterTank(g, 1622, 330, 150, 118, 975, 11320);
@@ -215,8 +218,13 @@ const A7_DAWN = (() => {
     const box = (Ls, p = 8) => { const b = lettersBox(Ls); return [b[0] - p, b[1] - p, b[2] + p, b[3] + p]; };
     const letterDraw = (L) => (tg) => { tg.beginPath(); pathOf(tg, L.cs); tg.fill("nonzero"); };
     const tp = textPlate("plT", [[letterDraw(T1[0]), box([T1[0]]), E.yo, "down", 11701], [letterDraw(T1[1]), box([T1[1]]), E.ga, "down", 11702], [letterDraw(M), box([M]), E.mei, "down", 11703], [letterDraw(T2[0]), box([T2[0]]), E.ke, "down", 11704], [letterDraw(T2[1]), box([T2[1]]), E.ru, "down", 11705]]);
+    { const tg = tp.getContext("2d"); tg.globalCompositeOperation = "destination-out"; tg.drawImage(gb, 0, 0); tg.globalCompositeOperation = "source-over"; } // 溝(電線の信号の道)は 明 の画を横切って彫ってある(墨を乗せない)
+    // 信号が日の中へ届いたら、明 の「日」の中(2つの穴)に琥珀をもう一度刷る(二度摺りで濃くなる=字の中の日に灯が入る。S2 の窓と韻)
+    const bbs = M.cs.map((c) => bbox([c])), ri = bbs.reduce((m, b, i) => (b[0] < bbs[m][0] ? i : m), 0), rb = bbs[ri];
+    const [a2, a2g] = plateBuf("plA2"); a2g.fillStyle = "#000"; M.cs.forEach((c, i) => { const b = bbs[i]; if (i !== ri && b[0] > rb[0] && b[2] < rb[2] && b[1] > rb[1] && b[3] < rb[3]) { a2g.beginPath(); pathOf(a2g, [c]); a2g.fill(); } });
+    baren(a2g, [rb[0] - 4, rb[1] - 4, rb[2] + 4, rb[3] + 4], E.sigIn, "down", 11710);
     const shown = [[T1[0], E.yo], [T1[1], E.ga], [M, E.mei], [T2[0], E.ke], [T2[1], E.ru]].filter(([, s]) => f >= s).map(([L]) => L);
-    return fin(ctx, m, [{ c: a, color: C.ROSE, kind: "bokashi", shift: [-2, 1] }, { c: h, color: C.HONEY, kind: "bokashi", shift: [2, -1] }, { c: am, color: C.AMBER, kind: "flat", shift: [-3, 2] }, { c: tp, color: C.INK_DAWN, kind: "flat", shift: [0, 0] }], o, shown, { comp: "B", events: E, signal: +sA.toFixed(3), sun_diam_px: 2 * SR, ming_em_px: EM, ming_box: lettersBox([M]).map(Math.round), letters: [T1[0], T1[1], M, T2[0], T2[1]].map((L) => ({ ch: L.ch, bb: bbox(L.cs).map(Math.round) })) }, { sheet: 2, cut: 11 });
+    return fin(ctx, m, [{ c: a, color: C.ROSE, kind: "bokashi", shift: [-2, 1] }, { c: h, color: C.HONEY, kind: "bokashi", shift: [2, -1] }, { c: am, color: C.AMBER, kind: "flat", shift: [-3, 2] }, { c: tp, color: C.INK_DAWN, kind: "flat", shift: [0, 0] }, { c: a2, color: C.AMBER, kind: "flat", shift: [-2, 1] }], o, shown, { comp: "B", events: E, mbox: { sunIn: [end[0] - 20, end[1] - 60, end[0] + 0.13 * EM + 30, end[1] + 60].map(Math.round), hi: rb.map(Math.round) }, signal: +sA.toFixed(3), sun_diam_px: 2 * SR, ming_em_px: EM, ming_box: lettersBox([M]).map(Math.round), letters: [T1[0], T1[1], M, T2[0], T2[1]].map((L) => ({ ch: L.ch, bb: bbox(L.cs).map(Math.round) })) }, { sheet: 2, cut: 11 });
   }
 
   // =====================================================================
@@ -244,7 +252,7 @@ const A7_DAWN = (() => {
     const WN = { x: bx + 44, y: btop + 46, w: 56, h: 66 };
     g.fillStyle = "#fff"; { const bar = 7, pw = (WN.w - bar) / 2, ph = (WN.h - bar) / 2; for (let j = 0; j < 2; j++) for (let i = 0; i < 2; i++) { const x0 = WN.x + i * (pw + bar), y0 = WN.y + j * (ph + bar), q = (a) => (hash(j * 2 + i, a, 12060) - 0.5) * 2; g.beginPath(); poly(g, [[x0 + q(1), y0 + q(2)], [x0 + pw + q(3), y0 + q(4)], [x0 + pw + q(5), y0 + ph + q(6)], [x0 + q(7), y0 + ph + q(8)]]); g.fill(); } }
     rim(g, BLD, 12070, (a, b) => b[1] > a[1] + 20 && a[0] > bx + 100, 2.6); rim(g, chim, 12075, (a, b) => b[1] > a[1] + 20, 2.0);
-    g.fillStyle = "#fff"; for (const [x0, y0, l, w, sd] of [[bx + 110, btop + 140, 30, 2.0, 1], [bx + 18, btop + 150, 22, 1.6, 2], [bx + 100, btop + 190, 40, 2.4, 3], [bx + 10, btop + 222, 34, 1.8, 4], [bx + 120, btop + 250, 24, 2.0, 5], [420, hillC(420) + 40, 120, 2.6, 6], [560, hillC(560) + 70, 160, 3.0, 7]]) cut(g, [[x0, y0], [x0 + l, y0 + 1]], w, 12080 + sd, { entry: 0.2, exit: 0.5, jit: 0.4 });
+    g.fillStyle = "#fff"; for (const [x0, y0, l, w, sd] of [[bx + 110, btop + 140, 30, 2.0, 1], [bx + 18, btop + 150, 22, 1.6, 2], [bx + 100, btop + 190, 40, 2.4, 3], [bx + 10, btop + 222, 34, 1.8, 4], [bx + 120, btop + 250, 24, 2.0, 5], [420, hillC(420) + 40, 120, 2.6, 6], [560, hillC(560) + 70, 160, 3.0, 7]]) cutT(g, [[x0, y0], [x0 + l, y0 + 1]], w, 12080 + sd, { entry: 0.2, exit: 0.5, jit: 0.4 }, E.c0 + 2 + sd * 2, 3); // v7: 建物と丘の白い刀を刷り替えの後に1本ずつ
     const TX = 470, TB = hillC(470) + 6, TT2 = TB - 300, lx = tower(g, TX, TB, TT2, 26, 8, 11, 12100);
     const W1 = wire([lx(TT2 + 30, 1), TT2 + 30], [PX + 4, PT + 12], 60); ink(g, W1, 12, 12150, { entry: 0.01, exit: 0.02, jit: 0.25 });
     const SIG = [[WN.x + WN.w / 2, WN.y + WN.h + 8], [WN.x + WN.w / 2, btop + 200], [bx + bw + 30, hillC(bx + bw + 30) + 34], [lx(TB, 1) - 6, hillC(lx(TB, 1)) + 30], [lx(TB, 1), TB - 2], [lx(TT2 + 30, 1), TT2 + 30]].concat(W1.slice(1)).concat([[PX + 12, PB - 30], [PX + 16, PB - 2]]);
@@ -260,12 +268,12 @@ const A7_DAWN = (() => {
     pressIn(ag, E.c0, "down", 12601); pressIn(hg, E.c0, "up", 12602); pressIn(amg, E.c0, "up", 12603);
     // 最初の窓に琥珀(刷り替えと同じコマ)、信号が窓から鉄塔まで(アクセントごとに押す)
     amg.fillRect(WN.x - 3, WN.y - 3, WN.w + 6, WN.h + 6);
-    const sC = pushProg(E.sigPush.map((s, i) => [s, (i + 1) / (E.sigPush.length + 1), 5]).concat([[E.arrive - 3, 1, 4]]));
+    const sC = pushProg(E.sigPush.map((s, i) => [s, (i + 1) / (E.sigPush.length + 1), 5]).concat([[E.arrive - 1, 1, 2]]));
     const [sb] = signalBuf("sigC", SIG, sC * SL, { w0: 9, w1: 6.5, seed: 12500 }); amg.drawImage(sb, 0, 0);
     // 題: 札の枠と字を墨で刷り、題の「明」の日に琥珀
     const tp = textPlate("plT", [[(tg) => { const [x0, y0, x1, y1] = CART; for (const [d, w] of [[0, 6], [11, 2.2]]) { tg.lineWidth = w; tg.strokeStyle = "#000"; tg.strokeRect(x0 + d, y0 + d, x1 - x0 - 2 * d, y1 - y0 - 2 * d); } tg.beginPath(); pathOf(tg, TT.flatMap((L) => L.cs)); tg.fill("nonzero"); }, [CART[0] - 6, CART[1] - 6, CART[2] + 6, CART[3] + 6], E.title, "down", 12701]]);
     if (f >= E.title + 3) letterPlate(amg, TT[1], { rect: [0.0, -0.80, 0.40, -0.10] });
-    return fin(ctx, m, [{ c: a, color: C.ROSE, kind: "bokashi", shift: [-2, 1] }, { c: h, color: C.HONEY, kind: "bokashi", shift: [2, -1] }, { c: am, color: C.AMBER, kind: "flat", shift: [-3, 2] }, { c: tp, color: C.INK_DAWN, kind: "flat", shift: [0, 0] }], o, f >= E.title ? TT : [], { comp: "C", events: E, signal: +sC.toFixed(3), sun_diam_px: 2 * SR, cartouche_h_px: CH, signal_len_px: Math.round(SL), letters: TT.map((L) => ({ ch: L.ch, bb: bbox(L.cs).map(Math.round) })) }, { sheet: 3, cut: 12 });
+    return fin(ctx, m, [{ c: a, color: C.ROSE, kind: "bokashi", shift: [-2, 1] }, { c: h, color: C.HONEY, kind: "bokashi", shift: [2, -1] }, { c: am, color: C.AMBER, kind: "flat", shift: [-3, 2] }, { c: tp, color: C.INK_DAWN, kind: "flat", shift: [0, 0] }], o, f >= E.title ? TT : [], { comp: "C", events: E, mbox: { cart: CART, pylon: [PX - 40, PT - 20, PX + 40, PB + 10], window: [WN.x - 4, WN.y - 4, WN.x + WN.w + 4, WN.y + WN.h + 4] }, signal: +sC.toFixed(3), sun_diam_px: 2 * SR, cartouche_h_px: CH, signal_len_px: Math.round(SL), letters: TT.map((L) => ({ ch: L.ch, bb: bbox(L.cs).map(Math.round) })) }, { sheet: 3, cut: 12 });
   }
 
   return function draw(ctx, o) { const f = getF(); if (f < timesB().c0) return compA(ctx, o); if (f < timesC().c0) return compB(ctx, o); return compC(ctx, o); };

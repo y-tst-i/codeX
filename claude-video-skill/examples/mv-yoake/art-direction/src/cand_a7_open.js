@@ -18,7 +18,7 @@ const A7_T = (() => {
 
 const A7_OPEN = (() => {
   const { W, H, clamp, lerp, smooth, hash, fbm, vnoise, resample, stroke, bbox, pathOf } = AD;
-  const { MO, C, FRAME, PR, begin, plateBuf, poly, cut, cutW, wedge, groove, lens, chipEdge, setH, setV, lettersBox, keepOut, letterPlate, textMargin, bokashi, print, maskOnly, polyLen } = A6;
+  const { MO, avoidBoxes, C, FRAME, PR, begin, plateBuf, poly, cut, cutW, wedge, groove, lens, chipEdge, setH, setV, lettersBox, keepOut, letterPlate, textMargin, bokashi, print, maskOnly, polyLen } = A6;
   const { cutT, wedgeT, lensT, grooveT, grooveP, pushProg, baren, carveT, getF } = MO;
   const { word, phrase, accIn, strongest, firstAcc, shot } = A7_T;
   const F = FRAME, NEVER = -1e9;
@@ -31,6 +31,17 @@ const A7_OPEN = (() => {
   // カットの頭の刷り替え: 新しい紙(sheet)に、色版をばれんの1回で刷る(c0 で 62%、c0+1 で 92%、c0+2 で刷り終える。インクの乗りのむらは付けない)
   const pressIn = (pg, c0, dir, seed) => baren(pg, [0, 0, W, H], c0, dir, seed, { q0: 0.62, dq: 0.3, mottle: false, rag: 0.12 });
 
+  // 空の筋(6秒試作の残課題「中ほどの静止」の対策): 藍の版を細い刀で少しずつさらい、紙の筋を出す(版から抜くので、彫った所は戻らない)。
+  // 筋は横長でゆるく反り、両端が細る。字の箱から 26px 以内は彫らない。t0〜t1 に 1 本ずつ(6 コマで彫り切る)。位置・長さ・太さは PR(cutId, 80, k)
+  function skyStreaks(pg, cutId, n, [x0, y0, x1, y1], t0, t1, boxes, { w = [2.5, 7], l = [260, 900] } = {}) {
+    pg.save(); pg.globalCompositeOperation = "destination-out"; pg.fillStyle = "#000";
+    for (let k = 0; k < n; k++) {
+      const R = PR(cutId, 80, k), y = lerp(y0, y1, Math.pow(R(), 1.2)), len = lerp(l[0], l[1], R()), x = lerp(x0 - len * 0.3, x1 - len * 0.7, R()), ww = lerp(w[0], w[1], Math.pow(R(), 1.6)), bow = 3 + 6 * R(), tilt = (R() - 0.5) * 10, st = t0 + (t1 - t0) * (k + 0.6 * R()) / n;
+      const P = []; for (let i = 0; i <= 12; i++) { const u = i / 12; P.push([x + len * u, y - bow * 4 * u * (1 - u) + tilt * u]); }
+      avoidBoxes(P, boxes, 26, 4).forEach((seg, j) => cutT(pg, seg, ww, cutId * 9100 + k * 7 + j, { entry: 0.12, exit: 0.5, jit: 0.5 }, st, 6));
+    }
+    pg.restore();
+  }
   // ===== v6 から写した道具(位置の hash) =====
   function rowsOf(cut, layer, y0, y1, gap) { const out = []; let y = y0, k = 0; while (y < y1 && k < 4000) { out.push([k, y, PR(cut, layer, k)]); y += gap(y, PR(cut, layer + 50, k)); k++; } return out; }
   // 手で切った窓。at: 桟の1枚目を彫るコマ(1枚ずつ 1 コマ後)
@@ -79,7 +90,7 @@ const A7_OPEN = (() => {
     const K = [1298, 318, 64, 2.7];
     const a1 = strongest(sh.start, sh.start + 20), a2 = strongest(a1 + 15, a1 + 40), a3 = strongest(a2 + 10, a2 + 25);
     const ringAcc = accIn(a3 + 5, sh.end - 1).filter((x) => x.strength >= 0.7).map((x) => x.frame30); // 76, 85, 104, 113, 133
-    const grainEnd = ringAcc[ringAcc.length - 1] - 4;
+    const grainEnd = ringAcc[ringAcc.length - 1] + 6; // 木目は節の最後の年輪の後まで少しずつ(間を作らない)
     woodLinesT(g, 1, { K, focus: true }, (x, y, near, id) => (near < 0.22 ? NEVER : a1 + 6 + (grainEnd - a1 - 14) * clamp((near - 0.22) / 0.78) * 0.85 + 16 * h01(id, 3, 611)));
     const ringR = (a, j) => { const lobe = 1 + 0.16 * Math.cos(a - 0.6) + 0.07 * Math.cos(2 * a + 1.1), n = 1 + 0.07 * (fbm(Math.cos(a) * 1.6, Math.sin(a) * 1.6, 6210 + j, 3) - 0.5) * 2; return lobe * n; };
     for (let j = 0; j < 8; j++) {
@@ -164,6 +175,7 @@ const A7_OPEN = (() => {
     carveT(g, T, 2600, E.letters);
     g.restore();
     const [q, qg] = plateBuf("plB"); bokashi(qg, 0, F.y0, 0, EMB, [[0, 1], [0.5, 0.97], [0.82, 0.78], [1, 0.5]]); qg.globalCompositeOperation = "destination-out"; drawWedges(qg); qg.globalCompositeOperation = "source-over"; MO.holeT(qg, T, 2600, E.letters, 4); qg.globalCompositeOperation = "destination-out"; qg.fillStyle = "#000"; for (const P of city) { qg.beginPath(); poly(qg, P); qg.fill(); } qg.fillRect(0, EMB - 2, W, H); qg.globalCompositeOperation = "source-over";
+    skyStreaks(qg, 2, 14, [70, 70, 1480, 420], E.kan + 23, E.via - 1, [tb], { w: [2.2, 6], l: [240, 760] }); // v7: 闇の後〜溝の前の間を埋める空の筋
     pressIn(qg, c0, "down", 2801);
     const [p, pg] = plateBuf("plA");
     pg.save(); pg.beginPath(); poly(pg, city[6]); pg.clip(); pg.beginPath(); poly(pg, chipEdge([[870, 540], [962, 534], [976, 600], [968, 672], [874, 676], [866, 610], [870, 540]], 2551, { big: 0.6 })); pg.fill(); pg.restore();
@@ -243,6 +255,7 @@ const A7_OPEN = (() => {
     pg.globalCompositeOperation = "destination-out"; keepOut(pg, T, 24); pg.globalCompositeOperation = "source-over";
     const [q, qg] = plateBuf("plB"); bokashi(qg, 0, F.y0, 0, 360, [[0, 1], [0.45, 0.95], [0.85, 0.66], [1, 0.5]]);
     qg.globalCompositeOperation = "destination-out"; qg.fillStyle = "#000"; qg.beginPath(); qg.moveTo(0, yb(0) - 3); for (let xx = 0; xx <= W; xx += 8) qg.lineTo(xx, yb(xx) - 3); qg.lineTo(W, H); qg.lineTo(0, H); qg.closePath(); qg.fill(); for (const P of shapes) { qg.beginPath(); poly(qg, P); qg.fill(); } qg.globalCompositeOperation = "source-over";
+    skyStreaks(qg, 3, 12, [70, 60, 1860, 190], E.lit1 - 15, sh.end - 6, [lettersBox(T)], { w: [1.8, 4.5], l: [200, 640] }); // v7: 灯の間を埋める空の筋(遠い空なので細く)
     pressIn(qg, c0, "right", 3802);
     return fin(ctx, m, [{ c: q, color: C.AI, kind: "bokashi", shift: [2, -1] }, { c: p, color: C.AMBER, kind: "flat" }], o, T, { grain: -0.02, cut: 3, sheet: 2 }, { cut_id: "S3", events: E, letters: T.map((L) => ({ ch: L.ch, bb: bbox(L.cs).map(Math.round) })) });
   }
@@ -253,7 +266,8 @@ const A7_OPEN = (() => {
   //  溝は窓1から窓2へ、その後のアクセント(435・453・482)ごとに押して進む。「またひとつ」は 450 以後の最初のアクセント(453。語ごとの時刻が無いので推定)から。
   //  窓2は 485〜495 の最強(491)で彫り、495〜505 の最強(500、0.89)で刷る(またひとつ)。刷ったら窓1→窓2の溝に琥珀が通る(10 コマ)。
   //  「繋がってく」(540、要確認)で字を坂の黒に彫り始め、溝の2本目を窓2から右へ。アクセントごとに押し(557・567・576・585)、3つ目の窓の手前で止まる。
-  //  600〜 の最強(642)で3つ目の窓の枠を彫る(まだ灯らない)。坂の面の刀と家の縁の刀は全体に少しずつ(長い静止を作らない)
+  //  溝②は拍ごとに押して(546〜633 の 8 回)、600〜 の最強(642)で3つ目の窓に届いて桟を彫り、次の強いアクセント(652)で琥珀を刷る(v6 は灯らないまま=v7 で変えた)。
+  //  坂の面の刀・家の縁の刀・空の筋は全体に少しずつ(長い静止を作らない)
   // =====================================================================
   const slope4 = (x) => 470 + (x - F.x0) * 0.25 + (fbm(x * 0.004, 2, 81, 3) - 0.5) * 24;
   const S4_HOUSES = [[-80, 520, 300, 520, "g"], [430, 300, 150, 250, "e"], [790, 150, 96, 150, "s"], [980, 280, 170, 240, "g"], [1300, 210, 150, 160, "f"], [1560, 170, 90, 150, "e"], [1740, 200, 110, 140, "s"]];
@@ -272,9 +286,9 @@ const A7_OPEN = (() => {
     E.w2Carve = strongest(485, 495); E.w2Print = strongest(495, 505);
     E.g1Push = accIn(E.w1Print + 5, E.w2Carve - 5).sort((a, b) => b.strength - a.strength).slice(0, 3).map((x) => x.frame30).sort((a, b) => a - b);
     E.t3 = [0, 5, 10, 13, 18].map((d) => E.tsuna + d);
-    E.g2Push = [E.tsuna + 6].concat(accIn(E.tsuna + 12, E.tsuna + 50).sort((a, b) => b.strength - a.strength).slice(0, 4).map((x) => x.frame30).sort((a, b) => a - b));
-    E.w3 = strongest(600, sh.end - 10);
-    E.knives = accIn(E.w2Print + 5, sh.end - 5).filter((x) => x.frame30 !== E.w3 && !E.g2Push.includes(x.frame30)).map((x) => x.frame30).slice(0, 6);
+    E.w3 = strongest(600, sh.end - 20); E.w3Print = strongest(E.w3 + 6, sh.end - 12); // 3つ目の窓: 桟を彫る(642)→ 刷る(652)
+    E.g2Push = [E.tsuna + 6].concat(accIn(E.tsuna + 12, E.w3 - 4).sort((a, b) => b.strength - a.strength).slice(0, 7).map((x) => x.frame30).sort((a, b) => a - b)); // 溝②は拍ごとに押して、3つ目の窓に届く
+    E.knives = accIn(E.w2Print + 5, sh.end - 5).filter((x) => x.frame30 !== E.w3 && x.frame30 !== E.w3Print && !E.g2Push.includes(x.frame30)).map((x) => x.frame30).slice(0, 6);
     const topOf = (P) => P.reduce((a, q) => Math.min(a, q[1]), 1e9);
     const W1 = { x: 512, y: topOf(houses[1]) + 140, w: 84, h: 98, cols: 2, rows: 2 }, W2 = { x: 1074, y: topOf(houses[3]) + 112, w: 72, h: 104, cols: 1, rows: 2 }, W3 = { x: 1400, y: topOf(houses[4]) + 50, w: 56, h: 60 };
     g.fillStyle = "#fff"; g.beginPath(); g.moveTo(F.x0 - 10, F.y0 - 10); g.lineTo(F.x1 + 10, F.y0 - 10); for (let x = F.x1 + 10; x >= F.x0 - 10; x -= 8) g.lineTo(x, slope4(x) + 2); g.closePath(); g.fill();
@@ -294,18 +308,22 @@ const A7_OPEN = (() => {
     const [p, pg] = plateBuf("plA");
     for (const [Wn, hi, ca, pr] of [[W1, 1, E.w1Carve, E.w1Print], [W2, 3, E.w2Carve, E.w2Print]]) { g.fillStyle = "#000"; g.fillRect(Wn.x - 6, Wn.y - 6, Wn.w + 12, Wn.h + 12); g.fillStyle = "#fff"; handWindowT(g, Wn.x, Wn.y, Wn.w, Wn.h, Wn.cols, Wn.rows, 51 + hi, ca); pg.save(); pg.beginPath(); poly(pg, houses[hi]); pg.clip(); pg.beginPath(); pg.ellipse(Wn.x + Wn.w / 2, Wn.y + Wn.h / 2, Wn.w / 2 + 52, Wn.h / 2 + 50, 0, 0, 7); pg.fill(); pg.restore(); baren(pg, [Wn.x - 60, Wn.y - 60, Wn.x + Wn.w + 60, Wn.y + Wn.h + 60], pr, hi === 1 ? "down" : "right", 4810 + hi); }
     // 窓1→窓2 の溝の琥珀: 窓2を刷ったコマから、窓1の側から 10 コマで通る
-    pg.fillStyle = "#000"; grooveP(pg, G1, Object.assign({}, G1o, { w0: 14, w1: 9 }), f < E.w2Print ? 0 : clamp((f - E.w2Print + 1) / 10));
-    g.fillStyle = "#fff"; if (f >= E.w3) cutW(g, [[W3.x, W3.y], [W3.x + W3.w, W3.y]], 2, 2, 4760); if (f >= E.w3 + 1) cutW(g, [[W3.x, W3.y + W3.h], [W3.x + W3.w, W3.y + W3.h]], 2, 2, 4761);
+    pg.fillStyle = "#000"; grooveP(pg, G1, Object.assign({}, G1o, { w0: 14, w1: 9 }), f < E.w2Print ? 0 : clamp((f - E.w2Print + 1) / 22));
+    grooveP(pg, G2, { w0: 10, w1: 5, seed: 4802, chip: 2.2 }, f < E.w3Print ? 0 : clamp((f - E.w3Print + 1) / 9)); // v7: 3つ目の窓を刷ったら、窓2→窓3 の溝にも琥珀が通る
+    // v7: 3つ目の窓も灯す(「繋がってく」の句の終わりで、溝が届いて灯る)。v6 は灯らない枠の2本だけだった
+    g.fillStyle = "#000"; g.fillRect(W3.x - 6, W3.y - 6, W3.w + 12, W3.h + 12); g.fillStyle = "#fff"; handWindowT(g, W3.x, W3.y, W3.w, W3.h, 2, 2, 55, E.w3);
+    pg.save(); pg.beginPath(); poly(pg, houses[4]); pg.clip(); pg.beginPath(); pg.ellipse(W3.x + W3.w / 2, W3.y + W3.h / 2, W3.w / 2 + 44, W3.h / 2 + 42, 0, 0, 7); pg.fill(); pg.restore(); baren(pg, [W3.x - 60, W3.y - 60, W3.x + W3.w + 60, W3.y + W3.h + 60], E.w3Print, "right", 4815);
     const T1 = setH("SMB", "ひとつ、", 470, 262, 92, 0.1), T2 = setH("SMB", "またひとつ", 960, 352, 92, 0.1), T = T1.concat(T2);
-    const T3 = setH("SMB", "繋がってく", 1150, 948, 96, 0.1); // v7: 歌詞「繋がってく」(540、要確認)を坂の黒に彫る(v6 の静止画には無かった)
+    const T3 = setH("SMB", "繋がってく", 1060, 948, 96, 0.1); // v7: 歌詞「繋がってく」(540、要確認)を坂の黒に彫る(v6 の静止画には無かった)
     carveT(g, T, 4790, E.t1.concat(E.t2));
     keepOut(g, T3, 22); carveT(g, T3, 4890, E.t3);
     g.restore();
     const [q, qg] = plateBuf("plB"); bokashi(qg, F.x0, F.y0, F.x1 * 0.85, 760, [[0, 1], [0.5, 0.92], [0.8, 0.68], [1, 0.42]]);
     qg.globalCompositeOperation = "destination-out"; qg.fillStyle = "#000"; qg.beginPath(); qg.moveTo(0, H); for (let x = 0; x <= W; x += 8) qg.lineTo(x, slope4(x) - 2); qg.lineTo(W, H); qg.closePath(); qg.fill(); for (const P of houses) { qg.beginPath(); poly(qg, P); qg.fill(); } qg.globalCompositeOperation = "source-over"; MO.holeT(qg, T, 4790, E.t1.concat(E.t2), 4);
+    skyStreaks(qg, 4, 26, [60, 60, 1860, 400], E.w1Print + 3, sh.end - 6, T.map((L) => bbox(L.cs)), { w: [2.2, 6.5], l: [260, 820] }); // v7: 灯と溝の間、繋がってく の後を埋める空の筋(独立審査 v3 の S4「空の上の端に白い刀を戻す」)
     pressIn(qg, c0, "left", 4803);
     const all = T.concat(T3);
-    return fin(ctx, m, [{ c: q, color: C.AI, kind: "bokashi", shift: [2, -1] }, { c: p, color: C.AMBER, kind: "flat" }], o, all, { grain: 0.04, cut: 4, sheet: 3 }, { cut_id: "S4", events: E, g1: +g1p.toFixed(3), g2: +g2p.toFixed(3), letters: all.map((L) => ({ ch: L.ch, bb: bbox(L.cs).map(Math.round) })) });
+    return fin(ctx, m, [{ c: q, color: C.AI, kind: "bokashi", shift: [2, -1] }, { c: p, color: C.AMBER, kind: "flat" }], o, all, { grain: 0.04, cut: 4, sheet: 3 }, { cut_id: "S4", events: E, g1: +g1p.toFixed(3), g2: +g2p.toFixed(3), mbox: { W1: [W1.x - 6, W1.y - 6, W1.x + W1.w + 6, W1.y + W1.h + 6], W2: [W2.x - 6, W2.y - 6, W2.x + W2.w + 6, W2.y + W2.h + 6], W3: [W3.x - 8, W3.y - 8, W3.x + W3.w + 8, W3.y + W3.h + 8], G1: bbox([G1]).map(Math.round), G2: bbox([G2]).map(Math.round) }, letters: all.map((L) => ({ ch: L.ch, bb: bbox(L.cs).map(Math.round) })) });
   }
 
   function draw(ctx, o) {
