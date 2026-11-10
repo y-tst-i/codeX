@@ -1,5 +1,5 @@
 <!doctype html><meta charset="utf-8">
-<!-- 案A+C(v2)の描画ページ。?t=8|16|40 &v=clean|look。8秒だけ改善案の比較用に &win=0..4 &sky=0..2 &sun=0..2(省略時は採用した値)。1920×1080。
+<!-- 案A+C(v2)の描画ページ。?t=8|16|40 &v=clean|look。8秒だけ改善案の比較用に &win=0..4 &sky=0..2 &sun=0..2(省略時は採用した値)。40秒だけ &thin=0 で細い刀の刷りの改修(Phase 4 の回)を切る。1920×1080。
      字は gen/glyphs.js(tools/setup_v2.sh で text_v2.txt から作る字形の点列。git に入れない)。描画の計測値は window.__stats。 -->
 <style>body{margin:0;background:#000}</style>
 <body><canvas id="c" width="1920" height="1080"></canvas>
@@ -9,7 +9,7 @@
 <script>
 (() => {
   const q = new URLSearchParams(location.search), num = (k) => (q.has(k) ? +q.get(k) : undefined);
-  const o = { t: +(q.get("t") || 8), look: (q.get("v") || "look") === "look", win: num("win"), sky: num("sky"), sun: num("sun") };
+  const o = { t: +(q.get("t") || 8), look: (q.get("v") || "look") === "look", win: num("win"), sky: num("sky"), sun: num("sun"), thin: num("thin") };
   for (const k of Object.keys(o)) if (o[k] === undefined) delete o[k];
   const ctx = document.getElementById("c").getContext("2d", { willReadFrequently: true });
   ctx.fillStyle = "#000"; ctx.fillRect(0, 0, 1920, 1080);

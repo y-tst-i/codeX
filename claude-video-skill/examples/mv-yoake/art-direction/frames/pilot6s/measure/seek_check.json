@@ -1,0 +1,1323 @@
+{
+"frames": 180,
+"orders": {
+"A_forward_tl": {
+"how": "tl",
+"first": [
+0,
+1,
+2,
+3,
+4,
+5,
+6,
+7
+]
+},
+"B_reverse_event": {
+"how": "event",
+"first": [
+179,
+178,
+177,
+176,
+175,
+174,
+173,
+172
+]
+},
+"C_skip_tl": {
+"how": "tl",
+"first": [
+41,
+64,
+172,
+103,
+24,
+67,
+25,
+126
+]
+},
+"D_skip_event": {
+"how": "event",
+"first": [
+47,
+79,
+98,
+138,
+87,
+103,
+22,
+1
+]
+}
+},
+"seek_diff_frames": 0,
+"hf_png_compared": 180,
+"hf_png_diff_frames": 0,
+"verdict": "ALL_SAME",
+"rows": [
+{
+"frame": 0,
+"song": 141,
+"hash": "fdce24cc",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 1,
+"song": 142,
+"hash": "f5cb9a30",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 2,
+"song": 143,
+"hash": "98e369d7",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 3,
+"song": 144,
+"hash": "052f6125",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 4,
+"song": 145,
+"hash": "0d24258c",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 5,
+"song": 146,
+"hash": "a1dd1803",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 6,
+"song": 147,
+"hash": "8e2e7df9",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 7,
+"song": 148,
+"hash": "f91b0fff",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 8,
+"song": 149,
+"hash": "31997ce0",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 9,
+"song": 150,
+"hash": "1753bd82",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 10,
+"song": 151,
+"hash": "446261da",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 11,
+"song": 152,
+"hash": "446261da",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 12,
+"song": 153,
+"hash": "446261da",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 13,
+"song": 154,
+"hash": "446261da",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 14,
+"song": 155,
+"hash": "446261da",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 15,
+"song": 156,
+"hash": "446261da",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 16,
+"song": 157,
+"hash": "446261da",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 17,
+"song": 158,
+"hash": "446261da",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 18,
+"song": 159,
+"hash": "446261da",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 19,
+"song": 160,
+"hash": "ca240c1b",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 20,
+"song": 161,
+"hash": "b855b1a6",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 21,
+"song": 162,
+"hash": "867a0e5b",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 22,
+"song": 163,
+"hash": "712d8976",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 23,
+"song": 164,
+"hash": "2fde8438",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 24,
+"song": 165,
+"hash": "9e73fa52",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 25,
+"song": 166,
+"hash": "45a8caea",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 26,
+"song": 167,
+"hash": "f16e7a8b",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 27,
+"song": 168,
+"hash": "4e56fff9",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 28,
+"song": 169,
+"hash": "c7a8aa3f",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 29,
+"song": 170,
+"hash": "c7a8aa3f",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 30,
+"song": 171,
+"hash": "c7a8aa3f",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 31,
+"song": 172,
+"hash": "c7a8aa3f",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 32,
+"song": 173,
+"hash": "c7a8aa3f",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 33,
+"song": 174,
+"hash": "c7a8aa3f",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 34,
+"song": 175,
+"hash": "c7a8aa3f",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 35,
+"song": 176,
+"hash": "c7a8aa3f",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 36,
+"song": 177,
+"hash": "c7a8aa3f",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 37,
+"song": 178,
+"hash": "c7a8aa3f",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 38,
+"song": 179,
+"hash": "c7a8aa3f",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 39,
+"song": 180,
+"hash": "c7a8aa3f",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 40,
+"song": 181,
+"hash": "c7a8aa3f",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 41,
+"song": 182,
+"hash": "c7a8aa3f",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 42,
+"song": 183,
+"hash": "c7a8aa3f",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 43,
+"song": 184,
+"hash": "c7a8aa3f",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 44,
+"song": 185,
+"hash": "c7a8aa3f",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 45,
+"song": 186,
+"hash": "c7a8aa3f",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 46,
+"song": 187,
+"hash": "c7a8aa3f",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 47,
+"song": 188,
+"hash": "c7a8aa3f",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 48,
+"song": 189,
+"hash": "f7696602",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 49,
+"song": 190,
+"hash": "b80b9f45",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 50,
+"song": 191,
+"hash": "3c990baf",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 51,
+"song": 192,
+"hash": "d6e9235a",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 52,
+"song": 193,
+"hash": "69beff36",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 53,
+"song": 194,
+"hash": "362c088e",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 54,
+"song": 195,
+"hash": "1486d7c9",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 55,
+"song": 196,
+"hash": "812b04d7",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 56,
+"song": 197,
+"hash": "92500407",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 57,
+"song": 198,
+"hash": "2d33781f",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 58,
+"song": 199,
+"hash": "e2112f62",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 59,
+"song": 200,
+"hash": "9cfd8548",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 60,
+"song": 201,
+"hash": "1166eb7c",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 61,
+"song": 202,
+"hash": "f5b94dcc",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 62,
+"song": 203,
+"hash": "ad278ab9",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 63,
+"song": 204,
+"hash": "162b78bb",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 64,
+"song": 205,
+"hash": "a2aeeb3f",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 65,
+"song": 206,
+"hash": "eba57d08",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 66,
+"song": 207,
+"hash": "cebf2d0d",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 67,
+"song": 208,
+"hash": "6c2335fa",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 68,
+"song": 209,
+"hash": "e5b4cdd8",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 69,
+"song": 210,
+"hash": "33e9e84f",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 70,
+"song": 211,
+"hash": "7a697ab1",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 71,
+"song": 212,
+"hash": "423ff504",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 72,
+"song": 213,
+"hash": "06c0194c",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 73,
+"song": 214,
+"hash": "90e5ba1a",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 74,
+"song": 215,
+"hash": "846be9d7",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 75,
+"song": 216,
+"hash": "9c856429",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 76,
+"song": 217,
+"hash": "96d543a7",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 77,
+"song": 218,
+"hash": "55744634",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 78,
+"song": 219,
+"hash": "78023e80",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 79,
+"song": 220,
+"hash": "3edda594",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 80,
+"song": 221,
+"hash": "b4bde322",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 81,
+"song": 222,
+"hash": "c13da7a0",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 82,
+"song": 223,
+"hash": "56f4f7be",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 83,
+"song": 224,
+"hash": "ba0dc23d",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 84,
+"song": 225,
+"hash": "aa71c01e",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 85,
+"song": 226,
+"hash": "1a2ce32a",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 86,
+"song": 227,
+"hash": "54dfaeea",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 87,
+"song": 228,
+"hash": "5a13fffb",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 88,
+"song": 229,
+"hash": "3d2de469",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 89,
+"song": 230,
+"hash": "b299d32c",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 90,
+"song": 231,
+"hash": "9369c383",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 91,
+"song": 232,
+"hash": "adf3ed7d",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 92,
+"song": 233,
+"hash": "c2b3354a",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 93,
+"song": 234,
+"hash": "daa6b89d",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 94,
+"song": 235,
+"hash": "12fe166b",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 95,
+"song": 236,
+"hash": "62ca91aa",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 96,
+"song": 237,
+"hash": "d17c1b9c",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 97,
+"song": 238,
+"hash": "73f309d9",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 98,
+"song": 239,
+"hash": "2cd58afc",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 99,
+"song": 240,
+"hash": "6d4a5438",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 100,
+"song": 241,
+"hash": "de1a4837",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 101,
+"song": 242,
+"hash": "d7adb46d",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 102,
+"song": 243,
+"hash": "6ad8daba",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 103,
+"song": 244,
+"hash": "f4417835",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 104,
+"song": 245,
+"hash": "8a30a2f8",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 105,
+"song": 246,
+"hash": "538c525b",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 106,
+"song": 247,
+"hash": "b0815c4c",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 107,
+"song": 248,
+"hash": "5b2a2f31",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 108,
+"song": 249,
+"hash": "4698fc0b",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 109,
+"song": 250,
+"hash": "e2986860",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 110,
+"song": 251,
+"hash": "e2986860",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 111,
+"song": 252,
+"hash": "e2986860",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 112,
+"song": 253,
+"hash": "e2986860",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 113,
+"song": 254,
+"hash": "e2986860",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 114,
+"song": 255,
+"hash": "1d9a471e",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 115,
+"song": 256,
+"hash": "052b70e3",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 116,
+"song": 257,
+"hash": "bf3f37f4",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 117,
+"song": 258,
+"hash": "bfc35809",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 118,
+"song": 259,
+"hash": "516072c2",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 119,
+"song": 260,
+"hash": "6223f232",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 120,
+"song": 261,
+"hash": "8c62a2ef",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 121,
+"song": 262,
+"hash": "ef5e254e",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 122,
+"song": 263,
+"hash": "d53b8dd8",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 123,
+"song": 264,
+"hash": "d1b8e283",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 124,
+"song": 265,
+"hash": "f05656a7",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 125,
+"song": 266,
+"hash": "ca8af8d5",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 126,
+"song": 267,
+"hash": "e7aae0bc",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 127,
+"song": 268,
+"hash": "bf2dc429",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 128,
+"song": 269,
+"hash": "d1d120cc",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 129,
+"song": 270,
+"hash": "fd6bd77a",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 130,
+"song": 271,
+"hash": "d6b5991b",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 131,
+"song": 272,
+"hash": "0dab52b6",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 132,
+"song": 273,
+"hash": "9dcf929d",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 133,
+"song": 274,
+"hash": "60f9ed12",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 134,
+"song": 275,
+"hash": "80108cb7",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 135,
+"song": 276,
+"hash": "80108cb7",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 136,
+"song": 277,
+"hash": "80108cb7",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 137,
+"song": 278,
+"hash": "80108cb7",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 138,
+"song": 279,
+"hash": "80108cb7",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 139,
+"song": 280,
+"hash": "80108cb7",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 140,
+"song": 281,
+"hash": "80108cb7",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 141,
+"song": 282,
+"hash": "80108cb7",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 142,
+"song": 283,
+"hash": "1e000374",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 143,
+"song": 284,
+"hash": "7b16891e",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 144,
+"song": 285,
+"hash": "8c8f8afa",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 145,
+"song": 286,
+"hash": "5044bb7e",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 146,
+"song": 287,
+"hash": "49c91aeb",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 147,
+"song": 288,
+"hash": "5ac3f18e",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 148,
+"song": 289,
+"hash": "5ac3f18e",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 149,
+"song": 290,
+"hash": "5ac3f18e",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 150,
+"song": 291,
+"hash": "4e0c3159",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 151,
+"song": 292,
+"hash": "ca89e6b4",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 152,
+"song": 293,
+"hash": "375bd456",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 153,
+"song": 294,
+"hash": "a4221b32",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 154,
+"song": 295,
+"hash": "6842dc9c",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 155,
+"song": 296,
+"hash": "871d95fe",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 156,
+"song": 297,
+"hash": "c365d576",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 157,
+"song": 298,
+"hash": "fac8901a",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 158,
+"song": 299,
+"hash": "17518b3e",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 159,
+"song": 300,
+"hash": "9ebca9fb",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 160,
+"song": 301,
+"hash": "dd6be356",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 161,
+"song": 302,
+"hash": "15354206",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 162,
+"song": 303,
+"hash": "23ea83cc",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 163,
+"song": 304,
+"hash": "31f8a7a8",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 164,
+"song": 305,
+"hash": "cd3a8885",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 165,
+"song": 306,
+"hash": "cd3a8885",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 166,
+"song": 307,
+"hash": "cd3a8885",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 167,
+"song": 308,
+"hash": "cd3a8885",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 168,
+"song": 309,
+"hash": "cd3a8885",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 169,
+"song": 310,
+"hash": "cd3a8885",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 170,
+"song": 311,
+"hash": "cd3a8885",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 171,
+"song": 312,
+"hash": "cd3a8885",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 172,
+"song": 313,
+"hash": "cd3a8885",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 173,
+"song": 314,
+"hash": "cd3a8885",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 174,
+"song": 315,
+"hash": "cd3a8885",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 175,
+"song": 316,
+"hash": "cd3a8885",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 176,
+"song": 317,
+"hash": "cd3a8885",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 177,
+"song": 318,
+"hash": "cd3a8885",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 178,
+"song": 319,
+"hash": "47a07b1a",
+"same": true,
+"hf_match": true
+},
+{
+"frame": 179,
+"song": 320,
+"hash": "865db887",
+"same": true,
+"hf_match": true
+}
+]
+}

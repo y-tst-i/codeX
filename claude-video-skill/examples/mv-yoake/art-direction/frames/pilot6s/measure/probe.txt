@@ -1,0 +1,5 @@
+# ffprobe(書き出した動画。リポジトリの外 scratchpad/mv2d/yoake_art_pilot6s.mp4)
+stream|codec_name=h264|codec_type=video|width=1920|height=1080|r_frame_rate=30/1|duration=6.000000|nb_read_frames=180
+stream|codec_name=aac|codec_type=audio|sample_rate=48000|channels=2|r_frame_rate=0/0|duration=6.000000|nb_read_frames=282
+format|duration=6.000000
+# 音の区間: 出力の音を元の曲(MV_segment_A_122-175.mp3)と相互相関で照合。3区間(0.2-2.0/2.0-4.0/4.0-5.9秒)とも、出力の t 秒 = 元の曲の 4.70+t 秒(ずれ 0〜1 サンプル=0.02ms 以下、相関 0.9993〜0.9996)。RMS -17.3 dBFS(元の同じ区間 -17.2)。曲の先頭 0.15 秒のフェードインはこの区間に無い

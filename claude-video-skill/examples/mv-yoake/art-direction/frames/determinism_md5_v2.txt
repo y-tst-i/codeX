@@ -15,3 +15,6 @@ a85c5f4af32ab23cd423914a894e2c80  A2_8s_clean.png
 d493d5526705e22549f240f21b17d480  A2_8s_look.png
 e813959c3a081fbb04392dfa3b9ae773  v1_path_8s_clean.png
 d797854556e5be1356b2497b03dce4f2  v1_path_8s_look.png
+## Phase 4 の回(2026-11-10): 40秒 look の局所改修(細い刀の刷りの処理だけ。cand_a2.js print() の thinKeep)。改修前は ?thin=0 で同じ md5(dac5…)。8秒・16秒・40秒 clean の md5 は変わらない(上と同じ値を確認)
+8a984be145ce013dbcb544bbb934a10e  style_ac_40s_look.png(改修後)
+dac5ec0aeb74311489c92ee6e5172d58  style_ac_40s_look_v2before.png(改修前 = 上の A2_40s_look.png)

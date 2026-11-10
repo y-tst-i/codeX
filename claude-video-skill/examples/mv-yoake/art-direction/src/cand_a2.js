@@ -67,12 +67,15 @@ const CAND_A2 = (() => {
   }
 
   // ===== 刷り(cand_a.js と同じ。色版は彫った所にだけ乗る) =====
-  function print(ctx, mask, plate, look) {
+  // thinKeep(40秒の局所改修、Phase 4 の回): 細い刀(幅 1〜2px)の所だけ、刷りの閾値のノイズを弱め、閾値を下げる(かすれで途切れないように)。
+  // 太い刀の所(広いぼかしの値が高い)は今までと同じ処理。thinKeep = false なら改修前と同じ画素
+  function print(ctx, mask, plate, look, thinKeep = false) {
     const ink = AD.hex(INK), paper = AD.hex(PAPER), pc = AD.hex(PLATE);
     const [o, og] = buf("out"); og.drawImage(mask, 0, 0);
     const md = mask.getContext("2d").getImageData(0, 0, W, H).data, pd = plate.getContext("2d").getImageData(0, 0, W, H).data;
     let bd = md;
     if (look) { const [b, bg] = buf("blur"); bg.filter = "blur(0.9px)"; bg.drawImage(mask, 0, 0); bd = bg.getImageData(0, 0, W, H).data; }
+    let wd = null; if (look && thinKeep) { const [b2, bg2] = buf("blurWide"); bg2.filter = "blur(3px)"; bg2.drawImage(mask, 0, 0); wd = bg2.getImageData(0, 0, W, H).data; }
     const grain = noiseField(W, H, 6, (x, y) => fbm(x * 0.0022, y * 0.09, 61, 3));
     const blot = noiseField(W, H, 8, (x, y) => fbm(x * 0.006, y * 0.006, 62, 4));
     const fiber = noiseField(W, H, 3, (x, y) => fbm(x * 0.05, y * 0.05, 63, 3));
@@ -82,7 +85,7 @@ const CAND_A2 = (() => {
     perPixel(o, (x, y) => {
       const i = (y * W + x) * 4; let v = bd[i] / 255;
       if (x > BX0 + 8 && x < BX1 - 8 && y > BY0 + 8 && y < BY1 - 8) { inBlock++; if (md[i] > 127) carved++; }
-      if (look) { const t = 0.5 + (edge(x, y) - 0.5) * 0.42; v = smooth((v - (t - 0.1)) / 0.2); } else v = v > 0.5 ? 1 : 0;
+      if (look) { const th = wd ? (v > 0.05 ? 1 - smooth((wd[i] / 255 - 0.12) / 0.35) : 0) : 0, t = 0.5 - 0.14 * th + (edge(x, y) - 0.5) * 0.42 * (1 - 0.8 * th); v = smooth((v - (t - 0.1)) / 0.2); } else v = v > 0.5 ? 1 : 0;
       let ic = ink, pp = paper;
       if (look) {
         const thin = clamp((grain(x, y) - 0.45) * 2.2) * 0.13 + (blot(x, y) - 0.5) * 0.12, speck = hash((x / 2) | 0, (y / 2) | 0, 71) < 0.0007 ? 0.45 : 0;
@@ -399,7 +402,7 @@ const CAND_A2 = (() => {
     const TANK = [[320, 690], [366, 656], [412, 690], [406, 754], [326, 754]];
     const LEGS = [[[334, 754], [322, 862]], [[398, 754], [410, 862]], [[334, 780], [404, 832]], [[398, 780], [328, 832]]];
     const MAST = [[1580, 860], [1580, 670]];
-    return function draw(ctx, { look }) {
+    return function draw(ctx, { look, thin = 1 }) {
       const [m, g] = buf("maskA2");
       g.fillStyle = "#fff"; g.fillRect(0, 0, W, H);
       g.save(); g.beginPath(); blockPath(g); g.fillStyle = "#000"; g.fill(); g.clip();
@@ -426,7 +429,7 @@ const CAND_A2 = (() => {
       carve(g, L, 700);
       g.restore();
       const [p, pg] = buf("plateA2"); pg.fillStyle = "#000"; letterPlate(pg, L[2], { contour: 0 });
-      return Object.assign(print(ctx, m, p, look), { drop: [Math.round(dx), Math.round(dy)] });
+      return Object.assign(print(ctx, m, p, look, thin !== 0), { drop: [Math.round(dx), Math.round(dy)], thin_keep: thin !== 0 }); // thin=0 で改修前(style_ac_40s_look_v2before.png)
     };
   })();
 

@@ -1,0 +1,262 @@
+{
+ "frames": 180,
+ "black_frames": [],
+ "lyrics": [
+  {
+   "char": "暗",
+   "word": "暗",
+   "onset": 141,
+   "confidence": "要確認",
+   "carve_start": 142,
+   "start_diff": 1,
+   "readable85": 147,
+   "readable_diff": 6,
+   "full98": 149
+  },
+  {
+   "char": "闇",
+   "word": "闇",
+   "onset": 160,
+   "confidence": "確認済み",
+   "carve_start": 160,
+   "start_diff": 0,
+   "readable85": 166,
+   "readable_diff": 6,
+   "full98": 168
+  },
+  {
+   "char": "の",
+   "word": "の",
+   "onset": 192,
+   "confidence": "確認済み",
+   "carve_start": 192,
+   "start_diff": 0,
+   "readable85": 197,
+   "readable_diff": 5,
+   "full98": 198
+  },
+  {
+   "char": "数",
+   "word": "数",
+   "onset": 215,
+   "confidence": "確認済み",
+   "carve_start": 216,
+   "start_diff": 1,
+   "readable85": 221,
+   "readable_diff": 6,
+   "full98": 222
+  },
+  {
+   "char": "だ",
+   "word": "だけ",
+   "onset": 238,
+   "confidence": "確認済み",
+   "carve_start": 238,
+   "start_diff": 0,
+   "readable85": 245,
+   "readable_diff": 7,
+   "full98": 248
+  },
+  {
+   "char": "け",
+   "word": "だけ",
+   "onset": 238,
+   "confidence": "確認済み",
+   "carve_start": 242,
+   "start_diff": 4,
+   "readable85": 247,
+   "readable_diff": 9,
+   "full98": 250
+  }
+ ],
+ "events": {
+  "sun_print": 189,
+  "window_print": 273,
+  "circuit_carve": 255,
+  "window_carve": 265,
+  "sky_burst": 283,
+  "water_reflection": 294,
+  "city_detail": 199
+ },
+ "sun_print_full": 192,
+ "window_print_full": 275,
+ "sky_carved_delta_280_302": {
+  "280": 0.0,
+  "281": 0.0,
+  "282": 0.0,
+  "283": 0.0013,
+  "284": 0.0049,
+  "285": 0.0116,
+  "286": 0.0089,
+  "287": 0.0026,
+  "288": 0.0001,
+  "289": 0.0,
+  "290": 0.0,
+  "291": 0.0067,
+  "292": 0.0047,
+  "293": 0.0028,
+  "294": 0.0014,
+  "295": 0.0008,
+  "296": 0.0002,
+  "297": 0.0001,
+  "298": 0.0,
+  "299": 0.0,
+  "300": 0.0,
+  "301": 0.0,
+  "302": 0.0
+ },
+ "sync": [
+  {
+   "accent": 142,
+   "strength": 0.51,
+   "kick": 0.09,
+   "intended": "(合わせない)",
+   "measured": null,
+   "diff": null,
+   "chg_total_pm1_max": 2615
+  },
+  {
+   "accent": 151,
+   "strength": 0.63,
+   "kick": 0.14,
+   "intended": "(合わせない)",
+   "measured": null,
+   "diff": null,
+   "chg_total_pm1_max": 143
+  },
+  {
+   "accent": 161,
+   "strength": 0.56,
+   "kick": 0.07,
+   "intended": "(合わせない)",
+   "measured": null,
+   "diff": null,
+   "chg_total_pm1_max": 2817
+  },
+  {
+   "accent": 180,
+   "strength": 0.72,
+   "kick": 0.07,
+   "intended": "(合わせない)",
+   "measured": null,
+   "diff": null,
+   "chg_total_pm1_max": 0
+  },
+  {
+   "accent": 189,
+   "strength": 0.83,
+   "kick": 0.11,
+   "intended": "字の日に色版を刷る(ばれん)",
+   "measured": 189,
+   "diff": 0,
+   "chg_total_pm1_max": 3021
+  },
+  {
+   "accent": 198,
+   "strength": 0.63,
+   "kick": 0.17,
+   "intended": "町の光の側の彫り(太陽に近い建物から)",
+   "measured": 199,
+   "diff": 1,
+   "chg_total_pm1_max": 287
+  },
+  {
+   "accent": 208,
+   "strength": 0.67,
+   "kick": 0.02,
+   "intended": "(合わせない)",
+   "measured": null,
+   "diff": null,
+   "chg_total_pm1_max": 181
+  },
+  {
+   "accent": 227,
+   "strength": 0.55,
+   "kick": 0.09,
+   "intended": "(合わせない)",
+   "measured": null,
+   "diff": null,
+   "chg_total_pm1_max": 35
+  },
+  {
+   "accent": 236,
+   "strength": 0.64,
+   "kick": 0.02,
+   "intended": "(合わせない)",
+   "measured": null,
+   "diff": null,
+   "chg_total_pm1_max": 114
+  },
+  {
+   "accent": 246,
+   "strength": 0.57,
+   "kick": 0.03,
+   "intended": "(合わせない)",
+   "measured": null,
+   "diff": null,
+   "chg_total_pm1_max": 1199
+  },
+  {
+   "accent": 255,
+   "strength": 0.75,
+   "kick": 0.05,
+   "intended": "字の足もとのビア+回路の線を彫り始める",
+   "measured": 255,
+   "diff": 0,
+   "chg_total_pm1_max": 597
+  },
+  {
+   "accent": 265,
+   "strength": 0.65,
+   "kick": 0.01,
+   "intended": "窓を彫る(線が届く)",
+   "measured": 265,
+   "diff": 0,
+   "chg_total_pm1_max": 855
+  },
+  {
+   "accent": 274,
+   "strength": 0.84,
+   "kick": 0.47,
+   "intended": "窓に色版(1コマ手前に刷る=274の手前)",
+   "measured": 273,
+   "diff": -1,
+   "chg_total_pm1_max": 3237
+  },
+  {
+   "accent": 283,
+   "strength": 0.85,
+   "kick": 0.15,
+   "intended": "地平に近い空の筋を彫る",
+   "measured": 283,
+   "diff": 0,
+   "chg_total_pm1_max": 4698
+  },
+  {
+   "accent": 293,
+   "strength": 0.53,
+   "kick": 0.16,
+   "intended": "川の映りを彫る",
+   "measured": 294,
+   "diff": 1,
+   "chg_total_pm1_max": 5455
+  },
+  {
+   "accent": 302,
+   "strength": 0.54,
+   "kick": 0.02,
+   "intended": "(合わせない)",
+   "measured": null,
+   "diff": null,
+   "chg_total_pm1_max": 833
+  }
+ ],
+ "amber_places_max": 2,
+ "amber_px_last": 9666,
+ "first_frame_mean_luma": 59.19,
+ "first_frame_carved": {
+  "sky": 0.0255,
+  "water": 0.0213,
+  "city": 0.0423
+ }
+}
