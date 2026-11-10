@@ -1,0 +1,32 @@
+<!doctype html><meta charset="utf-8">
+<!-- 案A+C(v6、53秒ボード v4)の描画ページ。?f=<曲のコマ番号>&v=look|clean|mask[&p=<彫りの進み 0〜1>][&paper=0]。1920×1080。
+     f = 60|240|370|480|740|840|950|1080|1200|1340〜1590。字は gen/glyphs.js(tools/setup_v2.sh を TEXT=text_v3.txt で。git に入れない)。
+     刷りの紙は assets/paper_acg_Paper006_gray.jpg(ambientCG Paper006、CC0 1.0。asset_ledger.csv)。読み込んでから描く(描画は f・v・p だけで決まる)。
+     描画の計測値は window.__stats。v5 の版は styleframes_v5.html -->
+<style>body{margin:0;background:#000}</style>
+<body><canvas id="c" width="1920" height="1080"></canvas>
+<script src="gen/glyphs.js"></script>
+<script src="common.js"></script>
+<script src="cand_a6.js"></script>
+<script src="cand_a6_cuts.js"></script>
+<script src="cand_a6_dawn.js"></script>
+<script>
+(() => {
+  const q = new URLSearchParams(location.search);
+  const v = q.get("v") || "look";
+  const o = { f: +(q.get("f") || 840), look: v === "look", mask: v === "mask" };
+  if (q.has("p")) o.p = +q.get("p");
+  const go = (paperInfo) => {
+    const ctx = document.getElementById("c").getContext("2d", { willReadFrequently: true });
+    ctx.fillStyle = "#000"; ctx.fillRect(0, 0, 1920, 1080);
+    window.__stats = Object.assign(A6_DRAW(ctx, o), { paper_scan: paperInfo });
+    document.title = JSON.stringify(window.__stats);
+    window.__ready = true;
+  };
+  if (q.get("paper") === "0" || !o.look) { go(null); return; }
+  const im = new Image();
+  im.onload = () => go(A6.setPaper(im));
+  im.onerror = () => { throw new Error("紙のスキャンが読めない: assets/paper_acg_Paper006_gray.jpg"); };
+  im.src = "assets/paper_acg_Paper006_gray.jpg";
+})();
+</script>
