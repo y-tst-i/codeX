@@ -9,3 +9,5 @@ code-render-still,claude-video-skill/examples/mv-yoake/src/tools/render_still.mj
 code-noise,claude-video-skill/examples/lumiwake-30s/src/lib/paint.js (hash / vnoise / fbm の式),(このリポジトリ),本プロジェクト,リポジトリのライセンスに従う,,yes,no,2026-11-10,式を src/common.js に書き写した,,used,
 images-external,(なし),,,,,,,,,,none,写真・画像生成・外部テクスチャ・ロゴは使っていない(3案ともコードだけ)
 audio,(なし),,,,,,,,,,none,今回は静止画のみ。曲(Suno 無料プラン、利用者作成)は使っていない
+audio-song-pilot6s,(リポジトリ外: scratchpad/mv_songs/MV_segment_A_122-175.mp3 の 4.70〜10.70秒を ffmpeg で切り出し),,利用者(Suno 無料プランで作成した曲),利用者の曲(Suno の利用条件は利用者の契約に従う。商用可否は未確認),,要確認,no,2026-11-10,6秒を切り出しただけ(音量・音質の加工なし),音声ファイルはリポジトリに入れない,used,Phase 4 の6秒試作(yoake_art_pilot6s.mp4)の音。利用者の承認(6秒試作の着手)の範囲で使用
+lib-gsap-pilot6s,(リポジトリ外: npm pack gsap@3.14.2 → HyperFrames のプロジェクトの assets/),https://gsap.com/standard-license,GreenSock,GSAP Standard No-Charge License(MIT ではない),https://gsap.com/standard-license,yes(標準ライセンスの範囲),no,2026-11-10,なし,再配布・組込の条件は標準ライセンスを確認,used,6秒試作の止めたタイムライン(現行 MV と同じ版・同じ入れ方)。コミットしない
