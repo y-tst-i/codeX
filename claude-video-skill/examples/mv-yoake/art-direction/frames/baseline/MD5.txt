@@ -1,0 +1,6 @@
+72a0218da60e9fe4a6c3c41d8864f7b6  yoake_f0240.jpg
+1f0b757f0f0f60067461b0e3162d0c9f  yoake_f0480.jpg
+2a0fb4ac74f3eb20b199d12ace6bde90  yoake_f0840.jpg
+f0e6d3575e281f34383357e2f708c489  yoake_f1200.jpg
+683d50d3ce2e5a38c549ca1a770fe450  yoake_f1470.jpg
+# yoake_v1.mp4 (1590 frames) から ffmpeg -vf select=eq(n\,N) で抜いた。N=240,480,840,1200,1470
