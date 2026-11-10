@@ -1,0 +1,20 @@
+<!doctype html><meta charset="utf-8">
+<!-- 案A+C(v3、53秒ボード)の描画ページ。?t=2|12|25|28|32|36|40|49 &v=clean|look、40秒だけ &mode=a|b。1920×1080。
+     字は gen/glyphs.js(tools/setup_v2.sh を TEXT=text_v3.txt で。git に入れない)。描画の計測値は window.__stats。8/16秒と40秒の旧版は styleframes_v2.html -->
+<style>body{margin:0;background:#000}</style>
+<body><canvas id="c" width="1920" height="1080"></canvas>
+<script src="gen/glyphs.js"></script>
+<script src="common.js"></script>
+<script src="cand_a3.js"></script>
+<script>
+(() => {
+  const q = new URLSearchParams(location.search);
+  const o = { t: +(q.get("t") || 28), look: (q.get("v") || "look") === "look" };
+  if (q.has("mode")) o.mode = q.get("mode");
+  const ctx = document.getElementById("c").getContext("2d", { willReadFrequently: true });
+  ctx.fillStyle = "#000"; ctx.fillRect(0, 0, 1920, 1080);
+  window.__stats = CAND_A3(ctx, o);
+  document.title = JSON.stringify(window.__stats);
+  window.__ready = true;
+})();
+</script>

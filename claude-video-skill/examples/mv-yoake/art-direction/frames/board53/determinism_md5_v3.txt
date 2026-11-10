@@ -1,0 +1,20 @@
+# v3(53秒ボード)の決定性: 1回目(board53/ の PNG、stats.jsonl の順)と、2回目(別の node プロセスで逆順に描いた PNG)の md5 が18枚とも一致(diff で確認)。
+# 字形データを text_v3.txt で作り直した後も、v2 の 8秒 look/clean・16秒 look・40秒 look の md5 は既存の PNG と同じ(d493…/a85c…/0d3c…/8a98…)
+4b0b32e9740c35eb6b28fe0b2b8228b7  style_ac_02s_clean.png
+d83af03e56f5c4fbc90f03134c49bcee  style_ac_02s_look.png
+317227250c7d4a70e72fbed1766aa42c  style_ac_12s_clean.png
+84a979339a83930e73e454bbd76ec43b  style_ac_12s_look.png
+7751307ea2722cdb3b8467db624711e4  style_ac_25s_clean.png
+13ba1adfdf0748afeb057fb01188861e  style_ac_25s_look.png
+9cdc9f5b6ec2ed1c40e855c47963d625  style_ac_28s_clean.png
+ef2e37ed44834f1774eb067c128d48b6  style_ac_28s_look.png
+c5c8825db984570557d8fd7fd21feebe  style_ac_32s_clean.png
+456658fd782c64302d6d3af09dda509e  style_ac_32s_look.png
+310194c12f2cbee3432847c3c646531a  style_ac_36s_clean.png
+a96164255014a2bb314af66233f15760  style_ac_36s_look.png
+9c01b12a6fa707eef8e200f7994309ac  style_ac_40sa_clean.png
+a15583043f9876a04db6e7fc7e088444  style_ac_40sa_look.png
+2523851bab1ec4f16ce53b328eb58ace  style_ac_40sb_clean.png
+daffc74aeebacb772d9e01e792e333f8  style_ac_40sb_look.png
+7730c687398b87217de6837967551c9b  style_ac_49s_clean.png
+2c4b36efa008fb58fea14ab8b1d0aa79  style_ac_49s_look.png
