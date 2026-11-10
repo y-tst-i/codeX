@@ -1,0 +1,24 @@
+<!doctype html><meta charset="utf-8">
+<!-- 案A+C(v5、53秒ボード v3)の描画ページ。?f=<曲のコマ番号>&v=look|clean|mask[&p=<彫りの進み 0〜1>]。1920×1080。
+     f = 60|240|370|480|740|840|950|1080|1200|1340〜1590。字は gen/glyphs.js(tools/setup_v2.sh を TEXT=text_v3.txt で。git に入れない)。
+     描画の計測値は window.__stats。v4 の版は styleframes_v4.html -->
+<style>body{margin:0;background:#000}</style>
+<body><canvas id="c" width="1920" height="1080"></canvas>
+<script src="gen/glyphs.js"></script>
+<script src="common.js"></script>
+<script src="cand_a5.js"></script>
+<script src="cand_a5_cuts.js"></script>
+<script src="cand_a5_dawn.js"></script>
+<script>
+(() => {
+  const q = new URLSearchParams(location.search);
+  const v = q.get("v") || "look";
+  const o = { f: +(q.get("f") || 840), look: v === "look", mask: v === "mask" };
+  if (q.has("p")) o.p = +q.get("p");
+  const ctx = document.getElementById("c").getContext("2d", { willReadFrequently: true });
+  ctx.fillStyle = "#000"; ctx.fillRect(0, 0, 1920, 1080);
+  window.__stats = A5_DRAW(ctx, o);
+  document.title = JSON.stringify(window.__stats);
+  window.__ready = true;
+})();
+</script>
