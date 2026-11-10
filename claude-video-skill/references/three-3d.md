@@ -1,6 +1,7 @@
 # three.js で立体の場面を作る(HyperFrames・ヘッドレス Chrome・ソフトウェアGL)
 
 立体感(接地の影、AO、ピントの奥行き、光のにじみ)が要る場面だけ three.js を使う。2D で足りる場面は `new_scene.sh`(Canvas2D)のほうが数倍速い。
+初稿を出す前の品質基準と技術別の数値は `3d-quality/README.md` → `3d-quality/techniques.md`。
 three は **0.181.2 固定**。CDN はこの環境で証明書エラーになるので、`npm pack` で取ってプロジェクトの `assets/three/` に置く(約0.9MB。スキルには同梱しない)。
 
 ## 1. 手順
@@ -46,7 +47,7 @@ three は **0.181.2 固定**。CDN はこの環境で証明書エラーになる
   ピントは主役の距離を毎フレーム `camera.position.distanceTo(主役)` で入れる。ピント送りは focus を t の関数にする。正射影カメラは自動で orthographic の深度式になる。
 - **GTAO**: `radius .25, distanceExponent 1.2, thickness 1, scale 2.5, distanceFallOff .6, samples 16`、デノイズ `lumaPhi 10, depthPhi 2, normalPhi 3, radius 6·ssaa, rings 2, samples 16`、合成 `col *= mix(1, pow(ao,1.6), .85)`。
   ブロックや箱庭は AO が無いと「貼り付けた」ように見える。球や人物は接地影のぼかしで代用できることが多い。
-- **Bloom**: `UnrealBloomPass(res, strength .2, radius .5, threshold 1.6)`(HDR で 1.6 を超えた所だけ)。光らせる物は `emissiveIntensity` 4〜8。公式サンプルの 1.5/0.4/0.85 は強すぎて画面全体がにじむ。
+- **Bloom**: `UnrealBloomPass(res, strength .2, radius .5, threshold 1.6)`(HDR で 1.6 を超えた所だけ)。光らせる物は `emissiveIntensity` 4〜8。公式サンプルの 1.5/0.4/0.85 は強すぎて画面全体がにじむ(r181 のサンプルは作った直後に threshold 0・strength 1・radius 0.5 で上書きしている。`3d-quality/sources.md` §1 d4)。
 - **色補正(線形域)**: ビネット .35、warm 0〜.1、sat 1.05〜1.1、contrast `c(1+k)/(1+k·c/(c+.6))` で k .15〜.26。
 - **トーンマッピング**: `NeutralToneMapping`(既定)。ACES は紙・白の色がずれ、AgX はアクセント色が白く飛びやすい。exposure 1.0〜1.15。
 - グレイン: ページで描かず ffmpeg で足す(`noise=c0s=2:allf=t`)。ページで描くと圧縮が効かず遅い。
