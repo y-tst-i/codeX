@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>夜明けの回路 動きの本制作 第1段 A+C</title>
+<style>
+html,body{margin:0;padding:0;background:#000;}
+#root{position:relative;overflow:hidden;background:#000;}
+#film{position:absolute;left:0;top:0;width:100%;height:100%;}
+</style>
+</head>
+<body>
+<!-- 動きの本制作 第1段(区間 /*PART*/: 曲のコマ /*F0*/〜/*FL*/)。canvas 1枚に、止めたタイムラインの時刻から曲のコマ番号 f を出して A7_DRAW で描く(全コマが f の純関数)。
+     字はフォントを使わず、書体(OFL)から作った字形の点列(assets/glyphs.js)で描く。紙は CC0 のスキャン(assets/paper_acg_Paper006_gray.jpg)を読み込んでからタイムラインを登録する。
+     音は書き出し後に ffmpeg で付ける(曲の /*F0*//30 秒から)。 -->
+<div id="root" data-composition-id="m1" data-start="0" data-duration="/*DUR*/" data-width="1920" data-height="1080" data-fps="30">
+  <canvas id="film" class="clip" data-start="0" data-duration="/*DUR*/" data-track-index="0" width="1920" height="1080"></canvas>
+</div>
+<script src="assets/gsap.min.js"></script>
+<script src="assets/glyphs.js"></script>
+<script src="assets/common.js"></script>
+<script src="assets/cand_a7.js"></script>
+<script src="assets/timing.gen.js"></script>
+<script src="assets/cand_a6_cuts.js"></script>
+<script src="assets/cand_a6_dawn.js"></script>
+<script src="assets/cand_a7_open.js"></script>
+<script src="assets/cand_a7_cuts.js"></script>
+<script src="assets/cand_a7_dawn.js"></script>
+<script>
+const LOOK = /*LOOK*/true, F0 = /*F0*/0, N = /*N*/1;
+window.__timelines = window.__timelines || {};
+window.__hf = window.__hf || {}; window.__hf.buildReady = window.__hf.buildReady || {};
+const ready = new Promise((res, rej) => {
+  if (!LOOK) { res(null); return; }
+  const im = new Image();
+  im.onload = () => res(A6.setPaper(im));
+  im.onerror = () => rej(new Error("紙のスキャンが読めない: assets/paper_acg_Paper006_gray.jpg"));
+  im.src = "assets/paper_acg_Paper006_gray.jpg";
+});
+window.__hf.buildReady.m1 = ready;
+ready.then(() => {
+  const ctx = document.getElementById("film").getContext("2d", { willReadFrequently: true });
+  const draw = (t) => { const k = Math.min(N - 1, Math.max(0, Math.round(t * 30))); window.__last = A7_DRAW(ctx, { f: F0 + k, look: LOOK }); window.__lastFrame = k; };
+  const st = { v: 0 };
+  const tl = gsap.timeline({ paused: true });
+  tl.fromTo(st, { v: 0 }, { v: 1, duration: N / 30, ease: "none", onUpdate: () => draw(tl.time()) }, 0);
+  window.addEventListener("hf-seek", (e) => draw(e.detail.time));
+  draw(0);
+  window.__timelines["m1"] = tl;
+});
+</script>
+</body>
+</html>

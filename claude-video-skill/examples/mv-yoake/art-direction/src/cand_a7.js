@@ -304,9 +304,10 @@ const A6 = (() => {
   let F = Infinity;
   const prog = (s, d = 1) => clamp((F - s + 1) / d);
   // 刃先が進む刀(cut と同じ形。彫り終えたら cut と同じ画素)。途中は刃先までの帯で、幅の式は全長で決める(伸びても形が変わらない)。刃先は 0.35 倍から太る
-  function cutT(g, spine, w, seed, opts = {}, s = -1e9, d = 1) {
-    if (F >= s + d - 1) return cut(g, spine, w, seed, opts);
-    const p = prog(s, d); if (p <= 0) return;
+  const cutT = (g, spine, w, seed, opts = {}, s = -1e9, d = 1) => cutP(g, spine, w, seed, opts, F >= s + d - 1 ? 1 : prog(s, d));
+  // 刃先の進み p(0〜1)を直接与える版
+  function cutP(g, spine, w, seed, opts = {}, p = 1) {
+    if (p >= 1) return cut(g, spine, w, seed, opts); if (p <= 0) return;
     const { entry = 0.08, exit = 0.4, jit = 0.6 } = opts, sp = resample(spine, 3); if (sp.length < 2) return;
     const n = sp.length, m = Math.max(2, Math.ceil(p * (n - 1)) + 1);
     const wf = (u, i) => { const a = u < entry ? 0.55 + 0.45 * (u / entry) : 1, b = u > 1 - exit ? Math.pow((1 - u) / exit, 0.75) : 1; return w * a * b * (0.86 + 0.28 * vnoise(i * 0.15, seed * 0.37, 5)); };
@@ -320,29 +321,32 @@ const A6 = (() => {
     const sp = resample(spp, 4), n = sp.length, m = Math.max(2, Math.ceil(p * (n - 1)) + 1);
     g.beginPath(); stroke(g, sp.slice(0, m), (u, i) => lerp(wa, wb, Math.pow(i / (n - 1), 0.9)) * (0.93 + 0.14 * vnoise(i * 0.2, seed * 0.31, 6)) * Math.min(1, 0.35 + (m - 1 - i) / 2.5), { jit, seed }); g.fill();
   }
-  function lensT(g, x, y, hw, th, seed, tilt = 0, s = -1e9, d = 1) {
-    if (F >= s + d - 1) return lens(g, x, y, hw, th, seed, tilt);
-    const p = prog(s, d); if (p <= 0) return;
+  const lensT = (g, x, y, hw, th, seed, tilt = 0, s = -1e9, d = 1) => lensP(g, x, y, hw, th, seed, tilt, F >= s + d - 1 ? 1 : prog(s, d));
+  function lensP(g, x, y, hw, th, seed, tilt = 0, p = 1) {
+    if (p >= 1) return lens(g, x, y, hw, th, seed, tilt); if (p <= 0) return;
     const n = Math.max(3, Math.round(hw / 3)), sp = []; for (let i = 0; i <= n; i++) { const u = i / n; sp.push([x - hw + 2 * hw * u, y + tilt * (u - 0.5)]); }
     const m = Math.max(2, Math.ceil(p * n) + 1);
     g.beginPath(); stroke(g, sp.slice(0, m), (u, i) => th * Math.pow(Math.sin(Math.PI * (i / n)), 0.65) * Math.min(1, 0.4 + (m - 1 - i) / 2), { jit: 0.35, seed }); g.fill();
   }
-  // 溝: 全部を描いた溝(groove と同じ形)から、刃先(長さ p×全長)より先を消す。刃先は斜めに切れた端(丸い端にしない)
-  function grooveT(g, pts, o = {}, s = -1e9, d = 1) {
-    if (F >= s + d - 1) return groove(g, pts, o);
-    const p = prog(s, d); if (p <= 0) return;
+  // 溝: 全部を描いた溝(groove と同じ形)から、刃先(長さ p×全長)より先を消す。刃先は刀の幅で切れた端(丸い端にしない)。p ≥ 1 なら groove と同じ画素
+  function grooveP(g, pts, o = {}, p = 1) {
+    if (p >= 1) return groove(g, pts, o); if (p <= 0) return;
     const [c, cg] = buf("grooveT"); cg.fillStyle = g.fillStyle; const L = groove(cg, pts, o);
     const sp = splitAt(pts, p * L), w0 = o.w0 || 9;
     cg.globalCompositeOperation = "destination-out"; cg.strokeStyle = "#000"; cg.lineWidth = w0 * 2.6 + 10; cg.lineCap = "butt"; cg.lineJoin = "miter";
     cg.beginPath(); cg.moveTo(sp.tail[0][0], sp.tail[0][1]); for (const q of sp.tail) cg.lineTo(q[0], q[1]); cg.stroke();
     cg.globalCompositeOperation = "source-over"; g.drawImage(c, 0, 0);
   }
+  const grooveT = (g, pts, o = {}, s = -1e9, d = 1) => grooveP(g, pts, o, F >= s + d - 1 ? 1 : prog(s, d));
+  // 刀を何回かに分けて押す: pushes = [[コマ, そこまでの長さの割合, かかるコマ数], …]。押すたびに速く入って遅く止まる(ease-out)
+  function pushProg(pushes) { let p = 0; for (const [s, to, d] of pushes) { if (F < s) break; const from = p, t = clamp((F - s + 1) / d); p = from + (to - from) * (1 - Math.pow(1 - t, 2.2)); if (t < 1) break; p = to; } return p; }
   // 溝の刃先の位置(長さの割合 p)。音ハメの計測や、刃先に合わせて何かを打つ時に使う
   const grooveTip = (pts, p) => splitAt(pts, p * polyLen(pts)).at;
   // ばれんの1回: 版 pg の rect の中を、strike のコマで 55%、以後 1 コマで +22% ずつ、dir(down|up|right|left)へ刷り進む(4コマで刷り終える)。
   // 刷れたかどうかは 0/1(透明度の変化は使わない)。ばれんの前線は低い周波数のむら、インクの乗りは高い周波数のむら(位置だけの表)
-  function baren(pg, rect, strike, dir = "down", seed = 1) {
-    const q = 0.55 + 0.22 * (F - strike); if (q >= 1) return;
+  // opt: q0(strike のコマで刷れている割合)、dq(1コマで進む割合)、mottle(インクの乗りのむら。カットの頭の刷り替えでは切る=雪の粒に見えたため)、rag(ばれんの前線の揺れ。大きい版では小さく=しみに見えたため)
+  function baren(pg, rect, strike, dir = "down", seed = 1, { q0 = 0.55, dq = 0.22, mottle = true, rag = 0.35 } = {}) {
+    const q = q0 + dq * (F - strike); if (q >= 1) return;
     const x0 = Math.max(0, Math.round(rect[0])), y0 = Math.max(0, Math.round(rect[1])), x1 = Math.min(W, Math.round(rect[2])), y1 = Math.min(H, Math.round(rect[3])), w = x1 - x0, h = y1 - y0; if (w <= 0 || h <= 0) return;
     if (F < strike) { pg.clearRect(x0, y0, w, h); return; }
     const n1 = field("bn1/" + seed, () => noiseField(W, H, 6, (x, y) => fbm(x * 0.012, y * 0.012, seed, 3))), n2 = field("bn2/" + seed, () => noiseField(W, H, 2, (x, y) => fbm(x * 0.09, y * 0.09, seed + 9, 2)));
@@ -350,7 +354,7 @@ const A6 = (() => {
     for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
       const i = (y * w + x) * 4; if (!dd[i + 3]) continue;
       const u = dir === "down" ? y / h : dir === "up" ? 1 - y / h : dir === "right" ? x / w : 1 - x / w;
-      if (!(u + 0.35 * (n1(x0 + x, y0 + y) - 0.5) < q * 1.25 - 0.08 && n2(x0 + x, y0 + y) < 0.36 + 0.8 * q)) dd[i + 3] = 0;
+      if (!(u + rag * (n1(x0 + x, y0 + y) - 0.5) < q * 1.25 - 0.08 && (!mottle || n2(x0 + x, y0 + y) < 0.36 + 0.8 * q))) dd[i + 3] = 0;
     }
     pg.putImageData(img, x0, y0);
   }
@@ -379,12 +383,13 @@ const A6 = (() => {
     g.closePath(); g.fill();
   }
   // letters を starts[i] のコマから彫る(col の色で)。amp・seed は carve と同じ(彫り終えたら carve と同じ画素)
-  function carveT(g, letters, seed, starts, { col = "#fff", amp = 0.7, speed = 1 } = {}) {
+  function carveT(g, letters, seed, starts, { col = "#fff", amp = 0.7, speed = 1, i0 = 0 } = {}) {
     let end = -1e9;
-    letters.forEach((L, i) => {
-      const fcs = soften(L.cs, amp * Math.min(1.4, L.size / 120), seed + i), pl = letterPlan(fcs, starts[i], seed * 13 + i, speed); end = Math.max(end, pl.end);
+    letters.forEach((L, ii) => {
+      const i = i0 + ii;
+      const fcs = soften(L.cs, amp * Math.min(1.4, L.size / 120), seed + i), pl = letterPlan(fcs, starts[ii], seed * 13 + i, speed); end = Math.max(end, pl.end);
       if (F >= pl.end) { g.fillStyle = col; g.beginPath(); pathOf(g, fcs); g.fill("nonzero"); return; }
-      if (F < starts[i]) return;
+      if (F < starts[ii]) return;
       const bb = bbox(fcs), bx = Math.floor(bb[0]) - 8, by = Math.floor(bb[1]) - 8, bw = Math.ceil(bb[2] - bx) + 8, bh = Math.ceil(bb[3] - by) + 8;
       const [lc, lg] = buf("letterCarve", bw, bh); lg.translate(-bx, -by); lg.fillStyle = col;
       for (const o of pl.isl) {
@@ -401,7 +406,16 @@ const A6 = (() => {
     });
     return end;
   }
-  const MO = { setF: (f) => { F = f; }, getF: () => F, prog, cutT, wedgeT, lensT, grooveT, grooveTip, baren, carveT, letterPlan, field };
+  // 色版から字の形を彫り抜く(空の上の字: 字は紙のまま、版の色が抜けて読める)。彫りの途中は carveT と同じ形、彫り終えたら keepOut(lw) と同じ
+  function holeT(pg, letters, seed, starts, lw = 4, opt = {}) {
+    pg.save(); pg.globalCompositeOperation = "destination-out";
+    letters.forEach((L, i) => {
+      const fcs = soften(L.cs, (opt.amp || 0.7) * Math.min(1.4, L.size / 120), seed + i), pl = letterPlan(fcs, starts[i], seed * 13 + i, opt.speed || 1);
+      if (F >= pl.end) keepOut(pg, [L], lw); else carveT(pg, [L], seed, [starts[i]], Object.assign({}, opt, { col: "#000", i0: i }));
+    });
+    pg.restore();
+  }
+  const MO = { cutP, lensP, holeT, setF: (f) => { F = f; }, getF: () => F, prog, cutT, wedgeT, lensT, grooveT, grooveP, pushProg, grooveTip, baren, carveT, letterPlan, field };
 
   return { MO, setPaper, scallop, bandPoly, polyLen, splitAt, signalBuf, avoidBoxes, C, FRAME, BLEED, PR, blockPath, begin, plateBuf, poly, cut, cutW, wedge, groove, stab, lens, chipEdge, inkBox, letter, setH, setHC, setV, widthH, lettersBox, soften, carve, keepOut, letterPlate, textMargin, bokashi, print, maskOnly };
 })();

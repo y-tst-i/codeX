@@ -61,7 +61,7 @@ function A7_DRAW(ctx, o) {
   const f = +o.f;
   A6.MO.setF(f);
   if (f === 840) return Object.assign(A7_CUTS.S6(ctx, o), { f, v: "v7" });
-  if (typeof A7_CUTS.motion === "function" && f >= 0 && f <= 668) return Object.assign(A7_CUTS.motion(ctx, o), { f });
+  if (typeof A7_OPEN !== "undefined" && f >= 0 && f < A7_T.shot("S5").start) return Object.assign(A7_OPEN.draw(ctx, o), { f });
   if (typeof A7_DAWN !== "undefined" && f >= 1340 && f <= 1589) return Object.assign(A7_DAWN(ctx, o), { f });
   A6.MO.setF(Infinity);
   return A6_DRAW(ctx, o);
