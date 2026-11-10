@@ -1,0 +1,35 @@
+<!doctype html><meta charset="utf-8">
+<!-- 案A+C の動き(v7、動きの本制作 第1段)の開発ページ。?f=<曲のコマ番号>&v=look|clean|mask[&sheet=0][&legacy=1]。1920×1080。
+     f = 0〜668(S1〜S4 の動き)、840(S6 の静止画 v7)、1340〜1589(夜明けの動き)。それ以外のコマは v6 の静止画(f = 740|950|1080|1200)。
+     legacy=1: v6 の描画(A6_DRAW)を v7 の共通部品で描く(v6 のページと同じ md5 になるかの検査)。sheet=0: 紙の取り替えを切る(最後のコマと v6 の静止画の比較用)。
+     本番の書き出しは HyperFrames(motion1/tools/build_hf.sh)。window.__stats に計測値 -->
+<style>body{margin:0;background:#000}</style>
+<body><canvas id="c" width="1920" height="1080"></canvas>
+<script src="gen/glyphs.js"></script>
+<script src="common.js"></script>
+<script src="cand_a7.js"></script>
+<script src="cand_a6_cuts.js"></script>
+<script src="cand_a6_dawn.js"></script>
+<script src="cand_a7_cuts.js"></script>
+<script src="cand_a7_dawn.js"></script>
+<script>
+(() => {
+  const q = new URLSearchParams(location.search);
+  const v = q.get("v") || "look";
+  const o = { f: +(q.get("f") || 0), look: v === "look", mask: v === "mask" };
+  if (q.has("p")) o.p = +q.get("p");
+  if (q.has("sheet")) o.sheet = +q.get("sheet");
+  const go = (paperInfo) => {
+    const ctx = document.getElementById("c").getContext("2d", { willReadFrequently: true });
+    ctx.fillStyle = "#000"; ctx.fillRect(0, 0, 1920, 1080);
+    window.__stats = Object.assign(q.get("legacy") === "1" ? A6_DRAW(ctx, o) : A7_DRAW(ctx, o), { paper_scan: paperInfo });
+    document.title = "ready";
+    window.__ready = true;
+  };
+  if (q.get("paper") === "0" || !o.look) { go(null); return; }
+  const im = new Image();
+  im.onload = () => go(A6.setPaper(im));
+  im.onerror = () => { throw new Error("紙のスキャンが読めない: assets/paper_acg_Paper006_gray.jpg"); };
+  im.src = "assets/paper_acg_Paper006_gray.jpg";
+})();
+</script>
