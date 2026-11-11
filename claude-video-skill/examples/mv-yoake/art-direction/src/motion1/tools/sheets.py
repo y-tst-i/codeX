@@ -2,7 +2,7 @@
 """(画像の中の見出しは PIL の既定の字体で描くので英数字だけ)
 区間の確認画像を、書き出した mp4 から作る(描画のコードは使わない)。
 使い方: python3 -I sheets.py <look.mp4> <clean.mp4|-> <measure.json> <出力フォルダ> <接頭辞>
-出力: <接頭辞>_contact_0.2s.jpg(0.2 秒=6 コマ刻み、幅 320)、<接頭辞>_check_540.jpg(540px 幅: 歌詞の語頭+10・刷りの後・境目)、
+出力: <接頭辞>_contact_0.2s.jpg(0.2 秒=6 コマ刻み、幅 320)、<接頭辞>_contact_0.2s_540.jpg(同じ物を幅 540)、<接頭辞>_check_540.jpg(540px 幅: 歌詞の語頭+10・刷りの後・境目)、
       <接頭辞>_boundaries.jpg(カットの境目の前後 3 コマ)、<接頭辞>_fx_off_clean.jpg(clean と look を 1 秒刻みで並べる)"""
 import sys, os, json, subprocess
 import numpy as np
@@ -34,6 +34,7 @@ bd = sorted({j for c in cuts for j in (c - 2, c - 1, c, c + 1, c + 2) if 0 <= j 
 sec = list(range(0, N, 30))
 G = frames(look, set(cs) | set(pts) | set(bd) | set(sec))
 grid([(G[i], lab(i)) for i in cs], 8, 320, os.path.join(out, f"{pre}_contact_0.2s.jpg"))
+grid([(G[i], lab(i)) for i in cs], 4, 540, os.path.join(out, f"{pre}_contact_0.2s_540.jpg"))  # 540px 幅(スマホ相当)の 0.2 秒刻み。大きいのでリポジトリには入れない
 grid([(G[i], "540px " + lab(i)) for i in pts], 4, 540, os.path.join(out, f"{pre}_check_540.jpg"))
 grid([(G[i], lab(i)) for i in bd], 5, 384, os.path.join(out, f"{pre}_boundaries.jpg"))
 if clean != "-":

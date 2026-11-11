@@ -1,0 +1,273 @@
+[hyperframes] check: the report is saved to /tmp/claude-0/-home-user-codeX/d5574950-8955-5b0b-bf13-7c6be25a8755/scratchpad/mv2d/m1/hf_B_look/.hyperframes/artifacts/checks/b80e0b61-9135-4c0a-9452-995280ae1971.json when the check ends, unless a warning says it could not be saved
+[hyperframes] check: starting Chrome
+Chrome is still starting...
+[hyperframes] browserGpuMode probe → software (WebGL unavailable)
+[hyperframes] check: loading the page
+[hyperframes] check: waiting for the page to be ready
+[hyperframes] check: checking samples
+[hyperframes] check: samples 1/9
+[hyperframes] check: samples 2/9
+[hyperframes] check: samples 3/9
+[hyperframes] check: samples 4/9
+[hyperframes] check: samples 5/9
+[hyperframes] check: samples 6/9
+[hyperframes] check: samples 7/9
+[hyperframes] check: samples 8/9
+[hyperframes] check: samples 9/9
+[hyperframes] check: running the overlap pass
+[hyperframes] check: craft 1/68
+[hyperframes] check: craft 3/68
+[hyperframes] check: craft 5/68
+[hyperframes] check: craft 7/68
+[hyperframes] check: still running the overlap pass (1 s in this step)
+[hyperframes] check: craft 8/68
+[hyperframes] check: craft 9/68
+[hyperframes] check: craft 10/68
+[hyperframes] check: craft 11/68
+[hyperframes] check: craft 12/68
+[hyperframes] check: craft 13/68
+[hyperframes] check: craft 14/68
+[hyperframes] check: craft 15/68
+[hyperframes] check: craft 16/68
+[hyperframes] check: craft 17/68
+[hyperframes] check: craft 18/68
+[hyperframes] check: craft 19/68
+[hyperframes] check: craft 20/68
+[hyperframes] check: craft 21/68
+[hyperframes] check: craft 22/68
+[hyperframes] check: craft 23/68
+[hyperframes] check: craft 25/68
+[hyperframes] check: craft 26/68
+[hyperframes] check: craft 28/68
+[hyperframes] check: craft 30/68
+[hyperframes] check: still running the overlap pass (2 s in this step)
+[hyperframes] check: craft 32/68
+[hyperframes] check: craft 34/68
+[hyperframes] check: craft 35/68
+[hyperframes] check: craft 37/68
+[hyperframes] check: craft 38/68
+[hyperframes] check: craft 40/68
+[hyperframes] check: craft 41/68
+[hyperframes] check: craft 43/68
+[hyperframes] check: craft 44/68
+[hyperframes] check: craft 45/68
+[hyperframes] check: craft 47/68
+[hyperframes] check: craft 48/68
+[hyperframes] check: craft 50/68
+[hyperframes] check: craft 51/68
+[hyperframes] check: craft 52/68
+[hyperframes] check: craft 53/68
+[hyperframes] check: still running the overlap pass (1 s in this step)
+[hyperframes] check: craft 54/68
+[hyperframes] check: craft 56/68
+[hyperframes] check: craft 57/68
+[hyperframes] check: craft 58/68
+[hyperframes] check: craft 59/68
+[hyperframes] check: craft 60/68
+[hyperframes] check: craft 61/68
+[hyperframes] check: craft 63/68
+[hyperframes] check: craft 64/68
+[hyperframes] check: craft 65/68
+[hyperframes] check: craft 66/68
+[hyperframes] check: craft 67/68
+[hyperframes] check: craft 68/68
+[hyperframes] check: still running the overlap pass (7 s in this step)
+[hyperframes] check: overlap 1/9
+[hyperframes] check: overlap 2/9
+[hyperframes] check: overlap 3/9
+[hyperframes] check: still running the overlap pass (4 s in this step)
+[hyperframes] check: overlap 4/9
+[hyperframes] check: overlap 5/9
+[hyperframes] check: still running the overlap pass (4 s in this step)
+[hyperframes] check: overlap 6/9
+[hyperframes] check: overlap 7/9
+[hyperframes] check: still running the overlap pass (3 s in this step)
+[hyperframes] check: overlap 8/9
+[hyperframes] check: overlap 9/9
+[hyperframes] check: checking samples
+[hyperframes] check: analyze 0/3
+[hyperframes] check: analyzing the samples
+[hyperframes] check: analyze 1/3
+[hyperframes] check: analyze 2/3
+{
+  "ok": true,
+  "strict": false,
+  "browserSkipped": false,
+  "lint": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 0,
+    "findings": [],
+    "filesScanned": 1
+  },
+  "runtime": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 0,
+    "findings": []
+  },
+  "layout": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 1,
+    "infoCount": 0,
+    "findings": [
+      {
+        "code": "canvas_content_at_edge",
+        "severity": "warning",
+        "time": 0.463,
+        "selector": "#film",
+        "message": "Canvas content touches the frame edge (left, right, bottom).",
+        "rect": {
+          "left": 0,
+          "top": 0,
+          "right": 1920,
+          "bottom": 1080,
+          "width": 1920,
+          "height": 1080
+        },
+        "containerSelector": "#root",
+        "fixHint": "Keep drawn text inside the visible part of the canvas, or mark intentional full-bleed art with data-layout-allow-overflow.",
+        "containerRect": {
+          "left": 0,
+          "top": 0,
+          "right": 1920,
+          "bottom": 1080,
+          "width": 1920,
+          "height": 1080
+        },
+        "dataAttributes": {
+          "data-start": "0",
+          "data-duration": "8.333333",
+          "data-track-index": "0"
+        },
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "firstSeen": 0.463,
+        "lastSeen": 7.87,
+        "occurrences": 9,
+        "heldMs": 7407,
+        "times": [
+          0.463,
+          1.389,
+          2.315,
+          3.241,
+          4.167,
+          5.093,
+          6.019,
+          6.944,
+          7.87
+        ]
+      }
+    ],
+    "duration": 8.333333,
+    "samples": [
+      0.463,
+      1.389,
+      2.315,
+      3.241,
+      4.167,
+      5.093,
+      6.019,
+      6.944,
+      7.87
+    ],
+    "transitionSamples": [],
+    "transitionSamplesDropped": 0,
+    "tolerance": 2,
+    "totalIssueCount": 1,
+    "truncated": false
+  },
+  "motion": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 0,
+    "findings": [],
+    "enabled": false,
+    "samples": 0
+  },
+  "contrast": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 0,
+    "findings": [],
+    "enabled": true,
+    "samples": [
+      0.463,
+      2.315,
+      4.167,
+      6.019,
+      7.87
+    ],
+    "checked": 0,
+    "passed": 0
+  },
+  "craft": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 0,
+    "findings": [],
+    "enabled": true,
+    "step": 0.125,
+    "samples": 53
+  },
+  "audio": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 1,
+    "findings": [
+      {
+        "code": "audio_none",
+        "severity": "info",
+        "message": "The film has no sound: no clip in it plays audio.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {},
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "time": 0
+      }
+    ]
+  },
+  "hdr": {
+    "autoPromotion": null,
+    "inspection": "available"
+  },
+  "snapshots": {
+    "enabled": false,
+    "files": [],
+    "times": [],
+    "findingFiles": []
+  },
+  "saved": {
+    "id": "b80e0b61-9135-4c0a-9452-995280ae1971",
+    "revision": null,
+    "report": "/tmp/claude-0/-home-user-codeX/d5574950-8955-5b0b-bf13-7c6be25a8755/scratchpad/mv2d/m1/hf_B_look/.hyperframes/artifacts/checks/b80e0b61-9135-4c0a-9452-995280ae1971.json",
+    "attribution": "unversioned"
+  },
+  "_meta": {
+    "version": "0.9.30",
+    "latestVersion": "0.9.30",
+    "updateAvailable": false,
+    "checkedAt": "2026-11-10T19:19:52.671Z",
+    "skillsOutdated": 4,
+    "skillsMissing": 2,
+    "updateNotice": "For the user: 4 installed HyperFrames skills are out of date and 2 core skills are missing (this run is HyperFrames CLI 0.9.30). To update them, run: npx hyperframes update"
+  }
+}
+[hyperframes] check: report saved to /tmp/claude-0/-home-user-codeX/d5574950-8955-5b0b-bf13-7c6be25a8755/scratchpad/mv2d/m1/hf_B_look/.hyperframes/artifacts/checks/b80e0b61-9135-4c0a-9452-995280ae1971.json

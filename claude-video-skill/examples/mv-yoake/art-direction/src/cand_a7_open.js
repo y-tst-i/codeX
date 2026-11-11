@@ -45,9 +45,9 @@ const A7_OPEN = (() => {
   // ===== v6 から写した道具(位置の hash) =====
   function rowsOf(cut, layer, y0, y1, gap) { const out = []; let y = y0, k = 0; while (y < y1 && k < 4000) { out.push([k, y, PR(cut, layer, k)]); y += gap(y, PR(cut, layer + 50, k)); k++; } return out; }
   // 手で切った窓。at: 桟の1枚目を彫るコマ(1枚ずつ 1 コマ後)
-  function handWindowT(g, x, y, w, h, cols, rows, seed, at = NEVER) {
+  function handWindowT(g, x, y, w, h, cols, rows, seed, at = NEVER, step = 1) {
     const bar = Math.max(4, w * 0.11), pw = (w - bar * (cols - 1)) / cols, ph = (h - bar * (rows - 1)) / rows, f = getF();
-    for (let j = 0; j < rows; j++) for (let i = 0; i < cols; i++) { const k = j * cols + i; if (f < at + k) continue; const q = (a) => (hash(k, a, seed) - 0.5) * 2.2, x0 = x + i * (pw + bar), y0 = y + j * (ph + bar); g.beginPath(); poly(g, [[x0 + q(1), y0 + q(2)], [x0 + pw + q(3), y0 + q(4)], [x0 + pw + q(5), y0 + ph + q(6)], [x0 + q(7), y0 + ph + q(8)]]); g.fill(); }
+    for (let j = 0; j < rows; j++) for (let i = 0; i < cols; i++) { const k = j * cols + i; if (f < at + k * step) continue; const q = (a) => (hash(k, a, seed) - 0.5) * 2.2, x0 = x + i * (pw + bar), y0 = y + j * (ph + bar); g.beginPath(); poly(g, [[x0 + q(1), y0 + q(2)], [x0 + pw + q(3), y0 + q(4)], [x0 + pw + q(5), y0 + ph + q(6)], [x0 + q(7), y0 + ph + q(8)]]); g.fill(); }
   }
   // 光を受ける辺だけに刀。when(a, b, k) → 彫り始めのコマ
   function rimEdgesT(g, P, seed, face, wFn, when) { g.fillStyle = "#fff"; for (let k = 0; k < P.length - 1; k++) { const a = P[k], b = P[k + 1]; if (Math.hypot(b[0] - a[0], b[1] - a[1]) < 6 || !face(a, b)) continue; const w = wFn([(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]); if (w < 0.6) continue; cutT(g, [a, [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2], b], w, seed + k, { entry: 0.1, exit: 0.3, jit: 0.45 }, when(a, b, k), 2); } }
@@ -96,7 +96,7 @@ const A7_OPEN = (() => {
     for (let j = 0; j < 8; j++) {
       const R = PR(1, 2, j), base = K[2] * (0.34 + 0.09 * j + 0.012 * j * j), gaps = [R() * 6.28, R() < 0.6 ? R() * 6.28 : 99], w = lerp(1.3, 2.9, R()) * (j < 2 ? 1.25 : 1);
       const rs = j < 3 ? NEVER : ringAcc[Math.min(ringAcc.length - 1, j - 3)]; let pts = [], a0 = 0;
-      const flushR = () => { if (pts.length > 5) cutT(g, pts, w, 6200 + j * 10 + pts.length, { entry: 0.2, exit: 0.3, jit: 0.45 }, rs + Math.floor(3 * a0 / 6.3), 3); pts = []; };
+      const flushR = () => { if (pts.length > 5) cutT(g, pts, w, 6200 + j * 10 + pts.length, { entry: 0.2, exit: 0.3, jit: 0.45 }, rs, 2); pts = []; }; // 年輪は1本を一度に(アクセントのコマで山になるように)
       for (let a = 0; a < 6.3; a += 0.025) {
         if (gaps.some((q) => Math.abs(((a - q + 9.42) % 6.283) - 3.14) < 0.22 + 0.15 * R())) { flushR(); continue; }
         if (!pts.length) a0 = a;
@@ -226,8 +226,8 @@ const A7_OPEN = (() => {
     }
     const [p, pg] = plateBuf("plA"), refl = [];
     const reflect = (L, y0, y1, id, when) => { let y = y0 + 3, j = 0; const ph = hash(id, 1, 9) * 6.28; while (y < y1) { const R = PR(3, 3, id, j++), t = (y - y0) / (y1 - y0), d = clamp((y - 200) / (F.y1 - 200)), amp = L.w * (0.18 + 0.9 * t), cx = L.x + L.w / 2 + amp * Math.sin((y - y0) * 0.045 + ph) * 0.6 + (vnoise(y * 0.04, id, 9) - 0.5) * amp, hw = L.w * (0.42 + 0.9 * t) * (0.5 + 0.8 * R()), th = lerp(2.2, 6.4, d) * (0.75 + 0.5 * R()) * (1 - 0.3 * t); if (R() < 1 - 0.45 * t) refl.push([cx, y, hw, th, t < 0.55 && R() < 0.95 - t, id * 1000 + j, when(t, false)]); if (t > 0.2 && R() < 0.5) { const side = R() < 0.5 ? -1 : 1; refl.push([cx + side * hw * (1.2 + R()), y + 1, hw * (0.25 + 0.3 * R()), th * 0.7, false, id * 1000 + j + 500, when(t, true)]); } y += lerp(3.2, 7.5, d) * (0.8 + 0.5 * R()); } };
-    LIT.forEach((L, i) => reflect(L, L.water, L.water + (F.y1 - L.water) * L.reach, i, (t) => reflWave(i) + 8 * t));
-    reflect({ x: LAN.x - 10, w: LAN.w + 20 }, WL + 6, F.y1 + 4, 50, (t, side) => (side ? E.masu + 4 * t : E.lanPrint + 2 + 34 * t));
+    LIT.forEach((L, i) => reflect(L, L.water, L.water + (F.y1 - L.water) * L.reach, i, (t) => reflWave(i) + 2 * t));
+    reflect({ x: LAN.x - 10, w: LAN.w + 20 }, WL + 6, F.y1 + 4, 50, (t, side) => (side ? E.masu + 1.5 * t : E.lanPrint + 2 + 34 * t));
     g.fillStyle = "#000"; for (const [cx, y, hw] of refl) g.fillRect(cx - hw - 4, y - 2.5, hw * 2 + 8, 5);
     g.fillStyle = "#fff"; for (const [cx, y, hw, th, , id, s] of refl) lensT(g, cx, y, hw, th, 7100 + id, 0, s, 2);
     const hull = [[1352, WL - 26], [1440, WL - 14], [1660, WL - 18], [F.x1 + 30, WL - 40], [F.x1 + 30, WL + 30], [1410, WL + 26]];
@@ -304,14 +304,14 @@ const A7_OPEN = (() => {
     const G1 = [[ax, W1.y + W1.h + 10], [ax, gy(ax) - 20], [ax + 20, gy(ax)], [bx - 30, gy(bx - 30)], [bx, gy(bx - 30) - 30], [bx, W2.y + W2.h + 10]], G1o = { w0: 11, w1: 6, seed: 4801, chip: 2.4, splinter: false, taper: 0.03 };
     const G2 = [[bx + 8, gy(bx - 30) - 34], [bx + 120, gy(bx - 30) - 34], [bx + 120 + 40, gy(bx + 160) - 40], [W3.x - 16, gy(bx + 160) - 40]];
     const g1p = pushProg(E.g1Push.map((s, i) => [s, (i + 1) / E.g1Push.length, 7])), g2p = pushProg(E.g2Push.map((s, i) => [s, (i + 1) / E.g2Push.length, 6]));
-    g.fillStyle = "#fff"; grooveP(g, G1, G1o, g1p); grooveP(g, G2, { w0: 7, w1: 2, seed: 4802, chip: 2.2 }, g2p);
+    g.fillStyle = "#fff"; grooveP(g, G1, G1o, g1p); grooveP(g, G2, { w0: 11, w1: 6, seed: 4802, chip: 2.2, splinter: false, taper: 0.03 }, g2p); // v7: 窓3まで届く溝なので溝①と同じ太さに(v6 は 7→2px で、拍ごとに押しても見えにくかった)
     const [p, pg] = plateBuf("plA");
     for (const [Wn, hi, ca, pr] of [[W1, 1, E.w1Carve, E.w1Print], [W2, 3, E.w2Carve, E.w2Print]]) { g.fillStyle = "#000"; g.fillRect(Wn.x - 6, Wn.y - 6, Wn.w + 12, Wn.h + 12); g.fillStyle = "#fff"; handWindowT(g, Wn.x, Wn.y, Wn.w, Wn.h, Wn.cols, Wn.rows, 51 + hi, ca); pg.save(); pg.beginPath(); poly(pg, houses[hi]); pg.clip(); pg.beginPath(); pg.ellipse(Wn.x + Wn.w / 2, Wn.y + Wn.h / 2, Wn.w / 2 + 52, Wn.h / 2 + 50, 0, 0, 7); pg.fill(); pg.restore(); baren(pg, [Wn.x - 60, Wn.y - 60, Wn.x + Wn.w + 60, Wn.y + Wn.h + 60], pr, hi === 1 ? "down" : "right", 4810 + hi); }
     // 窓1→窓2 の溝の琥珀: 窓2を刷ったコマから、窓1の側から 10 コマで通る
     pg.fillStyle = "#000"; grooveP(pg, G1, Object.assign({}, G1o, { w0: 14, w1: 9 }), f < E.w2Print ? 0 : clamp((f - E.w2Print + 1) / 22));
-    grooveP(pg, G2, { w0: 10, w1: 5, seed: 4802, chip: 2.2 }, f < E.w3Print ? 0 : clamp((f - E.w3Print + 1) / 9)); // v7: 3つ目の窓を刷ったら、窓2→窓3 の溝にも琥珀が通る
+    grooveP(pg, G2, { w0: 14, w1: 9, seed: 4802, chip: 2.2, splinter: false, taper: 0.03 }, f < E.w3Print ? 0 : clamp((f - E.w3Print + 1) / 9)); // v7: 3つ目の窓を刷ったら、窓2→窓3 の溝にも琥珀が通る
     // v7: 3つ目の窓も灯す(「繋がってく」の句の終わりで、溝が届いて灯る)。v6 は灯らない枠の2本だけだった
-    g.fillStyle = "#000"; g.fillRect(W3.x - 6, W3.y - 6, W3.w + 12, W3.h + 12); g.fillStyle = "#fff"; handWindowT(g, W3.x, W3.y, W3.w, W3.h, 2, 2, 55, E.w3);
+    g.fillStyle = "#000"; g.fillRect(W3.x - 6, W3.y - 6, W3.w + 12, W3.h + 12); g.fillStyle = "#fff"; handWindowT(g, W3.x, W3.y, W3.w, W3.h, 2, 2, 55, E.w3, 0); // 3つ目は4枚の桟を一度に(アクセント 642 で山)
     pg.save(); pg.beginPath(); poly(pg, houses[4]); pg.clip(); pg.beginPath(); pg.ellipse(W3.x + W3.w / 2, W3.y + W3.h / 2, W3.w / 2 + 44, W3.h / 2 + 42, 0, 0, 7); pg.fill(); pg.restore(); baren(pg, [W3.x - 60, W3.y - 60, W3.x + W3.w + 60, W3.y + W3.h + 60], E.w3Print, "right", 4815);
     const T1 = setH("SMB", "ひとつ、", 470, 262, 92, 0.1), T2 = setH("SMB", "またひとつ", 960, 352, 92, 0.1), T = T1.concat(T2);
     const T3 = setH("SMB", "繋がってく", 1060, 948, 96, 0.1); // v7: 歌詞「繋がってく」(540、要確認)を坂の黒に彫る(v6 の静止画には無かった)
