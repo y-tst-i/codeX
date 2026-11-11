@@ -52,8 +52,8 @@ const A7_MID = (() => {
     g.fillStyle = "#000"; for (let k = 0, x = F.x0; x < F.x1; k++) { const R = PR(8, 1, k), w = 18 + 40 * R(), h = 4 + 12 * R(); if (R() < 0.55) { g.beginPath(); poly(g, PH([[x, HZ + 2], [x, HZ - 8 - h], [x + w * 0.5, HZ - 14 - h - 6 * R()], [x + w, HZ - 8 - h], [x + w, HZ + 2]])); g.fill(); } x += w + 6 + 30 * R(); }
     // 水: 地平の近くの映りは最初から少しと、刷り替えの後に少しずつ。深い所は 1123 で地平から手前へ一気に(川が灯る)
     g.fillStyle = "#fff";
-    for (const [k, y, R] of rowsOf(8, 2, HZ + 22, F.y1 - 4, (y) => 6 + (y - HZ) * 0.03)) { const d = (y - HZ) / (F.y1 - HZ); let x = F.x0 - 10 + R() * 30; while (x < F.x1) { const len = lerp(20, 120, Math.pow(R(), 1.2)) * (1 - 0.5 * d), inGap = gaps.some(([a, b]) => x + len / 2 > a - 10 && x + len / 2 < b + 10); if (!inGap && R() < 0.75 - 0.6 * d) { const hz = h01(x, y, 8801), s = hz < 0.3 ? NEVER : d < 0.22 && hz < 0.7 ? c0 + 4 + (E.lit - 12 - c0 - 4) * h01(x, y, 8802) : E.lit + 9 * Math.pow(d, 0.8) + 2 * h01(x, y, 8803); const q = P([x + len / 2, y], zW(y)); lensT(g, q[0], y + (vnoise(x * 0.01, y * 0.05, 3) - 0.5) * 2, len / 2, lerp(5, 1.4, d) * (0.6 + 0.8 * R()), k * 991 + (x | 0), 0, s, 2); } x += len + lerp(6, 70, d) * (0.5 + R()); } }
-    if (A7_CAM.on()) for (const [k, y, R] of rowsOf(8, 4, HZ + 22, F.y1 - 4, (y) => 6 + (y - HZ) * 0.03)) { const d = (y - HZ) / (F.y1 - HZ); let x = XL; while (x < F.x0 - 10) { const len = lerp(20, 120, Math.pow(R(), 1.2)) * (1 - 0.5 * d); if (R() < 0.75 - 0.6 * d) { const hz = h01(x, y, 8801), s = hz < 0.3 ? NEVER : E.lit + 9 * Math.pow(d, 0.8) + 2 * h01(x, y, 8803); const q = P([x + len / 2, y], zW(y)); lensT(g, q[0], y, len / 2, lerp(5, 1.4, d) * (0.6 + 0.8 * R()), 50000 + k * 991 + (x | 0), 0, s, 2); } x += len + lerp(6, 70, d) * (0.5 + R()); } } // 2.5D で左から入る水
+    for (const [k, y, R] of rowsOf(8, 2, HZ + 22, F.y1 - 4, (y) => 6 + (y - HZ) * 0.03)) { const d = (y - HZ) / (F.y1 - HZ); let x = F.x0 - 10 + R() * 30; while (x < F.x1) { const len = lerp(20, 120, Math.pow(R(), 1.2)) * (1 - 0.5 * d), inGap = gaps.some(([a, b]) => x + len / 2 > a - 10 && x + len / 2 < b + 10); if (!inGap && R() < 0.75 - 0.6 * d) { const hz = h01(x, y, 8801), s = hz < 0.3 ? NEVER : d < 0.22 && hz < 0.7 ? c0 + 4 + (E.lit - 12 - c0 - 4) * h01(x, y, 8802) : (d < 0.45 ? E.lit : E.lit + 1 + 6 * Math.pow(d, 0.8) + 1.5 * h01(x, y, 8803)); const q = P([x + len / 2, y], zW(y)); lensT(g, q[0], y + (vnoise(x * 0.01, y * 0.05, 3) - 0.5) * 2, len / 2, lerp(5, 1.4, d) * (0.6 + 0.8 * R()), k * 991 + (x | 0), 0, s, s === E.lit ? 1 : 2); } x += len + lerp(6, 70, d) * (0.5 + R()); } }
+    if (A7_CAM.on()) for (const [k, y, R] of rowsOf(8, 4, HZ + 22, F.y1 - 4, (y) => 6 + (y - HZ) * 0.03)) { const d = (y - HZ) / (F.y1 - HZ); let x = XL; while (x < F.x0 - 10) { const len = lerp(20, 120, Math.pow(R(), 1.2)) * (1 - 0.5 * d); if (R() < 0.75 - 0.6 * d) { const hz = h01(x, y, 8801), s = hz < 0.3 ? NEVER : (d < 0.45 ? E.lit : E.lit + 1 + 6 * Math.pow(d, 0.8) + 1.5 * h01(x, y, 8803)); const q = P([x + len / 2, y], zW(y)); lensT(g, q[0], y, len / 2, lerp(5, 1.4, d) * (0.6 + 0.8 * R()), 50000 + k * 991 + (x | 0), 0, s, 2); } x += len + lerp(6, 70, d) * (0.5 + R()); } } // 2.5D で左から入る水
     // 橋脚
     const PIERS = [[250, 96], [760, 66], [1150, 46], [1430, 33], [1640, 24], [1790, 17]].concat(A7_CAM.on() ? [[-120, 120]] : []);
     g.fillStyle = "#000"; PIERS.forEach(([x, w], i) => { const y0 = bot(x) - 4, z = zG(x); g.beginPath(); poly(g, chipEdge([[x - w / 2, y0], [x + w / 2, y0], [x + w / 2 + w * 0.08, F.y1 + 10], [x - w / 2 - w * 0.08, F.y1 + 10], [x - w / 2, y0]].map((p) => P(p, z)), 8200 + i, { big: 0.3 })); g.fill(); });
@@ -189,7 +189,7 @@ const A7_MID = (() => {
     E.win = E.push[2];
     // 消えかけた声: 歌の句の長さに合わせて 10 コマに1字(途切れながら彫る)
     const T1 = setH("SMB", "消えかけた声を", 180, 250, 84, 0.1), T2 = setH("SMB", "光に変えて", 178, 860, 214, 0.08);
-    woodLinesT(g, 7, { amount: 0.3, wmul: 0.85, sd: 7002 }, (x, y, near, id) => (h01(id, 1, 7701) < 0.35 ? NEVER : c0 + 3 + (E.hika - 4 - c0) * h01(id, 2, 7702)));
+    woodLinesT(g, 7, { amount: 0.3, wmul: 1.15, sd: 7002 }, (x, y, near, id) => (h01(id, 1, 7701) < 0.35 ? NEVER : c0 + 3 + (E.hika - 4 - c0) * h01(id, 2, 7702)));
     keepOut(g, T1, 24); keepOut(g, T2, 36);
     const te = T2[T2.length - 1], tb = bbox(te.cs); let ex = [tb[2], (tb[1] + tb[3]) / 2]; for (const ct of te.cs) for (const q of ct) if (q[0] > ex[0] - 1 && q[1] < ex[1] + 60 && q[1] > tb[1]) ex = q;
     const WN = { x: 1612, y: 238, w: 62, h: 78 }, wx = WN.x + WN.w / 2, wy = WN.y + WN.h + 12;
@@ -211,7 +211,9 @@ const A7_MID = (() => {
     const b1 = lettersBox(T1); for (const [k, y, R] of rowsOf(7, 2, b1[1], b1[3], () => 7)) { let x = b1[0]; while (x < b1[2]) { const len = 30 + R() * 120; if (R() < 0.62) g.fillRect(x, y + R(), len, 3.2); x += len + 10 + R() * 40; } }
     g.restore();
     // 窓と、窓のまわりの家(屋根と壁の線。S4 の家の続き)
-    g.fillStyle = "#fff"; [[[1526, 226], [1585, 186], [1643, 146]], [[1643, 146], [1700, 186], [1722, 200]], [[1740, 236], [1741, 300]], [[1500, 242], [1532, 226]]].forEach((P, i) => cutT(g, P, [4.4, 2.6, 2.2, 1.8][i], 7350 + i, { entry: 0.06, exit: [0.2, 0.6, 0.5, 0.4][i], jit: 0.7 }, E.roof[i % E.roof.length], 2)); // 屋根・軒・壁を拍ごとに1本 // 窓の光を受ける屋根の辺だけ(閉じた家の絵記号にしない)
+    g.fillStyle = "#fff"; [[[1526, 226], [1585, 186], [1643, 146]], [[1643, 146], [1700, 186], [1722, 200]], [[1740, 236], [1741, 300]], [[1500, 242], [1532, 226]]].forEach((P, i) => cutT(g, P, [4.4, 2.6, 2.2, 3.0][i], 7350 + i, { entry: 0.06, exit: [0.2, 0.6, 0.5, 0.4][i], jit: 0.7 }, E.roof[i % E.roof.length], 2)); // 屋根・軒・壁を拍ごとに1本 // 窓の光を受ける屋根の辺だけ(閉じた家の絵記号にしない)
+    // 窓の家の壁(窓の光を受ける左の壁)の白い刀: 屋根と同じ拍で3本ずつ(家が拍ごとに少しずつ彫り出される。消えかけた声の間の静止を埋める)
+    g.fillStyle = "#fff"; for (let k = 0; k < 12; k++) { const R = PR(7, 40, k), y = 250 + 92 * R(), x0 = 1530 + 70 * R(), l = 30 + 48 * R(); cutT(g, [[x0, y], [x0 + l * 0.5, y + (R() - 0.5) * 2], [x0 + l, y + (R() - 0.5) * 2]], 2.0 + 2.6 * R(), 7380 + k, { entry: 0.15, exit: 0.5, jit: 0.5 }, E.roof[k % E.roof.length] + (k >> 2) * 0.5, 2); }
     g.fillStyle = "#000"; g.fillRect(WN.x - 6, WN.y - 6, WN.w + 12, WN.h + 12); g.fillStyle = "#fff"; handWindowT(g, WN.x, WN.y, WN.w, WN.h, 2, 2, 7300, E.win, 0);
     g.restore();
     const [pp, pg] = plateBuf("plA"); pg.fillRect(WN.x - 4, WN.y - 4, WN.w + 8, WN.h + 8); baren(pg, [WN.x - 8, WN.y - 8, WN.x + WN.w + 8, WN.y + WN.h + 8], E.win + 2, "down", 7401);
@@ -233,7 +235,7 @@ const A7_MID = (() => {
     const E = { mada: word("まだ、"), hikari: word("光は"), kienai: word("消えない") };
     E.t = [0, 7, 15].map((d) => E.mada + d); E.comma = strongest(E.t[2] + 6, E.hikari); E.t4 = [E.hikari, E.hikari + 7, E.kienai, E.kienai + 5, E.kienai + 10, E.kienai + 15];
     E.drop = accIn(E.hikari + 5, E.kienai - 2).map((x) => x.frame30).filter((x) => x !== E.comma).slice(0, 3); E.brk = firstAcc(1295, 1310);
-    woodLinesT(g, 9, { amount: 0.3, wmul: 0.85, sd: 9002 }, (x, y, near, id) => (h01(id, 1, 9701) < 0.5 ? NEVER : c0 + 3 + (E.brk - 6 - c0 - 3) * h01(id, 2, 9702)));
+    woodLinesT(g, 9, { amount: 0.3, wmul: 1.1, sd: 9002 }, (x, y, near, id) => (h01(id, 1, 9701) < 0.5 ? NEVER : c0 + 3 + (E.brk - 6 - c0 - 3) * h01(id, 2, 9702)));
     const T = setV("SMB", "まだ、", 1312, 150, 250, 0.08), cb = bbox(T[2].cs), dx = (cb[0] + cb[2]) / 2, dy = cb[3];
     const T4 = setV("SMB", "光は消えない", 1010, 330, 96, 0.1);
     keepOut(g, T, 46); keepOut(g, T4, 30); g.fillStyle = "#000"; g.fillRect(dx - 30, dy + 10, 60, F.y1 - dy);

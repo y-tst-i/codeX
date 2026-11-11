@@ -59,7 +59,7 @@ elif part == "M":
     for ch, s_ in zip("夜明けの", e["t"]): lyr.append((ch, s_, next(x["bb"] for x in L if x["ch"] == ch), "light", shots["S5"]["end"] - 1, "夜明けの"))
     c = cutp("S6"); e = c["events"]; mb = c["mbox"]; L = c["letters"]
     add("S6 芯の琥珀が全面に(刷り替え)", e["flood"], [0, 0, W, H], "amber", 20000, e["flood"])
-    for k in e["gPush"]: add(f"S6 畝を路から火へ押す {k}", k, [620, 300, 1300, 560], "ink", 300, k)  # 字(回路に)の箱を外した領域
+    for k in e["gPush"]: add(f"S6 畝を路から火へ押す {k}", k, [620, 300, 1250, 560], "chg", 200, k)  # 字(回路に・火)の箱を外した領域。押しの間が 4 コマなので増え始めでなく変化の山で測る
     add("S6 火のまわりの面を一刀で彫り取る", e["face"], mb["face"], "chg", 2000, e["face"])
     for k in e["wedges"]: add(f"S6 楔 {k}", k, [1150, 40, 1600, 420], "chg", 150, k)
     T2 = [x for x in L if x["ch"] in "回路に"][:3]
