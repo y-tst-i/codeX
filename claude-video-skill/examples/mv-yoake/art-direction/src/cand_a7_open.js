@@ -282,7 +282,9 @@ const A7_OPEN = (() => {
     if (t === "s") return [[x, base], [x, r], [x + w + 10, e + 8], [x + w, e], [x + w, base]];
     return [[x, base], [x, e], [x + w * 0.1, e], [x + w * 0.1, e - 10], [x + w, e - 10], [x + w, base]];
   }
-  const S4_PAN = 120; // 第2段 2.5D: 主の層(z=0.7)が 84px、手前の家が 120px、空が 14px 左へ
+  // 第2段 2.5D: 最初は 120px(主の層 84px)をなめらかに動かしたが、夜明け A の 6% が「違いが分からない」(利用者)だったのと同じ弱さだったので、
+  // 溝②を押す拍ごとに一段ずつ、z = 1 で 240px(主の層 168px、手前の家 240px、空 29px)に強めた。空の字も家の窓の名札なので主の層と一緒に動かす
+  const S4_PAN = 240;
   function S4(ctx, o) {
     const f = getF(), sh = shot("S4"), c0 = sh.start, [m, g] = begin(F), houses = S4_HOUSES.map((h, i) => chipEdge(housePoly4(h), 4400 + i, { big: 0.4 }));
     const E = { hito: phrase("ひとつ、またひとつ"), tsuna: phrase("繋がってく") };
@@ -297,12 +299,12 @@ const A7_OPEN = (() => {
     // 第2段(2.5D、A7_CAM が入の時): 「またひとつ」が灯った(500)後、カメラは溝②と一緒に右へ動き、3つ目の窓が灯るコマ(652)で止まる(夜明け A と同じ規則: 信号を追い、届いたら止まる)。
     //   層: 空(藍のぼかしと空の筋)= 遠 0.12/坂と家 = 主 0.7/手前の左の家 = 前 1.0/字 = カメラに固定(読みやすさ)。紙の端の版木のふちは動かない(版木の窓の奥が動く)
     // 第2段(静止の FAIL の直し): 溝②から右の家々へ枝分かれ(B1: 窓3の家の壁 → 坂の下 → 4つ目の窓、B2: 4つ目 → 5つ目)。4つ目の窓は 642 で彫り 661 で刷る
-    const Z = A7_CAM.Z, camT = A7_CAM.ease((f - E.w2Print) / (E.w3Print - E.w2Print)); A7_CAM.set({ pan: [-S4_PAN * camT, 0] });
+    const Z = A7_CAM.Z, camT = pushProg([[E.w2Print + 4, 0.08, 10]].concat(E.g2Push.map((s, i) => [s, 0.08 + 0.84 * (i + 1) / E.g2Push.length, 6]), [[E.w3Print, 1, 6]])); A7_CAM.set({ pan: [-S4_PAN * camT, 0] });
     const Lz = (gg, z) => A7_CAM.layer(gg, z), PR4 = (r, z) => { const a = A7_CAM.pt([r[0], r[1]], z), b = A7_CAM.pt([r[2], r[3]], z); return [a[0], a[1], b[0], b[1]]; };
     E.b1Push = accIn(E.w3 - 30, E.w3 - 5).map((x) => x.frame30).slice(-3); E.w4 = E.w3; E.w4Print = strongest(E.w3Print + 4, sh.end - 2); E.b2Push = [E.w3Print, E.w4Print]; E.w5 = E.w4Print + 4;
     const topOf = (P) => P.reduce((a, q) => Math.min(a, q[1]), 1e9);
     const W1 = { x: 512, y: topOf(houses[1]) + 140, w: 84, h: 98, cols: 2, rows: 2 }, W2 = { x: 1074, y: topOf(houses[3]) + 112, w: 72, h: 104, cols: 1, rows: 2 }, W3 = { x: 1400, y: topOf(houses[4]) + 50, w: 56, h: 60 };
-    const W4 = { x: 1626, y: topOf(houses[5]) + 66, w: 42, h: 50, cols: 1, rows: 2 }, W5 = { x: 1792, y: topOf(houses[6]) + 46, w: 38, h: 42 }, XR = F.x1 + 10 + (A7_CAM.on() ? 130 : 0);
+    const W4 = { x: 1626, y: topOf(houses[5]) + 66, w: 42, h: 50, cols: 1, rows: 2 }, W5 = { x: 1792, y: topOf(houses[6]) + 46, w: 38, h: 42 }, XR = F.x1 + 10 + (A7_CAM.on() ? 260 : 0);
     Lz(g, Z.MAIN);
     g.fillStyle = "#fff"; g.beginPath(); g.moveTo(F.x0 - 10, F.y0 - 10); g.lineTo(XR, F.y0 - 10); for (let x = XR; x >= F.x0 - 10; x -= 8) g.lineTo(x, slope4(x) + 2); g.closePath(); g.fill();
     g.fillStyle = "#000"; g.beginPath(); g.moveTo(F.x0 - 20, H); for (let x = F.x0 - 20; x <= XR + 10; x += 8) g.lineTo(x, slope4(x)); g.lineTo(XR + 10, H); g.closePath(); g.fill();
@@ -338,12 +340,12 @@ const A7_OPEN = (() => {
     pg.save(); pg.beginPath(); poly(pg, houses[4]); pg.clip(); pg.beginPath(); pg.ellipse(W3.x + W3.w / 2, W3.y + W3.h / 2, W3.w / 2 + 44, W3.h / 2 + 42, 0, 0, 7); pg.fill(); pg.restore(); baren(pg, PR4([W3.x - 60, W3.y - 60, W3.x + W3.w + 60, W3.y + W3.h + 60], Z.MAIN), E.w3Print, "right", 4815); Lz(pg, null);
     const T1 = setH("SMB", "ひとつ、", 470, 262, 92, 0.1), T2 = setH("SMB", "またひとつ", 960, 352, 92, 0.1), T = T1.concat(T2);
     const T3 = setH("SMB", "繋がってく", 1060, 948, 96, 0.1); // v7: 歌詞「繋がってく」(540、要確認)を坂の黒に彫る(v6 の静止画には無かった)
-    Lz(g, null); carveT(g, T, 4790, E.t1.concat(E.t2));
+    carveT(g, T, 4790, E.t1.concat(E.t2)); // 第2段: 字も主の層(家の名札・坂に彫った字)
     keepOut(g, T3, 22); carveT(g, T3, 4890, E.t3);
     g.restore();
     const [q, qg] = plateBuf("plB"); bokashi(qg, F.x0, F.y0, F.x1 * 0.85, 760, [[0, 1], [0.5, 0.92], [0.8, 0.68], [1, 0.42]]);
-    qg.globalCompositeOperation = "destination-out"; qg.fillStyle = "#000"; Lz(qg, Z.MAIN); qg.beginPath(); qg.moveTo(0, H); for (let x = 0; x <= XR; x += 8) qg.lineTo(x, slope4(x) - 2); qg.lineTo(XR, H); qg.closePath(); qg.fill(); houses.forEach((P, i) => { Lz(qg, i ? Z.MAIN : Z.NEAR); qg.beginPath(); poly(qg, P); qg.fill(); }); Lz(qg, null); qg.globalCompositeOperation = "source-over"; MO.holeT(qg, T, 4790, E.t1.concat(E.t2), 4);
-    Lz(qg, Z.FAR); skyStreaks(qg, 4, 26, [60, 60, 1860, 400], E.w1Print + 3, sh.end - 6, T.map((L) => bbox(L.cs)), { w: [2.2, 6.5], l: [260, 820] }); Lz(qg, null); // v7: 灯と溝の間、繋がってく の後を埋める空の筋(独立審査 v3 の S4「空の上の端に白い刀を戻す」)
+    qg.globalCompositeOperation = "destination-out"; qg.fillStyle = "#000"; Lz(qg, Z.MAIN); qg.beginPath(); qg.moveTo(0, H); for (let x = 0; x <= XR; x += 8) qg.lineTo(x, slope4(x) - 2); qg.lineTo(XR, H); qg.closePath(); qg.fill(); houses.forEach((P, i) => { Lz(qg, i ? Z.MAIN : Z.NEAR); qg.beginPath(); poly(qg, P); qg.fill(); }); Lz(qg, Z.MAIN); qg.globalCompositeOperation = "source-over"; MO.holeT(qg, T, 4790, E.t1.concat(E.t2), 4); Lz(qg, null);
+    const dT = A7_CAM.on() ? -S4_PAN * (Z.MAIN - Z.FAR) : 0; Lz(qg, Z.FAR); skyStreaks(qg, 4, 26, [60, 60, 1860, 400], E.w1Print + 3, sh.end - 6, T.map((L) => { const b = bbox(L.cs); return [b[0] + dT, b[1], b[2], b[3]]; }), { w: [2.2, 6.5], l: [260, 820] }); Lz(qg, null); // v7: 灯と溝の間、繋がってく の後を埋める空の筋(独立審査 v3 の S4「空の上の端に白い刀を戻す」)
     pressIn(qg, c0, "left", 4803);
     const all = T.concat(T3);
     return fin(ctx, m, [{ c: q, color: C.AI, kind: "bokashi", shift: [2, -1] }, { c: p, color: C.AMBER, kind: "flat" }], o, all, { grain: 0.04, cut: 4, sheet: 3 }, { cut_id: "S4", events: E, g1: +g1p.toFixed(3), g2: +g2p.toFixed(3), mbox: { W1: [W1.x - 6, W1.y - 6, W1.x + W1.w + 6, W1.y + W1.h + 6], W2: [W2.x - 6, W2.y - 6, W2.x + W2.w + 6, W2.y + W2.h + 6], W3: [W3.x - 8, W3.y - 8, W3.x + W3.w + 8, W3.y + W3.h + 8], W4: PR4([W4.x - 8, W4.y - 8, W4.x + W4.w + 8, W4.y + W4.h + 8], Z.MAIN).map(Math.round), camEndDx: A7_CAM.on() ? -S4_PAN * Z.MAIN : 0, W4raw: [W4.x - 8, W4.y - 8, W4.x + W4.w + 8, W4.y + W4.h + 8].map(Math.round), G1: bbox([G1]).map(Math.round), G2: bbox([G2]).map(Math.round) }, letters: all.map((L) => ({ ch: L.ch, bb: bbox(L.cs).map(Math.round) })) });
