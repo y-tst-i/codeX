@@ -8,11 +8,13 @@
 <script src="gen/glyphs.js"></script>
 <script src="common.js"></script>
 <script src="cand_a7.js"></script>
+<script src="cand_a7_cam.js"></script>
 <script src="motion1/gen/timing.gen.js"></script>
 <script src="cand_a6_cuts.js"></script>
 <script src="cand_a6_dawn.js"></script>
 <script src="cand_a7_open.js"></script>
 <script src="cand_a7_cuts.js"></script>
+<script src="cand_a7_mid.js"></script>
 <script src="cand_a7_dawn.js"></script>
 <script>
 (() => {
@@ -21,6 +23,7 @@
   const o = { f: +(q.get("f") || 0), look: v === "look", mask: v === "mask" };
   if (q.has("p")) o.p = +q.get("p");
   if (q.has("sheet")) o.sheet = +q.get("sheet");
+  if (q.has("cam")) o.cam = +q.get("cam");
   const go = (paperInfo) => {
     const ctx = document.getElementById("c").getContext("2d", { willReadFrequently: true });
     ctx.fillStyle = "#000"; ctx.fillRect(0, 0, 1920, 1080);

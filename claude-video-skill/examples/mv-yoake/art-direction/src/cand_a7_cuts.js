@@ -57,11 +57,14 @@ const A7_CUTS = (() => {
   return { S6 };
 })();
 
+const A7_CAM_DEFAULT = false; // 2.5D を使う既定(比較試験の後に決める)。?cam=0|1 で上書き
 function A7_DRAW(ctx, o) {
   const f = +o.f;
   A6.MO.setF(f);
+  if (typeof A7_CAM !== "undefined") { A7_CAM.setOn(o.cam == null ? A7_CAM_DEFAULT : !!+o.cam); A7_CAM.set(null); } // 2.5D の層のカメラ(第2段)。コマごとに切ってから、カットが決める
   if (f === 840) return Object.assign(A7_CUTS.S6(ctx, o), { f, v: "v7" });
   if (typeof A7_OPEN !== "undefined" && f >= 0 && f < A7_T.shot("S5").start) return Object.assign(A7_OPEN.draw(ctx, o), { f });
+  if (typeof A7_MID !== "undefined" && f >= A7_T.shot("S5").start && f < A7_T.shot("S10").start) { const r = A7_MID.draw(ctx, o); if (r) return Object.assign(r, { f }); } // 第2段: 中盤 S5〜S9 の動き
   if (typeof A7_DAWN !== "undefined" && f >= 1340 && f <= 1589) return Object.assign(A7_DAWN(ctx, o), { f });
   A6.MO.setF(Infinity);
   return A6_DRAW(ctx, o);

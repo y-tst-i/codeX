@@ -20,14 +20,16 @@ html,body{margin:0;padding:0;background:#000;}
 <script src="assets/glyphs.js"></script>
 <script src="assets/common.js"></script>
 <script src="assets/cand_a7.js"></script>
+<script src="assets/cand_a7_cam.js"></script>
 <script src="assets/timing.gen.js"></script>
 <script src="assets/cand_a6_cuts.js"></script>
 <script src="assets/cand_a6_dawn.js"></script>
 <script src="assets/cand_a7_open.js"></script>
 <script src="assets/cand_a7_cuts.js"></script>
+<script src="assets/cand_a7_mid.js"></script>
 <script src="assets/cand_a7_dawn.js"></script>
 <script>
-const LOOK = /*LOOK*/true, F0 = /*F0*/0, N = /*N*/1;
+const LOOK = /*LOOK*/true, F0 = /*F0*/0, N = /*N*/1, CAM = /*CAM*/null;
 window.__timelines = window.__timelines || {};
 window.__hf = window.__hf || {}; window.__hf.buildReady = window.__hf.buildReady || {};
 const ready = new Promise((res, rej) => {
@@ -40,7 +42,7 @@ const ready = new Promise((res, rej) => {
 window.__hf.buildReady.m1 = ready;
 ready.then(() => {
   const ctx = document.getElementById("film").getContext("2d", { willReadFrequently: true });
-  const draw = (t) => { const k = Math.min(N - 1, Math.max(0, Math.round(t * 30))); window.__last = A7_DRAW(ctx, { f: F0 + k, look: LOOK }); window.__lastFrame = k; };
+  const draw = (t) => { const k = Math.min(N - 1, Math.max(0, Math.round(t * 30))); window.__last = A7_DRAW(ctx, { f: F0 + k, look: LOOK, cam: CAM }); window.__lastFrame = k; };
   const st = { v: 0 };
   const tl = gsap.timeline({ paused: true });
   tl.fromTo(st, { v: 0 }, { v: 1, duration: N / 30, ease: "none", onUpdate: () => draw(tl.time()) }, 0);

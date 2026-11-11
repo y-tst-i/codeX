@@ -32,6 +32,12 @@ const A7_DAWN = (() => {
   function fin(ctx, m, plates, o, texts, extra, popt = {}) { const tm = textMargin(texts, B); if (o.mask) return Object.assign(maskOnly(ctx, m), { text: tm }, extra); return Object.assign(print(ctx, m, plates, Object.assign({ look: o.look, B, ink: C.INK_DAWN, grain: 0.02, cut: 10 }, popt, o.sheet == null ? {} : { sheet: o.sheet })), { text: tm }, extra); }
   const { getF, pushProg, cutT, baren } = MO; const { accIn, strongest, firstAcc, word, phrase } = A7_T;
   const pressIn = (pg, c0, dir, seed) => baren(pg, [0, 0, W, H], c0, dir, seed, { q0: 0.62, dq: 0.3, mottle: false, rag: 0.12 });
+  // 第2段: 琥珀の版(太陽とその映り)を、空の側は薔薇と同じばれん(上から、同じ前線)、水の側は淡黄と同じばれん(下から)で刷る。
+  // 第1段は琥珀を全部下から刷り、構図の頭のコマで、薔薇の版の太陽の穴(上から刷れた所)に琥珀がまだ無く、白い太陽が半分欠けて見えた(1520・1431)
+  function pressAmber(am, amg, HZ, c0, seedSky, seedWater) {
+    const [s1, s1g] = plateBuf("plAsky"); s1g.drawImage(am, 0, 0); s1g.globalCompositeOperation = "destination-in"; s1g.fillRect(0, 0, W, HZ + 4); s1g.globalCompositeOperation = "source-over"; pressIn(s1g, c0, "down", seedSky);
+    amg.globalCompositeOperation = "destination-out"; amg.fillRect(0, 0, W, HZ + 4); amg.globalCompositeOperation = "source-over"; pressIn(amg, c0, "up", seedWater); amg.drawImage(s1, 0, 0);
+  }
   // 墨の文字版(字・題箋を墨で刷る。紙・色版の上に重ねて刷る)。at のコマからばれんで dir へ
   function textPlate(name, draws) { const [c, g] = plateBuf(name); g.fillStyle = "#000"; for (const [fn, rect, at, dir, seed] of draws) { const [t, tg] = plateBuf(name + "T"); tg.fillStyle = "#000"; fn(tg); if (getF() < at) continue; baren(tg, rect, at, dir, seed); g.drawImage(t, 0, 0); } return c; }
   // 切妻の家(反りなし。S4 の坂の家と同じ型)
@@ -106,6 +112,7 @@ const A7_DAWN = (() => {
   const PYL_A = { b: HZ_A + 4, t: 548 };
   const WIRE_A = wire([lxA(TT_A + 60, 1), TT_A + 60], [PX_A + 7, PYL_A.t + 12], 70);
   const SIG_A = [[812, H + 30], [748, 950], [688, slopeA(688) + 22], [lxA(TB_A, 1) + 2, slopeA(lxA(TB_A, 1)) + 4], [lxA(TT_A + 60, 1), TT_A + 60]].concat(WIRE_A.slice(1)).concat([[PX_A + 16, PYL_A.b - 30], [PX_A + 22, PYL_A.b - 2]]);
+  const CAM_A = { push: 0.06 }; // 2.5D の押し込みの量(前景で 6%、中景 2.1%、遠景 0.7%)
   const timesA = () => {
     const c0 = 1340, E = { c0, hit: strongest(c0 - 2, c0 + 2), end: word("夜") - 1 };
     E.arrive = 1402; // 信号が鉄塔に届くコマ(統括の指定。前後のアクセント 1397・1406 の間)
@@ -116,6 +123,12 @@ const A7_DAWN = (() => {
   };
   function compA(ctx, o) {
     const f = getF(), E = timesA(), [m, g] = begin(B), HZ = HZ_A, SR = SR_A, SX = SX_A;
+    // 第2段(2.5D、A7_CAM が入の時だけ): 衝撃の次のコマから、信号が鉄塔に届く(1402)まで、カメラが信号と一緒に地平の鉄塔へ押し込む(焦点は鉄塔の根元=地平)。
+    // 届いたコマで止まる(太陽の縁はカメラが止まってから刷る)。層: 空・雲・太陽 = 遠 0.12/地平の町・丘・鉄塔・水 = 中 0.35/坂・工場・煙突・給水塔・櫓 = 前 1.0。電線と信号は点ごとに 1.0 → 0.35
+    const Z = A7_CAM.Z, camT = A7_CAM.ease((f - E.hit) / (E.arrive - E.hit)); A7_CAM.set({ fx: PX_A + 7, fy: HZ, push: CAM_A.push * camT });
+    const Lz = (gg, z) => A7_CAM.layer(gg, z), WIRE = A7_CAM.pathZ(WIRE_A, A7_CAM.alongZ(WIRE_A, Z.NEAR, Z.MID));
+    const SIG = A7_CAM.pathZ(SIG_A, (p, i) => (i < 5 ? Z.NEAR : i < 5 + WIRE_A.length - 1 ? A7_CAM.alongZ(WIRE_A, Z.NEAR, Z.MID)(null, i - 4) : Z.MID));
+    Lz(g, Z.FAR);
     // 空を彫る進み: 衝撃のコマで最初の一刀(14%)、その後アクセントごとに押す
     const cp = pushProg([[E.hit, 0.14, 2]].concat(E.carve.map((s, i) => [s, Math.min(1, 0.14 + 0.86 * (i + 1) / E.carve.length), 6])));
     const wp = pushProg([[E.hit + 9, 0.2, 6]].concat(E.carve.slice(2).map((s, i, a) => [s + 2, Math.min(1, 0.2 + 0.8 * (i + 1) / a.length), 7])));
@@ -129,8 +142,11 @@ const A7_DAWN = (() => {
     skyMarks(g, 10, SX, HZ + 380, 420, 900, (x, y) => y > 230 && y < HZ - 30, 1.6);
     for (const [x0, x1, y, th, sd] of [[860, 1740, 250, 30, 1], [1320, 1960, 432, 34, 3], [700, 1180, 520, 14, 4]]) for (const P of haze(x0, x1, y, th, 10100 + sd)) fill(g, P); // 雲は彫り残す木。v7: 前線で切らずに最初から描く(まだ彫っていない黒の中では見えない。前線で切ると、前線が上がった時に彫った所へ墨が戻った)
     const dayY = lerp(HZ + 14, H + 80, wp);
-    g.fillStyle = "#fff"; g.fillRect(0, HZ + 14, W, dayY - HZ - 14);
-    for (let k = 0, y = HZ + 14; y < H + 60; k++, y += 7) { for (let j = 0; j < 24; j++) { const R = PR(10, 3, k, j), x = 560 + j * 64 + R() * 40, t = Math.min(1, 1 - (y - dayY) / 110), tA = R(); if (y < dayY - 8 || t <= 0 || tA > t) continue; const hw = (20 + 90 * R()) * 1.4; g.fillStyle = "#fff"; MO.lensP(g, x, y, hw, 6, 10300 + k * 41 + j, 0, clamp((t - tA) / Math.max(0.05, 1 - tA) * 1.5)); } } // v7: 水の映りの刀も形を固定し、左から彫り進む(長さ・太さが t で変わると、隣のコマで墨に戻る画素が出た)
+    Lz(g, Z.MID);
+    g.fillStyle = "#fff"; g.fillRect(-40, HZ + 14, W + 80, dayY - HZ - 14);
+    // 第2段: 前線を過ぎた映りの刀も描き続ける(第1段は y < dayY - 8 を飛ばしていた。地平の下の帯 HZ+14 から上へはみ出す刀の上の端 y=711〜713 が、
+    //   前線が過ぎた次のコマで墨に戻った=1349 の刀の入れ替わり 139 画素の原因)
+    for (let k = 0, y = HZ + 14; y < H + 60; k++, y += 7) { for (let j = 0; j < 24; j++) { const R = PR(10, 3, k, j), x = 560 + j * 64 + R() * 40, t = Math.min(1, 1 - (y - dayY) / 110), tA = R(); if (t <= 0 || tA > t) continue; const hw = (20 + 90 * R()) * 1.4; g.fillStyle = "#fff"; MO.lensP(g, x, y, hw, 6, 10300 + k * 41 + j, 0, clamp((t - tA) / Math.max(0.05, 1 - tA) * 1.5)); } } // v7: 水の映りの刀も形を固定し、左から彫り進む(長さ・太さが t で変わると、隣のコマで墨に戻る画素が出た)
     waterInk(g, 10, HZ + 22, H + 10, 600, W + 20, SX, () => true); // v7: 水の墨の線は最初から(彫る前の黒の中では見えない)
     const MID = [["s", 612, 60, 22], ["g", 668, 70, 34], ["f", 744, 54, 70], ["k", 806, 50, 46], ["g", 862, 84, 30], ["c", 1418, 110, 40], ["f", 1534, 64, 86], ["g", 1600, 84, 44], ["k", 1690, 56, 70], ["f", 1756, 96, 120], ["s", 1856, 90, 70]];
     const hill = (x) => HZ + 6 - 120 * smooth((x - 1380) / 540);
@@ -142,14 +158,16 @@ const A7_DAWN = (() => {
       else if (t === "c") fill(g, chipEdge([[x, b], [x, b - h], [x + w * 0.25, b - h - 18], [x + w * 0.25, b - h], [x + w * 0.5, b - h - 18], [x + w * 0.5, b - h], [x + w * 0.62, b - h], [x + w * 0.62, b - h - 96], [x + w * 0.7, b - h - 96], [x + w * 0.7, b - h], [x + w, b - h], [x + w, b]], s2));
       else { waterTank(g, x + w / 2, b - h, w * 0.8, h * 0.4, b, s2); } });
     pylon(g, PX_A, PYL_A.b, PYL_A.t, 10450);
+    Lz(g, Z.NEAR);
     fill(g, (() => { const P = [[-20, H + 20], [-20, slopeA(-20)]]; for (let x = 0; x <= 1060; x += 10) P.push([x, slopeA(x) + 6 * Math.sin(x * 0.02)]); P.push([1060, H + 20]); return P; })());
     const SAW = [[-30, H + 20], [-30, 470]]; for (const x of [-30, 96, 222]) SAW.push([x, 470], [x + 124, 548], [x + 124, 470]); SAW.splice(SAW.length - 1, 1); SAW.push([346, 548], [346, H + 20]);
     const fac = chipEdge(SAW, 10500, { big: 0.3 }); fill(g, fac);
     const chim = chimney(268, 560, 52, 74, 48, 10510); fill(g, chim);
     const tank = waterTank(g, 440, 356, 112, 96, slopeA(440) + 8, 10520);
     tower(g, TX_A, TB_A, TT_A, 58, 16, 15, 10600, slopeA(lxA(TB_A, 1)) + 6);
-    ink(g, WIRE_A, 15, 10650, { entry: 0.01, exit: 0.02, jit: 0.3 });
-    ink(g, wire([TX_A + 20, TT_A + 92], [W + 30, 330], 140), 2.2, 10651);
+    Lz(g, null); ink(g, WIRE, 15, 10650, { entry: 0.01, exit: 0.02, jit: 0.3 });
+    { const W2 = wire([TX_A + 20, TT_A + 92], [W + 30, 330], 140); ink(g, A7_CAM.pathZ(W2, A7_CAM.alongZ(W2, Z.NEAR, 0.6)), 2.2, 10651); }
+    Lz(g, Z.NEAR);
     // 光の縁: 太陽の縁を刷ったコマから太くなる(彫り足す)。影の中の白い刀
     const lit = MO.prog(E.arrive, 26), rimW = lerp(2.2, 4.2, lit); // v7: 太陽の縁を刷ったコマから 26 コマで、光の縁を太く彫り足す(段で太らせず、間を埋める)
     rim(g, fac, 10700, (a, b) => b[0] > a[0] + 3 && b[1] > a[1] + 1, rimW, ycut); rim(g, chim, 10720, (a, b) => b[1] > a[1] + 20, rimW * 0.8, ycut); rim(g, tank, 10730, (a, b) => b[0] > a[0] + 3 || b[1] > a[1] + 20, rimW * 0.8, ycut);
@@ -158,17 +176,17 @@ const A7_DAWN = (() => {
     for (const [y, sd] of [[214, 1], [396, 2]]) { const hw = lerp(37, 24, (560 - y) / 508); cut(g, [[268 - hw + 4, y], [268 + hw - 2, y - 1]], 2.4, 10760 + sd, { entry: 0.3, exit: 0.3, jit: 0.3 }); }
     // 信号の溝: 道の形は最初から全部彫ってある(紙)。琥珀は届いた所まで(アクセントごとに押して進む)
     const SLfull = polyLen(SIG_A), sA = pushProg([[E.hit, 0.06, 3]].concat(E.sigPush.map((s, i) => [s, 0.06 + 0.94 * (i + 1) / (E.sigPush.length + 1), 5])).concat([[E.arrive - 3, 1, 4]]));
-    const [gb] = signalBuf("sigAfull", SIG_A, SLfull, { w0: 12, w1: 8, seed: 10800 }); g.drawImage(gb, 0, 0);
+    Lz(g, null); const SLc = polyLen(SIG), [gb] = signalBuf("sigAfull", SIG, SLc, { w0: 12, w1: 8, seed: 10800 }); g.drawImage(gb, 0, 0);
     g.restore();
     const plates = [];
     if (honey) { const [h, hg] = plateBuf("plH"); bokashi(hg, 0, HZ, 0, 120, [[0, 1], [0.45, 0.7], [1, 0]]); bokashi(hg, 0, HZ + 14, 0, H, [[0, 0.8], [1, 0.15]], (gg) => gg.rect(0, HZ + 14, W, H)); baren(hg, [0, 0, W, H], E.arrive, "up", 10901, { q0: 0.45, dq: 0.2, mottle: false, rag: 0.12 }); plates.push({ c: h, color: C.HONEY, kind: "bokashi", shift: [2, -1] }); }
-    const [sb, SL] = signalBuf("sigA", SIG_A, sA * SLfull, { w0: 12, w1: 8, seed: 10800 });
+    const [sb, SL] = signalBuf("sigA", SIG, sA * SLc, { w0: 12, w1: 8, seed: 10800 });
     const [am, amg] = plateBuf("plA"); amg.drawImage(sb, 0, 0);
-    if (sunOn) { amg.save(); amg.beginPath(); amg.rect(0, 0, W, HZ + 6); amg.clip(); amg.fillStyle = "#000"; amg.beginPath(); poly(amg, sunPoly(SX, SY, SR, 10900)); amg.fill(); amg.restore(); sunReflect(amg, 10, SX, HZ + 16, H, 70, 230, lerp(0.3, 1, Math.max(0, rise) / 0.45 * 0.43)); }
+    if (sunOn) { amg.save(); amg.beginPath(); amg.rect(0, 0, W, HZ + 6); amg.clip(); Lz(amg, Z.FAR * 0.5); amg.fillStyle = "#000"; amg.beginPath(); poly(amg, sunPoly(SX, SY, SR, 10900)); amg.fill(); amg.restore(); amg.save(); Lz(amg, Z.MID); sunReflect(amg, 10, SX, HZ + 16, H, 70, 230, lerp(0.3, 1, Math.max(0, rise) / 0.45 * 0.43)); amg.restore(); }
     plates.push({ c: am, color: C.AMBER, kind: "flat", shift: [-3, 2] });
     // 版ずれ: 衝撃のコマで墨の版だけが紙と色版から 14px、次のコマで 6px ずれ、その次で合う
     const ks = f === E.hit ? [-14, 8] : f === E.hit + 1 ? [-6, 3] : null;
-    return fin(ctx, m, plates, o, [], { comp: "A", events: E, mbox: { sun: [SX - SR, HZ - 120, SX + SR, HZ + 6], sky: [0, 0, W, HZ], pylon: [PX_A - 40, PYL_A.t - 20, PX_A + 40, PYL_A.b + 10] }, carve_sky: +cp.toFixed(3), carve_water: +wp.toFixed(3), sun_step: step, sun_rise: rise, signal: +sA.toFixed(3), signal_px: Math.round(sA * SLfull), signal_len_px: Math.round(SL), key_shift: ks }, { sheet: 1, keyShift: ks });
+    return fin(ctx, m, plates, o, [], { comp: "A", events: E, mbox: { sun: [SX - SR, HZ - 120, SX + SR, HZ + 6], sky: [0, 0, W, HZ], pylon: [PX_A - 40, PYL_A.t - 20, PX_A + 40, PYL_A.b + 10] }, carve_sky: +cp.toFixed(3), carve_water: +wp.toFixed(3), sun_step: step, sun_rise: rise, signal: +sA.toFixed(3), signal_px: Math.round(sA * SLfull), signal_len_px: Math.round(SL), key_shift: ks, cam: A7_CAM.state() }, { sheet: 1, keyShift: ks });
   }
 
   // =====================================================================
@@ -213,7 +231,7 @@ const A7_DAWN = (() => {
     const [sb] = signalBuf("sigB", SIG, sA * SL, { w0: 10, w1: 8.5, seed: 11500 });
     const [am, amg] = plateBuf("plA"); amg.save(); amg.beginPath(); amg.rect(0, 0, W, HZ + 4); amg.clip(); amg.beginPath(); poly(amg, sun); amg.fill(); amg.restore(); sunReflect(amg, 11, SC[0], HZ + 14, H, 120, 300);
     for (const pgc of [ag, hg]) { pgc.globalCompositeOperation = "destination-out"; pgc.beginPath(); poly(pgc, sunIn); pgc.fill(); pgc.globalCompositeOperation = "source-over"; }
-    pressIn(ag, E.c0, "down", 11601); pressIn(hg, E.c0, "up", 11602); pressIn(amg, E.c0, "up", 11603); amg.drawImage(sb, 0, 0);
+    pressIn(ag, E.c0, "down", 11601); pressIn(hg, E.c0, "up", 11602); pressAmber(am, amg, HZ, E.c0, 11601, 11602); amg.drawImage(sb, 0, 0);
     // 墨の文字版: 夜・が・明・け・る を語頭(と推定の時刻)でばれん。字は 4 コマで刷り終える
     const box = (Ls, p = 8) => { const b = lettersBox(Ls); return [b[0] - p, b[1] - p, b[2] + p, b[3] + p]; };
     const letterDraw = (L) => (tg) => { tg.beginPath(); pathOf(tg, L.cs); tg.fill("nonzero"); };
@@ -265,7 +283,7 @@ const A7_DAWN = (() => {
     const [am, amg] = plateBuf("plA"); amg.beginPath(); poly(amg, sun); amg.fill(); sunReflect(amg, 12, SC[0], HZ + 14, H, 60, 180);
     for (const pgc of [ag, hg]) { pgc.globalCompositeOperation = "destination-out"; pgc.beginPath(); poly(pgc, sunIn); pgc.fill(); pgc.globalCompositeOperation = "source-over"; }
     for (const pgc of [ag, hg, amg]) { pgc.globalCompositeOperation = "destination-out"; for (const P of KASUMI) { pgc.beginPath(); poly(pgc, P); pgc.fill(); } pgc.fillRect(CART[0] - 2, CART[1] - 2, CW + 4, CH + 4); pgc.globalCompositeOperation = "source-over"; } // 題箋は最初から白い札(色版を刷らない所)
-    pressIn(ag, E.c0, "down", 12601); pressIn(hg, E.c0, "up", 12602); pressIn(amg, E.c0, "up", 12603);
+    pressIn(ag, E.c0, "down", 12601); pressIn(hg, E.c0, "up", 12602); pressAmber(am, amg, HZ, E.c0, 12601, 12602);
     // 最初の窓に琥珀(刷り替えと同じコマ)、信号が窓から鉄塔まで(アクセントごとに押す)
     amg.fillRect(WN.x - 3, WN.y - 3, WN.w + 6, WN.h + 6);
     const sC = pushProg(E.sigPush.map((s, i) => [s, (i + 1) / (E.sigPush.length + 1), 5]).concat([[E.arrive - 1, 1, 2]]));
