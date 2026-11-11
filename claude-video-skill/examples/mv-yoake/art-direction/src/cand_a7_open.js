@@ -284,6 +284,7 @@ const A7_OPEN = (() => {
   }
   // 第2段 2.5D: 最初は 120px(主の層 84px)をなめらかに動かしたが、夜明け A の 6% が「違いが分からない」(利用者)だったのと同じ弱さだったので、
   // 溝②を押す拍ごとに一段ずつ、z = 1 で 240px(主の層 168px、手前の家 240px、空 29px)に強めた。空の字も家の窓の名札なので主の層と一緒に動かす
+  // 段だけだと拍の間が止まって見えた(試験 v2 の静止 0.87 秒)ので、移動の 3 割は 500→657 の一定の速さ、7 割を拍ごとの段にした
   const S4_PAN = 240;
   function S4(ctx, o) {
     const f = getF(), sh = shot("S4"), c0 = sh.start, [m, g] = begin(F), houses = S4_HOUSES.map((h, i) => chipEdge(housePoly4(h), 4400 + i, { big: 0.4 }));
@@ -299,7 +300,7 @@ const A7_OPEN = (() => {
     // 第2段(2.5D、A7_CAM が入の時): 「またひとつ」が灯った(500)後、カメラは溝②と一緒に右へ動き、3つ目の窓が灯るコマ(652)で止まる(夜明け A と同じ規則: 信号を追い、届いたら止まる)。
     //   層: 空(藍のぼかしと空の筋)= 遠 0.12/坂と家 = 主 0.7/手前の左の家 = 前 1.0/字 = カメラに固定(読みやすさ)。紙の端の版木のふちは動かない(版木の窓の奥が動く)
     // 第2段(静止の FAIL の直し): 溝②から右の家々へ枝分かれ(B1: 窓3の家の壁 → 坂の下 → 4つ目の窓、B2: 4つ目 → 5つ目)。4つ目の窓は 642 で彫り 661 で刷る
-    const Z = A7_CAM.Z, camT = pushProg([[E.w2Print + 4, 0.08, 10]].concat(E.g2Push.map((s, i) => [s, 0.08 + 0.84 * (i + 1) / E.g2Push.length, 6]), [[E.w3Print, 1, 6]])); A7_CAM.set({ pan: [-S4_PAN * camT, 0] });
+    const Z = A7_CAM.Z, camT = 0.3 * clamp((f - E.w2Print) / (E.w3Print + 5 - E.w2Print)) + 0.7 * pushProg([[E.w2Print + 4, 0.08, 10]].concat(E.g2Push.map((s, i) => [s, 0.08 + 0.84 * (i + 1) / E.g2Push.length, 6]), [[E.w3Print, 1, 6]])); A7_CAM.set({ pan: [-S4_PAN * camT, 0] });
     const Lz = (gg, z) => A7_CAM.layer(gg, z), PR4 = (r, z) => { const a = A7_CAM.pt([r[0], r[1]], z), b = A7_CAM.pt([r[2], r[3]], z); return [a[0], a[1], b[0], b[1]]; };
     E.b1Push = accIn(E.w3 - 30, E.w3 - 5).map((x) => x.frame30).slice(-3); E.w4 = E.w3; E.w4Print = strongest(E.w3Print + 4, sh.end - 2); E.b2Push = [E.w3Print, E.w4Print]; E.w5 = E.w4Print + 4;
     const topOf = (P) => P.reduce((a, q) => Math.min(a, q[1]), 1e9);
