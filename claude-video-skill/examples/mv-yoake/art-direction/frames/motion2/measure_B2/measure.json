@@ -1,0 +1,329 @@
+{
+ "part": "B",
+ "frames": 250,
+ "song_range": [
+  1340,
+  1589
+ ],
+ "black_frames": [],
+ "min_mean_luma": 68.67,
+ "events": [
+  {
+   "name": "1340 衝撃: 版ずれ+空の最初の一刀",
+   "frame": 1340,
+   "box": [
+    0,
+    0,
+    1920,
+    1080
+   ],
+   "kind": "chg",
+   "thr": 5000,
+   "accent": 1340,
+   "measured": 1341,
+   "diff": 1,
+   "value": 170869,
+   "strength": 0.93,
+   "kick": 0.87
+  },
+  {
+   "name": "空を押して彫る 1349",
+   "frame": 1349,
+   "box": [
+    0,
+    0,
+    1920,
+    700
+   ],
+   "kind": "chg",
+   "thr": 2000,
+   "accent": 1349,
+   "measured": 1349,
+   "diff": 0,
+   "value": 71640,
+   "strength": 0.73,
+   "kick": 0.28
+  },
+  {
+   "name": "空を押して彫る 1359",
+   "frame": 1359,
+   "box": [
+    0,
+    0,
+    1920,
+    700
+   ],
+   "kind": "chg",
+   "thr": 2000,
+   "accent": 1359,
+   "measured": 1359,
+   "diff": 0,
+   "value": 95263,
+   "strength": 0.6,
+   "kick": 0.26
+  },
+  {
+   "name": "空を押して彫る 1368",
+   "frame": 1368,
+   "box": [
+    0,
+    0,
+    1920,
+    700
+   ],
+   "kind": "chg",
+   "thr": 2000,
+   "accent": 1368,
+   "measured": 1368,
+   "diff": 0,
+   "value": 100025,
+   "strength": 0.64,
+   "kick": 0.41
+  },
+  {
+   "name": "空を押して彫る 1377",
+   "frame": 1377,
+   "box": [
+    0,
+    0,
+    1920,
+    700
+   ],
+   "kind": "chg",
+   "thr": 2000,
+   "accent": 1377,
+   "measured": 1377,
+   "diff": 0,
+   "value": 115233,
+   "strength": 0.55,
+   "kick": 0.49
+  },
+  {
+   "name": "空を押して彫る 1387",
+   "frame": 1387,
+   "box": [
+    0,
+    0,
+    1920,
+    700
+   ],
+   "kind": "chg",
+   "thr": 2000,
+   "accent": 1387,
+   "measured": 1387,
+   "diff": 0,
+   "value": 90411,
+   "strength": 0.54,
+   "kick": 0.34
+  },
+  {
+   "name": "空を押して彫る 1397",
+   "frame": 1397,
+   "box": [
+    0,
+    0,
+    1920,
+    700
+   ],
+   "kind": "chg",
+   "thr": 2000,
+   "accent": 1397,
+   "measured": 1397,
+   "diff": 0,
+   "value": 45570,
+   "strength": 0.51,
+   "kick": 0.16
+  },
+  {
+   "name": "信号が鉄塔に届く=太陽の縁・淡黄を刷る(1402 は統括の指定。アクセントではない)",
+   "frame": 1402,
+   "box": [
+    896,
+    580,
+    1496,
+    706
+   ],
+   "kind": "amber",
+   "thr": 2000,
+   "accent": null,
+   "measured": 1402,
+   "diff": null,
+   "value": 5146,
+   "strength": null,
+   "kick": null
+  },
+  {
+   "name": "太陽を一段上に刷り直す 1415",
+   "frame": 1415,
+   "box": [
+    896,
+    580,
+    1496,
+    706
+   ],
+   "kind": "amber",
+   "thr": 300,
+   "accent": 1415,
+   "measured": 1415,
+   "diff": 0,
+   "value": 10542,
+   "strength": 0.61,
+   "kick": 0.7
+  },
+  {
+   "name": "太陽を一段上に刷り直す 1425",
+   "frame": 1425,
+   "box": [
+    896,
+    580,
+    1496,
+    706
+   ],
+   "kind": "amber",
+   "thr": 300,
+   "accent": 1425,
+   "measured": 1425,
+   "diff": 0,
+   "value": 10982,
+   "strength": 0.7,
+   "kick": 0.15
+  },
+  {
+   "name": "信号が「明」の日の中へ届き、日の穴に琥珀を二度摺り",
+   "frame": 1481,
+   "box": [
+    630,
+    247,
+    890,
+    745
+   ],
+   "kind": "deep",
+   "thr": 300,
+   "accent": 1481,
+   "measured": 1481,
+   "diff": 0,
+   "value": 16504,
+   "strength": 0.71,
+   "kick": 0.03
+  },
+  {
+   "name": "「明」を刷る",
+   "frame": 1462,
+   "box": [
+    630,
+    233,
+    1224,
+    869
+   ],
+   "kind": "ink",
+   "thr": 3000,
+   "accent": 1462,
+   "measured": 1462,
+   "diff": 0,
+   "value": 114595,
+   "strength": 0.76,
+   "kick": 0.08
+  },
+  {
+   "name": "題を墨で刷る",
+   "frame": 1538,
+   "box": [
+    672,
+    214,
+    848,
+    646
+   ],
+   "kind": "ink",
+   "thr": 500,
+   "accent": 1538,
+   "measured": 1538,
+   "diff": 0,
+   "value": 5543,
+   "strength": 0.57,
+   "kick": 0.09
+  },
+  {
+   "name": "信号が地平の鉄塔まで届く",
+   "frame": 1557,
+   "box": [
+    1196,
+    828,
+    1276,
+    954
+   ],
+   "kind": "amberAny",
+   "thr": 10,
+   "accent": 1557,
+   "measured": 1556,
+   "diff": -1,
+   "value": 51,
+   "strength": 0.65,
+   "kick": 0.1
+  }
+ ],
+ "strong_accents_not_used": [
+  1453
+ ],
+ "lyrics": [
+  {
+   "char": "夜",
+   "onset": 1431,
+   "word": "夜",
+   "confidence": "要確認",
+   "start": 1431,
+   "start_diff": 0,
+   "readable85": 1432,
+   "readable_diff": 1
+  },
+  {
+   "char": "が",
+   "onset": 1456,
+   "word": "が明ける",
+   "confidence": "確認済み",
+   "start": 1456,
+   "start_diff": 0,
+   "readable85": 1457,
+   "readable_diff": 1
+  },
+  {
+   "char": "明",
+   "onset": 1462,
+   "word": "が明ける",
+   "confidence": "確認済み",
+   "start": 1462,
+   "start_diff": 0,
+   "readable85": 1463,
+   "readable_diff": 1
+  },
+  {
+   "char": "け",
+   "onset": 1468,
+   "word": "が明ける",
+   "confidence": "確認済み",
+   "start": 1468,
+   "start_diff": 0,
+   "readable85": 1469,
+   "readable_diff": 1
+  },
+  {
+   "char": "る",
+   "onset": 1473,
+   "word": "が明ける",
+   "confidence": "確認済み",
+   "start": 1473,
+   "start_diff": 0,
+   "readable85": 1474,
+   "readable_diff": 1
+  },
+  {
+   "char": "題",
+   "onset": 1538,
+   "word": null,
+   "confidence": null,
+   "start": 1538,
+   "start_diff": 0,
+   "readable85": 1539,
+   "readable_diff": 1
+  }
+ ]
+}
