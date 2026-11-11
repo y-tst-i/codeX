@@ -3,7 +3,7 @@
 #   使い方: bash plan.sh <作業フォルダ>   → <作業フォルダ>/plan.json
 set -euo pipefail
 here="$(cd "$(dirname "$0")/.." && pwd)"; src="$(cd "$here/.." && pwd)"; w="${1:?作業フォルダ}"; mkdir -p "$w/plan_png"
-args=(); for f in 0 141 291 409 1340 1431 1520; do args+=("$src/styleframes_v7.html?f=$f&v=mask" "$w/plan_png/f$f.png"); done
+args=(); for f in 0 141 291 409 669 769 864 1002 1173 1340 1431 1520; do args+=("$src/styleframes_v7.html?f=$f&v=mask" "$w/plan_png/f$f.png"); done
 node "$src/tools/render_v2.mjs" "${args[@]}" | python3 -I -c "
 import sys,json
 out={}

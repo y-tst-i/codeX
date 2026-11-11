@@ -46,9 +46,9 @@ const A7_MID = (() => {
     const P = (p, z) => A7_CAM.pt(p, z), PG = (pts) => pts.map((p) => P(p, zG(p[0]))), PW = (pts) => pts.map((p) => P(p, zW(p[1]))), PH = (pts) => pts.map((p) => P(p, zHz));
     const XL = F.x0 - 260; // 2.5D で左から入ってくる分まで描く
     const top = (x) => lerp(170, 462, u(x)), bot = (x) => lerp(470, 566, u(x));
-    // 町明かりの帯(地平): 刷り替えのコマで最初の一刀(左から 3 コマで)
+    // 町明かりの帯(地平): 刷り替えのコマで最初の一刀(左から 3 コマで)。帯の形は最後の形のまま、刃先(x)より先を切る(形が変わると彫った所が墨に戻る)
     g.fillStyle = "#fff"; const gaps = [[300, 340], [620, 700], [1010, 1030], [1380, 1460], [1700, 1720]];
-    let x0 = F.x0 - 10; for (const [a, b] of gaps.concat([[F.x1 + 10, F.x1 + 20]])) { const pts = []; for (let x = x0; x <= a; x += 12) pts.push([x, HZ + 3 * Math.sin(x * 0.01)]); if (pts.length > 1) { const pp = clamp((f - c0 + 1) / 3 * 1.6 - u(x0) * 0.6); if (pp >= 1) cutW(g, PH(pts), 18 + 8 * hash(a, 1, 8), 14 + 10 * hash(a, 2, 8), 8100 + a, 1.2); else if (pp > 0) cutW(g, PH(pts.slice(0, Math.max(2, Math.ceil(pts.length * pp)))), 18 + 8 * hash(a, 1, 8), lerp(18 + 8 * hash(a, 1, 8), 14 + 10 * hash(a, 2, 8), pp), 8100 + a, 1.2); } x0 = b; }
+    let x0 = F.x0 - 10; for (const [a, b] of gaps.concat([[F.x1 + 10, F.x1 + 20]])) { const pts = []; for (let x = x0; x <= a; x += 12) pts.push([x, HZ + 3 * Math.sin(x * 0.01)]); if (pts.length > 1) { const pp = clamp((f - c0 + 1) / 3 * 1.6 - u(x0) * 0.6); if (pp > 0) { const xe = A7_CAM.pt([lerp(x0, a, pp), HZ], zHz)[0]; g.save(); if (pp < 1) { g.beginPath(); g.rect(-1e4, 0, xe + 1e4, H); g.clip(); } cutW(g, PH(pts), 18 + 8 * hash(a, 1, 8), 14 + 10 * hash(a, 2, 8), 8100 + a, 1.2); g.restore(); } } x0 = b; }
     g.fillStyle = "#000"; for (let k = 0, x = F.x0; x < F.x1; k++) { const R = PR(8, 1, k), w = 18 + 40 * R(), h = 4 + 12 * R(); if (R() < 0.55) { g.beginPath(); poly(g, PH([[x, HZ + 2], [x, HZ - 8 - h], [x + w * 0.5, HZ - 14 - h - 6 * R()], [x + w, HZ - 8 - h], [x + w, HZ + 2]])); g.fill(); } x += w + 6 + 30 * R(); }
     // 水: 地平の近くの映りは最初から少しと、刷り替えの後に少しずつ。深い所は 1123 で地平から手前へ一気に(川が灯る)
     g.fillStyle = "#fff";
@@ -152,9 +152,9 @@ const A7_MID = (() => {
     // 琥珀: 全面。S5 の芯から広がる(3 コマ)
     const [pp, pg] = plateBuf("plA"); pg.fillRect(0, 0, W, H);
     if (f < c0 + 3) { const S5C = S5_CORE(), R = [520, 1150, 1900][f - c0], P = []; for (let a = 0; a < 6.283; a += 0.03) P.push([S5C[0] + Math.cos(a) * R, S5C[1] + Math.sin(a) * R * 0.9]); const sc = scallop(P, 6900 + f - c0, { step: [60, 140], depth: [6, 16], chip: 0.1 }); pg.globalCompositeOperation = "destination-in"; pg.beginPath(); poly(pg, sc); pg.fill(); pg.globalCompositeOperation = "source-over"; }
-    // 火のまわりの面: 812 で下から上へ一刀(3 コマ)。楔は1本ずつ
+    // 火のまわりの面: 812 で下から上へ一刀(2 コマ。前線は炎の向きに少し傾いた刀のえぐりの縁=まっすぐな横の帯にしない)。楔は1本ずつ
     pg.globalCompositeOperation = "destination-out"; pg.fillStyle = "#000";
-    if (f >= E.face) { const fy = lerp(700, 150, clamp((f - E.face + 1) / 3)); pg.save(); pg.beginPath(); pg.rect(0, fy, W, H); pg.clip(); const face = scallop(S6_FACE, 6170, { step: [44, 96], depth: [1.5, 4.5], chip: 0.0 }); pg.beginPath(); poly(pg, face); pg.fill(); pg.restore(); }
+    if (f >= E.face) { const q = f === E.face ? 0.58 : 1, fy = lerp(700, 120, q); pg.save(); pg.beginPath(); pg.moveTo(1000, H); for (let x = 1000, k = 0; x <= 1700; x += 22, k++) pg.lineTo(x, fy - 0.22 * (x - 1372) + (hash(k, 1, 6177) - 0.5) * 18 + 10 * Math.sin(x * 0.03)); pg.lineTo(1700, H); pg.closePath(); pg.clip(); const face = scallop(S6_FACE, 6170, { step: [44, 96], depth: [1.5, 4.5], chip: 0.0 }); pg.beginPath(); poly(pg, face); pg.fill(); pg.restore(); }
     S6_WEDGE.forEach(([a, deg, l, w, bend], k) => { const th = (deg * Math.PI) / 180; wedgeT(pg, a, [a[0] + Math.cos(th) * l, a[1] + Math.sin(th) * l], w, 1.4, 6270 + k, bend, 0.9, E.wedges[[1, 0, 2][k]], 3); });
     pg.globalCompositeOperation = "source-over";
     const th = (-62 * Math.PI) / 180, ux = Math.cos(th), uy = Math.sin(th);

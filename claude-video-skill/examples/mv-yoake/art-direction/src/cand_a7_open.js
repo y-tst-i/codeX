@@ -302,7 +302,7 @@ const A7_OPEN = (() => {
     E.b1Push = accIn(E.w3 - 30, E.w3 - 5).map((x) => x.frame30).slice(-3); E.w4 = E.w3; E.w4Print = strongest(E.w3Print + 4, sh.end - 2); E.b2Push = [E.w3Print, E.w4Print]; E.w5 = E.w4Print + 4;
     const topOf = (P) => P.reduce((a, q) => Math.min(a, q[1]), 1e9);
     const W1 = { x: 512, y: topOf(houses[1]) + 140, w: 84, h: 98, cols: 2, rows: 2 }, W2 = { x: 1074, y: topOf(houses[3]) + 112, w: 72, h: 104, cols: 1, rows: 2 }, W3 = { x: 1400, y: topOf(houses[4]) + 50, w: 56, h: 60 };
-    const W4 = { x: 1626, y: topOf(houses[5]) + 66, w: 42, h: 50 }, W5 = { x: 1792, y: topOf(houses[6]) + 46, w: 38, h: 42 }, XR = F.x1 + 10 + (A7_CAM.on() ? 130 : 0);
+    const W4 = { x: 1626, y: topOf(houses[5]) + 66, w: 42, h: 50, cols: 1, rows: 2 }, W5 = { x: 1792, y: topOf(houses[6]) + 46, w: 38, h: 42 }, XR = F.x1 + 10 + (A7_CAM.on() ? 130 : 0);
     Lz(g, Z.MAIN);
     g.fillStyle = "#fff"; g.beginPath(); g.moveTo(F.x0 - 10, F.y0 - 10); g.lineTo(XR, F.y0 - 10); for (let x = XR; x >= F.x0 - 10; x -= 8) g.lineTo(x, slope4(x) + 2); g.closePath(); g.fill();
     g.fillStyle = "#000"; g.beginPath(); g.moveTo(F.x0 - 20, H); for (let x = F.x0 - 20; x <= XR + 10; x += 8) g.lineTo(x, slope4(x)); g.lineTo(XR + 10, H); g.closePath(); g.fill();
@@ -346,7 +346,7 @@ const A7_OPEN = (() => {
     Lz(qg, Z.FAR); skyStreaks(qg, 4, 26, [60, 60, 1860, 400], E.w1Print + 3, sh.end - 6, T.map((L) => bbox(L.cs)), { w: [2.2, 6.5], l: [260, 820] }); Lz(qg, null); // v7: 灯と溝の間、繋がってく の後を埋める空の筋(独立審査 v3 の S4「空の上の端に白い刀を戻す」)
     pressIn(qg, c0, "left", 4803);
     const all = T.concat(T3);
-    return fin(ctx, m, [{ c: q, color: C.AI, kind: "bokashi", shift: [2, -1] }, { c: p, color: C.AMBER, kind: "flat" }], o, all, { grain: 0.04, cut: 4, sheet: 3 }, { cut_id: "S4", events: E, g1: +g1p.toFixed(3), g2: +g2p.toFixed(3), mbox: { W1: [W1.x - 6, W1.y - 6, W1.x + W1.w + 6, W1.y + W1.h + 6], W2: [W2.x - 6, W2.y - 6, W2.x + W2.w + 6, W2.y + W2.h + 6], W3: [W3.x - 8, W3.y - 8, W3.x + W3.w + 8, W3.y + W3.h + 8], W4: PR4([W4.x - 8, W4.y - 8, W4.x + W4.w + 8, W4.y + W4.h + 8], Z.MAIN).map(Math.round), G1: bbox([G1]).map(Math.round), G2: bbox([G2]).map(Math.round) }, letters: all.map((L) => ({ ch: L.ch, bb: bbox(L.cs).map(Math.round) })) });
+    return fin(ctx, m, [{ c: q, color: C.AI, kind: "bokashi", shift: [2, -1] }, { c: p, color: C.AMBER, kind: "flat" }], o, all, { grain: 0.04, cut: 4, sheet: 3 }, { cut_id: "S4", events: E, g1: +g1p.toFixed(3), g2: +g2p.toFixed(3), mbox: { W1: [W1.x - 6, W1.y - 6, W1.x + W1.w + 6, W1.y + W1.h + 6], W2: [W2.x - 6, W2.y - 6, W2.x + W2.w + 6, W2.y + W2.h + 6], W3: [W3.x - 8, W3.y - 8, W3.x + W3.w + 8, W3.y + W3.h + 8], W4: PR4([W4.x - 8, W4.y - 8, W4.x + W4.w + 8, W4.y + W4.h + 8], Z.MAIN).map(Math.round), camEndDx: A7_CAM.on() ? -S4_PAN * Z.MAIN : 0, W4raw: [W4.x - 8, W4.y - 8, W4.x + W4.w + 8, W4.y + W4.h + 8].map(Math.round), G1: bbox([G1]).map(Math.round), G2: bbox([G2]).map(Math.round) }, letters: all.map((L) => ({ ch: L.ch, bb: bbox(L.cs).map(Math.round) })) });
   }
 
   function draw(ctx, o) {

@@ -1,0 +1,4 @@
+yoake_25d_test_dawn_2d.mp4 frames 91 still_frames 28 median_pct 1.228 runs>=5 [(67, 74), (78, 84)]
+yoake_25d_test_dawn_25d.mp4 frames 91 still_frames 12 median_pct 7.489 runs>=5 []
+yoake_25d_test_s8_2d.mp4 frames 171 still_frames 94 median_pct 0.084 runs>=5 [(37, 54), (88, 123), (132, 170)]
+yoake_25d_test_s8_25d.mp4 frames 171 still_frames 0 median_pct 3.03 runs>=5 []

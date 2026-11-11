@@ -16,8 +16,8 @@ await page.evaluate(() => {
   window.__hash = (c) => { const d = c.getContext("2d").getImageData(0, 0, 1920, 1080).data; let h = 2166136261; for (let i = 0; i < d.length; i++) { if ((i & 3) === 3) continue; h ^= d[i]; h = Math.imul(h, 16777619); } return (h >>> 0).toString(16).padStart(8, "0"); }; // RGB だけ
   window.__at = (f, how) => { const t = f / 30; if (how === "tl") window.__timelines.m1.seek(t, false); /* gsap の seek は既定で onUpdate を止めるので false */ else window.dispatchEvent(new CustomEvent("hf-seek", { detail: { time: t } })); return window.__hash(document.getElementById("film")); };
 });
-const N = await page.evaluate(() => N), SONG0 = await page.evaluate(() => F0), idx = [...Array(N).keys()];
-const perm = (seed) => { let s = seed >>> 0; const r = () => ((s = (Math.imul(s, 1664525) + 1013904223) >>> 0) / 4294967296); const a = idx.slice(); for (let i = N - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const N = await page.evaluate(() => N), SONG0 = await page.evaluate(() => F0), EVERY = +(process.env.SEEK_EVERY || 1), idx = [...Array(N).keys()].filter((k) => k % EVERY === 0 || k === N - 1); // 第2段: SEEK_EVERY=k で k コマごと(時間の節約。省いたことは結果に書く)
+const perm = (seed) => { let s = seed >>> 0; const r = () => ((s = (Math.imul(s, 1664525) + 1013904223) >>> 0) / 4294967296); const a = idx.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 const runs = { A_forward_tl: [idx, "tl"], B_reverse_event: [idx.slice().reverse(), "event"], C_skip_tl: [perm(7), "tl"], D_skip_event: [perm(1234), "event"] };
 const H = {};
 for (const [name, [order, how]] of Object.entries(runs)) { H[name] = {}; for (const f of order) H[name][f] = await page.evaluate(([f, how]) => window.__at(f, how), [f, how]); console.log(name, "done", order.slice(0, 6).join(","), "…"); }
@@ -33,7 +33,7 @@ for (const f of idx) {
   }
   rows.push({ frame: f, song: SONG0 + f, hashes: hs, same, hf_render_png: hseq, hf_match: hseq === null ? null : hseq === hs[0] });
 }
-const res = { frames: N, song_first: SONG0, orders: Object.fromEntries(Object.entries(runs).map(([k, [o, how]]) => [k, { how, first: o.slice(0, 8) }])), seek_diff_frames: bad, hf_png_compared: seqN, hf_png_diff_frames: seqBad, verdict: bad === 0 && seqBad === 0 ? "ALL_SAME" : "DIFF", rows };
+const res = { frames: N, checked_every: EVERY, checked_frames: idx.length, song_first: SONG0, orders: Object.fromEntries(Object.entries(runs).map(([k, [o, how]]) => [k, { how, first: o.slice(0, 8) }])), seek_diff_frames: bad, hf_png_compared: seqN, hf_png_diff_frames: seqBad, verdict: bad === 0 && seqBad === 0 ? "ALL_SAME" : "DIFF", rows };
 fs.writeFileSync(out, JSON.stringify(res, null, 1));
 console.log(JSON.stringify({ seek_diff_frames: bad, hf_png_compared: seqN, hf_png_diff_frames: seqBad, verdict: res.verdict }));
 await b.close();

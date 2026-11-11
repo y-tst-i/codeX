@@ -15,7 +15,7 @@ await page.waitForFunction(() => window.__ready === true, null, { timeout: 12000
 await page.evaluate((CAM) => {
   window.__cam = CAM;
   const c = document.getElementById("c"), ctx = c.getContext("2d", { willReadFrequently: true });
-  const cuts = M1_TIMING.shots.map((s) => s.start).concat([1431, 1520]); // 夜明けの構図の切り替え(cand_a7_dawn.js)も新しい版木
+  const cuts = M1_TIMING.shots.map((s) => s.start).concat([1431, 1520]); // 中盤の S5〜S9 の頭(669・769・864・1002・1173)もショット表に入っている // 夜明けの構図の切り替え(cand_a7_dawn.js)も新しい版木
   window.__prev = null;
   window.__step = (f) => {
     ctx.fillStyle = "#000"; ctx.fillRect(0, 0, 1920, 1080); A7_DRAW(ctx, { f, look: false, mask: true, cam: window.__cam });

@@ -14,7 +14,7 @@ os.makedirs(out, exist_ok=True)
 plan = json.load(open(plan_p, encoding="utf-8"))
 tj = open(timing_p, encoding="utf-8").read(); T = json.loads(tj[tj.index("{"): tj.rindex("}") + 1])
 shots = {s["id"]: s for s in T["shots"]}
-F0, N = (0, shots["S5"]["start"]) if part == "A" else (shots["S10"]["start"], T["frames"] - shots["S10"]["start"])
+F0, N = {"A": (0, shots["S5"]["start"]), "M": (shots["S5"]["start"], shots["S10"]["start"] - shots["S5"]["start"]), "B": (shots["S10"]["start"], T["frames"] - shots["S10"]["start"])}[part]
 W, H = 1920, 1080
 
 # ---- 事象(曲のコマ・アクセント・測る領域・種類)----
@@ -46,10 +46,44 @@ if part == "A":
     for k in e["g1Push"]: add(f"S4 溝①を押す {k}", k, [mb["G1"][0] - 10, mb["G1"][1] - 10, mb["G1"][2] + 10, mb["G1"][3] + 10], "chg", 30, k)
     add("S4 窓2の桟を彫る", e["w2Carve"], mb["W2"], "chg", 150, e["w2Carve"]); add("S4 窓2に琥珀(またひとつ)", e["w2Print"], [mb["W2"][0] - 60, mb["W2"][1] - 60, mb["W2"][2] + 60, mb["W2"][3] + 60], "amber", 300, e["w2Print"])
     for k in e["g2Push"][1:]: add(f"S4 溝②を押す {k}", k, [mb["G2"][0] - 10, mb["G2"][1] - 14, mb["G2"][2] + 10, mb["G2"][3] + 14], "chg", 20, k)
-    add("S4 3つ目の窓の枠", e["w3"], mb["W3"], "chg", 30, e["w3"])
+    dx = mb.get("camEndDx", 0); sh_ = lambda bx, d=dx: [bx[0] + d - 10, bx[1], bx[2] + d + 10, bx[3]]  # 第2段: S4 の後半はカメラが左へ動いた後(終わりの位置で測る)
+    add("S4 3つ目の窓の枠", e["w3"], sh_(mb["W3"]), "chg", 30, e["w3"]); add("S4 3つ目の窓に琥珀", e["w3Print"], sh_([mb["W3"][0] - 50, mb["W3"][1] - 50, mb["W3"][2] + 50, mb["W3"][3] + 50]), "amber", 300, e["w3Print"])
+    if "W4raw" in mb: add("S4 4つ目の窓に琥珀(枝の先)", e["w4Print"], sh_([mb["W4raw"][0] - 50, mb["W4raw"][1] - 50, mb["W4raw"][2] + 50, mb["W4raw"][3] + 50]), "amber", 300, e["w4Print"])
     for i, (ch, s) in enumerate(zip("ひとつ、", e["t1"])): lyr.append((ch, s, L[i]["bb"], "light", shots["S4"]["end"] - 1, "ひとつ、またひとつ"))
     for i, (ch, s) in enumerate(zip("またひとつ", e["t2"])): lyr.append((ch, s, L[4 + i]["bb"], "light", shots["S4"]["end"] - 1, "ひとつ、またひとつ"))
     for i, (ch, s) in enumerate(zip("繋がってく", e["t3"])): lyr.append((ch, s, L[9 + i]["bb"], "light", shots["S4"]["end"] - 1, "繋がってく"))
+elif part == "M":
+    c = cutp("S5"); e = c["events"]; mb = c["mbox"]; L = c["letters"]
+    for k in e["heads"][:2]: add(f"S5 左から来る溝を押す {k}", k, mb["groove"], "chg", 30, k)
+    add("S5 芯の最後の太い丸刀", e["hero"], mb["core"], "chg", 300, e["hero"]); add("S5 芯に琥珀(火が灯る)", e["hero"], mb["core"], "amber", 300, e["hero"])
+    for ch, s_ in zip("夜明けの", e["t"]): lyr.append((ch, s_, next(x["bb"] for x in L if x["ch"] == ch), "light", shots["S5"]["end"] - 1, "夜明けの"))
+    c = cutp("S6"); e = c["events"]; mb = c["mbox"]; L = c["letters"]
+    add("S6 芯の琥珀が全面に(刷り替え)", e["flood"], [0, 0, W, H], "amber", 20000, e["flood"])
+    for k in e["gPush"]: add(f"S6 畝を路から火へ押す {k}", k, mb["grooves"], "ink", 300, k)
+    add("S6 火のまわりの面を一刀で彫り取る", e["face"], mb["face"], "chg", 2000, e["face"])
+    for k in e["wedges"]: add(f"S6 楔 {k}", k, [1150, 40, 1600, 420], "chg", 150, k)
+    T2 = [x for x in L if x["ch"] in "回路に"][:3]
+    for x, s_ in zip(T2, e["t2"]): lyr.append((x["ch"], s_, x["bb"], "dark", shots["S6"]["end"] - 1, "回路に"))
+    fh = next(x for x in L if x["ch"] == "火"); lyr.append(("火", e["hi"], fh["bb"], "dark", shots["S6"]["end"] - 1, "火を灯して"))
+    for x, s_ in zip([x for x in L if x["ch"] in "を灯して"][-4:], e["t3"]): lyr.append((x["ch"], s_, x["bb"], "dark", shots["S6"]["end"] - 1, "火を灯して"))
+    c = cutp("S7"); e = c["events"]; mb = c["mbox"]; L = c["letters"]
+    for k in e["roof"]: add(f"S7 窓のまわりの屋根の刀 {k}", k, mb["roof"], "chg", 40, k)
+    hb = L[7]["bb"]; add("S7 光 に琥珀", e["hikaPrint"], [hb[0] - 8, hb[1] - 8, hb[2] + 8, hb[3] + 8], "amber", 300, e["hikaPrint"])
+    for k in e["push"]: add(f"S7 て から溝がほどけて窓へ {k}", k, mb["grooves"], "chg", 150, k)
+    add("S7 窓に琥珀(2コマ後)", e["win"] + 2, mb["window"], "amber", 300, None)
+    for x, s_ in zip(L[:7], e["t1"]): lyr.append((x["ch"], s_, x["bb"], "light", shots["S7"]["end"] - 1, "消えかけた声を"))
+    for x, s_ in zip(L[7:], e["t2"]): lyr.append((x["ch"], s_, x["bb"], "light", shots["S7"]["end"] - 1, "光に変えて"))
+    c = cutp("S8"); e = c["events"]; mb = c["mbox"]; L = c["letters"]
+    for k in e["rail"]: add(f"S8 レールを押して延ばす {k}(2.5D で動いている)", k, mb["rail"] if k > e["rail"][0] else [56, 150, 1100, 480], "chg", 60, k)
+    for i, k in enumerate(e["cars"]): add(f"S8 列車の {i+1} 両目に琥珀(2コマ後)", k + 2, mb["train"], "amber", 300, None)
+    add("S8 川が灯る(低音)", e["lit"], mb["water"], "chg", 3000, e["lit"])
+    for x, s_ in zip(L[:5], e["t1"]): lyr.append((x["ch"], s_, x["bb"], "light", s_ + 10, "止まらない"))  # 2.5D で字が動くので、最後のコマでなく語頭+10 を 1 とする
+    for x, s_ in zip(L[5:], e["t2"]): lyr.append((x["ch"], s_, x["bb"], "light", shots["S8"]["end"] - 1, "止まれない"))
+    c = cutp("S9"); e = c["events"]; mb = c["mbox"]; L = c["letters"]
+    add("S9 読点に琥珀(燃え残り)", e["comma"], mb["comma"], "amber", 200, e["comma"])
+    for k in e["drop"]: add(f"S9 読点の下の溝を押す {k}", k, mb["drop"], "chg", 30, k)
+    for x, s_ in zip(L[:3], e["t"]): lyr.append((x["ch"], s_, x["bb"], "light", 1300, "まだ、"))
+    for x, s_ in zip(L[3:], e["t4"]): lyr.append((x["ch"], s_, x["bb"], "light", 1300, "光は" if x["ch"] in "光は" else "消えない"))
 else:
     c = cutp("A"); e = c["events"]; mb = c["mbox"]
     add("1340 衝撃: 版ずれ+空の最初の一刀", e["hit"], [0, 0, W, H], "chg", 5000, e["hit"])
@@ -114,7 +148,7 @@ strong_unused = [a["frame30"] for a in T["accents"] if F0 <= a["frame30"] < F0 +
 words = {w["text"]: w for w in T["words"]}; phrases = {p["text"]: p for p in T["phrases"]}
 res_ly = []
 for i, l in enumerate(lyr):
-    ch, s, bb, kind, last, word = l; v = lyrc[i]; cutstart = s in (0, 141, 291, 409, 1340, 1431, 1520); base = 0.0 if cutstart else v[max(0, L_(s) - 1)]; fin_ = v[L_(min(last, F0 + N - 1))]  # 語頭がカットの頭なら、前のコマは別の絵なので 0 から
+    ch, s, bb, kind, last, word = l; v = lyrc[i]; cutstart = s in (0, 141, 291, 409, 669, 769, 864, 1002, 1173, 1340, 1431, 1520); base = 0.0 if cutstart else v[max(0, L_(s) - 1)]; fin_ = v[L_(min(last, F0 + N - 1))]  # 語頭がカットの頭なら、前のコマは別の絵なので 0 から
     prog = [(x - base) / max(1e-6, fin_ - base) for x in v]
     st = next((F0 + j for j in range(max(0, L_(s) - (0 if cutstart else 2)), N) if prog[j] > 0.01), None); rd = next((F0 + j for j in range(max(0, L_(s) - (0 if cutstart else 2)), N) if prog[j] >= 0.85), None)
     conf = (words.get(word) or phrases.get(word) or {}).get("confidence") if word else None

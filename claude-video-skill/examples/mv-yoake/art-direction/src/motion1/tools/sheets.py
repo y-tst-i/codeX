@@ -29,7 +29,7 @@ def grid(items, cols, tw, path, label_h=16):
 lab = lambda i: f"{i/30:.1f}s f{F0 + i}"
 cs = list(range(0, N, 6)) + [N - 1]
 pts = sorted({min(N - 1, max(0, x["onset"] + 10 - F0)) for x in M["lyrics"]} | {min(N - 1, x["frame"] + 3 - F0) for x in M["events"]})
-cuts = [0] + [s - F0 for s in (141, 291, 409, 1431, 1520) if F0 < s < F0 + N]
+cuts = [0] + [s - F0 for s in (141, 291, 409, 769, 864, 1002, 1173, 1431, 1520) if F0 < s < F0 + N]
 bd = sorted({j for c in cuts for j in (c - 2, c - 1, c, c + 1, c + 2) if 0 <= j < N})
 sec = list(range(0, N, 30))
 G = frames(look, set(cs) | set(pts) | set(bd) | set(sec))
