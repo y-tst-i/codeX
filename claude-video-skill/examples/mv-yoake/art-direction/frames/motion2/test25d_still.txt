@@ -1,4 +1,8 @@
 yoake_25d_test_dawn_2d.mp4 frames 91 still_frames 28 median_pct 1.228 runs>=5 [(67, 74), (78, 84)]
 yoake_25d_test_dawn_25d.mp4 frames 91 still_frames 12 median_pct 7.489 runs>=5 []
+yoake_25d_test_dawn_25d_v2.mp4 frames 91 still_frames 13 median_pct 6.873 runs>=5 []
 yoake_25d_test_s8_2d.mp4 frames 171 still_frames 94 median_pct 0.084 runs>=5 [(37, 54), (88, 123), (132, 170)]
 yoake_25d_test_s8_25d.mp4 frames 171 still_frames 0 median_pct 3.03 runs>=5 []
+yoake_25d_test_s4_2d.mp4 frames 189 still_frames 141 median_pct 0.079 runs>=5 [(3, 10), (23, 60), (85, 111), (116, 161), (165, 171)]
+yoake_25d_test_s4_25d.mp4 frames 189 still_frames 21 median_pct 1.946 runs>=5 [(3, 10), (175, 180)]
+yoake_25d_test_s4_25d_v2.mp4 frames 189 still_frames 78 median_pct 0.259 runs>=5 [(3, 10), (36, 61), (116, 133), (165, 171)]
