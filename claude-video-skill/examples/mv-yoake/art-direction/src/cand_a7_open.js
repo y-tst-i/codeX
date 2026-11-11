@@ -91,7 +91,9 @@ const A7_OPEN = (() => {
     const a1 = strongest(sh.start, sh.start + 20), a2 = strongest(a1 + 15, a1 + 40), a3 = strongest(a2 + 10, a2 + 25);
     const ringAcc = accIn(a3 + 5, sh.end - 1).filter((x) => x.strength >= 0.7).map((x) => x.frame30); // 76, 85, 104, 113, 133
     const grainEnd = ringAcc[ringAcc.length - 1] + 6; // 木目は節の最後の年輪の後まで少しずつ(間を作らない)
-    woodLinesT(g, 1, { K, focus: true }, (x, y, near, id) => (near < 0.22 ? NEVER : a1 + 6 + (grainEnd - a1 - 14) * clamp((near - 0.22) / 0.78) * 0.85 + 16 * h01(id, 3, 611)));
+    // 第2段(音ハメ 104 が -2 の直し): 年輪の拍の直前 4 コマに始まる木目の刀は、年輪の拍のコマへ寄せる(拍の手前に変化の山を作らない)
+    const snapR = (t) => { for (const r of ringAcc) if (t > r - 5 && t < r) return r; return t; };
+    woodLinesT(g, 1, { K, focus: true }, (x, y, near, id) => (near < 0.22 ? NEVER : snapR(a1 + 6 + (grainEnd - a1 - 14) * clamp((near - 0.22) / 0.78) * 0.85 + 16 * h01(id, 3, 611))));
     const ringR = (a, j) => { const lobe = 1 + 0.16 * Math.cos(a - 0.6) + 0.07 * Math.cos(2 * a + 1.1), n = 1 + 0.07 * (fbm(Math.cos(a) * 1.6, Math.sin(a) * 1.6, 6210 + j, 3) - 0.5) * 2; return lobe * n; };
     for (let j = 0; j < 8; j++) {
       const R = PR(1, 2, j), base = K[2] * (0.34 + 0.09 * j + 0.012 * j * j), gaps = [R() * 6.28, R() < 0.6 ? R() * 6.28 : 99], w = lerp(1.3, 2.9, R()) * (j < 2 ? 1.25 : 1);
@@ -218,16 +220,18 @@ const A7_OPEN = (() => {
     const LIT = [[0.18, 0], [0.47, 1], [0.58, 0], [0.74, 1], [0.86, 0]].map(([u, j], i) => { const B = bld[Math.min(bld.length - 1, Math.round(u * (bld.length - 1)))], sz = (11 + 4 * j) * B.s; return { x: B.x + B.w * 0.35, y: B.tp + B.h * 0.35 + 4 * B.s, w: sz, h: sz * 1.25, water: B.b + 12, reach: 0.05 + 0.12 * u, id: i }; });
     const litPrint = (i) => ([1, 3].includes(i) ? E.lit1 : E.masu); // 大きい灯 2 つが先、小さい 3 つが「増す」で
     const reflWave = (i) => E.waves[[0, 1, 2, 1, 2][i] % E.waves.length];
+    // 第2段(音ハメ 350・387 が +2 の直し): 拍の事象の刀の時間差を縮め(映りの欠片は拍のコマに一度に、提灯のまわりの刀は 6 → 1.5 コマ)、拍の直前 4 コマに始まる川の暗い筋は拍へ寄せる
+    const snap3 = (t) => { for (const a of [E.masu].concat(E.waves)) if (t > a - 5 && t < a) return a; return t; };
     const LAN = { x: 1186, y: 456, w: 114, h: 158 }, LC = [LAN.x + LAN.w / 2, LAN.y + LAN.h / 2];
     g.fillStyle = "#fff";
     for (const [k2, y, R] of rowsOf(3, 2, 230, F.y1 - 2, (y) => 4 + (y - 200) * 0.012)) {
       const d = clamp((y - 200) / (F.y1 - 200)); let xx = F.x0 - 20 + R() * 40;
-      while (xx < F.x1) { const len = lerp(14, 110, Math.pow(R(), 1.3)) * lerp(0.45, 1.3, d), sky = Math.pow(clamp(1 - (y - yb(xx) - 10) / 70), 2), near = Math.pow(clamp(1 - Math.hypot((xx + len / 2 - LC[0]) / 340, (y - LC[1] - 60) / 300)), 1.1); if (y > yb(xx) + 8 && R() < 0.03 + 0.05 * d + 0.9 * sky + 0.9 * near) { const s = near > 0.15 ? (near > 0.5 ? E.masu : E.waves[E.waves.length - 1]) + 6 * h01(xx, y, 3701) : sky > 0.3 || h01(xx, y, 3702) < 0.4 ? NEVER : c0 + 4 + 100 * h01(xx, y, 3703); lensT(g, xx + len / 2, y + (vnoise(xx * 0.01, y * 0.05, 3) - 0.5) * 3, len / 2 * (1 + 0.6 * near), lerp(1.0, 3.2, d) * (0.6 + 0.8 * R()) * (1 + 0.7 * sky + 0.8 * near), k2 * 997 + (xx | 0), 0, s, 3); } xx += len + lerp(70, 30, d) * (0.5 + R()) * (1 - 0.6 * near); }
+      while (xx < F.x1) { const len = lerp(14, 110, Math.pow(R(), 1.3)) * lerp(0.45, 1.3, d), sky = Math.pow(clamp(1 - (y - yb(xx) - 10) / 70), 2), near = Math.pow(clamp(1 - Math.hypot((xx + len / 2 - LC[0]) / 340, (y - LC[1] - 60) / 300)), 1.1); if (y > yb(xx) + 8 && R() < 0.03 + 0.05 * d + 0.9 * sky + 0.9 * near) { const s = near > 0.15 ? (near > 0.5 ? E.masu : E.waves[E.waves.length - 1]) + 1.5 * h01(xx, y, 3701) : sky > 0.3 || h01(xx, y, 3702) < 0.4 ? NEVER : snap3(c0 + 4 + 100 * h01(xx, y, 3703)); lensT(g, xx + len / 2, y + (vnoise(xx * 0.01, y * 0.05, 3) - 0.5) * 3, len / 2 * (1 + 0.6 * near), lerp(1.0, 3.2, d) * (0.6 + 0.8 * R()) * (1 + 0.7 * sky + 0.8 * near), k2 * 997 + (xx | 0), 0, s, 3); } xx += len + lerp(70, 30, d) * (0.5 + R()) * (1 - 0.6 * near); }
     }
     const [p, pg] = plateBuf("plA"), refl = [];
     const reflect = (L, y0, y1, id, when) => { let y = y0 + 3, j = 0; const ph = hash(id, 1, 9) * 6.28; while (y < y1) { const R = PR(3, 3, id, j++), t = (y - y0) / (y1 - y0), d = clamp((y - 200) / (F.y1 - 200)), amp = L.w * (0.18 + 0.9 * t), cx = L.x + L.w / 2 + amp * Math.sin((y - y0) * 0.045 + ph) * 0.6 + (vnoise(y * 0.04, id, 9) - 0.5) * amp, hw = L.w * (0.42 + 0.9 * t) * (0.5 + 0.8 * R()), th = lerp(2.2, 6.4, d) * (0.75 + 0.5 * R()) * (1 - 0.3 * t); if (R() < 1 - 0.45 * t) refl.push([cx, y, hw, th, t < 0.55 && R() < 0.95 - t, id * 1000 + j, when(t, false)]); if (t > 0.2 && R() < 0.5) { const side = R() < 0.5 ? -1 : 1; refl.push([cx + side * hw * (1.2 + R()), y + 1, hw * (0.25 + 0.3 * R()), th * 0.7, false, id * 1000 + j + 500, when(t, true)]); } y += lerp(3.2, 7.5, d) * (0.8 + 0.5 * R()); } };
-    LIT.forEach((L, i) => reflect(L, L.water, L.water + (F.y1 - L.water) * L.reach, i, (t) => reflWave(i) + 2 * t));
-    reflect({ x: LAN.x - 10, w: LAN.w + 20 }, WL + 6, F.y1 + 4, 50, (t, side) => (side ? E.masu + 1.5 * t : E.lanPrint + 2 + 34 * t));
+    LIT.forEach((L, i) => reflect(L, L.water, L.water + (F.y1 - L.water) * L.reach, i, (t) => reflWave(i) + 0.8 * t));
+    reflect({ x: LAN.x - 10, w: LAN.w + 20 }, WL + 6, F.y1 + 4, 50, (t, side) => (side ? E.masu : snap3(E.lanPrint + 2 + 34 * t)));
     g.fillStyle = "#000"; for (const [cx, y, hw] of refl) g.fillRect(cx - hw - 4, y - 2.5, hw * 2 + 8, 5);
     g.fillStyle = "#fff"; for (const [cx, y, hw, th, , id, s] of refl) lensT(g, cx, y, hw, th, 7100 + id, 0, s, 2);
     const hull = [[1352, WL - 26], [1440, WL - 14], [1660, WL - 18], [F.x1 + 30, WL - 40], [F.x1 + 30, WL + 30], [1410, WL + 26]];
@@ -278,6 +282,7 @@ const A7_OPEN = (() => {
     if (t === "s") return [[x, base], [x, r], [x + w + 10, e + 8], [x + w, e], [x + w, base]];
     return [[x, base], [x, e], [x + w * 0.1, e], [x + w * 0.1, e - 10], [x + w, e - 10], [x + w, base]];
   }
+  const S4_PAN = 120; // 第2段 2.5D: 主の層(z=0.7)が 84px、手前の家が 120px、空が 14px 左へ
   function S4(ctx, o) {
     const f = getF(), sh = shot("S4"), c0 = sh.start, [m, g] = begin(F), houses = S4_HOUSES.map((h, i) => chipEdge(housePoly4(h), 4400 + i, { big: 0.4 }));
     const E = { hito: phrase("ひとつ、またひとつ"), tsuna: phrase("繋がってく") };
@@ -289,41 +294,59 @@ const A7_OPEN = (() => {
     E.w3 = strongest(600, sh.end - 20); E.w3Print = strongest(E.w3 + 6, sh.end - 12); // 3つ目の窓: 桟を彫る(642)→ 刷る(652)
     E.g2Push = [E.tsuna + 6].concat(accIn(E.tsuna + 12, E.w3 - 4).sort((a, b) => b.strength - a.strength).slice(0, 7).map((x) => x.frame30).sort((a, b) => a - b)); // 溝②は拍ごとに押して、3つ目の窓に届く
     E.knives = accIn(E.w2Print + 5, sh.end - 5).filter((x) => x.frame30 !== E.w3 && x.frame30 !== E.w3Print && !E.g2Push.includes(x.frame30)).map((x) => x.frame30).slice(0, 6);
+    // 第2段(2.5D、A7_CAM が入の時): 「またひとつ」が灯った(500)後、カメラは溝②と一緒に右へ動き、3つ目の窓が灯るコマ(652)で止まる(夜明け A と同じ規則: 信号を追い、届いたら止まる)。
+    //   層: 空(藍のぼかしと空の筋)= 遠 0.12/坂と家 = 主 0.7/手前の左の家 = 前 1.0/字 = カメラに固定(読みやすさ)。紙の端の版木のふちは動かない(版木の窓の奥が動く)
+    // 第2段(静止の FAIL の直し): 溝②から右の家々へ枝分かれ(B1: 窓3の家の壁 → 坂の下 → 4つ目の窓、B2: 4つ目 → 5つ目)。4つ目の窓は 642 で彫り 661 で刷る
+    const Z = A7_CAM.Z, camT = A7_CAM.ease((f - E.w2Print) / (E.w3Print - E.w2Print)); A7_CAM.set({ pan: [-S4_PAN * camT, 0] });
+    const Lz = (gg, z) => A7_CAM.layer(gg, z), PR4 = (r, z) => { const a = A7_CAM.pt([r[0], r[1]], z), b = A7_CAM.pt([r[2], r[3]], z); return [a[0], a[1], b[0], b[1]]; };
+    E.b1Push = accIn(E.w3 - 30, E.w3 - 5).map((x) => x.frame30).slice(-3); E.w4 = E.w3; E.w4Print = strongest(E.w3Print + 4, sh.end - 2); E.b2Push = [E.w3Print, E.w4Print]; E.w5 = E.w4Print + 4;
     const topOf = (P) => P.reduce((a, q) => Math.min(a, q[1]), 1e9);
     const W1 = { x: 512, y: topOf(houses[1]) + 140, w: 84, h: 98, cols: 2, rows: 2 }, W2 = { x: 1074, y: topOf(houses[3]) + 112, w: 72, h: 104, cols: 1, rows: 2 }, W3 = { x: 1400, y: topOf(houses[4]) + 50, w: 56, h: 60 };
-    g.fillStyle = "#fff"; g.beginPath(); g.moveTo(F.x0 - 10, F.y0 - 10); g.lineTo(F.x1 + 10, F.y0 - 10); for (let x = F.x1 + 10; x >= F.x0 - 10; x -= 8) g.lineTo(x, slope4(x) + 2); g.closePath(); g.fill();
-    g.fillStyle = "#000"; g.beginPath(); g.moveTo(F.x0 - 20, H); for (let x = F.x0 - 20; x <= F.x1 + 20; x += 8) g.lineTo(x, slope4(x)); g.lineTo(F.x1 + 20, H); g.closePath(); g.fill();
-    for (const P of houses) { g.beginPath(); poly(g, P); g.fill(); }
+    const W4 = { x: 1626, y: topOf(houses[5]) + 66, w: 42, h: 50 }, W5 = { x: 1792, y: topOf(houses[6]) + 46, w: 38, h: 42 }, XR = F.x1 + 10 + (A7_CAM.on() ? 130 : 0);
+    Lz(g, Z.MAIN);
+    g.fillStyle = "#fff"; g.beginPath(); g.moveTo(F.x0 - 10, F.y0 - 10); g.lineTo(XR, F.y0 - 10); for (let x = XR; x >= F.x0 - 10; x -= 8) g.lineTo(x, slope4(x) + 2); g.closePath(); g.fill();
+    g.fillStyle = "#000"; g.beginPath(); g.moveTo(F.x0 - 20, H); for (let x = F.x0 - 20; x <= XR + 10; x += 8) g.lineTo(x, slope4(x)); g.lineTo(XR + 10, H); g.closePath(); g.fill();
+    houses.forEach((P, i) => { if (i === 0) return; g.beginPath(); poly(g, P); g.fill(); }); // 手前の左の家(前の層)は坂の刀の後に描く
     // 家の光の縁: 最初は手前の 2 軒だけ。残りは左から右へ(句頭〜+70)
-    houses.forEach((P, i) => rimEdgesT(g, P, 4500 + i * 30, (a, b) => (b[0] > a[0] + 4 && b[1] > a[1] + 2 && a[1] < slope4(a[0])) || (Math.abs(b[0] - a[0]) < 3 && b[1] > a[1] + 20 && a[1] < slope4(a[0]) - 4), (q) => (i === 0 ? 2.4 : 1.6) + 2.2 * smooth((q[0] - 300) / 1400), (a) => (i < 2 ? NEVER : c0 + 6 + 64 * clamp((a[0] - 700) / 1150) + 4 * h01(a[0], a[1], 4701))));
-    g.fillStyle = "#fff"; { let seg = [], n = 0; const inHouse = (x) => S4_HOUSES.some(([hx, hw]) => x > hx + 6 && x < hx + hw - 6); for (let x = F.x0 - 10; x <= F.x1 + 10; x += 5) { if (inHouse(x)) { if (seg.length > 3) cut(g, seg, 3.2, 4600 + n++, { entry: 0.05, exit: 0.3, jit: 0.7 }); seg = []; } else seg.push([x, slope4(x) + 1]); } if (seg.length > 3) cut(g, seg, 3.2, 4600 + n, { entry: 0.05, exit: 0.3, jit: 0.7 }); }
+    const rim4 = (P, i) => rimEdgesT(g, P, 4500 + i * 30, (a, b) => (b[0] > a[0] + 4 && b[1] > a[1] + 2 && a[1] < slope4(a[0])) || (Math.abs(b[0] - a[0]) < 3 && b[1] > a[1] + 20 && a[1] < slope4(a[0]) - 4), (q) => (i === 0 ? 2.4 : 1.6) + 2.2 * smooth((q[0] - 300) / 1400), (a) => (i < 2 ? NEVER : c0 + 6 + 64 * clamp((a[0] - 700) / 1150) + 4 * h01(a[0], a[1], 4701)));
+    houses.forEach((P, i) => { if (i) rim4(P, i); });
+    g.fillStyle = "#fff"; { let seg = [], n = 0; const inHouse = (x) => S4_HOUSES.some(([hx, hw]) => x > hx + 6 && x < hx + hw - 6); for (let x = F.x0 - 10; x <= XR; x += 5) { if (inHouse(x)) { if (seg.length > 3) cut(g, seg, 3.2, 4600 + n++, { entry: 0.05, exit: 0.3, jit: 0.7 }); seg = []; } else seg.push([x, slope4(x) + 1]); } if (seg.length > 3) cut(g, seg, 3.2, 4600 + n, { entry: 0.05, exit: 0.3, jit: 0.7 }); }
     // 坂の面の刀: 最初は 35%。残りは全体に散らして(とくに 繋がってく の間)
     for (const [k, dy, R] of rowsOf(4, 2, 34, 560, (y) => 14 + y * 0.09)) { let x = F.x0 + R() * 60; while (x < F.x1) { const t = clamp((1 - dy / 380) * smooth((x - 300) / 1500)), len = lerp(40, 180, R()) * lerp(0.6, 1.3, t); if (R() < 0.04 + t * 0.9) { const hz = h01(x, dy, 4702), s = hz < 0.35 ? NEVER : hz < 0.55 ? c0 + 20 + 110 * h01(x, dy, 4703) : E.tsuna + 4 + (sh.end - 8 - E.tsuna - 4) * h01(x, dy, 4704); cutT(g, [0, 0.5, 1].map((u) => [x + len * u, slope4(x + len * u) + dy + (R() - 0.5) * 2]), lerp(0.9, 6, t), k * 991 + (x | 0), { entry: 0.1, exit: 0.5, jit: 0.4 }, s, 4); } x += len + lerp(130, 16, t) * (0.5 + R()); } }
+    Lz(g, Z.NEAR); g.fillStyle = "#000"; g.beginPath(); poly(g, houses[0]); g.fill(); rim4(houses[0], 0);
     g.fillStyle = "#fff"; [[390, 520, 70, 2.6, 1], [360, 600, 90, 3.0, 2], [400, 680, 50, 2.2, 3], [300, 760, 120, 3.4, 4], [380, 840, 64, 2.4, 5], [250, 920, 160, 3.0, 6]].forEach(([x0, y0, l, w, sd], i) => cutT(g, [[x0, y0], [x0 + l, y0 + 2]], w, 4730 + sd, { entry: 0.15, exit: 0.5, jit: 0.4 }, E.knives[i % E.knives.length], 3));
+    Lz(g, Z.MAIN);
     const gy = (x) => slope4(x) + 34, ax = W1.x + W1.w / 2, bx = W2.x + W2.w / 2;
     const G1 = [[ax, W1.y + W1.h + 10], [ax, gy(ax) - 20], [ax + 20, gy(ax)], [bx - 30, gy(bx - 30)], [bx, gy(bx - 30) - 30], [bx, W2.y + W2.h + 10]], G1o = { w0: 11, w1: 6, seed: 4801, chip: 2.4, splinter: false, taper: 0.03 };
     const G2 = [[bx + 8, gy(bx - 30) - 34], [bx + 120, gy(bx - 30) - 34], [bx + 120 + 40, gy(bx + 160) - 40], [W3.x - 16, gy(bx + 160) - 40]];
     const g1p = pushProg(E.g1Push.map((s, i) => [s, (i + 1) / E.g1Push.length, 7])), g2p = pushProg(E.g2Push.map((s, i) => [s, (i + 1) / E.g2Push.length, 6]));
-    g.fillStyle = "#fff"; grooveP(g, G1, G1o, g1p); grooveP(g, G2, { w0: 11, w1: 6, seed: 4802, chip: 2.2, splinter: false, taper: 0.03 }, g2p); // v7: 窓3まで届く溝なので溝①と同じ太さに(v6 は 7→2px で、拍ごとに押しても見えにくかった)
-    const [p, pg] = plateBuf("plA");
-    for (const [Wn, hi, ca, pr] of [[W1, 1, E.w1Carve, E.w1Print], [W2, 3, E.w2Carve, E.w2Print]]) { g.fillStyle = "#000"; g.fillRect(Wn.x - 6, Wn.y - 6, Wn.w + 12, Wn.h + 12); g.fillStyle = "#fff"; handWindowT(g, Wn.x, Wn.y, Wn.w, Wn.h, Wn.cols, Wn.rows, 51 + hi, ca); pg.save(); pg.beginPath(); poly(pg, houses[hi]); pg.clip(); pg.beginPath(); pg.ellipse(Wn.x + Wn.w / 2, Wn.y + Wn.h / 2, Wn.w / 2 + 52, Wn.h / 2 + 50, 0, 0, 7); pg.fill(); pg.restore(); baren(pg, [Wn.x - 60, Wn.y - 60, Wn.x + Wn.w + 60, Wn.y + Wn.h + 60], pr, hi === 1 ? "down" : "right", 4810 + hi); }
+    g.fillStyle = "#fff"; grooveP(g, G1, G1o, g1p); grooveP(g, G2, { w0: 11, w1: 6, seed: 4802, chip: 2.2, splinter: false, taper: 0.03 }, g2p);
+    const B1 = [[W3.x + W3.w + 10, W3.y + W3.h + 8], [1492, W3.y + W3.h + 8], [1492, slope4(1492) + 22], [W4.x + W4.w / 2, slope4(W4.x + W4.w / 2) + 22], [W4.x + W4.w / 2, W4.y + W4.h + 10]];
+    const B2 = [[W4.x + W4.w + 8, W4.y + W4.h - 6], [1712, W4.y + W4.h - 6], [1712, slope4(1712) + 20], [W5.x + W5.w / 2, slope4(W5.x + W5.w / 2) + 20], [W5.x + W5.w / 2, W5.y + W5.h + 10]], Bo = { w0: 9, w1: 5, splinter: false, taper: 0.03, chip: 2.0 };
+    const b1p = pushProg(E.b1Push.map((s, i) => [s, (i + 1) / E.b1Push.length, 6])), b2p = pushProg(E.b2Push.map((s, i) => [s, (i + 1) / E.b2Push.length, 6]));
+    grooveP(g, B1, Object.assign({ seed: 4831 }, Bo), b1p); grooveP(g, B2, Object.assign({ seed: 4832 }, Bo), b2p); // v7: 窓3まで届く溝なので溝①と同じ太さに(v6 は 7→2px で、拍ごとに押しても見えにくかった)
+    const [p, pg] = plateBuf("plA"); Lz(pg, Z.MAIN);
+    for (const [Wn, hi, ca, pr] of [[W1, 1, E.w1Carve, E.w1Print], [W2, 3, E.w2Carve, E.w2Print], [W4, 5, E.w4, E.w4Print]]) { g.fillStyle = "#000"; g.fillRect(Wn.x - 6, Wn.y - 6, Wn.w + 12, Wn.h + 12); g.fillStyle = "#fff"; handWindowT(g, Wn.x, Wn.y, Wn.w, Wn.h, Wn.cols, Wn.rows, 51 + hi, ca); pg.save(); pg.beginPath(); poly(pg, houses[hi]); pg.clip(); pg.beginPath(); pg.ellipse(Wn.x + Wn.w / 2, Wn.y + Wn.h / 2, Wn.w / 2 + 52, Wn.h / 2 + 50, 0, 0, 7); pg.fill(); pg.restore(); baren(pg, PR4([Wn.x - 60, Wn.y - 60, Wn.x + Wn.w + 60, Wn.y + Wn.h + 60], Z.MAIN), pr, hi === 1 ? "down" : "right", 4810 + hi); }
     // 窓1→窓2 の溝の琥珀: 窓2を刷ったコマから、窓1の側から 10 コマで通る
     pg.fillStyle = "#000"; grooveP(pg, G1, Object.assign({}, G1o, { w0: 14, w1: 9 }), f < E.w2Print ? 0 : clamp((f - E.w2Print + 1) / 22));
-    grooveP(pg, G2, { w0: 14, w1: 9, seed: 4802, chip: 2.2, splinter: false, taper: 0.03 }, f < E.w3Print ? 0 : clamp((f - E.w3Print + 1) / 9)); // v7: 3つ目の窓を刷ったら、窓2→窓3 の溝にも琥珀が通る
+    grooveP(pg, G2, { w0: 14, w1: 9, seed: 4802, chip: 2.2, splinter: false, taper: 0.03 }, f < E.w3Print ? 0 : clamp((f - E.w3Print + 1) / 9));
+    grooveP(pg, B1, Object.assign({ seed: 4831 }, Bo, { w0: 12, w1: 8 }), f < E.w4Print ? 0 : clamp((f - E.w4Print + 1) / 6)); // 第2段: 4つ目の窓を刷ったら、枝の溝にも琥珀
+    // v7: 3つ目の窓を刷ったら、窓2→窓3 の溝にも琥珀が通る
     // v7: 3つ目の窓も灯す(「繋がってく」の句の終わりで、溝が届いて灯る)。v6 は灯らない枠の2本だけだった
     g.fillStyle = "#000"; g.fillRect(W3.x - 6, W3.y - 6, W3.w + 12, W3.h + 12); g.fillStyle = "#fff"; handWindowT(g, W3.x, W3.y, W3.w, W3.h, 2, 2, 55, E.w3, 0); // 3つ目は4枚の桟を一度に(アクセント 642 で山)
-    pg.save(); pg.beginPath(); poly(pg, houses[4]); pg.clip(); pg.beginPath(); pg.ellipse(W3.x + W3.w / 2, W3.y + W3.h / 2, W3.w / 2 + 44, W3.h / 2 + 42, 0, 0, 7); pg.fill(); pg.restore(); baren(pg, [W3.x - 60, W3.y - 60, W3.x + W3.w + 60, W3.y + W3.h + 60], E.w3Print, "right", 4815);
+    g.fillStyle = "#000"; g.fillRect(W5.x - 5, W5.y - 5, W5.w + 10, W5.h + 10); g.fillStyle = "#fff"; handWindowT(g, W5.x, W5.y, W5.w, W5.h, 1, 2, 57, E.w5, 0); // 5つ目は彫るだけ(次の S5 へ繋がってく)
+    pg.save(); pg.beginPath(); poly(pg, houses[4]); pg.clip(); pg.beginPath(); pg.ellipse(W3.x + W3.w / 2, W3.y + W3.h / 2, W3.w / 2 + 44, W3.h / 2 + 42, 0, 0, 7); pg.fill(); pg.restore(); baren(pg, PR4([W3.x - 60, W3.y - 60, W3.x + W3.w + 60, W3.y + W3.h + 60], Z.MAIN), E.w3Print, "right", 4815); Lz(pg, null);
     const T1 = setH("SMB", "ひとつ、", 470, 262, 92, 0.1), T2 = setH("SMB", "またひとつ", 960, 352, 92, 0.1), T = T1.concat(T2);
     const T3 = setH("SMB", "繋がってく", 1060, 948, 96, 0.1); // v7: 歌詞「繋がってく」(540、要確認)を坂の黒に彫る(v6 の静止画には無かった)
-    carveT(g, T, 4790, E.t1.concat(E.t2));
+    Lz(g, null); carveT(g, T, 4790, E.t1.concat(E.t2));
     keepOut(g, T3, 22); carveT(g, T3, 4890, E.t3);
     g.restore();
     const [q, qg] = plateBuf("plB"); bokashi(qg, F.x0, F.y0, F.x1 * 0.85, 760, [[0, 1], [0.5, 0.92], [0.8, 0.68], [1, 0.42]]);
-    qg.globalCompositeOperation = "destination-out"; qg.fillStyle = "#000"; qg.beginPath(); qg.moveTo(0, H); for (let x = 0; x <= W; x += 8) qg.lineTo(x, slope4(x) - 2); qg.lineTo(W, H); qg.closePath(); qg.fill(); for (const P of houses) { qg.beginPath(); poly(qg, P); qg.fill(); } qg.globalCompositeOperation = "source-over"; MO.holeT(qg, T, 4790, E.t1.concat(E.t2), 4);
-    skyStreaks(qg, 4, 26, [60, 60, 1860, 400], E.w1Print + 3, sh.end - 6, T.map((L) => bbox(L.cs)), { w: [2.2, 6.5], l: [260, 820] }); // v7: 灯と溝の間、繋がってく の後を埋める空の筋(独立審査 v3 の S4「空の上の端に白い刀を戻す」)
+    qg.globalCompositeOperation = "destination-out"; qg.fillStyle = "#000"; Lz(qg, Z.MAIN); qg.beginPath(); qg.moveTo(0, H); for (let x = 0; x <= XR; x += 8) qg.lineTo(x, slope4(x) - 2); qg.lineTo(XR, H); qg.closePath(); qg.fill(); houses.forEach((P, i) => { Lz(qg, i ? Z.MAIN : Z.NEAR); qg.beginPath(); poly(qg, P); qg.fill(); }); Lz(qg, null); qg.globalCompositeOperation = "source-over"; MO.holeT(qg, T, 4790, E.t1.concat(E.t2), 4);
+    Lz(qg, Z.FAR); skyStreaks(qg, 4, 26, [60, 60, 1860, 400], E.w1Print + 3, sh.end - 6, T.map((L) => bbox(L.cs)), { w: [2.2, 6.5], l: [260, 820] }); Lz(qg, null); // v7: 灯と溝の間、繋がってく の後を埋める空の筋(独立審査 v3 の S4「空の上の端に白い刀を戻す」)
     pressIn(qg, c0, "left", 4803);
     const all = T.concat(T3);
-    return fin(ctx, m, [{ c: q, color: C.AI, kind: "bokashi", shift: [2, -1] }, { c: p, color: C.AMBER, kind: "flat" }], o, all, { grain: 0.04, cut: 4, sheet: 3 }, { cut_id: "S4", events: E, g1: +g1p.toFixed(3), g2: +g2p.toFixed(3), mbox: { W1: [W1.x - 6, W1.y - 6, W1.x + W1.w + 6, W1.y + W1.h + 6], W2: [W2.x - 6, W2.y - 6, W2.x + W2.w + 6, W2.y + W2.h + 6], W3: [W3.x - 8, W3.y - 8, W3.x + W3.w + 8, W3.y + W3.h + 8], G1: bbox([G1]).map(Math.round), G2: bbox([G2]).map(Math.round) }, letters: all.map((L) => ({ ch: L.ch, bb: bbox(L.cs).map(Math.round) })) });
+    return fin(ctx, m, [{ c: q, color: C.AI, kind: "bokashi", shift: [2, -1] }, { c: p, color: C.AMBER, kind: "flat" }], o, all, { grain: 0.04, cut: 4, sheet: 3 }, { cut_id: "S4", events: E, g1: +g1p.toFixed(3), g2: +g2p.toFixed(3), mbox: { W1: [W1.x - 6, W1.y - 6, W1.x + W1.w + 6, W1.y + W1.h + 6], W2: [W2.x - 6, W2.y - 6, W2.x + W2.w + 6, W2.y + W2.h + 6], W3: [W3.x - 8, W3.y - 8, W3.x + W3.w + 8, W3.y + W3.h + 8], W4: PR4([W4.x - 8, W4.y - 8, W4.x + W4.w + 8, W4.y + W4.h + 8], Z.MAIN).map(Math.round), G1: bbox([G1]).map(Math.round), G2: bbox([G2]).map(Math.round) }, letters: all.map((L) => ({ ch: L.ch, bb: bbox(L.cs).map(Math.round) })) });
   }
 
   function draw(ctx, o) {
@@ -331,5 +354,5 @@ const A7_OPEN = (() => {
     for (const [id, fn] of [["S1", S1], ["S2", S2], ["S3", S3], ["S4", S4]]) { const s = shot(id); if (f >= s.start && f < s.end) return fn(ctx, o); }
     throw new Error("冒頭の外のコマ: " + f);
   }
-  return { draw, S1, S2, S3, S4 };
+  return { draw, S1, S2, S3, S4, woodLinesT, handWindowT, skyStreaks, rimEdgesT }; // 第2段: 中盤(cand_a7_mid.js)も木目・窓・空の筋の部品を使う
 })();

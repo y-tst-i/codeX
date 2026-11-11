@@ -348,7 +348,7 @@ const A6 = (() => {
   function baren(pg, rect, strike, dir = "down", seed = 1, { q0 = 0.55, dq = 0.22, mottle = true, rag = 0.35 } = {}) {
     const q = q0 + dq * (F - strike); if (q >= 1) return;
     const x0 = Math.max(0, Math.round(rect[0])), y0 = Math.max(0, Math.round(rect[1])), x1 = Math.min(W, Math.round(rect[2])), y1 = Math.min(H, Math.round(rect[3])), w = x1 - x0, h = y1 - y0; if (w <= 0 || h <= 0) return;
-    if (F < strike) { pg.clearRect(x0, y0, w, h); return; }
+    if (F < strike) { pg.save(); pg.setTransform(1, 0, 0, 1, 0, 0); pg.clearRect(x0, y0, w, h); pg.restore(); return; } // 第2段: 版に 2.5D の変換が掛かっていても、画面の座標で消す(getImageData と同じ座標)
     const n1 = field("bn1/" + seed, () => noiseField(W, H, 6, (x, y) => fbm(x * 0.012, y * 0.012, seed, 3))), n2 = field("bn2/" + seed, () => noiseField(W, H, 2, (x, y) => fbm(x * 0.09, y * 0.09, seed + 9, 2)));
     const img = pg.getImageData(x0, y0, w, h), dd = img.data;
     for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {

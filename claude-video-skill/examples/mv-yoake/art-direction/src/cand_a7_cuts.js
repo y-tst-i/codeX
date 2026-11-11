@@ -54,15 +54,15 @@ const A7_CUTS = (() => {
     return fin(ctx, m, [{ c: pp, color: C.AMBER, kind: "flat", shift: [-4, 3] }], o, B, T1.concat(T2, T3), { groove_text_gap_px: Math.round(gap), printOpt: { grain: 0.12, cut: 6 } });
   }
 
-  return { S6 };
+  return { S6, S6_FACE, S6_WEDGE, S6_GROOVE }; // 第2段: 中盤の動き(cand_a7_mid.js)が S6 の形を使う
 })();
 
-const A7_CAM_DEFAULT = false; // 2.5D を使う既定(比較試験の後に決める)。?cam=0|1 で上書き
+const A7_CAM_DEFAULT = true; // 2.5D を使う既定(第2段の比較試験で採用: MOTION_PART2_REVIEW.md §1。カメラを決めるのは S4・S8・夜明け A だけ)。?cam=0|1 で上書き
 function A7_DRAW(ctx, o) {
   const f = +o.f;
   A6.MO.setF(f);
   if (typeof A7_CAM !== "undefined") { A7_CAM.setOn(o.cam == null ? A7_CAM_DEFAULT : !!+o.cam); A7_CAM.set(null); } // 2.5D の層のカメラ(第2段)。コマごとに切ってから、カットが決める
-  if (f === 840) return Object.assign(A7_CUTS.S6(ctx, o), { f, v: "v7" });
+  if (f === 840 && typeof A7_MID === "undefined") return Object.assign(A7_CUTS.S6(ctx, o), { f, v: "v7" }); // 第2段: 中盤の動きを読むページでは 840 も動きの S6
   if (typeof A7_OPEN !== "undefined" && f >= 0 && f < A7_T.shot("S5").start) return Object.assign(A7_OPEN.draw(ctx, o), { f });
   if (typeof A7_MID !== "undefined" && f >= A7_T.shot("S5").start && f < A7_T.shot("S10").start) { const r = A7_MID.draw(ctx, o); if (r) return Object.assign(r, { f }); } // 第2段: 中盤 S5〜S9 の動き
   if (typeof A7_DAWN !== "undefined" && f >= 1340 && f <= 1589) return Object.assign(A7_DAWN(ctx, o), { f });
