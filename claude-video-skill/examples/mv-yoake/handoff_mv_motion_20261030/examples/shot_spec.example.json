@@ -1,0 +1,19 @@
+{
+  "schema_version": "proposal-0.1",
+  "project": {"title": "夜明けの回路", "duration_frames": 300, "fps": 30, "resolution": [1920, 1080], "seed": 72145},
+  "rights": {"music": "not-attached-use-authorized-audio-only", "illustrations": "original-or-licensed"},
+  "art_direction": {
+    "intent": "暗い抽象空間から光のある世界へ変わる",
+    "palette": ["#0C101B", "#6875C2", "#E5D8C5"],
+    "primary_font": "locally-licensed-japanese-font",
+    "texture": "subtle-grain"
+  },
+  "shots": [
+    {"id": "S01", "start_frame": 0, "end_frame": 54, "subject": "thin-line", "intent": "mystery", "visual_hierarchy": {"primary": "light-line", "ambient": "dark-vignette"}, "music_event_ref": null, "camera": {"mode": "locked"}, "motion": [{"type": "path-reveal", "from_frame": 8, "to_frame": 42}], "transition_to_next": "path-continuity"},
+    {"id": "S02", "start_frame": 54, "end_frame": 108, "subject": "まだ、", "intent": "anticipation", "visual_hierarchy": {"primary": "text"}, "music_event_ref": "event-02", "camera": {"mode": "parallax", "strength": "subtle"}, "motion": [{"type": "mask-rise", "from_frame": 57, "to_frame": 73}, {"type": "hold", "from_frame": 74, "to_frame": 101}], "transition_to_next": "foreground-wipe"},
+    {"id": "S03", "start_frame": 108, "end_frame": 165, "subject": "abstract-space", "intent": "expand", "visual_hierarchy": {"primary": "moving-geometry"}, "music_event_ref": "event-03", "camera": {"mode": "dolly"}, "motion": [{"type": "camera-crossing", "from_frame": 108, "to_frame": 152}], "transition_to_next": "depth-cut"},
+    {"id": "S04", "start_frame": 165, "end_frame": 234, "subject": "光は消えない。", "intent": "resolve", "visual_hierarchy": {"primary": "text"}, "music_event_ref": "event-04", "camera": {"mode": "locked"}, "motion": [{"type": "word-reveal", "from_frame": 171, "to_frame": 190}, {"type": "hold", "from_frame": 191, "to_frame": 223}], "transition_to_next": "shape-morph"},
+    {"id": "S05", "start_frame": 234, "end_frame": 300, "subject": "夜明けの回路", "intent": "release", "visual_hierarchy": {"primary": "title"}, "music_event_ref": "event-05", "camera": {"mode": "subtle-push"}, "motion": [{"type": "title-reveal", "from_frame": 239, "to_frame": 253}, {"type": "hold", "from_frame": 254, "to_frame": 299}], "transition_to_next": "end"}
+  ]
+}
+
