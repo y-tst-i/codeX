@@ -14,7 +14,7 @@
 | 効果を切った版(clean、音なし) | 同じ scratchpad の `mv2d/m1/video_A_clean.mp4`・`mv2d/m1/video_B_clean.mp4` |
 | 540px 幅の 0.2 秒刻み(大きいので repo の外) | `mv2d/m1/sheets/A_contact_0.2s_540.jpg`・`B_contact_0.2s_540.jpg` |
 | 確認画像(repo、JPEG) | `frames/motion1/`: `{A,B}_contact_0.2s.jpg`(0.2秒刻み、幅320)、`{A,B}_check_540.jpg`(540px: 語頭+10・刷りの後)、`{A,B}_boundaries.jpg`(カットの境目の前後)、`{A,B}_fx_off_clean.jpg`(look と clean を 1 秒刻みで並べた物)、`s6_fix_{cmp,zoom,540}.jpg`(S6 の前後) |
-| 実測(repo) | `frames/motion1/measure_{A,B}/`: `sync_measured.md`(音ハメ)、`lyric_check.md`(歌詞の可読)、`measure.json`、`per_frame.csv`、`flicker_summary.json`、`seek_summary.json`(B)、`hyperframes_check_B.txt` |
+| 実測(repo) | `frames/motion1/measure_{A,B}/`: `sync_measured.md`(音ハメ)、`lyric_check.md`(歌詞の可読)、`measure.json`、`per_frame.csv`、`flicker_summary.json`、`seek_summary.json`、`devpage_hash.json`、`hyperframes_check_{A,B}.txt` |
 | 描画 | `src/cand_a7.js`(共通部品+動きの部品 MO)、`src/cand_a7_open.js`(S1〜S4 の動き)、`src/cand_a7_dawn.js`(夜明けの動き)、`src/cand_a7_cuts.js`(S6 の静止画 v7 と `A7_DRAW`)、開発ページ `src/styleframes_v7.html?f=<曲のコマ>&v=look|clean|mask[&sheet=0][&legacy=1]` |
 | HyperFrames への載せ方と検査の道具 | `src/motion1/`(`index.template.html`、`tools/build_hf.sh`・`render_part.sh`・`gen_timing.py`・`plan.sh`・`measure.py`・`sheets.py`・`seek_check.mjs`・`flicker_check.mjs`・`still_probe.mjs`、間の台帳 `holds_partA.json`・`holds_partB.json`) |
 
@@ -24,7 +24,7 @@
 
 | 区分 | 内容 |
 |---|---|
-| 完了 | S6 の手直し(§2)/共通の動きの仕組み(§3)/区間 A・B の音つき mp4 と clean 版/seek 決定性(B は全コマ、A は §4)/刀の入れ替わり検査/音ハメと歌詞の実測/黒コマ・長さ・fps・音量/540px のシート/hyperframes lint・check(B。A は §4)/静止の検査と間の台帳/目視で弱い所を直した(§6) |
+| 完了 | S6 の手直し(§2)/共通の動きの仕組み(§3)/区間 A・B の音つき mp4 と clean 版/seek 決定性(A・B とも全コマ)/刀の入れ替わり検査/音ハメと歌詞の実測/黒コマ・長さ・fps・音量/540px のシート/hyperframes lint・check(A・B)/静止の検査と間の台帳/目視で弱い所を直した(§6) |
 | 未実施 | 53秒全体の書き出し(指示どおり)/S5〜S9 の動き(次の段)/独立審査/利用者の目と耳での確認 |
 | 失敗・未解決 | **区間 A の静止の検査が FAIL**(登録した間を除いて 6.60 秒。S4 の後半 17〜21.4 秒に「細い溝が拍ごとに少し進むだけ」の所が残る。§5-1)/S3 の強いアクセント 350・387 が実測 +2 コマ(設計は 0。§4-3)/夜明けの 1349 で 139 画素だけ彫った所が墨に戻る(原因を特定しきれず。§4-2) |
 | 次の判断(利用者に) | §7 |
@@ -100,10 +100,10 @@
 | 音の区間 | MV の 0 秒 = `MV_segment_A_122-175.mp3` の 0 秒(6秒試作の `render_pilot.sh` が 141/30 秒から切っていることで確認)。A は 0〜22.3 秒、B は 44.667〜53.0 秒を出力側で切って付けた。音量は曲のまま: A -14.2 LUFS / -2.5 dBTP、B -13.3 LUFS / -2.7 dBTP | | `motion1/tools/render_part.sh` |
 | 黒コマ | **PASS**(平均の明るさの最小 54.8) | **PASS**(68.7) | `measure_*/measure.json` |
 | 白フラッシュ | **PASS** | **PASS** | `review_checks.py` |
-| seek 決定性 | **実行中**(全 669 コマを A 順 `tl.seek(t,false)`/B 逆順 `hf-seek`/C 飛ばし `tl.seek`/D 飛ばし2 `hf-seek` で比べ、HyperFrames の PNG 書き出し(4〜7 秒=120〜209、S1→S2 の境目を含む)と照合。結果は §8 に追記) | **PASS: ALL_SAME**(250コマ×4通り一致、HyperFrames の PNG 250 枚とも一致) | `measure_B/seek_summary.json` |
+| seek 決定性 | **PASS: ALL_SAME**(669コマ×4通り=A 順 `tl.seek(t,false)`/B 逆順 `hf-seek`/C 飛ばし `tl.seek`/D 飛ばし2 `hf-seek` が全コマ一致。HyperFrames の PNG 連番は「--start/--end は mp4 だけ」の制約で一部だけ書き出せなかったので、代わりに**別のプロセス・別のページ(開発ページ)**で 23 コマ(全カットの頭と終わり・主な事象)を描いて hash を比べ、23 コマとも一致) | **PASS: ALL_SAME**(250コマ×4通り一致、HyperFrames の PNG 連番 250 枚とも一致、開発ページの 10 コマも一致) | `measure_{A,B}/seek_summary.json`、`devpage_hash.json` |
 | 刀の入れ替わり(彫った所が隣のコマで墨に戻る画素) | **≒0**: 665 組で合計 43 画素、最大 12 画素(243) | 247 組で合計 165 画素。うち 139 画素が 1349 の1コマ(y=712 の1行、x 504〜599。櫓の脚の溝の近く。原因は特定しきれず)。他は最大 3 画素 | `measure_*/flicker_summary.json` |
 | hyperframes lint | **PASS** 0 エラー・0 警告 | **PASS** 0 エラー・0 警告 | — |
-| hyperframes check | §8 に追記 | **PASS**(エラー 0。警告 1 = `canvas_content_at_edge`: 夜明けは紙のふちを外した全面なので意図どおり。情報 1 = 音のクリップなし=書き出し後に ffmpeg で付けるため) | `measure_B/hyperframes_check_B.txt` |
+| hyperframes check | **PASS**(エラー 0。警告 1 = `film_silent`: 音は書き出し後に ffmpeg で曲を付けるため。情報 1 = 音のクリップなし) | **PASS**(エラー 0。警告 1 = `canvas_content_at_edge`: 夜明けは紙のふちを外した全面なので意図どおり。情報 1 = 音のクリップなし=書き出し後に ffmpeg で付けるため) | `measure_{A,B}/hyperframes_check_{A,B}.txt` |
 | 静止(`review_checks.py`) | **FAIL**: 登録した間 2.43 秒を除いて 6.60 秒(予算 0.74 秒)。0.6 秒超は 17.13〜17.77・18.87〜19.63・20.20〜21.40 秒(S4 の後半) | **PASS(台帳つき)**: 登録した間 4.13 秒を除いて 0 秒。ただし「台帳が全体の 53%」の注意 | `motion1/holds_part{A,B}.json` |
 
 ### 4-1. 歌詞の可読(書き出した動画の画素から。字の箱の中の字らしい画素が、語頭の1コマ前を 0・カットの最後を 1 として 1%=彫り始め、85%=読める)
@@ -161,7 +161,7 @@
 8. S4 で3つ目の窓まで灯したこと、空の筋を戻したこと、「繋がってく」の字を坂に置いたこと(v6 の静止画からの変更)。
 
 ## 8. 追記(検査の続き)
-- 区間 A の seek 決定性と hyperframes check: (このファイルの commit の後に追記する。§9 の報告にも書く)
+- 区間 A の seek 決定性(669コマ×4通り)と hyperframes check は、最初の commit の後に終わり、§4 の表に結果を書いた(どちらも PASS)。区間 A の HyperFrames の PNG 連番との照合は、CLI 0.9.30 の `--start/--end` が png-sequence に使えないため、開発ページでの別プロセスの照合で代えた(全 669 枚の PNG 連番は約 18 分かかるので今回は省いた)。
 
 ## 9. 次の段(S5〜S9、669〜1339)の計画
 - S5(669〜768、伸ばし→弱起): S4 の溝が左から入り、「火」を芯から粗彫り(進み p を時刻に)。「夜明けの」735(要確認)で縦組みを彫る。755(0.87)で芯の最後の太い丸刀。
@@ -173,7 +173,7 @@
 - その後、利用者の承認で 53 秒の通し書き出し(区間をつないで1回で再エンコード、元版の `src/film/tools/assemble.sh` の型)。
 
 ## 10. 時間とトークンの目安(この段)
-- 作業の時間: 約 3.5 時間(書き出しの待ち約 1.5 時間を含む。途中 2 回、使用量の上限で中断)。書き出し: A look 17.5 分・clean 7.4 分、B look 7.8 分・clean 3.8 分、PNG 連番 B 約 8 分、seek 検査 B 約 25 分(A は約 60 分の見込み)。
+- 作業の時間: 約 3.5 時間(書き出しの待ち約 1.5 時間を含む。途中 2 回、使用量の上限で中断)。書き出し: A look 17.5 分・clean 7.4 分、B look 7.8 分・clean 3.8 分、PNG 連番 B 約 8 分、seek 検査 B 約 25 分・A 約 65 分。
 - トークン: 推定 約 60〜80 万(コードの読み書きと画像の確認が大半。正確な値は分からない)。
 - 次の段(S5〜S9、22.3 秒): 同じ規模の見込み(約 3〜4 時間、60〜80 万トークン)。53 秒の通し書き出しは look だけで約 45 分。
 
@@ -188,8 +188,8 @@ bash motion1/tools/plan.sh $W                                            # 計�
 python3 -I motion1/tools/measure.py $W/video_A_look.mp4 $W/plan.json motion1/gen/timing.gen.js A $W/meas_A
 python3 -I motion1/tools/sheets.py $W/video_A_look.mp4 $W/video_A_clean.mp4 $W/meas_A/measure.json $W/sheets A
 node motion1/tools/flicker_check.mjs 0 668 $W/flicker_A.json
-(cd $W/hf_A_look && npx hyperframes render --format png-sequence --start 4 --end 7 -o $W/pngseq_A)
-node motion1/tools/seek_check.mjs $W/hf_A_look $W/pngseq_A $W/seek_A.json 120
+node motion1/tools/seek_check.mjs $W/hf_A_look - $W/seek_A.json            # B は PNG 連番(npx hyperframes render --format png-sequence)のフォルダを2つ目に渡す
+node motion1/tools/devpage_hash.mjs $W/seek_A.json $W/devhash_A.json 0 141 291 409 668   # 別プロセス・開発ページとの照合
 python3 <video-with-claude-code>/tools/review_checks.py $W/yoake_v4_partA.mp4 --holds motion1/holds_partA.json
 ```
 - 権利: 新しい外部素材なし(紙は v6 と同じ ambientCG Paper006 CC0、書体は v3 と同じ OFL、GSAP 3.14.2 は HyperFrames のプロジェクトにだけ入れてコミットしない)。動画・音声はリポジトリに入れていない。

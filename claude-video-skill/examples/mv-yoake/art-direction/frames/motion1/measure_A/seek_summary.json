@@ -1,0 +1,62 @@
+{
+ "frames": 669,
+ "song_first": 0,
+ "orders": {
+  "A_forward_tl": {
+   "how": "tl",
+   "first": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+   ]
+  },
+  "B_reverse_event": {
+   "how": "event",
+   "first": [
+    668,
+    667,
+    666,
+    665,
+    664,
+    663,
+    662,
+    661
+   ]
+  },
+  "C_skip_tl": {
+   "how": "tl",
+   "first": [
+    626,
+    652,
+    40,
+    527,
+    293,
+    137,
+    439,
+    555
+   ]
+  },
+  "D_skip_event": {
+   "how": "event",
+   "first": [
+    249,
+    241,
+    284,
+    195,
+    145,
+    240,
+    491,
+    57
+   ]
+  }
+ },
+ "seek_diff_frames": 0,
+ "hf_png_compared": 0,
+ "hf_png_diff_frames": 0,
+ "verdict": "ALL_SAME"
+}

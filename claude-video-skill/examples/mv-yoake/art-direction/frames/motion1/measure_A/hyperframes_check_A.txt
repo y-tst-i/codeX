@@ -1,0 +1,259 @@
+[hyperframes] check: the report is saved to /tmp/claude-0/-home-user-codeX/d5574950-8955-5b0b-bf13-7c6be25a8755/scratchpad/mv2d/m1/hf_A_look/.hyperframes/artifacts/checks/fe707bed-453a-4b45-9338-fd718bf3c10c.json when the check ends, unless a warning says it could not be saved
+[hyperframes] check: starting Chrome
+[hyperframes] browserGpuMode probe → software (WebGL unavailable)
+[hyperframes] check: loading the page
+[hyperframes] check: waiting for the page to be ready
+[hyperframes] check: checking samples
+[hyperframes] check: samples 1/9
+[hyperframes] check: samples 2/9
+[hyperframes] check: samples 3/9
+[hyperframes] check: samples 4/9
+[hyperframes] check: samples 5/9
+[hyperframes] check: samples 6/9
+[hyperframes] check: samples 7/9
+[hyperframes] check: samples 8/9
+[hyperframes] check: samples 9/9
+[hyperframes] check: running the overlap pass
+[hyperframes] check: craft 1/179
+[hyperframes] check: craft 4/179
+[hyperframes] check: craft 7/179
+[hyperframes] check: craft 10/179
+[hyperframes] check: craft 13/179
+[hyperframes] check: craft 16/179
+[hyperframes] check: craft 19/179
+[hyperframes] check: craft 22/179
+[hyperframes] check: craft 25/179
+[hyperframes] check: craft 28/179
+[hyperframes] check: craft 31/179
+[hyperframes] check: craft 34/179
+[hyperframes] check: still running the overlap pass (1 s in this step)
+[hyperframes] check: craft 37/179
+[hyperframes] check: craft 40/179
+[hyperframes] check: craft 43/179
+[hyperframes] check: craft 46/179
+[hyperframes] check: craft 49/179
+[hyperframes] check: craft 52/179
+[hyperframes] check: craft 55/179
+[hyperframes] check: craft 58/179
+[hyperframes] check: craft 61/179
+[hyperframes] check: craft 64/179
+[hyperframes] check: craft 67/179
+[hyperframes] check: craft 70/179
+[hyperframes] check: craft 73/179
+[hyperframes] check: craft 76/179
+[hyperframes] check: craft 79/179
+[hyperframes] check: craft 82/179
+[hyperframes] check: craft 85/179
+[hyperframes] check: craft 89/179
+[hyperframes] check: still running the overlap pass (2 s in this step)
+[hyperframes] check: craft 92/179
+[hyperframes] check: craft 96/179
+[hyperframes] check: craft 100/179
+[hyperframes] check: craft 104/179
+[hyperframes] check: craft 107/179
+[hyperframes] check: craft 110/179
+[hyperframes] check: craft 114/179
+[hyperframes] check: craft 117/179
+[hyperframes] check: craft 120/179
+[hyperframes] check: craft 124/179
+[hyperframes] check: craft 127/179
+[hyperframes] check: craft 131/179
+[hyperframes] check: craft 134/179
+[hyperframes] check: craft 137/179
+[hyperframes] check: craft 140/179
+[hyperframes] check: craft 143/179
+[hyperframes] check: craft 146/179
+[hyperframes] check: craft 149/179
+[hyperframes] check: craft 153/179
+[hyperframes] check: still running the overlap pass (0 s in this step)
+[hyperframes] check: craft 156/179
+[hyperframes] check: craft 159/179
+[hyperframes] check: craft 162/179
+[hyperframes] check: craft 165/179
+[hyperframes] check: craft 168/179
+[hyperframes] check: craft 171/179
+[hyperframes] check: craft 174/179
+[hyperframes] check: craft 177/179
+[hyperframes] check: craft 179/179
+[hyperframes] check: overlap 1/23
+[hyperframes] check: still running the overlap pass (5 s in this step)
+[hyperframes] check: overlap 2/23
+[hyperframes] check: overlap 3/23
+[hyperframes] check: overlap 4/23
+[hyperframes] check: still running the overlap pass (5 s in this step)
+[hyperframes] check: overlap 5/23
+[hyperframes] check: overlap 6/23
+[hyperframes] check: still running the overlap pass (10 s in this step)
+[hyperframes] check: overlap 7/23
+[hyperframes] check: overlap 8/23
+[hyperframes] check: overlap 9/23
+[hyperframes] check: still running the overlap pass (1 s in this step)
+[hyperframes] check: overlap 10/23
+[hyperframes] check: overlap 11/23
+[hyperframes] check: still running the overlap pass (5 s in this step)
+[hyperframes] check: overlap 12/23
+[hyperframes] check: overlap 13/23
+[hyperframes] check: still running the overlap pass (11 s in this step)
+[hyperframes] check: overlap 14/23
+[hyperframes] check: overlap 15/23
+[hyperframes] check: overlap 16/23
+[hyperframes] check: still running the overlap pass (3 s in this step)
+[hyperframes] check: overlap 17/23
+[hyperframes] check: overlap 18/23
+[hyperframes] check: still running the overlap pass (8 s in this step)
+[hyperframes] check: overlap 19/23
+[hyperframes] check: overlap 20/23
+[hyperframes] check: overlap 21/23
+[hyperframes] check: still running the overlap pass (1 s in this step)
+[hyperframes] check: overlap 22/23
+[hyperframes] check: overlap 23/23
+[hyperframes] check: checking samples
+[hyperframes] check: analyze 0/3
+[hyperframes] check: analyzing the samples
+[hyperframes] check: analyze 1/3
+[hyperframes] check: analyze 2/3
+{
+  "ok": true,
+  "strict": false,
+  "browserSkipped": false,
+  "lint": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 0,
+    "findings": [],
+    "filesScanned": 1
+  },
+  "runtime": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 0,
+    "findings": []
+  },
+  "layout": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 0,
+    "findings": [],
+    "duration": 22.3,
+    "samples": [
+      1.239,
+      3.717,
+      6.194,
+      8.672,
+      11.15,
+      13.628,
+      16.106,
+      18.583,
+      21.061
+    ],
+    "transitionSamples": [],
+    "transitionSamplesDropped": 0,
+    "tolerance": 2,
+    "totalIssueCount": 0,
+    "truncated": false
+  },
+  "motion": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 0,
+    "findings": [],
+    "enabled": false,
+    "samples": 0
+  },
+  "contrast": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 0,
+    "findings": [],
+    "enabled": true,
+    "samples": [
+      1.239,
+      6.194,
+      11.15,
+      16.106,
+      21.061
+    ],
+    "checked": 0,
+    "passed": 0
+  },
+  "craft": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 1,
+    "infoCount": 0,
+    "findings": [
+      {
+        "code": "film_silent",
+        "severity": "warning",
+        "message": "This 22 s film has no sound source (no <audio>, no <video> with sound): add a music bed and sounds on the visible actions unless the person asked for silence; see references/sound.md.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {},
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "time": 0
+      }
+    ],
+    "enabled": true,
+    "step": 0.37399999999999967,
+    "samples": 58
+  },
+  "audio": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 1,
+    "findings": [
+      {
+        "code": "audio_none",
+        "severity": "info",
+        "message": "The film has no sound: no clip in it plays audio.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {},
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "time": 0
+      }
+    ]
+  },
+  "hdr": {
+    "autoPromotion": null,
+    "inspection": "available"
+  },
+  "snapshots": {
+    "enabled": false,
+    "files": [],
+    "times": [],
+    "findingFiles": []
+  },
+  "saved": {
+    "id": "fe707bed-453a-4b45-9338-fd718bf3c10c",
+    "revision": "9f434ee1-b22f-4701-83ef-0a9cb6263daa",
+    "report": "/tmp/claude-0/-home-user-codeX/d5574950-8955-5b0b-bf13-7c6be25a8755/scratchpad/mv2d/m1/hf_A_look/.hyperframes/artifacts/checks/fe707bed-453a-4b45-9338-fd718bf3c10c.json",
+    "attribution": "recorded-revision"
+  },
+  "_meta": {
+    "version": "0.9.31",
+    "latestVersion": "0.9.31",
+    "updateAvailable": false,
+    "checkedAt": "2026-11-11T00:02:17.220Z",
+    "skillsOutdated": 4,
+    "skillsMissing": 2,
+    "updateNotice": "For the user: 4 installed HyperFrames skills are out of date and 2 core skills are missing (this run is HyperFrames CLI 0.9.31). To update them, run: npx hyperframes update"
+  }
+}
+[hyperframes] check: report saved to /tmp/claude-0/-home-user-codeX/d5574950-8955-5b0b-bf13-7c6be25a8755/scratchpad/mv2d/m1/hf_A_look/.hyperframes/artifacts/checks/fe707bed-453a-4b45-9338-fd718bf3c10c.json

@@ -1,0 +1,66 @@
+{
+ "compared": 10,
+ "diff": 0,
+ "rows": [
+  {
+   "f": 1340,
+   "dev": "a32b1303",
+   "hf": "a32b1303",
+   "same": true
+  },
+  {
+   "f": 1341,
+   "dev": "d75de4c1",
+   "hf": "d75de4c1",
+   "same": true
+  },
+  {
+   "f": 1349,
+   "dev": "bceda054",
+   "hf": "bceda054",
+   "same": true
+  },
+  {
+   "f": 1402,
+   "dev": "43e21b87",
+   "hf": "43e21b87",
+   "same": true
+  },
+  {
+   "f": 1431,
+   "dev": "2741ccaa",
+   "hf": "2741ccaa",
+   "same": true
+  },
+  {
+   "f": 1462,
+   "dev": "5e5f3f61",
+   "hf": "5e5f3f61",
+   "same": true
+  },
+  {
+   "f": 1481,
+   "dev": "7d08c524",
+   "hf": "7d08c524",
+   "same": true
+  },
+  {
+   "f": 1520,
+   "dev": "a305dda6",
+   "hf": "a305dda6",
+   "same": true
+  },
+  {
+   "f": 1538,
+   "dev": "a375b164",
+   "hf": "a375b164",
+   "same": true
+  },
+  {
+   "f": 1589,
+   "dev": "51a5c772",
+   "hf": "51a5c772",
+   "same": true
+  }
+ ]
+}
