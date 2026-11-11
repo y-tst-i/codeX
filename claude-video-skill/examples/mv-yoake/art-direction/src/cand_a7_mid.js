@@ -168,6 +168,8 @@ const A7_MID = (() => {
     T3.forEach((L, i) => add(LD([L]), box([L]), E.t3[i], "down", 6630 + i));
     const gp = f < E.kairo ? 0 : pushProg([[E.kairo, 0.12, 3]].concat(E.gPush.map((s, i) => [s, [0.4, 0.75, 1][i], 5])));
     tpg.fillStyle = "#000"; S6_GROOVE.forEach((P, i) => grooveP(tpg, P, { w0: [40, 34, 30][i], w1: [10, 9, 8][i], seed: 6160 + i, chip: 0.9, ov: 0.8, splinter: false, taper: 0.05 }, gp));
+    // 火が灯った後(楔の拍から)、畝の芯を火の側から路へ彫り抜く=回路に火が通る(墨の畝の中に琥珀の筋)。1本ずつ、カットの終わりの手前まで少しずつ
+    tpg.globalCompositeOperation = "destination-out"; S6_GROOVE.forEach((P, i) => { const s0 = E.wedges[i], lp = f < s0 ? 0 : clamp((f - s0 + 1) / (sh.end - 4 - s0)); if (lp > 0) grooveP(tpg, P.slice().reverse(), { w0: [3.2, 3, 2.8][i], w1: [12, 10, 9][i], seed: 6190 + i, chip: 0.6, ov: 0.6, splinter: false, taper: 0.04 }, Math.pow(lp, 0.8)); }); tpg.globalCompositeOperation = "source-over";
     return fin(ctx, m, [{ c: pp, color: C.AMBER, kind: "flat", shift: [-4, 3] }, { c: tp, color: C.INK, kind: "flat", shift: [0, 0] }], o, B, T1.concat(T2, T3), { grain: 0.12, cut: 6, sheet: 3 }, { cut_id: "S6", events: E, groove: +gp.toFixed(3), mbox: { face: [1150, 180, 1600, 690], grooves: [440, 320, 1500, 980] }, letters: T1.concat(T2, Fh, T3).map((L) => ({ ch: L.ch, bb: bbox(L.cs).map(Math.round) })) });
   }
 
@@ -181,12 +183,13 @@ const A7_MID = (() => {
   function S7(ctx, o) {
     const f = getF(), sh = shot("S7"), c0 = sh.start, [m, g] = begin(F), { woodLinesT, handWindowT } = A7_OPEN;
     const E = { kie: phrase("消えかけた声を"), hika: phrase("光に変えて") };
-    E.t1 = [...Array(7).keys()].map((k) => E.kie + 4 * k); E.t2 = [0, 5, 10, 15, 20].map((d) => E.hika + d);
-    E.roof = accIn(c0 + 25, E.hika - 15).sort((a, b) => b.strength - a.strength).slice(0, 2).map((x) => x.frame30).sort((a, b) => a - b); // 897・916
+    E.t1 = [...Array(7).keys()].map((k) => E.kie + 10 * k); E.t2 = [0, 5, 10, 15, 20].map((d) => E.hika + d);
+    E.roof = accIn(c0 + 20, E.hika - 1).map((x) => x.frame30).slice(0, 4); // 887・897・916・934
     E.hikaPrint = firstAcc(E.t2[0] + 9, E.t2[0] + 14); E.push = accIn(E.t2[4] + 3, sh.end - 5).sort((a, b) => b.strength - a.strength).slice(0, 3).map((x) => x.frame30).sort((a, b) => a - b); // 963・972・991
     E.win = E.push[2];
+    // 消えかけた声: 歌の句の長さに合わせて 10 コマに1字(途切れながら彫る)
     const T1 = setH("SMB", "消えかけた声を", 180, 250, 84, 0.1), T2 = setH("SMB", "光に変えて", 178, 860, 214, 0.08);
-    woodLinesT(g, 7, { amount: 0.22, wmul: 0.8, sd: 7002 }, (x, y, near, id) => (h01(id, 1, 7701) < 0.45 ? NEVER : c0 + 3 + (E.hika - 10 - c0) * h01(id, 2, 7702)));
+    woodLinesT(g, 7, { amount: 0.3, wmul: 0.85, sd: 7002 }, (x, y, near, id) => (h01(id, 1, 7701) < 0.35 ? NEVER : c0 + 3 + (E.hika - 4 - c0) * h01(id, 2, 7702)));
     keepOut(g, T1, 24); keepOut(g, T2, 36);
     const te = T2[T2.length - 1], tb = bbox(te.cs); let ex = [tb[2], (tb[1] + tb[3]) / 2]; for (const ct of te.cs) for (const q of ct) if (q[0] > ex[0] - 1 && q[1] < ex[1] + 60 && q[1] > tb[1]) ex = q;
     const WN = { x: 1612, y: 238, w: 62, h: 78 }, wx = WN.x + WN.w / 2, wy = WN.y + WN.h + 12;
@@ -196,20 +199,20 @@ const A7_MID = (() => {
     const G3 = [[X - 6, Y - 14], [X + 60, Y - 14], [X + 150, Y - 190], [X + 190, Y - 330]];
     const G4 = [[X - 8, Y + 30], [X + 300, Y + 30], [X + 470, Y - 50], [X + 600, Y - 50]];
     const G5 = [[X + 360, Y - 250], D(X + 360, Y - 250, 70), [X + 430, Y - 410]];
-    const pz = (a, b, c) => pushProg([[E.push[0], a, 6], [E.push[1], b, 6], [E.push[2], c, 5]]), p1 = pz(0.36, 0.72, 1);
+    const pz = (a, b, c) => pushProg([[E.push[0], a, 6], [E.push[1], b, 6], [E.push[1] + 6, c, E.push[2] - E.push[1] - 6]]), p1 = pz(0.36, 0.72, 1); // 3回目は拍を待たずに窓へ少しずつ(窓に届くのが 991)
     g.fillStyle = "#fff";
     grooveP(g, G1, { w0: 15, w1: 4, seed: 7101, chip: 2.6, taper: 0.06 }, p1);
     grooveP(g, G2, { w0: 10, w1: 2, seed: 7102, chip: 2.0 }, pz(0.5, 1, 1));
     grooveP(g, G3, { w0: 8, w1: 2.4, seed: 7103, chip: 2.2 }, pz(0.6, 1, 1));
     grooveP(g, G4, { w0: 6, w1: 1.2, seed: 7104, chip: 1.6 }, pz(0.3, 0.75, 1));
-    grooveP(g, G5, { w0: 6, w1: 1.5, seed: 7105, chip: 1.4 }, f < E.push[1] ? 0 : pushProg([[E.push[1], 0.45, 6], [E.push[2], 1, 5]]));
+    grooveP(g, G5, { w0: 6, w1: 1.5, seed: 7105, chip: 1.4 }, f < E.push[1] ? 0 : pushProg([[E.push[1], 0.45, 6], [E.push[1] + 6, 1, E.push[2] - E.push[1] - 6]]));
     carveT(g, T1, 7200, E.t1, { speed: 1.3 }); carveT(g, T2, 7200, E.t2, { i0: 7 });
     g.save(); g.beginPath(); pathOf(g, T1.flatMap((L) => L.cs)); g.clip("nonzero"); g.fillStyle = "#000";
     const b1 = lettersBox(T1); for (const [k, y, R] of rowsOf(7, 2, b1[1], b1[3], () => 7)) { let x = b1[0]; while (x < b1[2]) { const len = 30 + R() * 120; if (R() < 0.62) g.fillRect(x, y + R(), len, 3.2); x += len + 10 + R() * 40; } }
     g.restore();
     // 窓と、窓のまわりの家(屋根と壁の線。S4 の家の続き)
-    g.fillStyle = "#fff"; [[[1526, 226], [1585, 186], [1643, 146]], [[1643, 146], [1700, 186], [1722, 200]], [[1740, 236], [1741, 300]], [[1500, 242], [1532, 226]]].forEach((P, i) => cutT(g, P, [4.4, 2.6, 2.2, 1.8][i], 7350 + i, { entry: 0.06, exit: [0.2, 0.6, 0.5, 0.4][i], jit: 0.7 }, E.roof[i < 2 ? 0 : 1] + (i % 2) * 2, 4)); // 窓の光を受ける屋根の辺だけ(閉じた家の絵記号にしない)
-    g.fillStyle = "#000"; g.fillRect(WN.x - 6, WN.y - 6, WN.w + 12, WN.h + 12); g.fillStyle = "#fff"; handWindowT(g, WN.x, WN.y, WN.w, WN.h, 2, 2, 7300, E.win, 1);
+    g.fillStyle = "#fff"; [[[1526, 226], [1585, 186], [1643, 146]], [[1643, 146], [1700, 186], [1722, 200]], [[1740, 236], [1741, 300]], [[1500, 242], [1532, 226]]].forEach((P, i) => cutT(g, P, [4.4, 2.6, 2.2, 1.8][i], 7350 + i, { entry: 0.06, exit: [0.2, 0.6, 0.5, 0.4][i], jit: 0.7 }, E.roof[i % E.roof.length], 2)); // 屋根・軒・壁を拍ごとに1本 // 窓の光を受ける屋根の辺だけ(閉じた家の絵記号にしない)
+    g.fillStyle = "#000"; g.fillRect(WN.x - 6, WN.y - 6, WN.w + 12, WN.h + 12); g.fillStyle = "#fff"; handWindowT(g, WN.x, WN.y, WN.w, WN.h, 2, 2, 7300, E.win, 0);
     g.restore();
     const [pp, pg] = plateBuf("plA"); pg.fillRect(WN.x - 4, WN.y - 4, WN.w + 8, WN.h + 8); baren(pg, [WN.x - 8, WN.y - 8, WN.x + WN.w + 8, WN.y + WN.h + 8], E.win + 2, "down", 7401);
     grooveP(pg, G1, { w0: 15, w1: 4, seed: 7101, chip: 2.6, taper: 0.06 }, p1); pg.globalCompositeOperation = "destination-out"; pg.fillRect(0, 0, 1300, H); pg.globalCompositeOperation = "source-over";
@@ -238,6 +241,8 @@ const A7_MID = (() => {
     carveT(g, T, 9200, E.t); carveT(g, T4, 9300, E.t4);
     g.restore();
     const [pp, pg] = plateBuf("plA"); letterPlate(pg, T[2], { contour: 0 }); baren(pg, box1(T[2], 10), E.comma, "down", 9401);
+    // 燃え残りの琥珀が、読点の下の溝を少しずつ下りる(光は消えない。夜明け A の画面の下から上る信号へ続く)。彫った溝の先は越えない
+    { const dp = pushProg(E.drop.map((s, i) => [s, [0.3, 0.65, 1][i], 6])), ap = Math.min(dp, f < E.drop[0] ? 0 : clamp((f - E.drop[0] + 1) / (E.brk - 2 - E.drop[0]))); if (ap > 0) grooveP(pg, [[dx, dy + 22], [dx + 3, dy + 220], [dx - 2, F.y1 + 30]], { w0: 20, w1: 2.2, seed: 9101, chip: 2.2, splinter: false, taper: 0.01 }, ap); }
     return fin(ctx, m, [{ c: pp, color: C.AMBER, kind: "flat" }], o, F, T.concat(T4), { grain: -0.04, cut: 9, sheet: 2 }, { cut_id: "S9", events: E, drop: [Math.round(dx), Math.round(dy)], mbox: { comma: box1(T[2], 10).map(Math.round), drop: [Math.round(dx - 30), Math.round(dy), Math.round(dx + 30), F.y1] }, letters: T.concat(T4).map((L) => ({ ch: L.ch, bb: bbox(L.cs).map(Math.round) })) });
   }
 

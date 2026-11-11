@@ -59,7 +59,7 @@ elif part == "M":
     for ch, s_ in zip("夜明けの", e["t"]): lyr.append((ch, s_, next(x["bb"] for x in L if x["ch"] == ch), "light", shots["S5"]["end"] - 1, "夜明けの"))
     c = cutp("S6"); e = c["events"]; mb = c["mbox"]; L = c["letters"]
     add("S6 芯の琥珀が全面に(刷り替え)", e["flood"], [0, 0, W, H], "amber", 20000, e["flood"])
-    for k in e["gPush"]: add(f"S6 畝を路から火へ押す {k}", k, mb["grooves"], "ink", 300, k)
+    for k in e["gPush"]: add(f"S6 畝を路から火へ押す {k}", k, [620, 300, 1300, 560], "ink", 300, k)  # 字(回路に)の箱を外した領域
     add("S6 火のまわりの面を一刀で彫り取る", e["face"], mb["face"], "chg", 2000, e["face"])
     for k in e["wedges"]: add(f"S6 楔 {k}", k, [1150, 40, 1600, 420], "chg", 150, k)
     T2 = [x for x in L if x["ch"] in "回路に"][:3]
@@ -70,13 +70,13 @@ elif part == "M":
     for k in e["roof"]: add(f"S7 窓のまわりの屋根の刀 {k}", k, mb["roof"], "chg", 40, k)
     hb = L[7]["bb"]; add("S7 光 に琥珀", e["hikaPrint"], [hb[0] - 8, hb[1] - 8, hb[2] + 8, hb[3] + 8], "amber", 300, e["hikaPrint"])
     for k in e["push"]: add(f"S7 て から溝がほどけて窓へ {k}", k, mb["grooves"], "chg", 150, k)
-    add("S7 窓に琥珀(2コマ後)", e["win"] + 2, mb["window"], "amber", 300, None)
+    add("S7 窓に琥珀(設計は拍 991 の +2)", e["win"] + 2, mb["window"], "amber", 300, e["win"])
     for x, s_ in zip(L[:7], e["t1"]): lyr.append((x["ch"], s_, x["bb"], "light", shots["S7"]["end"] - 1, "消えかけた声を"))
     for x, s_ in zip(L[7:], e["t2"]): lyr.append((x["ch"], s_, x["bb"], "light", shots["S7"]["end"] - 1, "光に変えて"))
     c = cutp("S8"); e = c["events"]; mb = c["mbox"]; L = c["letters"]
-    for k in e["rail"]: add(f"S8 レールを押して延ばす {k}(2.5D で動いている)", k, mb["rail"] if k > e["rail"][0] else [56, 150, 1100, 480], "chg", 60, k)
-    for i, k in enumerate(e["cars"]): add(f"S8 列車の {i+1} 両目に琥珀(2コマ後)", k + 2, mb["train"], "amber", 300, None)
-    add("S8 川が灯る(低音)", e["lit"], mb["water"], "chg", 3000, e["lit"])
+    for k, bx in zip(e["rail"], ([56, 150, 669, 270], [870, 150, 1300, 330], [1250, 150, 1870, 480])): add(f"S8 レールを押して延ばす {k}(2.5D で動いている。字の箱を外した領域)", k, bx, "chg", 60, k)
+    for i, k in enumerate(e["cars"]): add(f"S8 列車の {i+1} 両目に琥珀(設計は拍の +2)", k + 2, mb["train"], "amber", 300, k)
+    add("S8 川が灯る(低音)", e["lit"], mb["water"], "chg", 1000, e["lit"])
     for x, s_ in zip(L[:5], e["t1"]): lyr.append((x["ch"], s_, x["bb"], "light", s_ + 10, "止まらない"))  # 2.5D で字が動くので、最後のコマでなく語頭+10 を 1 とする
     for x, s_ in zip(L[5:], e["t2"]): lyr.append((x["ch"], s_, x["bb"], "light", shots["S8"]["end"] - 1, "止まれない"))
     c = cutp("S9"); e = c["events"]; mb = c["mbox"]; L = c["letters"]
