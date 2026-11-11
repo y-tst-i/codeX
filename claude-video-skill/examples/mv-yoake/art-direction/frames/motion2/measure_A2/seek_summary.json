@@ -1,0 +1,64 @@
+{
+ "frames": 669,
+ "checked_every": 3,
+ "checked_frames": 224,
+ "song_first": 0,
+ "orders": {
+  "A_forward_tl": {
+   "how": "tl",
+   "first": [
+    0,
+    3,
+    6,
+    9,
+    12,
+    15,
+    18,
+    21
+   ]
+  },
+  "B_reverse_event": {
+   "how": "event",
+   "first": [
+    668,
+    666,
+    663,
+    660,
+    657,
+    654,
+    651,
+    648
+   ]
+  },
+  "C_skip_tl": {
+   "how": "tl",
+   "first": [
+    96,
+    195,
+    534,
+    225,
+    72,
+    363,
+    456,
+    603
+   ]
+  },
+  "D_skip_event": {
+   "how": "event",
+   "first": [
+    399,
+    630,
+    465,
+    312,
+    3,
+    411,
+    393,
+    84
+   ]
+  }
+ },
+ "seek_diff_frames": 0,
+ "hf_png_compared": 0,
+ "hf_png_diff_frames": 0,
+ "verdict": "ALL_SAME"
+}

@@ -1,0 +1,4 @@
+npx hyperframes lint: 0 errors, 0 warnings
+npx hyperframes check --json (CLI 0.9.33):
+62acf5ad-5cd1-4367-8f36-332d666a538f.json {"ok": true, "findings": {"warning:film_silent": 1, "info:audio_none": 1}}
+film_silent / audio_none: 音は書き出し後に ffmpeg で曲を付けるため(第1段と同じ)

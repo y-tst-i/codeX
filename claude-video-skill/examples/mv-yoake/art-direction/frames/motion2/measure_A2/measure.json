@@ -1,0 +1,1039 @@
+{
+ "part": "A",
+ "frames": 669,
+ "song_range": [
+  0,
+  668
+ ],
+ "black_frames": [],
+ "min_mean_luma": 54.75,
+ "events": [
+  {
+   "name": "S1 最初の一刀①(左の水平)",
+   "frame": 10,
+   "box": [
+    40,
+    820,
+    340,
+    920
+   ],
+   "kind": "chg",
+   "thr": 300,
+   "accent": 10,
+   "measured": 10,
+   "diff": 0,
+   "value": 3374,
+   "strength": 0.93,
+   "kick": 0.02
+  },
+  {
+   "name": "S1 一刀②(45度と水平)",
+   "frame": 38,
+   "box": [
+    300,
+    700,
+    700,
+    900
+   ],
+   "kind": "chg",
+   "thr": 300,
+   "accent": 38,
+   "measured": 38,
+   "diff": 0,
+   "value": 3199,
+   "strength": 1.0,
+   "kick": 0.01
+  },
+  {
+   "name": "S1 一刀③(x=900 まで)",
+   "frame": 57,
+   "box": [
+    650,
+    630,
+    930,
+    730
+   ],
+   "kind": "chg",
+   "thr": 300,
+   "accent": 57,
+   "measured": 57,
+   "diff": 0,
+   "value": 1246,
+   "strength": 0.92,
+   "kick": 0.21
+  },
+  {
+   "name": "S1 節の年輪 76",
+   "frame": 76,
+   "box": [
+    1060,
+    180,
+    1540,
+    460
+   ],
+   "kind": "chg",
+   "thr": 60,
+   "accent": 76,
+   "measured": 77,
+   "diff": 1,
+   "value": 776,
+   "strength": 0.78,
+   "kick": 0.3
+  },
+  {
+   "name": "S1 節の年輪 85",
+   "frame": 85,
+   "box": [
+    1060,
+    180,
+    1540,
+    460
+   ],
+   "kind": "chg",
+   "thr": 60,
+   "accent": 85,
+   "measured": 85,
+   "diff": 0,
+   "value": 1104,
+   "strength": 0.87,
+   "kick": 0.21
+  },
+  {
+   "name": "S1 節の年輪 104",
+   "frame": 104,
+   "box": [
+    1060,
+    180,
+    1540,
+    460
+   ],
+   "kind": "chg",
+   "thr": 60,
+   "accent": 104,
+   "measured": 104,
+   "diff": 0,
+   "value": 1429,
+   "strength": 0.72,
+   "kick": 0.0
+  },
+  {
+   "name": "S1 節の年輪 113",
+   "frame": 113,
+   "box": [
+    1060,
+    180,
+    1540,
+    460
+   ],
+   "kind": "chg",
+   "thr": 60,
+   "accent": 113,
+   "measured": 114,
+   "diff": 1,
+   "value": 2148,
+   "strength": 0.86,
+   "kick": 0.01
+  },
+  {
+   "name": "S1 節の年輪 133",
+   "frame": 133,
+   "box": [
+    1060,
+    180,
+    1540,
+    460
+   ],
+   "kind": "chg",
+   "thr": 60,
+   "accent": 133,
+   "measured": 133,
+   "diff": 0,
+   "value": 883,
+   "strength": 0.77,
+   "kick": 0.24
+  },
+  {
+   "name": "S2 字の日に琥珀を刷る",
+   "frame": 189,
+   "box": [
+    1523,
+    116,
+    1677,
+    436
+   ],
+   "kind": "amber",
+   "thr": 300,
+   "accent": 189,
+   "measured": 189,
+   "diff": 0,
+   "value": 2856,
+   "strength": 0.83,
+   "kick": 0.11
+  },
+  {
+   "name": "S2 町の光の側の刀(始まり)",
+   "frame": 198,
+   "box": [
+    56,
+    230,
+    1070,
+    712
+   ],
+   "kind": "chg",
+   "thr": 40,
+   "accent": 198,
+   "measured": null,
+   "diff": null,
+   "value": 0,
+   "strength": 0.63,
+   "kick": 0.17
+  },
+  {
+   "name": "S2 影の白い刀 1",
+   "frame": 151,
+   "box": [
+    106,
+    410,
+    148,
+    432
+   ],
+   "kind": "chg",
+   "thr": 20,
+   "accent": 151,
+   "measured": 152,
+   "diff": 1,
+   "value": 28,
+   "strength": 0.63,
+   "kick": 0.14
+  },
+  {
+   "name": "S2 影の白い刀 2",
+   "frame": 161,
+   "box": [
+    90,
+    574,
+    148,
+    596
+   ],
+   "kind": "chg",
+   "thr": 20,
+   "accent": 161,
+   "measured": 162,
+   "diff": 1,
+   "value": 37,
+   "strength": 0.56,
+   "kick": 0.07
+  },
+  {
+   "name": "S2 影の白い刀 3",
+   "frame": 180,
+   "box": [
+    346,
+    550,
+    414,
+    572
+   ],
+   "kind": "chg",
+   "thr": 20,
+   "accent": 180,
+   "measured": 181,
+   "diff": 1,
+   "value": 44,
+   "strength": 0.72,
+   "kick": 0.07
+  },
+  {
+   "name": "S2 影の白い刀 4",
+   "frame": 208,
+   "box": [
+    294,
+    636,
+    390,
+    660
+   ],
+   "kind": "chg",
+   "thr": 20,
+   "accent": 208,
+   "measured": 209,
+   "diff": 1,
+   "value": 107,
+   "strength": 0.67,
+   "kick": 0.02
+  },
+  {
+   "name": "S2 影の白い刀 5",
+   "frame": 227,
+   "box": [
+    560,
+    594,
+    634,
+    616
+   ],
+   "kind": "chg",
+   "thr": 20,
+   "accent": 227,
+   "measured": 228,
+   "diff": 1,
+   "value": 65,
+   "strength": 0.55,
+   "kick": 0.09
+  },
+  {
+   "name": "S2 影の白い刀 6",
+   "frame": 236,
+   "box": [
+    594,
+    666,
+    644,
+    688
+   ],
+   "kind": "chg",
+   "thr": 20,
+   "accent": 236,
+   "measured": 237,
+   "diff": 1,
+   "value": 25,
+   "strength": 0.64,
+   "kick": 0.02
+  },
+  {
+   "name": "S2 字の下から窓へ溝",
+   "frame": 255,
+   "box": [
+    1150,
+    716,
+    1560,
+    758
+   ],
+   "kind": "chg",
+   "thr": 60,
+   "accent": 255,
+   "measured": 256,
+   "diff": 1,
+   "value": 978,
+   "strength": 0.75,
+   "kick": 0.05
+  },
+  {
+   "name": "S2 窓の桟を彫る",
+   "frame": 265,
+   "box": [
+    884,
+    554,
+    944,
+    628
+   ],
+   "kind": "chg",
+   "thr": 150,
+   "accent": 265,
+   "measured": 266,
+   "diff": 1,
+   "value": 777,
+   "strength": 0.65,
+   "kick": 0.01
+  },
+  {
+   "name": "S2 窓・壁・映りに琥珀",
+   "frame": 274,
+   "box": [
+    850,
+    520,
+    1000,
+    900
+   ],
+   "kind": "amber",
+   "thr": 300,
+   "accent": 274,
+   "measured": 273,
+   "diff": -1,
+   "value": 2765,
+   "strength": 0.84,
+   "kick": 0.47
+  },
+  {
+   "name": "S2 窓のまわりの楔(内→外)",
+   "frame": 283,
+   "box": [
+    560,
+    250,
+    1450,
+    705
+   ],
+   "kind": "chg",
+   "thr": 200,
+   "accent": 283,
+   "measured": 284,
+   "diff": 1,
+   "value": 1518,
+   "strength": 0.85,
+   "kick": 0.15
+  },
+  {
+   "name": "S3 提灯に琥珀",
+   "frame": 302,
+   "box": [
+    1180,
+    450,
+    1310,
+    620
+   ],
+   "kind": "amber",
+   "thr": 300,
+   "accent": 302,
+   "measured": 302,
+   "diff": 0,
+   "value": 10731,
+   "strength": 0.54,
+   "kick": 0.02
+  },
+  {
+   "name": "S3 岸の灯 2 つに琥珀",
+   "frame": 340,
+   "box": [
+    56,
+    150,
+    1864,
+    420
+   ],
+   "kind": "amber",
+   "thr": 40,
+   "accent": 340,
+   "measured": 340,
+   "diff": 0,
+   "value": 275,
+   "strength": 0.7,
+   "kick": 0.01
+  },
+  {
+   "name": "S3 輝きは増す: 残りの灯と映りの欠片",
+   "frame": 350,
+   "box": [
+    1000,
+    600,
+    1500,
+    1030
+   ],
+   "kind": "chg",
+   "thr": 200,
+   "accent": 350,
+   "measured": 350,
+   "diff": 0,
+   "value": 7402,
+   "strength": 0.87,
+   "kick": 0.46
+  },
+  {
+   "name": "S3 岸の灯の映り 359",
+   "frame": 359,
+   "box": [
+    56,
+    330,
+    1864,
+    1030
+   ],
+   "kind": "chg",
+   "thr": 100,
+   "accent": 359,
+   "measured": 360,
+   "diff": 1,
+   "value": 191,
+   "strength": 0.67,
+   "kick": 0.13
+  },
+  {
+   "name": "S3 岸の灯の映り 373",
+   "frame": 373,
+   "box": [
+    56,
+    330,
+    1864,
+    1030
+   ],
+   "kind": "chg",
+   "thr": 100,
+   "accent": 373,
+   "measured": 373,
+   "diff": 0,
+   "value": 606,
+   "strength": 0.57,
+   "kick": 0.13
+  },
+  {
+   "name": "S3 岸の灯の映り 387",
+   "frame": 387,
+   "box": [
+    56,
+    330,
+    1864,
+    1030
+   ],
+   "kind": "chg",
+   "thr": 100,
+   "accent": 387,
+   "measured": 387,
+   "diff": 0,
+   "value": 3971,
+   "strength": 0.79,
+   "kick": 0.19
+  },
+  {
+   "name": "S4 窓1の桟を彫る",
+   "frame": 416,
+   "box": [
+    506,
+    446,
+    602,
+    556
+   ],
+   "kind": "chg",
+   "thr": 150,
+   "accent": 416,
+   "measured": 417,
+   "diff": 1,
+   "value": 1672,
+   "strength": 0.57,
+   "kick": 0.07
+  },
+  {
+   "name": "S4 窓1に琥珀(ひとつ)",
+   "frame": 425,
+   "box": [
+    446,
+    386,
+    662,
+    616
+   ],
+   "kind": "amber",
+   "thr": 300,
+   "accent": 425,
+   "measured": 425,
+   "diff": 0,
+   "value": 4741,
+   "strength": 0.88,
+   "kick": 0.22
+  },
+  {
+   "name": "S4 溝①を押す 435",
+   "frame": 435,
+   "box": [
+    544,
+    550,
+    1120,
+    769
+   ],
+   "kind": "chg",
+   "thr": 30,
+   "accent": 435,
+   "measured": 435,
+   "diff": 0,
+   "value": 741,
+   "strength": 0.66,
+   "kick": 0.11
+  },
+  {
+   "name": "S4 溝①を押す 453",
+   "frame": 453,
+   "box": [
+    544,
+    550,
+    1120,
+    769
+   ],
+   "kind": "chg",
+   "thr": 30,
+   "accent": 453,
+   "measured": 453,
+   "diff": 0,
+   "value": 653,
+   "strength": 0.5,
+   "kick": 0.01
+  },
+  {
+   "name": "S4 溝①を押す 482",
+   "frame": 482,
+   "box": [
+    544,
+    550,
+    1120,
+    769
+   ],
+   "kind": "chg",
+   "thr": 30,
+   "accent": 482,
+   "measured": 482,
+   "diff": 0,
+   "value": 463,
+   "strength": 0.58,
+   "kick": 0.16
+  },
+  {
+   "name": "S4 窓2の桟を彫る",
+   "frame": 491,
+   "box": [
+    1068,
+    568,
+    1152,
+    684
+   ],
+   "kind": "chg",
+   "thr": 150,
+   "accent": 491,
+   "measured": 491,
+   "diff": 0,
+   "value": 3541,
+   "strength": 0.58,
+   "kick": 0.17
+  },
+  {
+   "name": "S4 窓2に琥珀(またひとつ)",
+   "frame": 500,
+   "box": [
+    1008,
+    508,
+    1212,
+    744
+   ],
+   "kind": "amber",
+   "thr": 300,
+   "accent": 500,
+   "measured": 500,
+   "diff": 0,
+   "value": 5393,
+   "strength": 0.89,
+   "kick": 0.1
+  },
+  {
+   "name": "S4 溝②を押す 557",
+   "frame": 557,
+   "box": [
+    1108,
+    711,
+    1394,
+    775
+   ],
+   "kind": "chg",
+   "thr": 20,
+   "accent": 557,
+   "measured": 557,
+   "diff": 0,
+   "value": 292,
+   "strength": 0.62,
+   "kick": 0.01
+  },
+  {
+   "name": "S4 溝②を押す 567",
+   "frame": 567,
+   "box": [
+    1108,
+    711,
+    1394,
+    775
+   ],
+   "kind": "chg",
+   "thr": 20,
+   "accent": 567,
+   "measured": 567,
+   "diff": 0,
+   "value": 345,
+   "strength": 0.65,
+   "kick": 0.06
+  },
+  {
+   "name": "S4 溝②を押す 576",
+   "frame": 576,
+   "box": [
+    1108,
+    711,
+    1394,
+    775
+   ],
+   "kind": "chg",
+   "thr": 20,
+   "accent": 576,
+   "measured": 576,
+   "diff": 0,
+   "value": 335,
+   "strength": 0.59,
+   "kick": 0.34
+  },
+  {
+   "name": "S4 溝②を押す 585",
+   "frame": 585,
+   "box": [
+    1108,
+    711,
+    1394,
+    775
+   ],
+   "kind": "chg",
+   "thr": 20,
+   "accent": 585,
+   "measured": 585,
+   "diff": 0,
+   "value": 361,
+   "strength": 0.61,
+   "kick": 0.11
+  },
+  {
+   "name": "S4 溝②を押す 614",
+   "frame": 614,
+   "box": [
+    1108,
+    711,
+    1394,
+    775
+   ],
+   "kind": "chg",
+   "thr": 20,
+   "accent": 614,
+   "measured": 613,
+   "diff": -1,
+   "value": 227,
+   "strength": 0.57,
+   "kick": 0.22
+  },
+  {
+   "name": "S4 溝②を押す 623",
+   "frame": 623,
+   "box": [
+    1108,
+    711,
+    1394,
+    775
+   ],
+   "kind": "chg",
+   "thr": 20,
+   "accent": 623,
+   "measured": 623,
+   "diff": 0,
+   "value": 210,
+   "strength": 0.6,
+   "kick": 0.24
+  },
+  {
+   "name": "S4 溝②を押す 633",
+   "frame": 633,
+   "box": [
+    1108,
+    711,
+    1394,
+    775
+   ],
+   "kind": "chg",
+   "thr": 20,
+   "accent": 633,
+   "measured": 633,
+   "diff": 0,
+   "value": 142,
+   "strength": 0.61,
+   "kick": 0.28
+  },
+  {
+   "name": "S4 3つ目の窓の枠",
+   "frame": 642,
+   "box": [
+    1298,
+    656,
+    1390,
+    732
+   ],
+   "kind": "chg",
+   "thr": 30,
+   "accent": 642,
+   "measured": 642,
+   "diff": 0,
+   "value": 2631,
+   "strength": 0.7,
+   "kick": 0.14
+  },
+  {
+   "name": "S4 3つ目の窓に琥珀",
+   "frame": 652,
+   "box": [
+    1248,
+    606,
+    1440,
+    782
+   ],
+   "kind": "amber",
+   "thr": 300,
+   "accent": 652,
+   "measured": 652,
+   "diff": 0,
+   "value": 2314,
+   "strength": 0.67,
+   "kick": 0.2
+  },
+  {
+   "name": "S4 4つ目の窓に琥珀(枝の先)",
+   "frame": 661,
+   "box": [
+    1474,
+    707,
+    1652,
+    873
+   ],
+   "kind": "amber",
+   "thr": 300,
+   "accent": 661,
+   "measured": 661,
+   "diff": 0,
+   "value": 1642,
+   "strength": 0.69,
+   "kick": 0.1
+  }
+ ],
+ "strong_accents_not_used": [],
+ "lyrics": [
+  {
+   "char": "暗",
+   "onset": 141,
+   "word": "暗",
+   "confidence": "要確認",
+   "start": 141,
+   "start_diff": 0,
+   "readable85": 146,
+   "readable_diff": 5
+  },
+  {
+   "char": "闇",
+   "onset": 160,
+   "word": "闇",
+   "confidence": "確認済み",
+   "start": 160,
+   "start_diff": 0,
+   "readable85": 167,
+   "readable_diff": 7
+  },
+  {
+   "char": "の",
+   "onset": 192,
+   "word": "の",
+   "confidence": "確認済み",
+   "start": 192,
+   "start_diff": 0,
+   "readable85": 200,
+   "readable_diff": 8
+  },
+  {
+   "char": "数",
+   "onset": 215,
+   "word": "数",
+   "confidence": "確認済み",
+   "start": 216,
+   "start_diff": 1,
+   "readable85": 225,
+   "readable_diff": 10
+  },
+  {
+   "char": "だ",
+   "onset": 238,
+   "word": "だけ",
+   "confidence": "確認済み",
+   "start": 238,
+   "start_diff": 0,
+   "readable85": 248,
+   "readable_diff": 10
+  },
+  {
+   "char": "け",
+   "onset": 242,
+   "word": "だけ",
+   "confidence": "確認済み",
+   "start": 242,
+   "start_diff": 0,
+   "readable85": 246,
+   "readable_diff": 4
+  },
+  {
+   "char": "輝",
+   "onset": 291,
+   "word": "輝きは増す",
+   "confidence": "要確認",
+   "start": 291,
+   "start_diff": 0,
+   "readable85": 296,
+   "readable_diff": 5
+  },
+  {
+   "char": "き",
+   "onset": 299,
+   "word": "輝きは増す",
+   "confidence": "要確認",
+   "start": 299,
+   "start_diff": 0,
+   "readable85": 304,
+   "readable_diff": 5
+  },
+  {
+   "char": "は",
+   "onset": 305,
+   "word": "輝きは増す",
+   "confidence": "要確認",
+   "start": 305,
+   "start_diff": 0,
+   "readable85": 310,
+   "readable_diff": 5
+  },
+  {
+   "char": "増",
+   "onset": 311,
+   "word": "輝きは増す",
+   "confidence": "要確認",
+   "start": 311,
+   "start_diff": 0,
+   "readable85": 316,
+   "readable_diff": 5
+  },
+  {
+   "char": "す",
+   "onset": 319,
+   "word": "輝きは増す",
+   "confidence": "要確認",
+   "start": 319,
+   "start_diff": 0,
+   "readable85": 324,
+   "readable_diff": 5
+  },
+  {
+   "char": "ひ",
+   "onset": 409,
+   "word": "ひとつ、またひとつ",
+   "confidence": "確認済み",
+   "start": 409,
+   "start_diff": 0,
+   "readable85": 409,
+   "readable_diff": 0
+  },
+  {
+   "char": "と",
+   "onset": 413,
+   "word": "ひとつ、またひとつ",
+   "confidence": "確認済み",
+   "start": 413,
+   "start_diff": 0,
+   "readable85": 420,
+   "readable_diff": 7
+  },
+  {
+   "char": "つ",
+   "onset": 417,
+   "word": "ひとつ、またひとつ",
+   "confidence": "確認済み",
+   "start": 417,
+   "start_diff": 0,
+   "readable85": 424,
+   "readable_diff": 7
+  },
+  {
+   "char": "、",
+   "onset": 421,
+   "word": "ひとつ、またひとつ",
+   "confidence": "確認済み",
+   "start": 421,
+   "start_diff": 0,
+   "readable85": 428,
+   "readable_diff": 7
+  },
+  {
+   "char": "ま",
+   "onset": 453,
+   "word": "ひとつ、またひとつ",
+   "confidence": "確認済み",
+   "start": 453,
+   "start_diff": 0,
+   "readable85": 460,
+   "readable_diff": 7
+  },
+  {
+   "char": "た",
+   "onset": 457,
+   "word": "ひとつ、またひとつ",
+   "confidence": "確認済み",
+   "start": 457,
+   "start_diff": 0,
+   "readable85": 466,
+   "readable_diff": 9
+  },
+  {
+   "char": "ひ",
+   "onset": 461,
+   "word": "ひとつ、またひとつ",
+   "confidence": "確認済み",
+   "start": 461,
+   "start_diff": 0,
+   "readable85": 468,
+   "readable_diff": 7
+  },
+  {
+   "char": "と",
+   "onset": 465,
+   "word": "ひとつ、またひとつ",
+   "confidence": "確認済み",
+   "start": 465,
+   "start_diff": 0,
+   "readable85": 472,
+   "readable_diff": 7
+  },
+  {
+   "char": "つ",
+   "onset": 469,
+   "word": "ひとつ、またひとつ",
+   "confidence": "確認済み",
+   "start": 469,
+   "start_diff": 0,
+   "readable85": 476,
+   "readable_diff": 7
+  },
+  {
+   "char": "繋",
+   "onset": 540,
+   "word": "繋がってく",
+   "confidence": "要確認",
+   "start": 541,
+   "start_diff": 1,
+   "readable85": 546,
+   "readable_diff": 6
+  },
+  {
+   "char": "が",
+   "onset": 545,
+   "word": "繋がってく",
+   "confidence": "要確認",
+   "start": 545,
+   "start_diff": 0,
+   "readable85": 552,
+   "readable_diff": 7
+  },
+  {
+   "char": "っ",
+   "onset": 550,
+   "word": "繋がってく",
+   "confidence": "要確認",
+   "start": 550,
+   "start_diff": 0,
+   "readable85": 555,
+   "readable_diff": 5
+  },
+  {
+   "char": "て",
+   "onset": 553,
+   "word": "繋がってく",
+   "confidence": "要確認",
+   "start": 553,
+   "start_diff": 0,
+   "readable85": 558,
+   "readable_diff": 5
+  },
+  {
+   "char": "く",
+   "onset": 558,
+   "word": "繋がってく",
+   "confidence": "要確認",
+   "start": 558,
+   "start_diff": 0,
+   "readable85": 563,
+   "readable_diff": 5
+  }
+ ]
+}

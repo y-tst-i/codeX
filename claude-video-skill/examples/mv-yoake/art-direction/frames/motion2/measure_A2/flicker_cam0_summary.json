@@ -1,0 +1,83 @@
+{
+ "range": [
+  0,
+  668
+ ],
+ "pairs": 665,
+ "back_total": 42,
+ "back_max": 12,
+ "frames_with_back": 18,
+ "frames_back_over_50": 0,
+ "worst": [
+  {
+   "f": 243,
+   "carved": 1303204,
+   "back": 12,
+   "added": 1388,
+   "boundary": false
+  },
+  {
+   "f": 293,
+   "carved": 654706,
+   "back": 7,
+   "added": 1107,
+   "boundary": false
+  },
+  {
+   "f": 297,
+   "carved": 655875,
+   "back": 3,
+   "added": 272,
+   "boundary": false
+  },
+  {
+   "f": 381,
+   "carved": 704803,
+   "back": 3,
+   "added": 205,
+   "boundary": false
+  },
+  {
+   "f": 547,
+   "carved": 1085287,
+   "back": 3,
+   "added": 467,
+   "boundary": false
+  },
+  {
+   "f": 325,
+   "carved": 679541,
+   "back": 2,
+   "added": 1077,
+   "boundary": false
+  },
+  {
+   "f": 61,
+   "carved": 335198,
+   "back": 1,
+   "added": 147,
+   "boundary": false
+  },
+  {
+   "f": 268,
+   "carved": 1315954,
+   "back": 1,
+   "added": 1490,
+   "boundary": false
+  },
+  {
+   "f": 269,
+   "carved": 1317001,
+   "back": 1,
+   "added": 1048,
+   "boundary": false
+  },
+  {
+   "f": 270,
+   "carved": 1317463,
+   "back": 1,
+   "added": 463,
+   "boundary": false
+  }
+ ]
+}
