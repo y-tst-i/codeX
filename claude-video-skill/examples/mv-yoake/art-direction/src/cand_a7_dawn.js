@@ -35,8 +35,9 @@ const A7_DAWN = (() => {
   // 第2段: 琥珀の版(太陽とその映り)を、空の側は薔薇と同じばれん(上から、同じ前線)、水の側は淡黄と同じばれん(下から)で刷る。
   // 第1段は琥珀を全部下から刷り、構図の頭のコマで、薔薇の版の太陽の穴(上から刷れた所)に琥珀がまだ無く、白い太陽が半分欠けて見えた(1520・1431)
   function pressAmber(am, amg, HZ, c0, seedSky, seedWater) {
-    const [s1, s1g] = plateBuf("plAsky"); s1g.drawImage(am, 0, 0); s1g.globalCompositeOperation = "destination-in"; s1g.fillRect(0, 0, W, HZ + 4); s1g.globalCompositeOperation = "source-over"; pressIn(s1g, c0, "down", seedSky);
-    amg.globalCompositeOperation = "destination-out"; amg.fillRect(0, 0, W, HZ + 4); amg.globalCompositeOperation = "source-over"; pressIn(amg, c0, "up", seedWater); amg.drawImage(s1, 0, 0);
+    // 太陽の穴は薔薇(上から)と淡黄(下から)の両方の版に抜いてあるので、琥珀は「どちらかのばれんが通った所」に刷る(2つの前線の和)
+    const [s1, s1g] = plateBuf("plAsky"); s1g.drawImage(am, 0, 0); pressIn(s1g, c0, "down", seedSky);
+    pressIn(amg, c0, "up", seedWater); amg.drawImage(s1, 0, 0);
   }
   // 墨の文字版(字・題箋を墨で刷る。紙・色版の上に重ねて刷る)。at のコマからばれんで dir へ
   function textPlate(name, draws) { const [c, g] = plateBuf(name); g.fillStyle = "#000"; for (const [fn, rect, at, dir, seed] of draws) { const [t, tg] = plateBuf(name + "T"); tg.fillStyle = "#000"; fn(tg); if (getF() < at) continue; baren(tg, rect, at, dir, seed); g.drawImage(t, 0, 0); } return c; }
@@ -112,7 +113,9 @@ const A7_DAWN = (() => {
   const PYL_A = { b: HZ_A + 4, t: 548 };
   const WIRE_A = wire([lxA(TT_A + 60, 1), TT_A + 60], [PX_A + 7, PYL_A.t + 12], 70);
   const SIG_A = [[812, H + 30], [748, 950], [688, slopeA(688) + 22], [lxA(TB_A, 1) + 2, slopeA(lxA(TB_A, 1)) + 4], [lxA(TT_A + 60, 1), TT_A + 60]].concat(WIRE_A.slice(1)).concat([[PX_A + 16, PYL_A.b - 30], [PX_A + 22, PYL_A.b - 2]]);
-  const CAM_A = { push: 0.06 }; // 2.5D の押し込みの量(前景で 6%、中景 2.1%、遠景 0.7%)
+  // 2.5D の押し込みの量。第2段の最初の試験は 0.06(前景 6%、なめらか)で「違いが分からない」(利用者)→ 0.16 にして、信号が櫓を上る拍ごとに一段ずつ押す(前景 16%、中景 5.6%、遠景 1.9%)。
+  // 段の押しは拍のコマで速く入って遅く止まる(6 コマ)。最後は信号が鉄塔に届くコマ(1402)で止まる
+  const CAM_A = { push: 0.16, stepped: true };
   const timesA = () => {
     const c0 = 1340, E = { c0, hit: strongest(c0 - 2, c0 + 2), end: word("夜") - 1 };
     E.arrive = 1402; // 信号が鉄塔に届くコマ(統括の指定。前後のアクセント 1397・1406 の間)
@@ -125,7 +128,7 @@ const A7_DAWN = (() => {
     const f = getF(), E = timesA(), [m, g] = begin(B), HZ = HZ_A, SR = SR_A, SX = SX_A;
     // 第2段(2.5D、A7_CAM が入の時だけ): 衝撃の次のコマから、信号が鉄塔に届く(1402)まで、カメラが信号と一緒に地平の鉄塔へ押し込む(焦点は鉄塔の根元=地平)。
     // 届いたコマで止まる(太陽の縁はカメラが止まってから刷る)。層: 空・雲・太陽 = 遠 0.12/地平の町・丘・鉄塔・水 = 中 0.35/坂・工場・煙突・給水塔・櫓 = 前 1.0。電線と信号は点ごとに 1.0 → 0.35
-    const Z = A7_CAM.Z, camT = A7_CAM.ease((f - E.hit) / (E.arrive - E.hit)); A7_CAM.set({ fx: PX_A + 7, fy: HZ, push: CAM_A.push * camT });
+    const Z = A7_CAM.Z, camT = CAM_A.stepped ? pushProg(E.sigPush.map((s, i) => [s, (i + 1) / (E.sigPush.length + 1), 6]).concat([[E.arrive - 3, 1, 4]])) : A7_CAM.ease((f - E.hit) / (E.arrive - E.hit)); A7_CAM.set({ fx: PX_A + 7, fy: HZ, push: CAM_A.push * camT });
     const Lz = (gg, z) => A7_CAM.layer(gg, z), WIRE = A7_CAM.pathZ(WIRE_A, A7_CAM.alongZ(WIRE_A, Z.NEAR, Z.MID));
     const SIG = A7_CAM.pathZ(SIG_A, (p, i) => (i < 5 ? Z.NEAR : i < 5 + WIRE_A.length - 1 ? A7_CAM.alongZ(WIRE_A, Z.NEAR, Z.MID)(null, i - 4) : Z.MID));
     Lz(g, Z.FAR);

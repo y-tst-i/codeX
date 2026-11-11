@@ -1,0 +1,1021 @@
+{
+ "part": "M",
+ "frames": 671,
+ "song_range": [
+  669,
+  1339
+ ],
+ "black_frames": [],
+ "min_mean_luma": 54.27,
+ "events": [
+  {
+   "name": "S5 左から来る溝を押す 680",
+   "frame": 680,
+   "box": [
+    56,
+    800,
+    795,
+    930
+   ],
+   "kind": "chg",
+   "thr": 30,
+   "accent": 680,
+   "measured": 680,
+   "diff": 0,
+   "value": 818,
+   "strength": 0.62,
+   "kick": 0.16
+  },
+  {
+   "name": "S5 左から来る溝を押す 689",
+   "frame": 689,
+   "box": [
+    56,
+    800,
+    795,
+    930
+   ],
+   "kind": "chg",
+   "thr": 30,
+   "accent": 689,
+   "measured": 689,
+   "diff": 0,
+   "value": 486,
+   "strength": 0.6,
+   "kick": 0.1
+  },
+  {
+   "name": "S5 芯の最後の太い丸刀",
+   "frame": 755,
+   "box": [
+    790,
+    238,
+    1390,
+    818
+   ],
+   "kind": "chg",
+   "thr": 300,
+   "accent": 755,
+   "measured": 755,
+   "diff": 0,
+   "value": 37471,
+   "strength": 0.87,
+   "kick": 0.29
+  },
+  {
+   "name": "S5 芯に琥珀(火が灯る)",
+   "frame": 755,
+   "box": [
+    790,
+    238,
+    1390,
+    818
+   ],
+   "kind": "amber",
+   "thr": 300,
+   "accent": 755,
+   "measured": 755,
+   "diff": 0,
+   "value": 33609,
+   "strength": 0.87,
+   "kick": 0.29
+  },
+  {
+   "name": "S6 芯の琥珀が全面に(刷り替え)",
+   "frame": 769,
+   "box": [
+    0,
+    0,
+    1920,
+    1080
+   ],
+   "kind": "amber",
+   "thr": 20000,
+   "accent": 769,
+   "measured": 769,
+   "diff": 0,
+   "value": 688246,
+   "strength": 0.8,
+   "kick": 0.23
+  },
+  {
+   "name": "S6 畝を路から火へ押す 787",
+   "frame": 787,
+   "box": [
+    620,
+    300,
+    1250,
+    560
+   ],
+   "kind": "chg",
+   "thr": 200,
+   "accent": 787,
+   "measured": 787,
+   "diff": 0,
+   "value": 3307,
+   "strength": 0.59,
+   "kick": 0.05
+  },
+  {
+   "name": "S6 畝を路から火へ押す 798",
+   "frame": 798,
+   "box": [
+    620,
+    300,
+    1250,
+    560
+   ],
+   "kind": "chg",
+   "thr": 200,
+   "accent": 798,
+   "measured": 798,
+   "diff": 0,
+   "value": 6627,
+   "strength": 0.55,
+   "kick": 0.06
+  },
+  {
+   "name": "S6 畝を路から火へ押す 802",
+   "frame": 802,
+   "box": [
+    620,
+    300,
+    1250,
+    560
+   ],
+   "kind": "chg",
+   "thr": 200,
+   "accent": 802,
+   "measured": 799,
+   "diff": -3,
+   "value": 3905,
+   "strength": 0.69,
+   "kick": 0.08
+  },
+  {
+   "name": "S6 火のまわりの面を一刀で彫り取る",
+   "frame": 812,
+   "box": [
+    1150,
+    180,
+    1600,
+    690
+   ],
+   "kind": "chg",
+   "thr": 2000,
+   "accent": 812,
+   "measured": 812,
+   "diff": 0,
+   "value": 92885,
+   "strength": 0.93,
+   "kick": 0.35
+  },
+  {
+   "name": "S6 楔 821",
+   "frame": 821,
+   "box": [
+    1150,
+    40,
+    1600,
+    420
+   ],
+   "kind": "chg",
+   "thr": 150,
+   "accent": 821,
+   "measured": 821,
+   "diff": 0,
+   "value": 560,
+   "strength": 0.56,
+   "kick": 0.04
+  },
+  {
+   "name": "S6 楔 840",
+   "frame": 840,
+   "box": [
+    1150,
+    40,
+    1600,
+    420
+   ],
+   "kind": "chg",
+   "thr": 150,
+   "accent": 840,
+   "measured": 840,
+   "diff": 0,
+   "value": 1274,
+   "strength": 0.52,
+   "kick": 0.19
+  },
+  {
+   "name": "S6 楔 845",
+   "frame": 845,
+   "box": [
+    1150,
+    40,
+    1600,
+    420
+   ],
+   "kind": "chg",
+   "thr": 150,
+   "accent": 845,
+   "measured": 845,
+   "diff": 0,
+   "value": 731,
+   "strength": 0.4,
+   "kick": 0.52
+  },
+  {
+   "name": "S7 窓のまわりの屋根の刀 887",
+   "frame": 887,
+   "box": [
+    1520,
+    130,
+    1770,
+    360
+   ],
+   "kind": "chg",
+   "thr": 40,
+   "accent": 887,
+   "measured": 888,
+   "diff": 1,
+   "value": 487,
+   "strength": 0.56,
+   "kick": 0.08
+  },
+  {
+   "name": "S7 窓のまわりの屋根の刀 897",
+   "frame": 897,
+   "box": [
+    1520,
+    130,
+    1770,
+    360
+   ],
+   "kind": "chg",
+   "thr": 40,
+   "accent": 897,
+   "measured": 898,
+   "diff": 1,
+   "value": 252,
+   "strength": 0.54,
+   "kick": 0.31
+  },
+  {
+   "name": "S7 窓のまわりの屋根の刀 916",
+   "frame": 916,
+   "box": [
+    1520,
+    130,
+    1770,
+    360
+   ],
+   "kind": "chg",
+   "thr": 40,
+   "accent": 916,
+   "measured": 917,
+   "diff": 1,
+   "value": 231,
+   "strength": 0.5,
+   "kick": 0.2
+  },
+  {
+   "name": "S7 窓のまわりの屋根の刀 934",
+   "frame": 934,
+   "box": [
+    1520,
+    130,
+    1770,
+    360
+   ],
+   "kind": "chg",
+   "thr": 40,
+   "accent": 934,
+   "measured": 935,
+   "diff": 1,
+   "value": 171,
+   "strength": 0.55,
+   "kick": 0.28
+  },
+  {
+   "name": "S7 光 に琥珀",
+   "frame": 948,
+   "box": [
+    170,
+    670,
+    380,
+    886
+   ],
+   "kind": "amber",
+   "thr": 300,
+   "accent": 948,
+   "measured": 948,
+   "diff": 0,
+   "value": 6768,
+   "strength": 0.51,
+   "kick": 0.1
+  },
+  {
+   "name": "S7 て から溝がほどけて窓へ 963",
+   "frame": 963,
+   "box": [
+    1078,
+    120,
+    1700,
+    759
+   ],
+   "kind": "chg",
+   "thr": 150,
+   "accent": 963,
+   "measured": 963,
+   "diff": 0,
+   "value": 3025,
+   "strength": 0.6,
+   "kick": 0.31
+  },
+  {
+   "name": "S7 て から溝がほどけて窓へ 972",
+   "frame": 972,
+   "box": [
+    1078,
+    120,
+    1700,
+    759
+   ],
+   "kind": "chg",
+   "thr": 150,
+   "accent": 972,
+   "measured": 972,
+   "diff": 0,
+   "value": 2283,
+   "strength": 0.66,
+   "kick": 0.16
+  },
+  {
+   "name": "S7 て から溝がほどけて窓へ 991",
+   "frame": 991,
+   "box": [
+    1078,
+    120,
+    1700,
+    759
+   ],
+   "kind": "chg",
+   "thr": 150,
+   "accent": 991,
+   "measured": 991,
+   "diff": 0,
+   "value": 3957,
+   "strength": 0.57,
+   "kick": 0.02
+  },
+  {
+   "name": "S7 窓に琥珀(設計は拍 991 の +2)",
+   "frame": 993,
+   "box": [
+    1604,
+    230,
+    1682,
+    324
+   ],
+   "kind": "amber",
+   "thr": 300,
+   "accent": 991,
+   "measured": 993,
+   "diff": 2,
+   "value": 1976,
+   "strength": 0.57,
+   "kick": 0.02
+  },
+  {
+   "name": "S8 レールを押して延ばす 1010(2.5D で動いている。字の箱を外した領域)",
+   "frame": 1010,
+   "box": [
+    56,
+    150,
+    669,
+    270
+   ],
+   "kind": "chg",
+   "thr": 60,
+   "accent": 1010,
+   "measured": 1011,
+   "diff": 1,
+   "value": 1440,
+   "strength": 0.51,
+   "kick": 0.0
+  },
+  {
+   "name": "S8 レールを押して延ばす 1015(2.5D で動いている。字の箱を外した領域)",
+   "frame": 1015,
+   "box": [
+    870,
+    150,
+    1300,
+    330
+   ],
+   "kind": "chg",
+   "thr": 60,
+   "accent": 1015,
+   "measured": 1016,
+   "diff": 1,
+   "value": 639,
+   "strength": 0.43,
+   "kick": 0.48
+  },
+  {
+   "name": "S8 レールを押して延ばす 1024(2.5D で動いている。字の箱を外した領域)",
+   "frame": 1024,
+   "box": [
+    1250,
+    150,
+    1870,
+    480
+   ],
+   "kind": "chg",
+   "thr": 60,
+   "accent": 1024,
+   "measured": 1024,
+   "diff": 0,
+   "value": 954,
+   "strength": 0.51,
+   "kick": 0.32
+  },
+  {
+   "name": "S8 列車の 1 両目に琥珀(設計は拍の +2)",
+   "frame": 1017,
+   "box": [
+    150,
+    120,
+    1100,
+    470
+   ],
+   "kind": "amber",
+   "thr": 300,
+   "accent": 1015,
+   "measured": 1017,
+   "diff": 2,
+   "value": 3141,
+   "strength": 0.43,
+   "kick": 0.48
+  },
+  {
+   "name": "S8 列車の 2 両目に琥珀(設計は拍の +2)",
+   "frame": 1026,
+   "box": [
+    150,
+    120,
+    1100,
+    470
+   ],
+   "kind": "amber",
+   "thr": 300,
+   "accent": 1024,
+   "measured": 1026,
+   "diff": 2,
+   "value": 2674,
+   "strength": 0.51,
+   "kick": 0.32
+  },
+  {
+   "name": "S8 列車の 3 両目に琥珀(設計は拍の +2)",
+   "frame": 1036,
+   "box": [
+    150,
+    120,
+    1100,
+    470
+   ],
+   "kind": "amber",
+   "thr": 300,
+   "accent": 1034,
+   "measured": 1036,
+   "diff": 2,
+   "value": 1608,
+   "strength": 0.5,
+   "kick": 0.02
+  },
+  {
+   "name": "S8 川が灯る(低音)",
+   "frame": 1123,
+   "box": [
+    56,
+    762,
+    1864,
+    1034
+   ],
+   "kind": "chg",
+   "thr": 1000,
+   "accent": 1123,
+   "measured": 1123,
+   "diff": 0,
+   "value": 7706,
+   "strength": 0.53,
+   "kick": 0.5
+  },
+  {
+   "name": "S9 読点に琥珀(燃え残り)",
+   "frame": 1198,
+   "box": [
+    1325,
+    602,
+    1409,
+    679
+   ],
+   "kind": "amber",
+   "thr": 200,
+   "accent": 1198,
+   "measured": 1198,
+   "diff": 0,
+   "value": 824,
+   "strength": 0.7,
+   "kick": 0.37
+  },
+  {
+   "name": "S9 読点の下の溝を押す 1217",
+   "frame": 1217,
+   "box": [
+    1337,
+    669,
+    1397,
+    1034
+   ],
+   "kind": "chg",
+   "thr": 30,
+   "accent": 1217,
+   "measured": 1217,
+   "diff": 0,
+   "value": 675,
+   "strength": 0.53,
+   "kick": 0.07
+  },
+  {
+   "name": "S9 読点の下の溝を押す 1255",
+   "frame": 1255,
+   "box": [
+    1337,
+    669,
+    1397,
+    1034
+   ],
+   "kind": "chg",
+   "thr": 30,
+   "accent": 1255,
+   "measured": 1255,
+   "diff": 0,
+   "value": 545,
+   "strength": 0.52,
+   "kick": 0.23
+  },
+  {
+   "name": "S9 読点の下の溝を押す 1274",
+   "frame": 1274,
+   "box": [
+    1337,
+    669,
+    1397,
+    1034
+   ],
+   "kind": "chg",
+   "thr": 30,
+   "accent": 1274,
+   "measured": 1274,
+   "diff": 0,
+   "value": 310,
+   "strength": 0.52,
+   "kick": 0.42
+  }
+ ],
+ "strong_accents_not_used": [],
+ "lyrics": [
+  {
+   "char": "夜",
+   "onset": 735,
+   "word": "夜明けの",
+   "confidence": "要確認",
+   "start": 735,
+   "start_diff": 0,
+   "readable85": 740,
+   "readable_diff": 5
+  },
+  {
+   "char": "明",
+   "onset": 740,
+   "word": "夜明けの",
+   "confidence": "要確認",
+   "start": 740,
+   "start_diff": 0,
+   "readable85": 745,
+   "readable_diff": 5
+  },
+  {
+   "char": "け",
+   "onset": 745,
+   "word": "夜明けの",
+   "confidence": "要確認",
+   "start": 745,
+   "start_diff": 0,
+   "readable85": 750,
+   "readable_diff": 5
+  },
+  {
+   "char": "の",
+   "onset": 750,
+   "word": "夜明けの",
+   "confidence": "要確認",
+   "start": 750,
+   "start_diff": 0,
+   "readable85": 755,
+   "readable_diff": 5
+  },
+  {
+   "char": "回",
+   "onset": 784,
+   "word": "回路に",
+   "confidence": "確認済み",
+   "start": 784,
+   "start_diff": 0,
+   "readable85": 785,
+   "readable_diff": 1
+  },
+  {
+   "char": "路",
+   "onset": 787,
+   "word": "回路に",
+   "confidence": "確認済み",
+   "start": 787,
+   "start_diff": 0,
+   "readable85": 788,
+   "readable_diff": 1
+  },
+  {
+   "char": "に",
+   "onset": 790,
+   "word": "回路に",
+   "confidence": "確認済み",
+   "start": 790,
+   "start_diff": 0,
+   "readable85": 791,
+   "readable_diff": 1
+  },
+  {
+   "char": "火",
+   "onset": 808,
+   "word": "火を灯して",
+   "confidence": "確認済み",
+   "start": 808,
+   "start_diff": 0,
+   "readable85": 809,
+   "readable_diff": 1
+  },
+  {
+   "char": "を",
+   "onset": 812,
+   "word": "火を灯して",
+   "confidence": "確認済み",
+   "start": 812,
+   "start_diff": 0,
+   "readable85": 813,
+   "readable_diff": 1
+  },
+  {
+   "char": "灯",
+   "onset": 816,
+   "word": "火を灯して",
+   "confidence": "確認済み",
+   "start": 816,
+   "start_diff": 0,
+   "readable85": 817,
+   "readable_diff": 1
+  },
+  {
+   "char": "し",
+   "onset": 820,
+   "word": "火を灯して",
+   "confidence": "確認済み",
+   "start": 820,
+   "start_diff": 0,
+   "readable85": 821,
+   "readable_diff": 1
+  },
+  {
+   "char": "て",
+   "onset": 824,
+   "word": "火を灯して",
+   "confidence": "確認済み",
+   "start": 824,
+   "start_diff": 0,
+   "readable85": 825,
+   "readable_diff": 1
+  },
+  {
+   "char": "消",
+   "onset": 864,
+   "word": "消えかけた声を",
+   "confidence": "要確認",
+   "start": 864,
+   "start_diff": 0,
+   "readable85": 871,
+   "readable_diff": 7
+  },
+  {
+   "char": "え",
+   "onset": 874,
+   "word": "消えかけた声を",
+   "confidence": "要確認",
+   "start": 874,
+   "start_diff": 0,
+   "readable85": 881,
+   "readable_diff": 7
+  },
+  {
+   "char": "か",
+   "onset": 884,
+   "word": "消えかけた声を",
+   "confidence": "要確認",
+   "start": 884,
+   "start_diff": 0,
+   "readable85": 891,
+   "readable_diff": 7
+  },
+  {
+   "char": "け",
+   "onset": 894,
+   "word": "消えかけた声を",
+   "confidence": "要確認",
+   "start": 894,
+   "start_diff": 0,
+   "readable85": 901,
+   "readable_diff": 7
+  },
+  {
+   "char": "た",
+   "onset": 904,
+   "word": "消えかけた声を",
+   "confidence": "要確認",
+   "start": 904,
+   "start_diff": 0,
+   "readable85": 909,
+   "readable_diff": 5
+  },
+  {
+   "char": "声",
+   "onset": 914,
+   "word": "消えかけた声を",
+   "confidence": "要確認",
+   "start": 915,
+   "start_diff": 1,
+   "readable85": 921,
+   "readable_diff": 7
+  },
+  {
+   "char": "を",
+   "onset": 924,
+   "word": "消えかけた声を",
+   "confidence": "要確認",
+   "start": 924,
+   "start_diff": 0,
+   "readable85": 931,
+   "readable_diff": 7
+  },
+  {
+   "char": "光",
+   "onset": 937,
+   "word": "光に変えて",
+   "confidence": "確認済み",
+   "start": 937,
+   "start_diff": 0,
+   "readable85": 938,
+   "readable_diff": 1
+  },
+  {
+   "char": "に",
+   "onset": 942,
+   "word": "光に変えて",
+   "confidence": "確認済み",
+   "start": 942,
+   "start_diff": 0,
+   "readable85": 948,
+   "readable_diff": 6
+  },
+  {
+   "char": "変",
+   "onset": 947,
+   "word": "光に変えて",
+   "confidence": "確認済み",
+   "start": 947,
+   "start_diff": 0,
+   "readable85": 953,
+   "readable_diff": 6
+  },
+  {
+   "char": "え",
+   "onset": 952,
+   "word": "光に変えて",
+   "confidence": "確認済み",
+   "start": 952,
+   "start_diff": 0,
+   "readable85": 958,
+   "readable_diff": 6
+  },
+  {
+   "char": "て",
+   "onset": 957,
+   "word": "光に変えて",
+   "confidence": "確認済み",
+   "start": 957,
+   "start_diff": 0,
+   "readable85": 962,
+   "readable_diff": 5
+  },
+  {
+   "char": "止",
+   "onset": 1002,
+   "word": "止まらない",
+   "confidence": "確認済み",
+   "start": 1002,
+   "start_diff": 0,
+   "readable85": 1007,
+   "readable_diff": 5
+  },
+  {
+   "char": "ま",
+   "onset": 1007,
+   "word": "止まらない",
+   "confidence": "確認済み",
+   "start": 1007,
+   "start_diff": 0,
+   "readable85": 1011,
+   "readable_diff": 4
+  },
+  {
+   "char": "ら",
+   "onset": 1012,
+   "word": "止まらない",
+   "confidence": "確認済み",
+   "start": 1012,
+   "start_diff": 0,
+   "readable85": 1017,
+   "readable_diff": 5
+  },
+  {
+   "char": "な",
+   "onset": 1017,
+   "word": "止まらない",
+   "confidence": "確認済み",
+   "start": 1017,
+   "start_diff": 0,
+   "readable85": 1022,
+   "readable_diff": 5
+  },
+  {
+   "char": "い",
+   "onset": 1022,
+   "word": "止まらない",
+   "confidence": "確認済み",
+   "start": 1022,
+   "start_diff": 0,
+   "readable85": 1026,
+   "readable_diff": 4
+  },
+  {
+   "char": "止",
+   "onset": 1056,
+   "word": "止まれない",
+   "confidence": "要確認",
+   "start": 1056,
+   "start_diff": 0,
+   "readable85": 1062,
+   "readable_diff": 6
+  },
+  {
+   "char": "ま",
+   "onset": 1062,
+   "word": "止まれない",
+   "confidence": "要確認",
+   "start": 1062,
+   "start_diff": 0,
+   "readable85": 1067,
+   "readable_diff": 5
+  },
+  {
+   "char": "れ",
+   "onset": 1068,
+   "word": "止まれない",
+   "confidence": "要確認",
+   "start": 1068,
+   "start_diff": 0,
+   "readable85": 1073,
+   "readable_diff": 5
+  },
+  {
+   "char": "な",
+   "onset": 1074,
+   "word": "止まれない",
+   "confidence": "要確認",
+   "start": 1074,
+   "start_diff": 0,
+   "readable85": 1080,
+   "readable_diff": 6
+  },
+  {
+   "char": "い",
+   "onset": 1080,
+   "word": "止まれない",
+   "confidence": "要確認",
+   "start": 1080,
+   "start_diff": 0,
+   "readable85": 1086,
+   "readable_diff": 6
+  },
+  {
+   "char": "ま",
+   "onset": 1173,
+   "word": "まだ、",
+   "confidence": "要確認",
+   "start": 1173,
+   "start_diff": 0,
+   "readable85": 1178,
+   "readable_diff": 5
+  },
+  {
+   "char": "だ",
+   "onset": 1180,
+   "word": "まだ、",
+   "confidence": "要確認",
+   "start": 1180,
+   "start_diff": 0,
+   "readable85": 1187,
+   "readable_diff": 7
+  },
+  {
+   "char": "、",
+   "onset": 1188,
+   "word": "まだ、",
+   "confidence": "要確認",
+   "start": 1188,
+   "start_diff": 0,
+   "readable85": 1188,
+   "readable_diff": 0
+  },
+  {
+   "char": "光",
+   "onset": 1203,
+   "word": "光は",
+   "confidence": "確認済み",
+   "start": 1203,
+   "start_diff": 0,
+   "readable85": 1208,
+   "readable_diff": 5
+  },
+  {
+   "char": "は",
+   "onset": 1210,
+   "word": "光は",
+   "confidence": "確認済み",
+   "start": 1210,
+   "start_diff": 0,
+   "readable85": 1215,
+   "readable_diff": 5
+  },
+  {
+   "char": "消",
+   "onset": 1280,
+   "word": "消えない",
+   "confidence": "要確認",
+   "start": 1280,
+   "start_diff": 0,
+   "readable85": 1287,
+   "readable_diff": 7
+  },
+  {
+   "char": "え",
+   "onset": 1285,
+   "word": "消えない",
+   "confidence": "要確認",
+   "start": 1285,
+   "start_diff": 0,
+   "readable85": 1291,
+   "readable_diff": 6
+  },
+  {
+   "char": "な",
+   "onset": 1290,
+   "word": "消えない",
+   "confidence": "要確認",
+   "start": 1290,
+   "start_diff": 0,
+   "readable85": 1296,
+   "readable_diff": 6
+  },
+  {
+   "char": "い",
+   "onset": 1295,
+   "word": "消えない",
+   "confidence": "要確認",
+   "start": 1295,
+   "start_diff": 0,
+   "readable85": 1299,
+   "readable_diff": 4
+  }
+ ]
+}
