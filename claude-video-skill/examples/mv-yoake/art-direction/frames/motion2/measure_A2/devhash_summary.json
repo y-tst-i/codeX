@@ -27,27 +27,27 @@
    "same": true
   },
   {
-   "f": 500,
-   "dev": "17537218",
-   "hf": null,
-   "same": null
+   "f": 501,
+   "dev": "5e11b359",
+   "hf": "5e11b359",
+   "same": true
   },
   {
    "f": 576,
-   "dev": "f174d4bf",
-   "hf": "f174d4bf",
+   "dev": "f84d20e8",
+   "hf": "f84d20e8",
    "same": true
   },
   {
    "f": 651,
-   "dev": "d715b392",
-   "hf": "d715b392",
+   "dev": "e9a9b14d",
+   "hf": "e9a9b14d",
    "same": true
   },
   {
    "f": 666,
-   "dev": "fb698cf0",
-   "hf": "fb698cf0",
+   "dev": "a4bba3a7",
+   "hf": "a4bba3a7",
    "same": true
   }
  ]

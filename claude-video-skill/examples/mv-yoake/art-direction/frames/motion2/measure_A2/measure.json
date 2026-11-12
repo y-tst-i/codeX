@@ -580,7 +580,7 @@
    "accent": 491,
    "measured": 491,
    "diff": 0,
-   "value": 3541,
+   "value": 3539,
    "strength": 0.58,
    "kick": 0.17
   },
@@ -598,7 +598,7 @@
    "accent": 500,
    "measured": 500,
    "diff": 0,
-   "value": 5393,
+   "value": 5388,
    "strength": 0.89,
    "kick": 0.1
   },
@@ -616,7 +616,7 @@
    "accent": 557,
    "measured": 557,
    "diff": 0,
-   "value": 292,
+   "value": 835,
    "strength": 0.62,
    "kick": 0.01
   },
@@ -634,7 +634,7 @@
    "accent": 567,
    "measured": 567,
    "diff": 0,
-   "value": 345,
+   "value": 872,
    "strength": 0.65,
    "kick": 0.06
   },
@@ -652,7 +652,7 @@
    "accent": 576,
    "measured": 576,
    "diff": 0,
-   "value": 335,
+   "value": 889,
    "strength": 0.59,
    "kick": 0.34
   },
@@ -670,7 +670,7 @@
    "accent": 585,
    "measured": 585,
    "diff": 0,
-   "value": 361,
+   "value": 975,
    "strength": 0.61,
    "kick": 0.11
   },
@@ -686,9 +686,9 @@
    "kind": "chg",
    "thr": 20,
    "accent": 614,
-   "measured": 613,
-   "diff": -1,
-   "value": 227,
+   "measured": 614,
+   "diff": 0,
+   "value": 1393,
    "strength": 0.57,
    "kick": 0.22
   },
@@ -706,7 +706,7 @@
    "accent": 623,
    "measured": 623,
    "diff": 0,
-   "value": 210,
+   "value": 1675,
    "strength": 0.6,
    "kick": 0.24
   },
@@ -724,7 +724,7 @@
    "accent": 633,
    "measured": 633,
    "diff": 0,
-   "value": 142,
+   "value": 1567,
    "strength": 0.61,
    "kick": 0.28
   },
@@ -732,9 +732,9 @@
    "name": "S4 3つ目の窓の枠",
    "frame": 642,
    "box": [
-    1298,
+    1214,
     656,
-    1390,
+    1306,
     732
    ],
    "kind": "chg",
@@ -742,7 +742,7 @@
    "accent": 642,
    "measured": 642,
    "diff": 0,
-   "value": 2631,
+   "value": 2653,
    "strength": 0.7,
    "kick": 0.14
   },
@@ -750,9 +750,9 @@
    "name": "S4 3つ目の窓に琥珀",
    "frame": 652,
    "box": [
-    1248,
+    1164,
     606,
-    1440,
+    1356,
     782
    ],
    "kind": "amber",
@@ -760,7 +760,7 @@
    "accent": 652,
    "measured": 652,
    "diff": 0,
-   "value": 2314,
+   "value": 1978,
    "strength": 0.67,
    "kick": 0.2
   },
@@ -768,9 +768,9 @@
    "name": "S4 4つ目の窓に琥珀(枝の先)",
    "frame": 661,
    "box": [
-    1474,
+    1390,
     707,
-    1652,
+    1568,
     873
    ],
    "kind": "amber",
@@ -778,7 +778,7 @@
    "accent": 661,
    "measured": 661,
    "diff": 0,
-   "value": 1642,
+   "value": 1773,
    "strength": 0.69,
    "kick": 0.1
   }
@@ -912,8 +912,8 @@
    "confidence": "確認済み",
    "start": 413,
    "start_diff": 0,
-   "readable85": 420,
-   "readable_diff": 7
+   "readable85": 413,
+   "readable_diff": 0
   },
   {
    "char": "つ",
@@ -922,8 +922,8 @@
    "confidence": "確認済み",
    "start": 417,
    "start_diff": 0,
-   "readable85": 424,
-   "readable_diff": 7
+   "readable85": 417,
+   "readable_diff": 0
   },
   {
    "char": "、",
@@ -932,8 +932,8 @@
    "confidence": "確認済み",
    "start": 421,
    "start_diff": 0,
-   "readable85": 428,
-   "readable_diff": 7
+   "readable85": 421,
+   "readable_diff": 0
   },
   {
    "char": "ま",
@@ -942,8 +942,8 @@
    "confidence": "確認済み",
    "start": 453,
    "start_diff": 0,
-   "readable85": 460,
-   "readable_diff": 7
+   "readable85": 454,
+   "readable_diff": 1
   },
   {
    "char": "た",
@@ -962,8 +962,8 @@
    "confidence": "確認済み",
    "start": 461,
    "start_diff": 0,
-   "readable85": 468,
-   "readable_diff": 7
+   "readable85": 463,
+   "readable_diff": 2
   },
   {
    "char": "と",
@@ -972,8 +972,8 @@
    "confidence": "確認済み",
    "start": 465,
    "start_diff": 0,
-   "readable85": 472,
-   "readable_diff": 7
+   "readable85": 465,
+   "readable_diff": 0
   },
   {
    "char": "つ",
@@ -982,8 +982,8 @@
    "confidence": "確認済み",
    "start": 469,
    "start_diff": 0,
-   "readable85": 476,
-   "readable_diff": 7
+   "readable85": 469,
+   "readable_diff": 0
   },
   {
    "char": "繋",
@@ -992,8 +992,8 @@
    "confidence": "要確認",
    "start": 541,
    "start_diff": 1,
-   "readable85": 546,
-   "readable_diff": 6
+   "readable85": 542,
+   "readable_diff": 2
   },
   {
    "char": "が",
@@ -1002,18 +1002,18 @@
    "confidence": "要確認",
    "start": 545,
    "start_diff": 0,
-   "readable85": 552,
-   "readable_diff": 7
+   "readable85": 554,
+   "readable_diff": 9
   },
   {
    "char": "っ",
    "onset": 550,
    "word": "繋がってく",
    "confidence": "要確認",
-   "start": 550,
-   "start_diff": 0,
-   "readable85": 555,
-   "readable_diff": 5
+   "start": 551,
+   "start_diff": 1,
+   "readable85": 558,
+   "readable_diff": 8
   },
   {
    "char": "て",
@@ -1022,18 +1022,18 @@
    "confidence": "要確認",
    "start": 553,
    "start_diff": 0,
-   "readable85": 558,
-   "readable_diff": 5
+   "readable85": 555,
+   "readable_diff": 2
   },
   {
    "char": "く",
    "onset": 558,
    "word": "繋がってく",
    "confidence": "要確認",
-   "start": 558,
-   "start_diff": 0,
-   "readable85": 563,
-   "readable_diff": 5
+   "start": 559,
+   "start_diff": 1,
+   "readable85": 590,
+   "readable_diff": 32
   }
  ]
 }

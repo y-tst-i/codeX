@@ -15,7 +15,7 @@
 | 2.5D の比較(2回目、見て分かる強さ) | `/tmp/claude-0/-home-user-codeX/d5574950-8955-5b0b-bf13-7c6be25a8755/scratchpad/mv2d/yoake_25d_test_dawn_25d_v2.mp4`・`yoake_25d_test_dawn_sidebyside_v2.mp4`、`/tmp/claude-0/-home-user-codeX/d5574950-8955-5b0b-bf13-7c6be25a8755/scratchpad/mv2d/yoake_25d_test_s4_2d.mp4`・`yoake_25d_test_s4_25d_v2.mp4`・`yoake_25d_test_s4_sidebyside_v2.mp4`(1回目の S4 は `yoake_25d_test_s4_25d.mp4`・`_sidebyside.mp4`) |
 | 効果を切った版(clean、音なし) | `/tmp/claude-0/-home-user-codeX/d5574950-8955-5b0b-bf13-7c6be25a8755/scratchpad/mv2d/m2/video_{A,M,B}_clean.mp4` |
 | 540px 幅の 0.2 秒刻み(大きいので repo の外) | `/tmp/claude-0/-home-user-codeX/d5574950-8955-5b0b-bf13-7c6be25a8755/scratchpad/m2/sheets_{A,M,B}/*_contact_0.2s_540.jpg`、`*_check_540.jpg` |
-| 確認画像(repo、JPEG) | `frames/motion2/`: `{A2,M,B2}_contact_0.2s.jpg`(0.2 秒刻み)、`*_boundaries.jpg`(カットの境目)、`*_fx_off_clean.jpg`(look と clean)、`A2_check_540.jpg`、2.5D の比較 `test25d_*.jpg`・`test25d_still.txt`、太陽の直し `fix_sun_1431_1520.jpg` |
+| 確認画像(repo、JPEG) | `frames/motion2/`: `{A2,M,B2}_contact_0.2s.jpg`(0.2 秒刻み)、`*_boundaries.jpg`(カットの境目)、`*_fx_off_clean.jpg`(look と clean)、2.5D の比較 `test25d_*.jpg`・`test25d_still.txt`、太陽の直し `fix_sun_1431_1520.jpg` |
 | 実測(repo) | `frames/motion2/measure_{A2,M,B2}/`: `sync_measured.md`(音ハメ)、`lyric_check.md`(歌詞の可読)、`measure.json`、`review_*.txt`(review_checks)、`*_summary.json`(刀の入れ替わり・seek・別ページの照合)、`hyperframes_check.txt` |
 | 描画 | `src/cand_a7_cam.js`(2.5D の層のカメラ)、`src/cand_a7_mid.js`(S5〜S9)、`src/cand_a7_open.js`(S1〜S4。S4 の 2.5D と枝分かれ、S3・S1 の音ハメ)、`src/cand_a7_dawn.js`(夜明け。A の 2.5D、太陽、1349)、`src/cand_a7.js`(ばれんの消去を画面座標に)、`src/cand_a7_cuts.js`(`A7_DRAW`、`A7_CAM_DEFAULT = true`)。開発ページ `src/styleframes_v7.html?f=<曲のコマ>&v=look|clean|mask[&cam=0|1]` |
 | 道具 | `src/motion1/tools/`: `partrange.py`(区間の名前)、`build_hf.sh`・`render_part.sh`(区間・cam を指定)、`measure.py`(区間 M を追加)、`flicker_check.mjs`(cam を指定)・`flicker_where.mjs`(戻った画素の場所)、`seek_check.mjs`(`SEEK_EVERY`)、`still.py`・`pairs.py`・`sbs.sh`(静止の物差し・並べた比較)。間の台帳 `holds_part{A,M,B}.json` |
@@ -139,15 +139,15 @@ MOTION_PART1_REVIEW §9 の計画どおり。絵は v6 の S5・S7・S8・S9 と
 | 黒コマ・白フラッシュ | **PASS**(平均の明るさの最小 54.8) | **PASS**(54.3) | **PASS**(68.7) | `measure.json`、`review_*.txt` |
 | 音量(曲のまま、区間で切った物) | -14.2 LUFS / -2.5 dBTP | -13.4 LUFS / -3.1 dBTP | -13.3 LUFS / -2.7 dBTP | `review_*.txt` |
 | seek 決定性(`tl.seek(t,false)` 順・`hf-seek` 逆順・飛ばし2通り) | **PASS: ALL_SAME**(3 コマごと 223 コマ×4 通り) | **PASS: ALL_SAME**(2 コマごと 336 コマ×4 通り) | **PASS: ALL_SAME**(2 コマごと 125 コマ×4 通り) | `measure_*/seek_summary.json` |
-| 別のプロセス・別のページ(開発ページ)との照合 | <<A_DEV>> | **一致** 10/10 コマ | **一致** 8/8 コマ | `devhash_summary.json` |
+| 別のプロセス・別のページ(開発ページ)との照合 | **一致** 8/8 コマ | **一致** 10/10 コマ | **一致** 8/8 コマ | `devhash_summary.json` |
 | 刀の入れ替わり(cam=0) | 合計 42 画素、最大 12(243) | 合計 115 画素、最大 22(954: S7 の大きい字の粗彫りの縁のにじみ)。50 画素を超えるコマ 0 | 合計 27 画素、最大 3。**1349 は 1 画素**(第1段 139) | `flicker_cam0_summary.json` |
 | 2.5D のカメラの動き | S4: 段の頭で主の層 約 5px/コマ、手前の家 約 7px/コマ。往復・手ぶれなし | S8: 一定 約 1px/コマ | 夜明け A: 段の頭で前景の端 約 8px/コマ。1402 で止まる | 式から(`cand_a7_cam.js`、各カットの `A7_CAM.set`) |
 | 音ハメ(強いアクセント 0.7 以上の事象) | **全部 ±1 以内**(104: 0、350: 0、387: 0、第1段は -2・+2・+2) | 755・769・812・1198 は 0。押しの事象も ±1(802 だけ -3: 押しの間が 4 コマで、前の押しの山と区別できない測り方の限界)。窓・列車の琥珀は「拍のコマで彫り、2 コマ後に刷る」設計どおり +2 | 1340: +1、1349〜1397: 0、1415・1425・1481・1462・1538: 0、1557: -1 | `sync_measured.md` |
 | 歌詞の可読 | 25 字とも語頭から 0〜+1 コマで彫り始め。読める(85%)のは +10 以内。ただし「く」(558)は測定で +32: 2.5D で字が動いて測る箱からずれたため。等倍で見て +5 で読める(確認済み) | 43 字とも 0〜+1 で彫り(刷り)始め、+7 以内に読める | 5 字と題: 第1段と同じ(+1〜で刷り始め) | `lyric_check.md` |
 | 静止(`review_checks.py`) | **FAIL(合計の予算)**: 0.6 秒を超える静止は 0(登録した間を除く)。0.2〜0.37 秒の拍待ちが 8 か所で合計 3.9 秒 > 予算 0.74 秒。**S4 後半の静止(第1段の FAIL)は解消** | **FAIL(合計の予算)**: 0.6 秒を超える静止は 0(登録した 2 つを除く)。0.2〜0.53 秒の拍待ちが合計 3.6 秒 | **PASS**(台帳つき。台帳が全体の 53% の注意は第1段と同じ) | `review_*.txt`、`holds_part{A,M,B}.json` |
 | hyperframes lint | **PASS** 0 エラー・0 警告 | **PASS** | **PASS** | — |
-| hyperframes check | <<A_CHK>> | **PASS**(エラー 0。警告 `canvas_content_at_edge`=S6 は紙のふちを外した全面、`film_silent`=音は書き出し後に ffmpeg で付ける) | **PASS**(エラー 0。警告 `canvas_content_at_edge`=夜明けは全面) | `measure_*/hyperframes_check.txt` |
-| 540px・clean | 語頭+10 で字は全部読める。動きは clean でも全部残る(動きは刀の形と刷りの 0/1 と層の位置だけ) | 同じ | 同じ | `*_check_540.jpg`(repo の外)、`*_fx_off_clean.jpg` |
+| hyperframes check | **PASS**(エラー 0。警告 `film_silent`=音は書き出し後に ffmpeg で付ける。情報 `audio_none`) | **PASS**(エラー 0。警告 `canvas_content_at_edge`=S6 は紙のふちを外した全面、`film_silent`=音は書き出し後に ffmpeg で付ける) | **PASS**(エラー 0。警告 `canvas_content_at_edge`=夜明けは全面) | `measure_*/hyperframes_check.txt` |
+| 540px・clean | 540px のシートは repo の外(§0)。語頭+10 で字は全部読める。動きは clean でも全部残る(動きは刀の形と刷りの 0/1 と層の位置だけ) | 同じ | 同じ | `*_check_540.jpg`(repo の外)、`*_fx_off_clean.jpg` |
 
 ## 6. 完了 / 未実施 / 失敗 / 次の判断
 | 区分 | 内容 |
