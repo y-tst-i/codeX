@@ -1,0 +1,3 @@
+npx hyperframes lint: 0 errors, 0 warnings
+npx hyperframes check --json (CLI 0.9.33):
+1c4fd3d0-40ee-4b83-8dab-b35b4a891ad2.json {"ok": true, "findings": {"warning:canvas_content_at_edge": 1, "info:audio_none": 1}}
